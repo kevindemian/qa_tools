@@ -37,7 +37,13 @@ import {
     setManager,
     getProjects,
 } from './session-state.js';
-import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
+import {
+    getCurrentProject,
+    setCurrentProject,
+    ensureSelfHostProject,
+    getSelfHostEntry,
+} from '../shared/project-context.js';
+import type { ProjectEntry } from '../shared/types/project.js';
 import { pollPipeline } from './pipeline-handler.js';
 import type { BatchCliArgs } from './cli-args.js';
 import { parseCliArgs } from './cli-args.js';
@@ -63,8 +69,27 @@ async function setupBatchProject(batch: BatchCliArgs): Promise<{
     const projectName = batch.project || (firstEntry ? firstEntry[0] : '');
     const projectEntry = projsEntries.find(([k]) => k === projectName);
     if (!projectEntry) {
-        error('Projeto "' + projectName + '" não encontrado. Registre-o via Setup Wizard (opção "Adicionar projeto").');
-        return null;
+        // Registry miss: try self-host resolution (the checked-out repo is the requested project).
+        // Resolves in-memory without writing the registry — correct for CI where the registry is empty.
+        let selfEntry: ProjectEntry | undefined;
+        try {
+            ensureSelfHostProject(projectName);
+            selfEntry = getSelfHostEntry();
+        } catch {
+            selfEntry = undefined;
+        }
+        if (!selfEntry) {
+            error(
+                'Projeto "' +
+                    projectName +
+                    '" não encontrado. Registre-o via Setup Wizard (opção "Adicionar projeto") ou execute a partir do repositório do projeto.',
+            );
+            return null;
+        }
+        setProjectId(selfEntry.projectId ?? '');
+        const m = createManagerForProject(projectName, selfEntry.projectId ?? '');
+        setManager(m);
+        return { m, branch: batch.branch || 'main', projectName };
     }
 
     setCurrentProject(projectName);

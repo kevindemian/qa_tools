@@ -1,181 +1,124 @@
-import { EventEmitter } from 'events';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Output, defaultOutput } from '../ui/output.js';
-import * as entryMenuModule from '../ui/entry-menu.js';
-import * as promptModule from '../ui/prompt.js';
-import { type ChildProcess } from 'child_process';
+import Config from '../config-accessor.js';
+import { selectProject, moduleEnv } from '../ui/entry-menu.js';
+import { addProject, getProject, removeProject } from '../project-registry.js';
+import type { MenuUI } from '../ui/entry-menu.js';
 
-vi.mock('../ui/splash.js', () => ({ showSplash: vi.fn() }));
-vi.mock('../ui/prompt.js', () => ({
-    showSelect: vi.fn(),
-    confirm: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    divider: vi.fn(),
-}));
-vi.mock('../ui/output.js', () => {
-    const mockOutput = { box: vi.fn(), print: vi.fn() };
-    return {
-        Output: { isTTY: vi.fn(), isCI: vi.fn() },
-        defaultOutput: mockOutput,
+function makeUi(selectQueue: Array<string | undefined>): { ui: MenuUI; warns: string[]; infos: string[] } {
+    const warns: string[] = [];
+    const infos: string[] = [];
+    let idx = 0;
+    const ui: MenuUI = {
+        showSelect: vi.fn((_label: string, _choices: unknown) => Promise.resolve(selectQueue[idx++] ?? '')),
+        confirm: vi.fn(() => true),
+        info: vi.fn((m: string) => {
+            infos.push(m);
+        }),
+        warn: vi.fn((m: string) => {
+            warns.push(m);
+        }),
+        divider: vi.fn(),
+        smartPrompt: vi.fn(() => Promise.resolve('')),
     };
-});
-
-vi.mock('child_process', () => ({ spawn: vi.fn() }));
-vi.mock('../migration/migrate-projects.js', () => ({
-    migrateLegacyProjects: vi.fn(() => ({ migrated: 0, skipped: 0, renamed: false })),
-}));
-
-import { spawn } from 'child_process';
-const mockSpawn = vi.mocked(spawn);
-const entryMenu = entryMenuModule;
-
-function makeMockChildProcess(): ChildProcess {
-    return new EventEmitter() as ChildProcess;
+    return { ui, warns, infos };
 }
 
-function mockSpawnWithExit(code: number): void {
-    const cp = makeMockChildProcess();
-    mockSpawn.mockImplementation(() => {
-        setImmediate(() => cp.emit('exit', code));
-        return cp;
-    });
-}
-
-describe('RunModule', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('spawns npx tsx for jira module', async () => {
-        expect.hasAssertions();
-
-        mockSpawnWithExit(0);
-
-        const promise = entryMenu.runModule('jira');
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-            process.execPath,
-            [expect.stringContaining('.bin/tsx'), expect.stringContaining('jira_management/main.ts')],
-            expect.any(Object),
-        );
-        await expect(promise).resolves.toBeUndefined();
-    });
-
-    it('spawns npx tsx for git module', async () => {
-        expect.hasAssertions();
-
-        mockSpawnWithExit(0);
-
-        const promise = entryMenu.runModule('git');
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-            process.execPath,
-            [expect.stringContaining('.bin/tsx'), expect.stringContaining('git_triggers/main.ts')],
-            expect.any(Object),
-        );
-        await expect(promise).resolves.toBeUndefined();
-    });
-
-    it('rejects on non-zero exit code', async () => {
-        expect.hasAssertions();
-
-        mockSpawnWithExit(1);
-
-        const promise = entryMenu.runModule('jira');
-
-        await expect(promise).rejects.toThrow('código 1');
-    });
-
-    it('rejects on spawn error', async () => {
-        expect.hasAssertions();
-
-        const cp = makeMockChildProcess();
-        mockSpawn.mockImplementation(() => {
-            setImmediate(() => cp.emit('error', new Error('ENOENT')));
-            return cp;
-        });
-
-        const promise = entryMenu.runModule('jira');
-
-        await expect(promise).rejects.toThrow('ENOENT');
-    });
-});
-
-describe('Main', () => {
-    let printSpy: ReturnType<typeof vi.spyOn>;
-    let xdg: string;
+describe('SelectProject entry menu (real logic, injected UI, no TTY/spawn)', () => {
+    let TMP: string;
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        vi.spyOn(console, 'clear').mockImplementation(() => {});
-        printSpy = vi.spyOn(defaultOutput, 'print');
-        // Isola registry/state XDG para o boot do menu não enxergar projetos
-        // de outras suítes nem migrar config/projects.json do cwd (coberto por
-        // testes dedicados de _initInfrastructure).
-        xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'em-main-xdg-'));
-        process.env['XDG_CONFIG_HOME'] = xdg;
-        process.env['XDG_STATE_HOME'] = xdg;
+        TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'entry-menu-test-'));
+        process.env['XDG_CONFIG_HOME'] = TMP;
+        Config.reset();
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
-        fs.rmSync(xdg, { recursive: true, force: true });
+        delete process.env['XDG_CONFIG_HOME'];
+        Config.reset();
+        fs.rmSync(TMP, { recursive: true, force: true });
     });
 
-    it('prints usage when not TTY', async () => {
+    it('auto-selects the single registered project (valid) and returns true', async () => {
         expect.hasAssertions();
 
-        vi.spyOn(Output, 'isTTY').mockReturnValue(false);
+        addProject({ name: 'solo', dir: TMP });
+        const { ui } = makeUi([]);
+        const result = await selectProject(ui);
 
-        await entryMenu.main();
-
-        expect(printSpy).toHaveBeenCalledWith(expect.stringContaining('npm run jira'));
-        expect(printSpy).toHaveBeenCalledWith(expect.stringContaining('npm run git'));
+        expect(result).toBeTruthy();
+        expect(getProject('solo')?.name).toBe('solo');
+        expect(Config.get('qaCurrentProject')).toBe('solo');
     });
 
-    it('loops and exits on /exit choice', async () => {
+    it('warns but still selects a single project with an invalid directory', async () => {
         expect.hasAssertions();
 
-        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
-        vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        const showSelectMock = vi.spyOn(promptModule, 'showSelect');
-        showSelectMock.mockResolvedValue('exit');
+        const invalidDir = path.join(TMP, 'does-not-exist');
+        addProject({ name: 'broken', dir: invalidDir });
+        const { ui, warns } = makeUi([]);
+        const result = await selectProject(ui);
 
-        await entryMenu.main();
-
-        expect(showSelectMock).toHaveBeenCalledTimes(1);
+        expect(result).toBeTruthy();
+        expect(warns.some((w) => w.includes('inválido'))).toBeTruthy();
     });
 
-    it('launches jira module when selected and exits on failure', async () => {
+    it('selects among many projects via the menu and sets the active project', async () => {
         expect.hasAssertions();
 
-        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
-        vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        vi.spyOn(promptModule, 'showSelect').mockResolvedValue('jira');
-        mockSpawnWithExit(1);
+        addProject({ name: 'a', dir: TMP });
+        addProject({ name: 'b', dir: TMP });
+        const { ui } = makeUi(['b']);
+        const result = await selectProject(ui);
 
-        await entryMenu.main();
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-            process.execPath,
-            expect.arrayContaining([expect.stringContaining('.bin/tsx')]),
-            expect.objectContaining({ stdio: 'inherit' }),
-        );
+        expect(result).toBeTruthy();
+        expect(Config.get('qaCurrentProject')).toBe('b');
     });
 
-    it('continues loop on unknown choice', async () => {
+    it('returns false when the chosen project name is unknown (many-project path)', async () => {
         expect.hasAssertions();
 
-        vi.spyOn(Output, 'isTTY').mockReturnValue(true);
-        vi.spyOn(Output, 'isCI').mockReturnValue(false);
-        const showSelectMock = vi.spyOn(promptModule, 'showSelect');
-        showSelectMock.mockResolvedValueOnce('unknown').mockResolvedValueOnce('exit');
+        addProject({ name: 'a', dir: TMP });
+        addProject({ name: 'b', dir: TMP });
+        const { ui } = makeUi(['ghost']);
+        const result = await selectProject(ui);
 
-        await entryMenu.main();
+        expect(result).toBeFalsy();
+    });
 
-        expect(showSelectMock).toHaveBeenCalledTimes(2);
+    it('returns false when no projects are registered and legacy mode chosen', async () => {
+        expect.hasAssertions();
+
+        const { ui } = makeUi(['__legacy__']);
+        const result = await selectProject(ui);
+
+        expect(result).toBeFalsy();
+        expect(Config.get('qaCurrentProject')).toBe('');
+    });
+
+    it('moduleEnv propagates the active project via QA_CURRENT_PROJECT / QA_PROJECT_DIR', () => {
+        expect.hasAssertions();
+
+        addProject({ name: 'envproj', dir: TMP });
+        Config.set('qaCurrentProject', 'envproj');
+        Config.set('qaProjectDir', TMP);
+        const env = moduleEnv();
+
+        expect(env['QA_CURRENT_PROJECT']).toBe('envproj');
+        expect(env['QA_PROJECT_DIR']).toBe(TMP);
+    });
+
+    it('removing a project updates the registry (no orphaned entry)', () => {
+        expect.hasAssertions();
+
+        addProject({ name: 'tmp', dir: TMP });
+
+        expect(getProject('tmp')).toBeDefined();
+
+        removeProject('tmp');
+
+        expect(getProject('tmp')).toBeUndefined();
     });
 });

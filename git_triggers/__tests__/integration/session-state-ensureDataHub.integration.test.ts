@@ -23,6 +23,7 @@ vi.mock('../../../shared/project-context', () => ({
     getCurrentProject: vi.fn(() => undefined),
     setCurrentProject: vi.fn(),
     clearCurrentProject: vi.fn(),
+    getSelfHostEntry: vi.fn(() => undefined),
 }));
 
 /* ── Mock DataHub ─────────────────────────────────────────────────────── */

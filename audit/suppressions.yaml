@@ -1,661 +1,661 @@
 meta:
-  measured_at: 2026-07-16
-  baseline_count: 306
-  note: >-
-    Estoque legado de anotacoes inline (eslint-disable/@ts-ignore) a migrar para este
-    arquivo (baseline 306). O contador de inline eh validado contra o teto Stryker
-    (scripts/audit-suppressions.ts). As entradas abaixo (rule: local-no-swallow/no-swallow)
-    sao catch-blocks que engolem erro no estoque, identificadas pelo detector no-swallow.
-    SUNSET DE 7 DIAS (2026-07-23): apos o vencimento, cada entrada volta a quebrar o CI
-    e deve ser corrigida na raiz (rethrow / ExternalError / rootLogger.error + sentinela).
-    Debito registrado em BACKLOG_sanitize.md (secao "Debito: no-swallow legado 88").
+    measured_at: 2026-07-16
+    baseline_count: 306
+    note: >-
+        Estoque legado de anotacoes inline (eslint-disable/@ts-ignore) a migrar para este
+        arquivo (baseline 306). O contador de inline eh validado contra o teto Stryker
+        (scripts/audit-suppressions.ts). As entradas abaixo (rule: local-no-swallow/no-swallow)
+        sao catch-blocks que engolem erro no estoque, identificadas pelo detector no-swallow.
+        SUNSET DE 7 DIAS (2026-07-23): apos o vencimento, cada entrada volta a quebrar o CI
+        e deve ser corrigida na raiz (rethrow / ExternalError / rootLogger.error + sentinela).
+        Debito registrado em BACKLOG_sanitize.md (secao "Debito: no-swallow legado 88").
 
 suppressions:
-  - file: e2e/csv-import-errors.test.ts
-    line: 83
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: e2e/handlers-happy-paths.test.ts
-    line: 147
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/interactive-mode.ts
-    line: 901
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/pipeline-handler.ts
-    line: 289
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/session-state.ts
-    line: 199
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/test-results.ts
-    line: 30
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/test-results.ts
-    line: 42
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: git_triggers/test-results.ts
-    line: 65
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/case11.ts
-    line: 39
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/case18.ts
-    line: 63
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/case18.ts
-    line: 118
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/case19.ts
-    line: 114
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/case22.ts
-    line: 15
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/commands/test-execution-flow.ts
-    line: 114
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/create_tests.test.ts
-    line: 441
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/create_tests.test.ts
-    line: 446
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/jira-resource-sprint.ts
-    line: 69
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/jira-resource-version.ts
-    line: 147
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/jira-resource-version.ts
-    line: 253
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/result_reporter.test.ts
-    line: 89
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/xray-history.ts
-    line: 117
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: jira_management/xray-history.ts
-    line: 215
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: scripts/audit/mock-facade.ts
-    line: 47
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: scripts/opencode-db-maintenance.ts
-    line: 114
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: scripts/opencode-db-maintenance.ts
-    line: 141
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: scripts/smartwizard-llm.ts
-    line: 44
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: setup/reporter-ast.ts
-    line: 52
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: setup/secure-io.ts
-    line: 43
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: setup/secure-io.ts
-    line: 58
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: setup/secure-io.ts
-    line: 67
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/git-metrics-adapter.integration.test.ts
-    line: 52
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/integration-helpers.ts
-    line: 79
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/integration-helpers.ts
-    line: 116
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/logger.integration.test.ts
-    line: 37
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/quarantine.integration.test.ts
-    line: 50
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/quarantine.integration.test.ts
-    line: 55
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/quarantine.integration.test.ts
-    line: 63
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/quarantine.integration.test.ts
-    line: 68
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/setup-wizard.integration.test.ts
-    line: 95
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/store.integration.test.ts
-    line: 58
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/integration/test-impact.integration.test.ts
-    line: 37
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/migration/migrate-projects.test.ts
-    line: 27
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/quarantine.property.test.ts
-    line: 31
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/__tests__/quarantine.property.test.ts
-    line: 36
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/extractors/coverage-files-extractor.ts
-    line: 158
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/extractors/coverage-files-extractor.ts
-    line: 239
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/extractors/coverage-files-extractor.ts
-    line: 316
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/metrics/json-exporter.ts
-    line: 25
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/providers/github-provider.ts
-    line: 600
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/providers/github-provider.ts
-    line: 634
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/providers/github-provider.ts
-    line: 669
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/providers/github-provider.ts
-    line: 708
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/data-hub/providers/github-provider.ts
-    line: 746
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/disk-cache.ts
-    line: 79
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/git-sha.ts
-    line: 45
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/git-sha.ts
-    line: 72
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/git-sha.ts
-    line: 91
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/github-check-run.ts
-    line: 127
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 301
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 322
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 337
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 358
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 427
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/http-client.test.ts
-    line: 448
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/junit-xml-parser.ts
-    line: 176
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/llm-fallback-http.ts
-    line: 94
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/llm-metrics.test.ts
-    line: 29
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/model-discovery.ts
-    line: 67
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/project-registry.ts
-    line: 39
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/prompt-input-base.ts
-    line: 22
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/prompt-input-base.ts
-    line: 66
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/quarantine.test.ts
-    line: 44
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/quarantine.test.ts
-    line: 49
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/quarantine.test.ts
-    line: 57
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/quarantine.test.ts
-    line: 62
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/result_parser.test.ts
-    line: 153
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/result_parser.test.ts
-    line: 182
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/show-docs.ts
-    line: 19
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/state.ts
-    line: 145
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/store-backend.ts
-    line: 55
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
-  - file: shared/store-backend.ts
-    line: 106
-    rule: local-no-swallow/no-swallow
-    kind: swallow-catch-legacy
-    reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
-    owner: legacy
-    sunset: '2026-07-23'
-    status: active
+    - file: e2e/csv-import-errors.test.ts
+      line: 83
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: e2e/handlers-happy-paths.test.ts
+      line: 147
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/interactive-mode.ts
+      line: 901
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/pipeline-handler.ts
+      line: 289
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/session-state.ts
+      line: 203
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/test-results.ts
+      line: 30
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/test-results.ts
+      line: 42
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: git_triggers/test-results.ts
+      line: 65
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/case11.ts
+      line: 39
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/case18.ts
+      line: 63
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/case18.ts
+      line: 118
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/case19.ts
+      line: 114
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/case22.ts
+      line: 15
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/commands/test-execution-flow.ts
+      line: 114
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/create_tests.test.ts
+      line: 441
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/create_tests.test.ts
+      line: 446
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/jira-resource-sprint.ts
+      line: 69
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/jira-resource-version.ts
+      line: 147
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/jira-resource-version.ts
+      line: 253
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/result_reporter.test.ts
+      line: 89
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/xray-history.ts
+      line: 117
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: jira_management/xray-history.ts
+      line: 215
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: scripts/audit/mock-facade.ts
+      line: 47
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: scripts/opencode-db-maintenance.ts
+      line: 114
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: scripts/opencode-db-maintenance.ts
+      line: 141
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: scripts/smartwizard-llm.ts
+      line: 44
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: setup/reporter-ast.ts
+      line: 52
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: setup/secure-io.ts
+      line: 43
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: setup/secure-io.ts
+      line: 58
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: setup/secure-io.ts
+      line: 67
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/git-metrics-adapter.integration.test.ts
+      line: 52
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/integration-helpers.ts
+      line: 79
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/integration-helpers.ts
+      line: 116
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/logger.integration.test.ts
+      line: 37
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/quarantine.integration.test.ts
+      line: 50
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/quarantine.integration.test.ts
+      line: 55
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/quarantine.integration.test.ts
+      line: 63
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/quarantine.integration.test.ts
+      line: 68
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/setup-wizard.integration.test.ts
+      line: 95
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/store.integration.test.ts
+      line: 58
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/integration/test-impact.integration.test.ts
+      line: 37
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/migration/migrate-projects.test.ts
+      line: 27
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/quarantine.property.test.ts
+      line: 31
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/__tests__/quarantine.property.test.ts
+      line: 36
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/extractors/coverage-files-extractor.ts
+      line: 158
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/extractors/coverage-files-extractor.ts
+      line: 239
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/extractors/coverage-files-extractor.ts
+      line: 316
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/metrics/json-exporter.ts
+      line: 25
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/providers/github-provider.ts
+      line: 600
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/providers/github-provider.ts
+      line: 634
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/providers/github-provider.ts
+      line: 669
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/providers/github-provider.ts
+      line: 708
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/data-hub/providers/github-provider.ts
+      line: 746
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/disk-cache.ts
+      line: 79
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/git-sha.ts
+      line: 45
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/git-sha.ts
+      line: 72
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/git-sha.ts
+      line: 91
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/github-check-run.ts
+      line: 127
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 301
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 322
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 337
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 358
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 427
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/http-client.test.ts
+      line: 448
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/junit-xml-parser.ts
+      line: 176
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/llm-fallback-http.ts
+      line: 94
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/llm-metrics.test.ts
+      line: 29
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/model-discovery.ts
+      line: 67
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/project-registry.ts
+      line: 39
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/prompt-input-base.ts
+      line: 22
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/prompt-input-base.ts
+      line: 66
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/quarantine.test.ts
+      line: 44
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/quarantine.test.ts
+      line: 49
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/quarantine.test.ts
+      line: 57
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/quarantine.test.ts
+      line: 62
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/result_parser.test.ts
+      line: 153
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/result_parser.test.ts
+      line: 182
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/show-docs.ts
+      line: 19
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/state.ts
+      line: 145
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/store-backend.ts
+      line: 55
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active
+    - file: shared/store-backend.ts
+      line: 106
+      rule: local-no-swallow/no-swallow
+      kind: swallow-catch-legacy
+      reason: 'Estoque legado — catch que engole erro (AGENTS 25). Corrigir na raiz apos o sunset.'
+      owner: legacy
+      sunset: '2026-07-23'
+      status: active

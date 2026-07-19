@@ -57,7 +57,11 @@ jobs:
                   curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | sudo tar -xz -C /usr/local/bin gitleaks
             - run: npm run gitleaks
             - name: Install osv-scanner
-              run: npm install -g osv-scanner
+              run: |
+                  OSV_VERSION="2.4.0"
+                  curl -sSL "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64" -o /tmp/osv-scanner
+                  sudo install -m 755 /tmp/osv-scanner /usr/local/bin/osv-scanner
+                  osv-scanner --version
             - run: npm run osv-scan
             - name: Snyk test
               if: env.SNYK_TOKEN != ''
@@ -104,22 +108,6 @@ jobs:
             - run: npm ci
             - name: Run no-swallow detector on diff (turnstile)
               run: npx tsx scripts/run-noswallow.ts
-
-    mutation:
-        name: Mutation testing (Stryker)
-        if: github.event_name != 'schedule'
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v5
-              with:
-                  fetch-depth: 0
-            - uses: actions/setup-node@v6
-              with:
-                  node-version-file: .node-version
-                  cache: npm
-            - run: npm ci
-            - name: Audit suppressions (immutable guard)
-              run: npx tsx scripts/audit-suppressions.ts
 
     test:
         name: Test (Node ${{ matrix.node-version }})

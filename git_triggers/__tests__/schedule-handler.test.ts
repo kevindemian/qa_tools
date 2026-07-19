@@ -18,6 +18,7 @@ vi.mock('../../shared/project-context', () => ({
     getCurrentProject: vi.fn(() => ''),
     setCurrentProject: vi.fn(),
     clearCurrentProject: vi.fn(),
+    getSelfHostEntry: vi.fn(() => undefined),
 }));
 
 vi.mock('../session-state', () => ({

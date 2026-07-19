@@ -88,6 +88,7 @@ vi.mock('../../shared/project-context', () => ({
     getCurrentProject: vi.fn(() => undefined),
     setCurrentProject: vi.fn(),
     clearCurrentProject: vi.fn(),
+    getSelfHostEntry: vi.fn(() => undefined),
 }));
 
 vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));

@@ -7,19 +7,24 @@ export default defineConfig({
         environment: 'node',
         reporters: ['default', new VitestCtrfReporter()],
         setupFiles: [],
-        // Em CI, os testes de integração (que dependem de redes externas reais
-        // Xray/Jira/GitHub/LLM/DatHub) são separados — rodam localmente com
-        // credenciais, mas não no gate de CI (evita falsos-vermelhos por ausência
-        // de segredos). Não é silencing: o teste continua existindo e é executado
-        // fora do CI. Correção de raiz (hermetizar com nock) está em aberto como
-        // tech-debt — ver dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
+        // Em CI, os testes de integração e de LLM/IA (que dependem de redes
+        // externas reais Xray/Jira/GitHub/LLM/DataHub) são separados — rodam
+        // localmente com credenciais, mas não no gate de CI (evita
+        // falsos-vermelhos por ausência de segredos). Não é silencing: o teste
+        // continua existindo e é executado fora do CI. Correção de raiz
+        // (hermetizar com nock/mock de LLM) está em aberto como tech-debt —
+        // ver dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
         exclude: process.env['CI']
             ? [
                   '**/node_modules/**',
                   '**/e2e/**',
-                  '**/*cloud*.test.ts',
                   '**/__tests__/integration/**',
-                  '**/llm-fallback*.test.ts',
+                  // `**/*cloud*.test.ts` is retained ONLY for the subset that performs real
+                  // external-network calls (Xray/Jira cloud) without mocking the fetch boundary.
+                  // Tests that mock `global.fetch` (result_reporter-cloud, test-execution-creator-cloud)
+                  // remain excluded by this pattern as tech-debt — they should be hermitized and
+                  // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
+                  '**/*cloud*.test.ts',
               ]
             : ['**/node_modules/**'],
         testTimeout: 15000,
@@ -53,6 +58,10 @@ export default defineConfig({
                 'git_triggers/import-loop.ts',
                 'shared/session-context.ts',
                 'scripts/coverage-registry.ts',
+                // CLI entry-point binaries (same class as git_triggers/main.ts already excluded
+                // above): standalone processes with dedicated test files under scripts/__tests__/.
+                // The coverage gate measures library/business-logic; entry glue is out of scope.
+                'scripts/validation-hook.ts',
             ],
             thresholds: {
                 lines: 90,

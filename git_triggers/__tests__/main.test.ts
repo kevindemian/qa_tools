@@ -90,6 +90,7 @@ vi.mock('../../shared/project-context', () => ({
     getCurrentProject: vi.fn(() => 'proj-a'),
     setCurrentProject: vi.fn(),
     clearCurrentProject: vi.fn(),
+    getSelfHostEntry: vi.fn(() => undefined),
 }));
 
 vi.mock('../../shared/ui/prompt.js', () => ({

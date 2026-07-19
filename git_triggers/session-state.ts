@@ -17,7 +17,7 @@ import {
 } from '../shared/data-hub/global-hub.js';
 import GitLabManager from './gitlab_manager.js';
 import GitHubManager from './github_manager.js';
-import { getCurrentProject } from '../shared/project-context.js';
+import { getCurrentProject, getSelfHostEntry } from '../shared/project-context.js';
 import { listProjects, getProject } from '../shared/project-registry.js';
 
 export const sessionLog = rootLogger.child({ session: 'gitlab' });
@@ -157,6 +157,10 @@ export function getProjects(): Record<string, string> {
 
 /** Resolve the CI provider for a project from the registry (single source of truth). */
 export function getProviderForProject(projectName: string): 'gitlab' | 'github' {
+    const selfEntry = getSelfHostEntry();
+    if (selfEntry && selfEntry.name === projectName && selfEntry.name === getCurrentProject()) {
+        return selfEntry.provider === 'github' ? 'github' : 'gitlab';
+    }
     const entry = getProject(projectName);
     return entry?.provider === 'github' ? 'github' : 'gitlab';
 }
