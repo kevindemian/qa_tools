@@ -145,7 +145,13 @@ export class QualityMetricsCollector {
             const variance = ratios.reduce((sum, r) => sum + (r - mean) ** 2, 0) / ratios.length;
             const stdDev = Math.sqrt(variance);
 
-            if (stdDev > 0 && currentRatio > mean + DRIFT_SIGMA_MULTIPLIER * stdDev) {
+            // A baseline determinística (stdDev = 0) NÃO deve suprimir drift: um desvio
+            // real de currentRatio em relação a mean deve alertar (§24 boundary guard).
+            // Sem esta guarda, baseline estável + pico em produção passaria despercebido.
+            const DRIFT_MIN_DEVIATION = 1e-6;
+            const exceedsBaseline = currentRatio > mean + DRIFT_SIGMA_MULTIPLIER * stdDev;
+            const deviatesFromMean = Math.abs(currentRatio - mean) > DRIFT_MIN_DEVIATION;
+            if (exceedsBaseline && deviatesFromMean) {
                 const firstBaselinePct = ratios[0] !== undefined ? (ratios[0] * 100).toFixed(1) : 'N/A';
                 alerts.push(
                     'DRIFT: invariant "' +

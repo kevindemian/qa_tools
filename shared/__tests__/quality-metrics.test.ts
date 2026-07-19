@@ -141,13 +141,22 @@ describe('QualityMetricsCollector', () => {
         });
 
         it('detects drift when current rate exceeds 2σ from baseline mean', () => {
+            // Current: T-01 fires 9 of 10 times (rate 0.9).
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
+            collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-01');
             collector.recordInvariantFire('T-02');
-
+            // Baseline: T-01 fires 1 of 10 times (rate 0.1) in every snapshot.
             const snapshots: QualityMetricsSnapshot[] = [
                 {
                     timestamp: '2026-01-01',
-                    invariantFireCount: { 'T-02': 1 },
+                    invariantFireCount: { 'T-01': 1, 'T-02': 9 },
                     layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
                     layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
                     artifactTypeCounts: {},
@@ -155,7 +164,7 @@ describe('QualityMetricsCollector', () => {
                 },
                 {
                     timestamp: '2026-01-02',
-                    invariantFireCount: { 'T-02': 1 },
+                    invariantFireCount: { 'T-01': 1, 'T-02': 9 },
                     layerPassRates: { layer1: 1, layer2: 1, layer3: 1 },
                     layerAttempts: { layer1: 1, layer2: 1, layer3: 1 },
                     artifactTypeCounts: {},
@@ -166,6 +175,8 @@ describe('QualityMetricsCollector', () => {
             const alerts = collector.detectDrift(snapshots);
 
             expect(Array.isArray(alerts)).toBeTruthy();
+            expect(alerts.length).toBeGreaterThanOrEqual(1);
+            expect(alerts[0]).toContain('T-01');
         });
 
         it('skips invariants with fewer than 2 baseline occurrences', () => {

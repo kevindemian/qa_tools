@@ -538,14 +538,29 @@ Para CADA arquivo de teste, em ordem dos diretórios abaixo:
 
 ### 20.3 Matriz de cobertura (505 arquivos de teste)
 
-Inventário por diretório (2026-07-19):
+Inventário por diretório (2026-07-19), **REVISADO 2026-07-19 (retomada):**
+
+> ⚠️ **REVISÃO DE STATUS — EVITAR O MESMO ERRO EM RETOMADA**
+> Os relatórios anteriores (subagent) marcaram `git_triggers` (41), `jira_management` (71),
+> `scripts` (10), `setup` (14), `e2e` (13) como "TODOS AUDITADOS SÃO". Esse status foi dado
+> por **subagentes**, NÃO por leitura arquivo-a-arquivo do agente responsável. Pela regra
+> §16/§20.1 ("AUDITAR = todos os arquivos; auditoria varre todos"), **nenhum arquivo está
+> concluído até ser lido em par source+teste pelo agente que atesta**. Portanto TODOS os 505
+> arquivos estão **EM ABERTO** — os 149 de subagent NÃO foram lidos por mim e não contam como
+> auditoria concluída. O `shared` (356) tinha gap adicional (scans + amostra, não leitura
+> integral). Risco residual (Oracle Problem, dual-implementation, mock shape quase-real)
+> aplica-se a TODOS, não só ao `shared`.
 
 | Diretório | Total test files | Estado da auditoria | Defeitos corrigidos |
 |-----------|------------------|---------------------|---------------------|
-| `git_triggers` | 41 | ✅ **TODOS AUDITADOS SÃO** (2 corrigidos: schedule-handler, interactive-mode; 39 SÃO sem correção) | 2 (teste/teatro) |
-| `jira_management/commands/__tests__` | 33 | ✅ **TODOS AUDITADOS SÃO** (case01–16 corrigidos teatro + acompanhados por D1–D5 no código; case17–27 + handlers/context/index SÃO) | 5 (produção D1–D5) + teatro case01–16 |
-| `jira_management/__tests__` | 38 | ✅ **TODOS AUDITADOS SÃO** (lidos integralmente em pares source+teste) | 0 |
-| `shared` | 356 | ⚠️ **RELATÓRIO SUBAGENT INCOMPLETO** — declarado 356/356 SÃO via scans de assinatura + amostra representativa (`AUDIT-SHARED-2026-07-19.md`), **NÃO lido arquivo-a-arquivo** (gap metodológico vs §16/§20.1). Requer re-auditoria integral OU aceite formal com ressalva. | 0 conhecidos |
+| `git_triggers` | 41 | ⏳ **EM ABERTO** — relatado SÃO por subagent, NÃO lido por mim (§20.3-rev). Re-auditoria integral pendente. | 2 (teste/teatro, p/ revalidar) |
+| `jira_management/commands/__tests__` | 33 | ⏳ **EM ABERTO** — idem. | 5 (prod D1–D5) + teatro case01–16 (p/ revalidar) |
+| `jira_management/__tests__` | 38 | ⏳ **EM ABERTO** — idem. | 0 (p/ revalidar) |
+| `shared` | 356 | ⏳ **EM ABERTO** — gap metodológico (scans+amostra, não leitura integral). Re-auditoria integral pendente. | 0 conhecidos (p/ revalidar) |
+| `scripts/__tests__` | 10 | ⏳ **EM ABERTO** — idem. | 1 (quality-check) (p/ revalidar) |
+| `setup/__tests__` | 14 | ⏳ **EM ABERTO** — idem. | 0 (p/ revalidar) |
+| `e2e` | 13 | ⏳ **EM ABERTO** — idem. | 0 (p/ revalidar) |
+| **TOTAL** | **505** | ⏳ **505 EM ABERTO** — nenhum concluído por leitura do agente responsável. | — |
 | `scripts/__tests__` | 10 | ✅ **TODOS AUDITADOS SÃO** (lidos integralmente; quality-check Opção D; opencode-db-maintenance SÃO) | 1 (quality-check) |
 | `setup/__tests__` | 14 | ✅ **TODOS AUDITADOS SÃO** (lidos integralmente; mocks em fronteira fs/prompt/detector, fs real em detector/secure-io) | 0 |
 | `e2e` | 13 | ✅ **TODOS auditados SÃO** (fronteira externa legítima) | 0 |
@@ -640,28 +655,108 @@ Auditoria concluída quando TODOS os 505 arquivos estiverem marcados no §20.4, 
 `tsc --noEmit` limpo e suíte completa verde, e todos os defeitos de produção encontrados
 corrigidos na origem (§4). Nada fica sem verificação.
 
-### 20.6 Decisão pendente — `shared/` (GAP metodológico)
+### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
-O subagent declarou 356/356 SÃO em `shared/`, mas por **scans de assinatura + amostra
+O subagent declarou 356/356 SÃO em `shared/` por **scans de assinatura + amostra
 representativa**, NÃO por leitura arquivo-a-arquivo. Isso viola a regra §16/§20.1
 ("AUDITAR = todos os arquivos de teste do repo; auditoria varre todos").
 
-Evidência a favor do relatório (reduz risco de lacuna real):
-- 3 scans de assinatura cobriram os 3 padrões de teatro do plano (`mockReturnValue({})`,
-  `toContain([undefined,true,false])`, `catch {}`) EM TODOS os 356 arquivos → baixa
-  probabilidade de teatro do tipo (b)/(c)/(d) passar despercebido.
-- Arquivos de risco (`quality-gate`, `compute/*`) lidos integralmente → SÃO.
+**DECISÃO TOMADA (retomada):** re-auditoria integral de **TODOS os 505 arquivos** pelo
+agente responsável, arquivo-a-arquivo, em pares source+teste. Motivo: o usuário confirmou
+que os 149 arquivos marcados "SÃO" por subagent também **não foram lidos por mim** e
+**estão em aberto** — o erro não é só o `shared`, é a conclusão prematura de todo o repo.
+A Opção B (aceitar com ressalva) está **descartada**: ressalva não substitui leitura.
 
-Risco residual (não coberto por scan):
+Risco residual (não coberto por scan, aplica-se a TODOS os 505):
 - "Oracle Problem" (expected copiado do output) — indetectável por grep/scan.
 - Dual-implementation (teste duplica lógica do source) — só visível lendo em par.
 - Mocks com shape QUASE-real (vazio) que passam no scan mas não testam branch.
 
-**Decisão do usuário requerida** (pergunta direta, não inferência):
-- Opção A: **Re-auditoria integral** de `shared/` arquivo-a-arquivo (custo alto, ~356 arquivos).
-- Opção B: **Aceitar relatório com ressalva** — marcar `shared` como "SÃO por scans+amostra"
-  e documentar o risco residual explicitamente; concluir auditoria com ressalva.
+Correção de curso: o agente responsável NÃO usará grep/find/scripts como descoberta (§19).
+Auditoria = leitura manual integral source+teste, arquivo por arquivo. Registro em §20.4.
 
-Nenhuma correção de código está pendente de `shared` (0 defeitos conhecidos). A decisão
-afeta apenas o **nível de garantia** da auditoria, não a correção de defeitos.
+---
+
+## 21. RETOMADA — RE-AUDITORIA INTEGRAL (2026-07-19, build mode)
+
+**Contexto:** auditoria anterior interrompida com conclusões prematuras (subagent marcou
+149 arquivos como SÃO sem leitura do agente responsável; `shared` 356 por scans+amostra).
+Usuário determinou: TODOS os 505 arquivos estão EM ABERTO. Retomada com leitura integral
+arquivo-a-arquivo, em pares source+teste, pelo agente responsável. Sem grep/scripts como
+descoberta. Commit por arquivo. CI monitorado (§13).
+
+**Padrão esperado para a suíte ao fim da auditoria (contrato de robustez real):**
+
+```
+# FASE: TESTES (ROBUSTEZ REAL)
+Sua missão é criar uma suíte de testes robusta e agressiva, projetada para encontrar
+falhas reais no código antes de irem para produção. O objetivo não é bater metas de
+cobertura nominal com relatórios verdes maquiados, mas sim estressar a aplicação.
+
+## 🚫 DIRETRIZES DE ISOLAMENTO (ANTI-MOCK THEATER)
+- Proibido Mockar Lógica Interna: proibido mockar classes, funções, helpers, utilitários
+  ou módulos locais desenvolvidos/alterados nesta demanda. Se A interage com B, o fluxo
+  roda real e integrado.
+- Mocks Estritos de Fronteira: mocks limitados estritamente a serviços externos/infra
+  inacessíveis localmente (APIs HTTP externas, gateways, e-mail de terceiro).
+- Validação de Efeitos Colaterais: testar retorno E mudança de estado colateral real
+  (dado persistido em memória, evento publicado, mutação de estado).
+
+## 🧠 METODOLOGIAS OBRIGATÓRIAS
+- Property-Based Testing: validar lógica de negócio contra ampla gama de inputs gerados.
+- Valores Esperados Intocáveis: proibido alterar asserts/valores esperados para fazer
+  teste passar. Falha → corrigir a IMPLEMENTAÇÃO (AGENTS §19.4/§19.5).
+- Tratamento de Erros: fluxos de erro (rejeições, exceções, edge cases) com a mesma
+  rigidez do caminho feliz.
+
+Ao concluir, nenhum problema de integração real deve passar despercebido. Se inconsistência:
+PARAR, corrigir código de produção, reiniciar a bateria.
+```
+
+**Ordem de execução (a critério do agente, pior-primeiro por branch coverage §17 Fase 0):**
+1. `shared/` (356) — módulos de score/analytics de menor cobertura primeiro.
+2. `git_triggers` (41)
+3. `jira_management` (71)
+4. `scripts` (10), `setup` (14), `e2e` (13)
+
+**Método por arquivo (§20.1):** ler teste (caçar teatro §2/§3/§18) → ler produção em par
+(caçar defeito §24/§25/contrato false→exit/§12) → corrigir na origem → validar
+`tsc --noEmit` + `vitest run <arquivo>` → commit por arquivo → registrar §20.4.
+
+**Descarte de manifesto paralelo:** `audit/test-audit/PROGRESS.md` (criado pelo agente como
+rascunho, baseado em leitura parcial + grep) está **REVOGADO** — não é autoridade; o
+registro oficial é este documento (§20.4). Apagado em retomada.
+
+---
+
+## 20.7 LOG DE EXECUÇÃO — RE-AUDITORIA INTEGRAL (retomada, agente responsável)
+
+Formato: `[DIR] arquivo — AUDITADO SÃO | CORRIGIDO(teste|prod) — nota`. Leitura em par
+source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
+
+### shared/quality
+- [shared] `__tests__/health-score.test.ts` + `quality/health-score.ts` — **AUDITADO SÃO**
+  - Teste: `makeDataHubMock` (factory real, não `{}`); assertions concretas (scores exatos
+    100/0/49/50, boundaries 89/90/59/60); cobre feliz+erro (spyOn rootLogger rethrow) + NaN/
+    Infinity regression. Sem teatro, sem mock de lógica interna.
+  - Source: guards `Number.isFinite` em todos os scores; `evaluateQualityGate` falha em
+    NaN/Infinity; erro relançado (não silenciado); overall protegido contra NaN. Sem defeito.
+- [shared] `__tests__/quality-gate.test.ts` + `quality/quality-gate.ts` — **AUDITADO SÃO**
+  - Teste: `makeDataHubGetters()` (factory real) + `createMockHub` com shape completo (não
+    `{}`); `vi.mock` só de `global-hub`/`flakiness-entries`/`logger` (fronteira externa).
+    Assertions concretas: overall pass/fail, score 50, branch scoping (`branchGate.overall
+    !== repoGate.overall` prova scoping real), data-quality checks + incompleteItems. Cobre
+    feliz + erro. Sem teatro.
+  - Source: thresholds fixos (sem bypass); sem dados → fail explícito; catch registra e
+    retorna fail (não silenciado); `incompleteItems` reporta ausência (não silent pass);
+    `Number.isFinite` em suiteSpeed. Sem defeito.
+- [shared] `__tests__/quality-metrics.test.ts` + `quality/quality-metrics.ts` — **CORRIGIDO(prod) + CORRIGIDO(teste T2)**
+  - Teste (T2): "detects drift" só verificava `Array.isArray(alerts)` (assertion poverty).
+    Corrigido para construir baseline estável (T-01 rate 0.1) + current com pico (T-01 rate
+    0.9) e verificar `alerts.length >= 1` + `alerts[0]` contém 'T-01'.
+  - PRODUÇÃO (defeito encontrado via teste RED): `detectDrift` exigia `stdDev > 0`, logo
+    baseline determinístico (stdDev=0) + pico em produção NUNCA alertava (falso negativo).
+    Causa raiz: guarda `stdDev > 0` suprimia drift real. Corrigido: `exceedsBaseline &&
+    deviatesFromMean` (tolerância 1e-6) — baseline estável + desvio real → alerta.
+  - Validação: `vitest` 18/18 pass; `tsc --noEmit` limpo.
 
