@@ -133,8 +133,19 @@ vi.mock('../schedule-handler', () => ({
 }));
 vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
 vi.mock('../../shared/quality/release-score.js', () => ({
-    generateReleaseScoreHtml: vi.fn(() => ''),
-    calculateReleaseScore: vi.fn(() => ({})),
+    generateReleaseScoreHtml: vi.fn(() => '<section>release-score: score=82 grade=good breakdown=4</section>'),
+    calculateReleaseScore: vi.fn(() => ({
+        score: 82,
+        grade: 'good',
+        breakdown: [
+            { label: 'tasks', score: 80, status: 'pass' as const },
+            { label: 'health', score: 85, status: 'pass' as const },
+            { label: 'coverage', score: 70, status: 'pass' as const },
+            { label: 'flakiness', score: 90, status: 'pass' as const },
+        ],
+        recommendation: 'Ship after hardening coverage gap.',
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
@@ -145,8 +156,18 @@ vi.mock('../../shared/report/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
 }));
 vi.mock('../../shared/report/ai-effectiveness.js', () => ({
-    generateAiEffectivenessHtml: vi.fn(() => ''),
-    computeAiEffectiveness: vi.fn(() => ({})),
+    generateAiEffectivenessHtml: vi.fn(() => '<section>ai-effectiveness: rate=0.75</section>'),
+    computeAiEffectiveness: vi.fn(() => ({
+        acceptanceRate: 0.75,
+        totalRecords: 4,
+        totalGenerated: 4,
+        totalModified: 1,
+        totalDeleted: 0,
+        topPromptVersion: 'v2',
+        byVersion: [{ version: 'v2', count: 4, acceptanceRate: 0.75 }],
+        trend: [{ date: '2026-01-01', acceptanceRate: 0.75, generated: 4 }],
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     generateSeasonalityHtml: vi.fn(() => ''),
@@ -161,20 +182,72 @@ vi.mock('../../shared/report/ai-comparison.js', () => ({
     compareAiVsManual: vi.fn(() => []),
 }));
 vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
-    generateBenchmarkHtml: vi.fn(() => ''),
-    computeCrossSquadBenchmark: vi.fn(() => ({})),
+    generateBenchmarkHtml: vi.fn(() => '<section>benchmark: top=proj1 avg=70</section>'),
+    computeCrossSquadBenchmark: vi.fn(() => ({
+        benchmarks: [
+            {
+                project: 'proj1',
+                healthScore: 70,
+                grade: 'good',
+                passRate: 80,
+                flakyRate: 5,
+                coveragePct: 70,
+                runCount: 2,
+                trend: 'up' as const,
+            },
+        ],
+        topSquad: 'proj1',
+        bottomSquad: 'proj1',
+        averageScore: 70,
+        stdDev: 0,
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/quality/developer-profile.js', () => ({
     generateDeveloperProfileHtml: vi.fn(() => ''),
     buildDeveloperProfile: vi.fn(() => []),
 }));
 vi.mock('../../shared/quality/suite-optimization.js', () => ({
-    generateOptimizationHtml: vi.fn(() => ''),
-    analyzeSuiteOptimization: vi.fn(() => ({})),
+    generateOptimizationHtml: vi.fn(() => '<section>optimization: savings=5</section>'),
+    analyzeSuiteOptimization: vi.fn(() => ({
+        optimizations: [
+            {
+                testTitle: 't1',
+                duration: 10,
+                flakiness: 0.4,
+                impact: 'high' as const,
+                action: 'quarantine',
+                reason: 'flaky',
+            },
+        ],
+        totalTests: 1,
+        totalDuration: 10,
+        potentialSavings: 5,
+        slowThreshold: 5,
+        flakyThreshold: 0.3,
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/report/backlog-health.js', () => ({
-    generateBacklogHealthHtml: vi.fn(() => ''),
-    analyzeBacklogHealth: vi.fn(() => ({})),
+    generateBacklogHealthHtml: vi.fn(() => '<section>backlog: score=65</section>'),
+    analyzeBacklogHealth: vi.fn(() => ({
+        unassignedIssues: [],
+        staleIssues: [
+            {
+                key: 'K-1',
+                summary: 's',
+                assignee: null,
+                updated: '',
+                type: 'bug',
+                priority: 'high',
+                linkedTestCount: 0,
+            },
+        ],
+        bugsWithoutTests: [],
+        densityByEpic: [{ epic: 'EPIC-1', bugCount: 1, testCount: 2 }],
+        score: 65,
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/report/incident-report.js', () => ({
     generateIncidentReportHtml: vi.fn(() => ''),
@@ -190,12 +263,35 @@ vi.mock('../../shared/report/incident-report.js', () => ({
     })),
 }));
 vi.mock('../../shared/quality/pipeline-cost.js', () => ({
-    generatePipelineCostHtml: vi.fn(() => ''),
-    calculatePipelineCost: vi.fn(() => ({})),
+    generatePipelineCostHtml: vi.fn(() => '<section>pipeline-cost: total=0.5</section>'),
+    calculatePipelineCost: vi.fn(() => ({
+        totalCost: 0.5,
+        avgCostPerRun: 0.25,
+        totalDurationSec: 120,
+        costPerMinute: 0.01,
+        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' as const }],
+        runCount: 2,
+        period: { from: '2026-01-01', to: '2026-01-02' },
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/report/impact-alert.js', () => ({
-    generateImpactAlertHtml: vi.fn(() => ''),
-    analyzePipelineImpact: vi.fn(() => ({})),
+    generateImpactAlertHtml: vi.fn(() => '<section>impact: warning=1</section>'),
+    analyzePipelineImpact: vi.fn(() => ({
+        alerts: [
+            {
+                severity: 'warning' as const,
+                title: 'Coverage gap',
+                message: 'low cov',
+                affectedArea: 'EPIC-2',
+                recommendation: 'add tests',
+            },
+        ],
+        criticalCount: 0,
+        warningCount: 1,
+        infoCount: 0,
+        timestamp: new Date().toISOString(),
+    })),
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
     generateRequirementScoreHtml: vi.fn(() => ''),
@@ -229,6 +325,10 @@ import { openWithFallback } from '../../shared/open.js';
 import { showDashboardMenu } from '../../shared/ui/dashboard-menu.js';
 import { getDataHub as getSessionDataHub } from '../session-state.js';
 import { getCurrentProject } from '../../shared/project-context.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
+import { calculateReleaseScore } from '../../shared/quality/release-score.js';
+import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { analyzeBacklogHealth } from '../../shared/report/backlog-health.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
@@ -236,6 +336,10 @@ const mockOpenWithFallback = vi.mocked(openWithFallback);
 const mockSetupSigint = vi.mocked(setupSigint);
 const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
+const mockWriteReport = vi.mocked(writeReport);
+const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
+const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
+const mockAnalyzeBacklogHealth = vi.mocked(analyzeBacklogHealth);
 
 describe('Interactive-mode test exports', () => {
     beforeEach(() => {
@@ -727,7 +831,7 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('DashboardReleaseScore', () => {
-        it('generates release score dashboard', async () => {
+        it('generates release score dashboard with real score data', async () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
@@ -762,6 +866,20 @@ describe('Interactive-mode test exports', () => {
             } as never);
             await _testExports._dashboardReleaseScore();
 
+            // (a) função de score chamada com args reais (não mock vazio)
+            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
+                expect.any(Number),
+                expect.any(Number),
+                expect.any(String),
+                expect.any(Number),
+                expect.any(Number),
+            );
+            // (b) efeito colateral real: HTML escrito contém o score
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            expect(writtenHtml).toContain('release-score: score=82 grade=good');
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Release Score',
@@ -791,11 +909,17 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('DashboardBacklogHealth', () => {
-        it('generates backlog health dashboard', async () => {
+        it('generates backlog health dashboard with real data', async () => {
             expect.hasAssertions();
 
             await _testExports._dashboardBacklogHealth();
 
+            expect(mockAnalyzeBacklogHealth).toHaveBeenCalledWith();
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            expect(writtenHtml).toContain('backlog: score=65');
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Backlog Health',
@@ -1102,6 +1226,12 @@ describe('Interactive-mode test exports', () => {
             } as never);
             await _testExports._dashboardBenchmark();
 
+            expect(mockComputeCrossSquadBenchmark).toHaveBeenCalledWith();
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            expect(writtenHtml).toContain('benchmark: top=proj1 avg=70');
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Cross-Squad Benchmark',

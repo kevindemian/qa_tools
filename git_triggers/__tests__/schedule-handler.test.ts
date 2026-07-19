@@ -63,69 +63,170 @@ vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
 }));
 vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({})),
-    generateReleaseScoreHtml: vi.fn(() => ''),
+    calculateReleaseScore: vi.fn(() => ({
+        score: 82,
+        grade: 'good',
+        breakdown: [
+            { label: 'tasks', score: 80, status: 'pass' as const },
+            { label: 'health', score: 85, status: 'pass' as const },
+            { label: 'coverage', score: 70, status: 'pass' as const },
+            { label: 'flakiness', score: 90, status: 'pass' as const },
+        ],
+        recommendation: 'Ship after hardening coverage gap.',
+        timestamp: new Date().toISOString(),
+    })),
+    generateReleaseScoreHtml: vi.fn(() => '<section>release</section>'),
 }));
 vi.mock('../../shared/report/ai-effectiveness.js', () => ({
-    computeAiEffectiveness: vi.fn(() => ({})),
-    generateAiEffectivenessHtml: vi.fn(() => ''),
+    computeAiEffectiveness: vi.fn(() => ({
+        acceptanceRate: 0.75,
+        totalRecords: 4,
+        totalGenerated: 4,
+        totalModified: 1,
+        totalDeleted: 0,
+        topPromptVersion: 'v2',
+        byVersion: [{ version: 'v2', count: 4, acceptanceRate: 0.75 }],
+        trend: [{ date: '2026-01-01', acceptanceRate: 0.75, generated: 4 }],
+        timestamp: new Date().toISOString(),
+    })),
+    generateAiEffectivenessHtml: vi.fn(() => '<section>ai</section>'),
 }));
 vi.mock('../../shared/report/traceability-matrix.js', () => ({
-    buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
-    generateTraceabilityHtml: vi.fn(() => ''),
+    buildTraceabilityMatrix: vi.fn(() => ({
+        nodes: [
+            { epic: 'EPIC-1', coverage: 100, requirement: 'R1', tests: ['t1'] },
+            { epic: 'EPIC-2', coverage: 40, requirement: 'R2', tests: ['t2'] },
+        ],
+    })),
+    generateTraceabilityHtml: vi.fn(() => '<section>trace</section>'),
 }));
 vi.mock('../../shared/report/backlog-health.js', () => ({
-    analyzeBacklogHealth: vi.fn(() => ({})),
-    generateBacklogHealthHtml: vi.fn(() => ''),
+    analyzeBacklogHealth: vi.fn(() => ({
+        unassignedIssues: [],
+        staleIssues: [
+            {
+                key: 'K-1',
+                summary: 's',
+                assignee: null,
+                updated: '',
+                type: 'bug',
+                priority: 'high',
+                linkedTestCount: 0,
+            },
+        ],
+        bugsWithoutTests: [],
+        densityByEpic: [{ epic: 'EPIC-1', bugCount: 1, testCount: 2 }],
+        score: 65,
+        timestamp: new Date().toISOString(),
+    })),
+    generateBacklogHealthHtml: vi.fn(() => '<section>backlog</section>'),
 }));
 vi.mock('../../shared/quality/defect-seasonality.js', () => ({
-    aggregateDefectSeasonality: vi.fn(() => ({ peakDay: '' })),
-    generateSeasonalityHtml: vi.fn(() => ''),
+    aggregateDefectSeasonality: vi.fn(() => ({ peakDay: 'Monday', byDay: { Monday: 3 } })),
+    generateSeasonalityHtml: vi.fn(() => '<section>seasonality</section>'),
 }));
 vi.mock('../../shared/quality/silent-regression.js', () => ({
-    detectSilentRegression: vi.fn(() => ({ regressions: [] })),
-    generateSilentRegressionHtml: vi.fn(() => ''),
+    detectSilentRegression: vi.fn(() => ({ regressions: [{ test: 't1', from: 100, to: 90 }] })),
+    generateSilentRegressionHtml: vi.fn(() => '<section>regression</section>'),
 }));
 vi.mock('../../shared/report/ai-comparison.js', () => ({
-    compareAiVsManual: vi.fn(() => []),
-    generateAiComparisonHtml: vi.fn(() => ''),
+    compareAiVsManual: vi.fn(() => [{ dimension: 'speed', ai: 10, manual: 30, delta: -20 }]),
+    generateAiComparisonHtml: vi.fn(() => '<section>aicomp</section>'),
 }));
 vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
-    computeCrossSquadBenchmark: vi.fn(() => ({})),
-    generateBenchmarkHtml: vi.fn(() => ''),
+    computeCrossSquadBenchmark: vi.fn(() => ({
+        benchmarks: [
+            {
+                project: 'proj1',
+                healthScore: 70,
+                grade: 'good',
+                passRate: 80,
+                flakyRate: 5,
+                coveragePct: 70,
+                runCount: 2,
+                trend: 'up' as const,
+            },
+        ],
+        topSquad: 'proj1',
+        bottomSquad: 'proj1',
+        averageScore: 70,
+        stdDev: 0,
+        timestamp: new Date().toISOString(),
+    })),
+    generateBenchmarkHtml: vi.fn(() => '<section>benchmark</section>'),
 }));
 vi.mock('../../shared/quality/developer-profile.js', () => ({
-    buildDeveloperProfile: vi.fn(() => []),
-    generateDeveloperProfileHtml: vi.fn(() => ''),
+    buildDeveloperProfile: vi.fn(() => [{ developer: 'dev1', defectCount: 1, flakyCount: 0 }]),
+    generateDeveloperProfileHtml: vi.fn(() => '<section>devprofile</section>'),
 }));
 vi.mock('../../shared/quality/suite-optimization.js', () => ({
-    analyzeSuiteOptimization: vi.fn(() => ({})),
-    generateOptimizationHtml: vi.fn(() => ''),
+    analyzeSuiteOptimization: vi.fn(() => ({
+        optimizations: [
+            {
+                testTitle: 't1',
+                duration: 10,
+                flakiness: 0.4,
+                impact: 'high' as const,
+                action: 'quarantine',
+                reason: 'flaky',
+            },
+        ],
+        totalTests: 1,
+        totalDuration: 10,
+        potentialSavings: 5,
+        slowThreshold: 5,
+        flakyThreshold: 0.3,
+        timestamp: new Date().toISOString(),
+    })),
+    generateOptimizationHtml: vi.fn(() => '<section>optimization</section>'),
 }));
 vi.mock('../../shared/report/incident-report.js', () => ({
     buildIncidentReport: vi.fn(() => ({
-        events: [],
-        eventCount: 0,
+        events: [{ id: 'e1', severity: 'medium' as const, area: 'coverage', description: 'gap' }],
+        eventCount: 1,
         highCount: 0,
-        mediumCount: 0,
+        mediumCount: 1,
         lowCount: 0,
-        summary: '',
-        overallSeverity: 'none' as const,
+        summary: '1 incident',
+        overallSeverity: 'medium' as const,
         timestamp: new Date().toISOString(),
     })),
-    generateIncidentReportHtml: vi.fn(() => ''),
+    generateIncidentReportHtml: vi.fn(() => '<section>incident</section>'),
 }));
 vi.mock('../../shared/report/impact-alert.js', () => ({
-    analyzePipelineImpact: vi.fn(() => ({})),
-    generateImpactAlertHtml: vi.fn(() => ''),
+    analyzePipelineImpact: vi.fn(() => ({
+        alerts: [
+            {
+                severity: 'warning' as const,
+                title: 'Coverage gap',
+                message: 'low cov',
+                affectedArea: 'EPIC-2',
+                recommendation: 'add tests',
+            },
+        ],
+        criticalCount: 0,
+        warningCount: 1,
+        infoCount: 0,
+        timestamp: new Date().toISOString(),
+    })),
+    generateImpactAlertHtml: vi.fn(() => '<section>impact</section>'),
 }));
 vi.mock('../../shared/quality/pipeline-cost.js', () => ({
-    calculatePipelineCost: vi.fn(() => ({})),
-    generatePipelineCostHtml: vi.fn(() => ''),
+    calculatePipelineCost: vi.fn(() => ({
+        totalCost: 0.5,
+        avgCostPerRun: 0.25,
+        totalDurationSec: 120,
+        costPerMinute: 0.01,
+        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' as const }],
+        runCount: 2,
+        period: { from: '2026-01-01', to: '2026-01-02' },
+        timestamp: new Date().toISOString(),
+    })),
+    generatePipelineCostHtml: vi.fn(() => '<section>pipelinecost</section>'),
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
-    calculateRequirementScores: vi.fn(() => []),
-    generateRequirementScoreHtml: vi.fn(() => ''),
+    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
+    generateRequirementScoreHtml: vi.fn(() => '<section>reqscore</section>'),
 }));
 vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
@@ -182,6 +283,20 @@ const mockWarn = vi.mocked(warn);
 const mockInfo = vi.mocked(info);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
+const mockWriteReport = vi.mocked(writeReport);
+const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
+const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
+const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
+const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
+const mockRunQualityGate = vi.mocked(runQualityGate);
+const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
+import { writeReport } from '../../shared/infra/temp-dir.js';
+import { calculateReleaseScore } from '../../shared/quality/release-score.js';
+import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
+import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
+import { runQualityGate } from '../../shared/quality/quality-gate.js';
+import { buildIncidentReport } from '../../shared/report/incident-report.js';
 const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
@@ -475,6 +590,90 @@ describe('Schedule Handler', () => {
             generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
+        });
+
+        function seedTwoRunsHub(): void {
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            project: 'proj1',
+                            timestamp: '2026-01-01',
+                            total: 10,
+                            passed: 8,
+                            failed: 2,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [{ title: 't1', duration: 50, flakiness: 0 }],
+                        },
+                        {
+                            project: 'proj1',
+                            timestamp: '2026-01-02',
+                            total: 10,
+                            passed: 9,
+                            failed: 1,
+                            skipped: 0,
+                            duration: 110,
+                            tests: [{ title: 't2', duration: 55, flakiness: 0.4 }],
+                        },
+                    ],
+                },
+                raw: {
+                    failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
+                },
+            } as never);
+        }
+
+        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
+            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
+                expect.any(Number),
+                expect.any(Number),
+                expect.any(String),
+                expect.any(Number),
+                expect.any(Number),
+            );
+            expect(mockComputeCrossSquadBenchmark).toHaveBeenCalledWith();
+            expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith();
+            expect(mockCalculatePipelineCost).toHaveBeenCalledWith();
+            expect(mockRunQualityGate).toHaveBeenCalledWith();
+            expect(mockBuildIncidentReport).toHaveBeenCalledWith();
+        });
+
+        it('writes exactly one report file with the project-specific path', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenPath = mockWriteReport.mock.calls[0]?.[0] as string;
+
+            expect(writtenPath).toContain('weekly-quality-proj1.html');
+        });
+
+        it('renders every dashboard section in the generated HTML', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            expect(writtenHtml).toContain('<h1>Weekly Quality Report — proj1</h1>');
+            expect(writtenHtml).toContain('<h2>Quality Gate</h2>');
+            expect(writtenHtml).toContain('<h2>Cross-Squad Benchmark</h2>');
+            expect(writtenHtml).toContain('<h2>Release Score</h2>');
+            expect(writtenHtml).toContain('<h2>Silent Regression</h2>');
+            expect(writtenHtml).toContain('<h2>Incident Investigation Report</h2>');
+            expect(writtenHtml).toContain('<h2>Pipeline Cost Analytics</h2>');
+            expect(writtenHtml).toContain('<h2>Requirement Quality Score</h2>');
         });
     });
 });
