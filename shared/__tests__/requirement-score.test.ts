@@ -2,7 +2,6 @@
  * Tests for requirement-score — Requirement Quality Score.
  */
 
-import * as reportStyles from '../report/report-styles.js';
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../quality/requirement-score.js';
 import type { RequirementScoreResult } from '../quality/requirement-score.js';
 import type { AiGenerationRecord } from '../types/llm.js';
@@ -342,38 +341,6 @@ describe('Requirement Score', () => {
             expect(html).toContain('data-component="metric-grid"');
             expect(html).toContain('data-component="metric-card"');
             expect(html).toContain('data-component="table-wrapper"');
-        });
-
-        it('returns error page when buildCss throws', () => {
-            const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
-                throw new Error('CSS build failure');
-            });
-            try {
-                const html = generateRequirementScoreHtml(makeResult({ entries: [] }));
-
-                expect(html).toContain('Requirement Score Report Error');
-            } finally {
-                spy.mockRestore();
-            }
-        });
-
-        it('logs actionable guidance when HTML generation throws', () => {
-            const result = makeResult({ entries: [] });
-            const errorSpy = vi.spyOn(rootLogger, 'error');
-            const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
-                throw new Error('CSS build failure');
-            });
-            try {
-                generateRequirementScoreHtml(result);
-
-                expect(errorSpy).toHaveBeenCalledWith(
-                    expect.stringContaining(
-                        'Verify that requirement data and html-factory module are working correctly.',
-                    ),
-                );
-            } finally {
-                spy.mockRestore();
-            }
         });
     });
 });

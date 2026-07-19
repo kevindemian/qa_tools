@@ -89,12 +89,12 @@ Status: pending | audited-clean | fixed-Tx
 
 ## B1.2b — quality/score (split de B1.2)
 
-- [pending] shared/**tests**/analysis-validator.test.ts
-- [pending] shared/**tests**/artifact-validator.test.ts
-- [pending] shared/**tests**/benchmark-metrics.property.test.ts
-- [pending] shared/**tests**/benchmark-metrics.test.ts
-- [pending] shared/**tests**/benchmark-validators.test.ts
-- [pending] shared/**tests**/comparison-schema.test.ts
+- [audited-clean] shared/**tests**/analysis-validator.test.ts
+- [audited-clean] shared/**tests**/artifact-validator.test.ts
+- [audited-clean] shared/**tests**/benchmark-metrics.property.test.ts
+- [audited-clean] shared/**tests**/benchmark-metrics.test.ts
+- [audited-clean] shared/**tests**/benchmark-validators.test.ts
+- [audited-clean] shared/**tests**/comparison-schema.test.ts
 - [audited-clean] shared/**tests**/comparison-validator.test.ts
 - [audited-clean] shared/**tests**/coverage-verifier.property.test.ts
 - [audited-clean] shared/**tests**/coverage-verifier.test.ts
@@ -108,8 +108,8 @@ Status: pending | audited-clean | fixed-Tx
 - [audited-clean] shared/**tests**/developer-profile.property.test.ts
 - [fixed-T3] shared/**tests**/developer-profile.test.ts
 - [audited-clean] shared/**tests**/evidence-validator.test.ts
-- [pending] shared/**tests**/health-score.property.test.ts
-- [pending] shared/**tests**/health-score.test.ts
+- [audited-clean] shared/**tests**/health-score.property.test.ts
+- [audited-clean] shared/**tests**/health-score.test.ts
 - [pending] shared/**tests**/pr-report-core.compute-diff.test.ts
 - [pending] shared/**tests**/pr-report-core.main.test.ts
 - [pending] shared/**tests**/pr-report-core.property.test.ts
@@ -117,22 +117,22 @@ Status: pending | audited-clean | fixed-Tx
 - [pending] shared/**tests**/pr-report-core.wiring.property.test.ts
 - [pending] shared/**tests**/pr-report-core.wiring.test.ts
 - [pending] shared/**tests**/pr-report.test.ts
-- [pending] shared/**tests**/quality-gate.property.test.ts
-- [pending] shared/**tests**/quality-gate.test.ts
-- [pending] shared/**tests**/quality-metrics.property.test.ts
-- [pending] shared/**tests**/quality-metrics.test.ts
-- [pending] shared/**tests**/quality-suggester.property.test.ts
-- [pending] shared/**tests**/quality-suggester.test.ts
-- [pending] shared/**tests**/release-score.property.test.ts
-- [pending] shared/**tests**/release-score.test.ts
+- [audited-clean] shared/**tests**/quality-gate.property.test.ts
+- [audited-clean] shared/**tests**/quality-gate.test.ts
+- [audited-clean] shared/**tests**/quality-metrics.property.test.ts
+- [audited-clean] shared/**tests**/quality-metrics.test.ts
+- [audited-clean] shared/**tests**/quality-suggester.property.test.ts
+- [audited-clean] shared/**tests**/quality-suggester.test.ts
+- [audited-clean] shared/**tests**/release-score.property.test.ts
+- [audited-clean] shared/**tests**/release-score.test.ts
 - [audited-clean] shared/**tests**/requirement-score.property.test.ts
-- [pending] shared/**tests**/requirement-score.test.ts
-- [pending] shared/**tests**/run-comparison.property.test.ts
-- [pending] shared/**tests**/run-comparison.test.ts
-- [pending] shared/**tests**/silent-regression.property.test.ts
-- [pending] shared/**tests**/silent-regression.test.ts
-- [pending] shared/**tests**/suite-optimization.property.test.ts
-- [pending] shared/**tests**/suite-optimization.test.ts
+- [fixed-T3] shared/**tests**/requirement-score.test.ts
+- [audited-clean] shared/**tests**/run-comparison.property.test.ts
+- [audited-clean] shared/**tests**/run-comparison.test.ts
+- [audited-clean] shared/**tests**/silent-regression.property.test.ts
+- [audited-clean] shared/**tests**/silent-regression.test.ts
+- [audited-clean] shared/**tests**/suite-optimization.property.test.ts
+- [audited-clean] shared/**tests**/suite-optimization.test.ts
 - [pending] shared/**tests**/targeted-retry.test.ts
 - [pending] shared/**tests**/test-impact.property.test.ts
 - [pending] shared/**tests**/test-impact.test.ts
