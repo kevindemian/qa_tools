@@ -101,10 +101,14 @@ describe('CompareAiVsManual — property-based', () => {
                 const result = compareAiVsManual(records);
                 const aiRecords = records.filter((r) => r.generatedBy === 'ai');
                 const aiAccepted = aiRecords.filter((r) => r.accepted).length;
-                const expected = aiRecords.length > 0 ? aiAccepted / aiRecords.length : 0;
+                const expectedAi = aiRecords.length > 0 ? aiAccepted / aiRecords.length : 0;
 
-                expect(result.aiAcceptanceRate).toBe(expected);
-                expect(result.manualAcceptanceRate).toBe(1);
+                const manualRecords = records.filter((r) => r.generatedBy === 'manual');
+                const manualAccepted = manualRecords.filter((r) => r.accepted).length;
+                const expectedManual = manualRecords.length > 0 ? manualAccepted / manualRecords.length : 0;
+
+                expect(result.aiAcceptanceRate).toBe(expectedAi);
+                expect(result.manualAcceptanceRate).toBe(expectedManual);
             }),
             { numRuns: 50 },
         );
