@@ -742,6 +742,8 @@ function parseArgs(args: string[]): CliOptions {
             case '--no-flaky':
                 opts.skipFlaky = true;
                 break;
+            case 'pr-report':
+                break;
             default:
                 rootLogger.warn(`Flag desconhecida ignorada: ${String(arg)}`);
         }

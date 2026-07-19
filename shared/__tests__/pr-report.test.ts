@@ -334,6 +334,27 @@ describe('Pr-report entry point — quality gate check run', () => {
         exitSpy.mockRestore();
     });
 
+    it('does not warn about the pr-report subcommand token (known, not an unknown flag)', async () => {
+        expect.hasAssertions();
+
+        createCtrfFixture([{ name: 'pass-1', status: 'passed', duration: 100 }]);
+
+        process.argv = ['node', 'test', 'pr-report', '--project', 'owner/repo', '--html-output', TEST_HTML_PATH];
+
+        const { rootLogger } = await import('../logger.js');
+        const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
+
+        const { main } = await import('../pr-report-core.js');
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+        await main();
+
+        expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Flag desconhecida ignorada: pr-report'));
+
+        warnSpy.mockRestore();
+        exitSpy.mockRestore();
+    });
+
     it('calls createCheckRun with failure conclusion when quality gate fails', async () => {
         expect.hasAssertions();
 
