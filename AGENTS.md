@@ -354,18 +354,6 @@ Never justify decisions using:
 
 ---
 
-## 15. AUDIT TRAIL — Flags tsconfig AVALIADOS E DEFERIDOS
-
-### `noPropertyAccessFromIndexSignature`
-
-- **Data da avaliação original:** 2026-06-02
-- **Medição original:** 613 erros em 87 arquivos
-- **Cobertura existente:** `noUncheckedIndexedAccess` já ativo
-- **Decisão original:** DEFERIDO — regra estilística, zero ganho de correção. Pareto: alto custo, zero benefício.
-- **Reavaliação (2026-07-12):** A regra ESTÁ ATIVA em `tsconfig.json:17` (`"noPropertyAccessFromIndexSignature": true`) e o codebase compila limpo — `npx tsc --noEmit` = 0 erros. Os 613 erros originais foram eliminados (correção em curso ou mudança de estado posterior à avaliação de 2026-06-02). Portanto o custo caiu para 0 e a decisão "DEFERIDO / não reativar" está **obsoleta e contradiz o estado atual**.
-- **Decisão vigente:** REGRA ATIVA E COMPLACENTE. Nenhuma ação necessária. O audit trail anterior é mantido acima apenas para histórico; a recomendação "não reativar" não se aplica pois a regra já está ativa.
-- **Comentário:** não há explicação inline em `tsconfig.json` (linha 17 apenas habilita a flag).
-
 ### Mudança de contrato — `shared/env-loader.ts` (SH-3b)
 
 - **Data:** 2026-07-17
