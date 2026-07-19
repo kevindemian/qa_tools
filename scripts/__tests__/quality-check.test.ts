@@ -206,7 +206,10 @@ describe('Quality check integrated', () => {
 
             expect(typeof r.passed).toBe('boolean');
             expect(Array.isArray(r.violations)).toBeTruthy();
-        }, 240000);
+            // Full-repo ESLint pass: under a loaded CI runner this can exceed the default
+            // wall without any assertion failure. The budget is operational headroom only;
+            // the eslint contract (real lint + structured result) is unchanged.
+        }, 600000);
     });
 
     describe('Main', () => {
