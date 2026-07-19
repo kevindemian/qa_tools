@@ -39,7 +39,7 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
             project_name: 'TEST',
             results: [],
             resetResults: vi.fn(),
-            withBusy: vi.fn(),
+            withBusy: vi.fn(async (fn: () => Promise<unknown>, _label?: string) => fn()),
             pushHistory: vi.fn(),
             buildContextLine: vi.fn(),
         },

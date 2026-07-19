@@ -191,11 +191,6 @@ describe('Handlers', () => {
     });
 
     describe('Case03 — create version', () => {
-        beforeEach(() => {
-            const prompt = vi.mocked(promptModule);
-            (prompt as { askMultiline: ReturnType<typeof vi.fn> }).askMultiline = vi.fn();
-        });
-
         it('returns early when name is empty', async () => {
             expect.hasAssertions();
 

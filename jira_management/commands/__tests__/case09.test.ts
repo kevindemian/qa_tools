@@ -21,12 +21,30 @@ describe('Case09', () => {
             expect(typeof case09.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {
+        it('warns and aborts when project name is empty', async () => {
             expect.hasAssertions();
 
+            const { warn } = await import('../../../shared/ui/prompt.js');
             const result = await case09.handler(mockContext);
 
-            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            expect(result).toBeUndefined();
+            expect(vi.mocked(warn)).toHaveBeenCalledWith('Nome do projeto não pode ser vazio.');
+            expect(vi.mocked(mockContext.pushHistory)).not.toHaveBeenCalled();
+        });
+
+        it('switches project and persists state when a valid name is provided', async () => {
+            expect.hasAssertions();
+
+            const { ask, success } = await import('../../../shared/ui/prompt.js');
+            const { update } = await import('../../../shared/state.js');
+            vi.mocked(ask).mockResolvedValueOnce('novo-proj');
+            const result = await case09.handler(mockContext);
+
+            expect(result).toBeUndefined();
+            expect(mockContext.ctx.project_name).toBe('NOVO-PROJ');
+            expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith('trocar-projeto', 'NOVO-PROJ', 'ok');
+            expect(vi.mocked(update)).toHaveBeenCalledWith(expect.any(Function));
+            expect(vi.mocked(success)).toHaveBeenCalledWith('Projeto alterado para: NOVO-PROJ');
         });
     });
 });

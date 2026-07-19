@@ -62,12 +62,15 @@ describe('Case12', () => {
             expect(typeof case12.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {
+        it('reports all endpoints healthy and records diagnostic history', async () => {
             expect.hasAssertions();
 
+            mockJiraResource.axiosInstance.get.mockResolvedValue({ status: 200 });
             const result = await case12.handler(mockContext);
 
-            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            expect(result).toBeUndefined();
+            expect(vi.mocked(tableView)).toHaveBeenCalledWith();
+            expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith('diagnostico', '3/4 ok', 'ok');
         });
 
         it('shows health score warning when metrics and endpoints both fail', async () => {

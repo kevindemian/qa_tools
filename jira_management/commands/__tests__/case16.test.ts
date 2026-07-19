@@ -21,12 +21,31 @@ describe('Case16', () => {
             expect(typeof case16.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {
+        it('warns and aborts when directory is empty', async () => {
             expect.hasAssertions();
 
+            const { warn } = await import('../../../shared/ui/prompt.js');
             const result = await case16.handler(mockContext);
 
-            expect(result === undefined || typeof result === 'boolean').toBeTruthy();
+            expect(result).toBeUndefined();
+            expect(vi.mocked(warn)).toHaveBeenCalledWith('Caminho vazio, ignorando.');
+            expect(vi.mocked(mockContext.pushHistory)).not.toHaveBeenCalled();
+        });
+
+        it('records the JSON directory when a valid path is provided', async () => {
+            expect.hasAssertions();
+
+            const { ask, success } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValueOnce('./resultados');
+            const result = await case16.handler(mockContext);
+
+            expect(result).toBeUndefined();
+            expect(vi.mocked(success)).toHaveBeenCalledWith();
+            expect(vi.mocked(mockContext.pushHistory)).toHaveBeenCalledWith(
+                'config-json-dir',
+                expect.any(String),
+                'ok',
+            );
         });
     });
 });

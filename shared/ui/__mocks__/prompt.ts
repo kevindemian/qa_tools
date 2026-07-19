@@ -31,6 +31,7 @@ export const prompt = vi.fn<() => Promise<string>>().mockResolvedValue('');
 export const confirm = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
 export const smartPrompt = vi.fn<() => Promise<string>>().mockResolvedValue('');
 export const ask = vi.fn<(msg: string) => Promise<string>>().mockResolvedValue('');
+export const askMultiline = vi.fn<(msg: string) => Promise<string>>().mockResolvedValue('');
 export const askFilePath = vi.fn<(msg: string) => Promise<string>>().mockResolvedValue('');
 export const askConfirm = vi.fn<(msg: string) => Promise<boolean>>().mockResolvedValue(false);
 export const showSelect = vi.fn<(msg: string, choices: string[]) => Promise<string>>().mockResolvedValue('0');
