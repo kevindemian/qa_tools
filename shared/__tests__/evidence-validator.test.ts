@@ -25,11 +25,12 @@ describe('VerifyEvidence', () => {
 
     it('detects hallucinated citations', () => {
         const result = verifyEvidence(
-            { evidence: ['Something completely unrelated to the input'] },
-            makeCtx('This is about a completely different topic with no overlap'),
+            { evidence: ['Something completely unrelated to the input which cannot be found'] },
+            makeCtx('This is about a completely different topic with no overlap whatsoever'),
         );
 
-        expect(result.hallucinated).toBeGreaterThanOrEqual(0);
+        expect(result.hallucinated).toBeGreaterThan(0);
+        expect(result.allVerified).toBeFalsy();
     });
 
     it('handles test-level evidence array', () => {
@@ -44,7 +45,7 @@ describe('VerifyEvidence', () => {
     it('handles short citations as unverifiable', () => {
         const result = verifyEvidence({ evidence: ['abc'] }, makeCtx('anything'));
 
-        expect(result.unverifiable).toBeGreaterThanOrEqual(0);
+        expect(result.unverifiable).toBe(1);
     });
 });
 

@@ -917,7 +917,30 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     finalErrors. Sem teatro. Gap: `attempts` não era verificado (alinhado ao bug).
   - Source: `generateWithRetry` 3 camadas (schema/inv/semantic) c/ retry por camada; `tryLayer`
     catch→loga warn+null (não lança); `data: finalErrors.length===0 ? result : null` (não entrega
-    dado inválido); `finalErrors` reporta invariantes (não silencia). Sem outros defeitos.
+    dado inválido);     `finalErrors` reporta invariantes (não silencia). Sem outros defeitos.
+- [shared] `__tests__/backlog-health.test.ts` + `report/backlog-health.ts` — **AUDITADO SÃO**
+  - Teste: dados reais `sampleIssues`; assertions exatas de score: poor=43 (66.67*0.30+
+    33.33*0.35*2=43.33→round), 10 unassigned/total10→70, 5/10→85 (prova sensibilidade à
+    razão, denominador=totalIssues não bug-only), data ''/'not-a-date'→STALE (Infinity>30,
+    não fresh), perfect→100, maxIssues. `nonNull`. Sem teatro.
+  - Source: `daysSince` `''`→Infinity; diff não-finito→Infinity; `Math.max(0,floor)`;
+    `analyzeStaleIssues` filtra `daysSince>staleDays` (dado corrompido→stale, não silenciado
+    §25); `calculateBacklogScore` `totalIssues` guarda `isFinite? :0`, `effective=max(total,
+    flagged,1)` (evita div/0), scores `Math.max(0,...)`, `isFinite(raw)?round:0`;
+    `generateBacklogHealthHtml` `sanitizeHtml` (XSS). `BACKLOG_HEALTH_PROVENANCE` documenta
+    pesos. Sem defeito.
+- [shared] `__tests__/bug-report.test.ts` + `report/bug-report.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('fs')`/`llm-client`/`ui/prompt` (fronteiras); `classifyFailure` spied
+    (impl real preservada via importOriginal); `makeDataHubMock` factory real; mocks c/ shape
+    exato; assertions: summary vazio 3x→reject+warn 3x, coleta completa `toStrictEqual`
+    (linkedIssues uppercased), severidade inválida→'minor', '1/2 failed', dataQualityConfidence
+    0.8 (min), LLM fail→null, template ausente→null. `nonNull`. Sem teatro.
+  - Source: `readPrompt` try/catch→loga+`''`; `generateBugReportFromDescription` retorna null
+    se template ausente (doc); `enrichWithLlm` catch→loga warn+undefined (não quebra);
+    `askWithRetry` 3 tentativas, lança se vazio (obrigatório); `normalizeSeverity` inválido→
+    'minor' (fallback); `collectAutomated` `Math.min(...confidences)` c/ `null` se vazio (não
+    Infinity); `fileToJira` valida projectKey (lança); `interactiveBugReportFlow` catch→
+    `{status:'error'}` (erro reportado, não silenciado). Sem defeito.
 - [shared] `__tests__/run-comparison.test.ts` + `quality/run-comparison.ts` — **AUDITADO SÃO**
   - Teste: `vi.mock('../llm/llm-client.js')` (fronteira externa LLM); `sanitizeForLlm` REAL (não
     mockada, testada); assertions: retorna análise do LLM, `null,null`→'No run data provided',
@@ -927,4 +950,71 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     aplicado ANTES do LLM (segurança); try/catch→`rootLogger.error` c/ hint API key/network +
     retorna `''` (logado, não silenciado §25). `runSummary` usa `calcRunPassRate` real + round.
     Sem defeito.
+- [shared] `__tests__/incident-report.test.ts` + `report/incident-report.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../logger')` (fronteira); assertions concretas: null/undefined→'Insufficient
+    data'+none, failRate 45>30→high, regressionCount 5>2→high, 2 epics→2 medium, seasonality
+    'December'→low, sort severity+type (failure,regression,coverage_gap,seasonality), XSS via
+    `sanitizeHtml`, error null/undefined. `buildCss`/`buildHtmlPage` reais. Sem teatro.
+  - Source: `buildIncidentReport` `failRate==null||passRate==null`→'Insufficient data'+loga
+    warn (não silencia §25); thresholds FAIL_RATE>30/REGRESSION>2; sort por SEVERITY_ORDER
+    depois TYPE_ORDER c/ `??99` fallback; `overallSeverity` high>medium>low>none; `summary`
+    montado; `generateIncidentReportHtml` null→error page+loga, `sanitizeHtml` (XSS), try/catch
+    `extractErrorMessage`. Sem defeito.
+- [shared] `__tests__/analysis-validator.test.ts` + `validation/analysis-validator.ts` — **AUDITADO SÃO**
+  - Teste: `makeCtx` factory; invariantes testados isolados + via `createAnalysisValidator`
+    (10 IDs A/I registrados); assertions: bem-formada→`failed===0`, 'Missing test'→A-01 fail,
+    UNKNOWN+'Not sure'(<15)→A-04 fail, high+'Fix it'(<20)→A-05 fail, ASSERTION+low→A-03 warn.
+    Sem teatro.
+  - Source: 6 invariantes domínio (A-01..A-05) + 5 shared (I-01..I-05); `parseTests` não-objeto/
+    sem-array→`[]`; `extractFailedTestTitles` regex `^\d+\.\s+\[failed|error\]`. `title.includes||
+    t.includes` (match parcial tolerante). `invariantUnknownHasReason` UNKNOWN+rec<15→fail;
+    `invariantHighSeverityRecommendation` high+rec<20→fail; `invariantSeverityConsistent`
+    ASSERTION/low,FLAKY/high,ENVIRONMENT/high→warn. Todos retornam `pass` c/ motivo quando não
+    há o que validar (não silenciam). Sem exceções. Sem defeito.
+- [shared] `__tests__/artifact-validator.test.ts` + `validation/artifact-validator.ts` — **AUDITADO SÃO**
+  - Teste: `ctx` factory; assertions: sem invariantes→allPassed+total0, pass→passed1,
+    fail→allPassed false+failed1, warn→allPassed true+warnings1 (warning NÃO quebra allPassed),
+    invariante lança→capturado→failed1, duplicata→throw, cross-field items_count≠length→fail.
+    Factories pass/fail/warn testadas. Sem teatro.
+  - Source: `ArtifactValidator.validate` roda cada invariante/cross-field em try/catch → lança
+    registra `fail` c/ msg do erro (não silencia exceções §25); `summarize`: `failed=!passed &&
+    severity==='error'`, `warnings=severity==='warning' && !passed`, `allPassed=failed===0`
+    (warning≠error, design correto); `addInvariant` rejeita duplicata (lança, contrato).
+    Sem defeito.
+- [shared] `__tests__/comparison-schema.test.ts` + `validation/comparison-schema.ts` — **AUDITADO SÃO**
+  - Teste: Zod real; valid/summary<20/summary>500/empty changes/empty evidence/confidence<0 →
+    `toThrow`; ChangeImpact enum positive/negative/neutral ok, 'unknown'→throw. Shape real. Sem teatro.
+  - Source: `RunComparisonSchema` (summary 20-500, meaningfulChanges≥1, confidence 0-1,
+    evidence≥1), `MeaningfulChangeSchema`, `ChangeImpactSchema`. Contratos Zod explícitos. Sem defeito.
+- [shared] `__tests__/comparison-validator.test.ts` + `validation/comparison-validator.ts` — **AUDITADO SÃO**
+  - Teste: `makeCtx` factory; C-01 changes pass/fail, C-03 short/warn(6 sentenças), C-02 match
+    input→pass; `createComparisonValidator` registra C-01/02/03. Sem teatro.
+  - Source: C-01 changes vazio→fail; C-02 números antes/depois no input (length>3 threshold p/
+    ignorar falsos positivos em valores curtos), não acha→warn; C-03 summary≤5 sentenças
+    (`match(/[.!?]+/g) || []`+1, robusto a undefined). Sem exceções. Sem defeito.
+- [shared] `__tests__/coverage-verifier.test.ts` + `validation/coverage-verifier.ts` — **AUDITADO SÃO**
+  - Teste: 12 casos; no criteria→total0, full match→100, **NaN/250/-50/Infinity declared→null
+    (§24 agressivo)**, gaps, negative delta(oversell), Gherkin extraction, no tests→0,
+    missing→null, 85→85. Assertions exatas. Sem teatro.
+  - Source: `recalculateCoverage` re-calcula cobertura via substring/token-overlap (não confia
+    em self-declared); `extractDeclaredCoverage` só aceita `number && isFinite && [0,100]`
+    (NaN/250/-50/Infinity→null, delta 0 — não oversell). Sem exceções. Sem defeito.
+- [shared] `__tests__/evidence-validator.test.ts` + `validation/evidence-validator.ts` — **AUDITADO + CORRIGIDO (teste)**
+  - Defeito de TESTE (coverage theater, §19.10): linha 32 `hallucinated >= 0` e linha 47
+    `unverifiable >= 0` são sempre-verdadeiras — não detectam comportamento (viola §19.8).
+    Corrigido: hallucinated→`toBeGreaterThan(0)` + `allVerified===false` (citation longa sem
+    overlap→'hallucinated'); short 'abc'→`unverifiable === 1`. Expectation vem do requisito
+    (detectar alucinação), não do output.
+  - Source: `verifyEvidence` classifica verified/unverifiable/hallucinated (substring / token
+    overlap≥0.7 / ID match; <0.3+len>20→hallucinated); `evidenceValidationResult` hallucinated>0
+    →E-01 fail, verified>0→E-02 pass, 0→E-00 pass; `isNonNullObject` guard. Sem defeito.
+- [shared] `__tests__/llm-benchmark.test.ts` + `llm/llm-benchmark.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../llm/llm-client')` (fronteira LLM) + `vi.mock('fs')` + `vi.mock('logger')` +
+    fixtures mockadas c/ shape real (FA/US/CL); `mockImplementation` retorna JSON real casado c/
+    `validateJsonSchema/Array/Classify`; assertions: skip→'Skipping', true→Loading/Running/RESULTS,
+    llmPrompt throws→'FAIL'+'API timeout' (erro reportado), empty fixtures→Loading+RESULTS. Sem teatro.
+  - Source: `runBenchmark` skip se `BENCHMARK!=='true'`; roda em lotes de 3 c/ `Promise.allSettled`
+    (rejected→registra fail c/ msg, não silenciado); 3 runners c/ try/catch→`passed:false`+`formatErr`;
+    `readPrompt` catch→`''`+debug; SW-15 sinais qualidade passRate<50/<80; `isMain` guard CLI.
+    Sem exceções. Sem defeito.
 
