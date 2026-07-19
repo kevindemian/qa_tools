@@ -23,14 +23,14 @@ function describeJsonFailure(reason: 'empty' | 'missing' | 'read-error'): string
     }
 }
 
-function getSourceMessage(resolvedData: { source: string }, sha: string | null): string {
+function getSourceMessage(resolvedData: { source: string }, sha: string | null, branch: string | null): string {
     if (resolvedData.source === 'cache') {
         return 'Usando dados em cache (SHA ' + (sha as string).slice(0, 7) + ')';
     }
     if (resolvedData.source === 'ci') {
         return 'Resultados baixados do CI';
     }
-    return 'Usando baseline do branch ';
+    return 'Usando baseline do branch ' + (branch || 'desconhecido');
 }
 
 async function handler(c: CommandContext): Promise<boolean | void> {
@@ -62,7 +62,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             2,
         );
         jsonPath = writeEphemeral('ctrf-import', `resolve-${sha ?? 'nosha'}-${Date.now()}.json`, ctrfContent);
-        const sourceMsg = getSourceMessage(resolvedData, sha);
+        const sourceMsg = getSourceMessage(resolvedData, sha, branch);
         success(sourceMsg);
     } else {
         /* Fallback: prompt user for manual file path */

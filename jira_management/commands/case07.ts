@@ -32,6 +32,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 const summary = taskIds.map((id) => ({ status: 'ok' as const, label: id, message: '' }));
                 printSummary(summary);
                 c.pushHistory('fechar-tarefas', taskIds.length + ' tarefa(s)', 'ok');
+                c.ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
             } catch (err: unknown) {
                 rootLogger.error('Falha ao fechar tarefas: ' + formatErr(err));
                 printError('Erro ao fechar tarefas', err);
@@ -42,12 +43,11 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 }));
                 printSummary(summary);
                 c.pushHistory('fechar-tarefas', 'erro', 'error');
+                c.ctx.lastOperation = 'Falha ao fechar ' + taskIds.length + ' tarefa(s)';
             }
-            c.ctx.lastOperation = taskIds.length + ' tarefa(s) fechadas';
         },
         'Fechando ' + taskIds.length + ' tarefa(s)...',
     );
-    return false;
 }
 
 export default { handler };

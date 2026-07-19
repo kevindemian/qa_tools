@@ -18,7 +18,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         printError('Erro ao publicar versão', err);
         c.pushHistory('publicar-versão', 'erro', 'error');
     }
-    return false;
 }
 
 export default { handler };

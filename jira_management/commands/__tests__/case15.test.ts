@@ -207,5 +207,46 @@ describe('Case15', () => {
             );
             expect(showResults).toHaveBeenCalledWith(mockContext, ['TEST-1', 'TEST-2'], { associated: false });
         });
+
+        it('reports the branch name in the baseline source message (no truncated text)', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveSessionContext).mockReturnValue({
+                sha: 'abc123def456',
+                branch: 'release/2.8',
+                store: mockStore(),
+            });
+            vi.mocked(resolveTestDataSource).mockResolvedValue({
+                result: {
+                    tests: [{ title: 'T1', state: 'passed', duration: 1 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 1 },
+                },
+                source: 'branch',
+            });
+
+            const { success } = await import('../../../shared/ui/prompt.js');
+
+            await case15.handler(mockContext);
+
+            expect(vi.mocked(success)).toHaveBeenCalledWith('Usando baseline do branch release/2.8');
+        });
+
+        it('reports CI download source message', async () => {
+            expect.hasAssertions();
+
+            vi.mocked(resolveTestDataSource).mockResolvedValue({
+                result: {
+                    tests: [{ title: 'CI Test', state: 'passed', duration: 50 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 50 },
+                },
+                source: 'ci',
+            });
+
+            const { success } = await import('../../../shared/ui/prompt.js');
+
+            await case15.handler(mockContext);
+
+            expect(vi.mocked(success)).toHaveBeenCalledWith('Resultados baixados do CI');
+        });
     });
 });

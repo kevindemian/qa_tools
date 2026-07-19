@@ -50,7 +50,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     );
 
     await _addToSprint(c, taskIds);
-    return false;
 }
 
 async function _processBatchTasks(

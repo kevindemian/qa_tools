@@ -24,12 +24,37 @@ describe('Case06', () => {
             expect(typeof case06.handler).toBe('function');
         });
 
-        it('executes without error with basic context', async () => {
+        it('calls safeJiraCall to check release status', async () => {
             expect.hasAssertions();
+
+            const { ask } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValueOnce('v2.8.0');
+            const { safeJiraCall } = await import('../../../shared/jira/jira-helper.js');
 
             const result = await case06.handler(mockContext);
 
-            expect([undefined, true, false]).toContain(result);
+            expect(result).toBeUndefined();
+            expect(vi.mocked(safeJiraCall)).toHaveBeenCalledWith(
+                mockContext,
+                'verificar-status',
+                'v2.8.0',
+                expect.any(Function),
+            );
+        });
+
+        it('warns and aborts when version name is empty (no Jira call)', async () => {
+            expect.hasAssertions();
+
+            const { ask, warn } = await import('../../../shared/ui/prompt.js');
+            vi.mocked(ask).mockResolvedValueOnce('');
+            const { safeJiraCall } = await import('../../../shared/jira/jira-helper.js');
+
+            const result = await case06.handler(mockContext);
+
+            expect(result).toBeUndefined();
+            expect(vi.mocked(warn)).toHaveBeenCalledWith('Nome da versão não pode ser vazio.');
+            expect(vi.mocked(safeJiraCall)).not.toHaveBeenCalled();
+            expect(mockJiraResource.checkReleaseTasksStatus).not.toHaveBeenCalled();
         });
     });
 });
