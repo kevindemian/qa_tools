@@ -26,15 +26,21 @@ export interface BarChartProps {
 export function BarChart(props: BarChartProps): string {
     const w = props.width ?? 300;
     const h = props.height ?? 30;
-    const total = props.segments.reduce((s, seg) => s + seg.value, 0) || 1;
-    const fillW = props.segments.reduce((s, seg) => s + (seg.value / total) * w, 0);
+    const finiteSegments = props.segments.filter((seg) => Number.isFinite(seg.value));
+    if (finiteSegments.length === 0 || props.segments.length === 0) {
+        return `<svg data-component="bar-chart" viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;height:auto"
+        role="${props.role || 'img'}" ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
+        xmlns="http://www.w3.org/2000/svg"></svg>`;
+    }
+    const total = finiteSegments.reduce((s, seg) => s + seg.value, 0);
+    const fillW = finiteSegments.reduce((s, seg) => s + (seg.value / total) * w, 0);
     const scale = fillW > 0 ? w / fillW : 1;
 
     let x = 0;
     let bars = '';
-    for (const seg of props.segments) {
+    for (const seg of finiteSegments) {
         const segW = (seg.value / total) * w * scale;
-        if (segW <= 0) continue;
+        if (!Number.isFinite(segW) || segW <= 0) continue;
         let label = '';
         if (props.showLabels !== false && segW >= 20) {
             const textColor = seg.color === '#facc15' ? '#333' : '#fff';
@@ -118,6 +124,11 @@ export interface SparklineProps {
 export function Sparkline(props: SparklineProps): string {
     const w = props.width ?? 100;
     const h = props.height ?? 8;
+    if (!Number.isFinite(props.value) || !Number.isFinite(props.maxValue ?? 100) || props.maxValue === 0) {
+        return `<div data-component="sparkline" role="${props.role || 'img'}"
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
+        style="display:inline-block;vertical-align:middle"></div>`;
+    }
     const pct = Math.min((props.value / (props.maxValue || 100)) * 100, 100);
     let color: string;
     if (pct >= 50) {
@@ -149,6 +160,12 @@ export interface ProgressBarProps {
 
 export function ProgressBar(props: ProgressBarProps): string {
     const max = props.max ?? 100;
+    if (!Number.isFinite(props.value) || !Number.isFinite(max) || max <= 0) {
+        return `<div data-component="progress-bar" role="${props.role || 'progressbar'}"
+        aria-valuenow="0" aria-valuemin="0" aria-valuemax="0"
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
+        style="height:${props.height ?? 8}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.sm}px;overflow:hidden;margin:${tokens.spacing.xs}px 0"></div>`;
+    }
     const pct = Math.min((props.value / max) * 100, 100);
     const color = props.color ?? tokens.color.semantic.info.light;
     const h = props.height ?? 8;
