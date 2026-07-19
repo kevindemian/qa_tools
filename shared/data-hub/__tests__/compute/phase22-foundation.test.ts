@@ -185,6 +185,33 @@ describe('CalcPerRunCosts', () => {
 
         expect(calcPerRunCosts([])).toHaveLength(0);
     });
+
+    it('aGGRESIVE: negative/NaN costPerMinute does not fabricate negative/NaN cost (§24)', () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, created_at: '2026-01-01T10:00:00Z', updated_at: '2026-01-01T10:10:00Z' })];
+
+        const neg = calcPerRunCosts(runs, -5);
+
+        expect(neg[0]?.cost).toBe(0);
+        expect(Number.isNaN(neg[0]?.cost)).toBeFalsy();
+
+        const nan = calcPerRunCosts(runs, NaN);
+
+        expect(nan[0]?.cost).toBe(0);
+    });
+
+    it('aGGRESIVE: invalid dates yield 0 minutes, not NaN (§25)', () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, created_at: 'not-a-date', updated_at: 'also-bad' })];
+
+        const costs = calcPerRunCosts(runs, 0.008);
+
+        expect(costs).toHaveLength(1);
+        expect(Number.isNaN(costs[0]?.minutes)).toBeFalsy();
+        expect(costs[0]?.minutes).toBe(0);
+    });
 });
 
 /* ── ConvertToMetricsRuns ───────────────────────────────────────────────── */

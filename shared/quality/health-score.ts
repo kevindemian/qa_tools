@@ -323,7 +323,7 @@ function _computeHealthScore(options: Partial<HealthScoreConfig> & { dataHub: Da
 
     const statusPassRate = gate(actual.passRate, config.minPassRateGate, 'gte');
     const statusFlaky =
-        actual.flakyPct !== null && actual.flakyPct <= config.maxFlakyGate ? ('pass' as const) : ('fail' as const);
+        actual.flakyPct === null || actual.flakyPct <= config.maxFlakyGate ? ('pass' as const) : ('fail' as const);
     const statusCoverage = gate(actual.coverage, config.minCoverageGate, 'gte');
     const statusSpeed = gate(actual.suiteSpeed, config.maxSuiteSpeedGate, 'lte');
     const statusExecRate = gate(actual.executionRate, config.minExecutionRateGate, 'gte');

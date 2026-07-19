@@ -44,6 +44,39 @@ describe('EvaluateQualityGate', () => {
     });
 });
 
+describe('Flaky dimension consistency (no-data vs gate)', () => {
+    it('aGGRESIVE: null flakyPct => dimension status pass AND qualityGate pass (no contradiction)', () => {
+        // All other dimensions comfortably pass the gate; flaky data is absent (null).
+        const hub = createTestHub({
+            passRate: 95,
+            coverage: 90,
+            executionRate: 100,
+            suiteSpeedP95: 500,
+            flakyPercentage: null as unknown as number,
+        });
+
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.dimensions.flakyRate.status).toBe('pass');
+        expect(result.qualityGate).toBe('pass');
+    });
+
+    it('aGGRESIVE: high flakyPct => dimension status fail AND qualityGate fail', () => {
+        const hub = createTestHub({
+            passRate: 95,
+            coverage: 90,
+            executionRate: 100,
+            suiteSpeedP95: 500,
+            flakyPercentage: 15,
+        });
+
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.dimensions.flakyRate.status).toBe('fail');
+        expect(result.qualityGate).toBe('fail');
+    });
+});
+
 describe('CalculateHealthScore', () => {
     describe('Empty store', () => {
         it('returns low overall for empty store', () => {
