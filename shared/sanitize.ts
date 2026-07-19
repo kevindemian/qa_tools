@@ -26,7 +26,7 @@ export function sanitizeForLlm(input: string, maxStackLines?: number): string {
                     const lines = match.split('\n');
                     return lines[0] + '\n[...sanitized...]\n' + lines[lines.length - 1];
                 }
-                return match;
+                return '[...sanitized...]';
             }
             return match.slice(0, 4) + '[...sanitized]';
         });

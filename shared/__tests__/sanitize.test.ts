@@ -30,9 +30,10 @@ describe('SanitizeForLlm', () => {
         const key = 'x -----BEGIN RSA PRIVATE KEY-----data-----END RSA PRIVATE KEY----- y';
         const result = sanitizeForLlm(key);
 
-        // Single-line format passes through unchanged (no newlines to truncate)
-        expect(result).toContain('BEGIN');
-        expect(result).not.toContain('[...sanitized]');
+        // A private key must NEVER reach the LLM, even on a single line.
+        expect(result).not.toContain('BEGIN');
+        expect(result).not.toContain('END');
+        expect(result).toContain('[...sanitized...]');
     });
 
     it('sanitizes URLs with embedded credentials', () => {

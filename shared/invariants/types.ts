@@ -31,7 +31,7 @@ function isCriteriaItem(line: string): boolean {
 }
 
 function isSectionEnd(line: string): boolean {
-    return line === '' || /^(user story|description|acceptance|scenarios)/i.test(line);
+    return /^(user story|description|acceptance|scenarios)/i.test(line);
 }
 
 export function extractCriteria(input: string): string[] {

@@ -63,4 +63,14 @@ describe('ExtractCriteria', () => {
 
         expect(result).toStrictEqual(['Item 1']);
     });
+
+    it('preserves criteria separated by blank lines within the same section', () => {
+        const input = 'Acceptance Criteria:\n- User can log in\n\n- User can log out\n\n- User can reset password';
+        const result = extractCriteria(input);
+
+        expect(result).toContain('User can log in');
+        expect(result).toContain('User can log out');
+        expect(result).toContain('User can reset password');
+        expect(result).toHaveLength(3);
+    });
 });
