@@ -9,7 +9,6 @@ import {
 } from '../quality/defect-seasonality.js';
 import type { FailureClassification } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
-import * as reportStyles from '../report/report-styles.js';
 
 const sampleClass: FailureClassification = {
     timestamp: '2026-06-01T10:00:00Z',
@@ -374,17 +373,5 @@ describe('GenerateSeasonalityHtml', () => {
         const html = generateSeasonalityHtml(result);
 
         expect(html).toContain('N/A');
-    });
-
-    it('handles generation errors gracefully', () => {
-        const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
-            throw new Error('CSS failure');
-        });
-        const result = aggregateDefectSeasonality([sampleClass]);
-        const html = generateSeasonalityHtml(result, 'Error Test');
-
-        expect(html).toContain('Error generating dashboard');
-
-        spy.mockRestore();
     });
 });

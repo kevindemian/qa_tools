@@ -101,10 +101,10 @@ Status: pending | audited-clean | fixed-Tx
 - [audited-clean] shared/**tests**/cross-squad-benchmark.property.test.ts
 - [fixed-T3] shared/**tests**/cross-squad-benchmark.test.ts
 - [audited-clean] shared/**tests**/data-quality.test.ts
-- [pending] shared/**tests**/defect-seasonality.property.test.ts
-- [pending] shared/**tests**/defect-seasonality.test.ts
-- [pending] shared/**tests**/defect-trend-html.property.test.ts
-- [pending] shared/**tests**/defect-trend.test.ts
+- [audited-clean] shared/**tests**/defect-seasonality.property.test.ts
+- [fixed-T3] shared/**tests**/defect-seasonality.test.ts
+- [audited-clean] shared/**tests**/defect-trend-html.property.test.ts
+- [audited-clean] shared/**tests**/defect-trend.test.ts
 - [audited-clean] shared/**tests**/developer-profile.property.test.ts
 - [fixed-T3] shared/**tests**/developer-profile.test.ts
 - [audited-clean] shared/**tests**/evidence-validator.test.ts
@@ -125,7 +125,7 @@ Status: pending | audited-clean | fixed-Tx
 - [pending] shared/**tests**/quality-suggester.test.ts
 - [pending] shared/**tests**/release-score.property.test.ts
 - [pending] shared/**tests**/release-score.test.ts
-- [pending] shared/**tests**/requirement-score.property.test.ts
+- [audited-clean] shared/**tests**/requirement-score.property.test.ts
 - [pending] shared/**tests**/requirement-score.test.ts
 - [pending] shared/**tests**/run-comparison.property.test.ts
 - [pending] shared/**tests**/run-comparison.test.ts
