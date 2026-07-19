@@ -759,4 +759,172 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     Causa raiz: guarda `stdDev > 0` suprimia drift real. Corrigido: `exceedsBaseline &&
     deviatesFromMean` (tolerância 1e-6) — baseline estável + desvio real → alerta.
   - Validação: `vitest` 18/18 pass; `tsc --noEmit` limpo.
+- [shared] `__tests__/quality-suggester.test.ts` + `quality/quality-suggester.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock` de `state`/`quality-metrics`/`llm-metrics` (dependência/fronteira);
+    verifica concretamente `failureRate` (NaN/neg/Infinity→0, ratio exato), `severityFromLatency`
+    (boundaries 3000/8000), signals reais. Cobre feliz+erro (detectDrift throw→[]). Sem teatro.
+  - Source: `failureRate` com guards NaN/Inf/neg/total<=0→0 e `Math.min(...,1)`; `analyzeSnapshotMetrics`
+    guarda totalRequests===0 e `failuresByTier ?? {}`; try/catch em detectDrift/snapshot/updateTyped
+    registra `rootLogger.warn` (não silencia — §25 ok). Sem defeito.
+- [shared] `__tests__/release-score.test.ts` + `quality/release-score.ts` — **AUDITADO SÃO**
+  - Teste: `calculateReleaseScore` com valores exatos (weights 25/30/25/20, boundaries
+    89/90/49/50/69/70, NaN/Inf/-10/150); `generateReleaseScoreHtml` verifica HTML real
+    (title/score/grade/recommendation/breakdown/DOCTYPE) — `buildHtmlPage`/`buildCss` rodam
+    reais (sem mock de lógica interna). Sem teatro.
+  - Source: `invertFlakiness` guarda `!Number.isFinite`→0 e clampa [0,100]; `calculateReleaseScore`
+    arredonda com `Number.isFinite` e cai p/ 0 em NaN; `generateReleaseScoreHtml` usa funções
+    de render reais. Sem defeito.
+- [shared] `__tests__/requirement-score.test.ts` + `quality/requirement-score.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../logger')` (fronteira); `calculateRequirementScores` com `makeRecords`
+    reais, assertions concretas (totalRequirements 3, totalGenerated 6, acceptanceRate 100,
+    sort desc); `generateRequirementScoreHtml` verifica HTML real (`<!DOCTYPE>`, summary cards,
+    data-table, sanitize, error page p/ null/undefined). `buildCss`/`MetricGrid`/`DataTable`
+    rodam reais (T3 corrigido em B1.2b). Sem teatro.
+  - Source: `calculateGrade` 'F' p/ `!Number.isFinite`; `computeEntryScore` guarda acceptance
+    (`Number.isFinite`→0), `retentionRate` (`totalTests>0`), `volumeScore` clamp [0,100];
+    `generateRequirementScoreHtml` usa `sanitizeHtml` (XSS) + try/catch→`buildErrorPage`+loga
+    (não silencia). Sem defeito.
+- [shared] `__tests__/cross-squad-benchmark.test.ts` + `quality/cross-squad-benchmark.ts` — **AUDITADO SÃO**
+  - Teste: `makeSquads()` reais (não `{}`); assertions concretas: sort `[92,78,64,45]`, top/
+    bottom, average `69.75` (exato), stdDev `toBeCloseTo` c/ cálculo real, trend up/down/stable,
+    NaN/neg filtrados, XSS sanitizado (`&lt;script&gt;`), error page null/undefined. `buildCss`
+    roda real (T3 corrigido B1.2b). Sem teatro.
+  - Source: `computeCrossSquadBenchmark` filtra NaN/neg (`Number.isNaN` + `p.*<0`) e loga warn
+    (não silencia); `!Array.isArray`→vazio+warn; `_determineTrend` trata NaN→stable;
+    `generateBenchmarkHtml` usa `sanitizeHtml` (XSS) + try/catch→error page+loga. Sem defeito.
+- [shared] `__tests__/developer-profile.test.ts` + `quality/developer-profile.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../logger')` (fronteira); dados reais; assertions concretas: agrupamento
+    por autor, `failureRate` 100/150/200 (modelo acumula repetições em totalFailures),
+    topContributor/topFailureAuthor, XSS via `sanitizeHtml`, error page p/ null. Sem teatro.
+  - Source: `buildDeveloperProfile` agrupa por autor; `failureRate = testsTouched>0 ?
+    totalFailures/testsTouched*100 : 0` (não clampa 100 — modelo intencional, falha repetida
+    conta N; teste documenta 150/200). `generateDeveloperProfileHtml` usa `sanitizeHtml` (XSS)
+    + `buildHtmlPage`/`buildCss` reais (T3 corrigido B1.2b) + try/catch→error page+loga.
+    Sem defeito.
+- [shared] `__tests__/defect-seasonality.test.ts` + `quality/defect-seasonality.ts` — **AUDITADO SÃO**
+  - Teste: dados reais `makeFC`/`sampleClass`; assertions concretas: zero-fill (7 dias/24h),
+    agrupamento, sort Mon-Sun + horas 0-23, peak day/hour, period from/to, all-days (propriedade
+    implícita), invalid ts→N/A, tie→primeira, XSS (`&lt;script&gt;`), cards. `buildCss`/`buildHtmlPage`
+    reais (T3). `nonNull` evita `?.` mascarar ausência. Sem teatro.
+  - Source: `aggregateDefectSeasonality` trata `null/undefined`/`length===0`→zero-fill explícito;
+    `getUTCDay`/`getUTCHours` corretos; ts inválido→`'Unknown'`+`!isNaN(hour)` pula acúmulo de hora;
+    `sanitizeHtml` em categorias (XSS);     `findPeakDay/Hour` c/ fallback; `generateSeasonalityHtml`
+    try/catch→error page+loga. Sem defeito.
+- [shared] `__tests__/defect-trend.test.ts` + `quality/defect-trend.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions concretas: agrupamento, sort data asc, topCategories desc,
+    `sanitizeTrendResult` NaN/Infinity→0 (+ no HTML render), XSS (`&lt;script&gt;`), **prototype-
+    pollution** (`__proto__` como chave de objeto preservada, não vaza p/ prototype via
+    fromEntries/entries), cards. `buildCss`/`buildHtmlPage` reais. Sem teatro.
+  - Source: `sanitizeTrendResult` converte NaN/Infinity→0 (§24 na fronteira de saída) e
+    `generateDefectTrendHtml` aplica antes do render; `aggregateDefectTrends` trata
+    `null/undefined`/`length===0`→vazio;     `sanitizeHtml` em categorias (XSS); try/catch→error
+    page+loga. Sem defeito.
+- [shared] `__tests__/ai-feedback.test.ts` + `quality/ai-feedback.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('fs')`+`vi.mock('../logger')` (fronteiras externas); mocks c/ shape exato.
+    `mockWriteFileSync.mock.calls[0]?.[1]` parseado e validado (side-effect real verificado):
+    append, trim-200 (`rec-1` mantido), acceptanceRate 67 (`(3-1-0)/3*100`→66.67→round 67),
+    topVersion, reverse order. `nonNull` evita `?.`. Sem teatro.
+  - Source: `isPathWithinStore` previne path traversal (segurança); `safeParseJson` c/ fallback
+    `{records:[]}`; trim a 200 (slice -200); `acceptanceRate` guarda divisão por zero
+    (`totalReviewed>0 ?`);     `recordAiModification` retorna `null` p/ unknown (loga warn, não
+    silencia). Sem defeito.
+- [shared] `__tests__/ai-comparison.test.ts` + `__tests__/ai-comparison.property.test.ts` + `report/ai-comparison.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions concretas: passRate 67 (`round(2/3*100)`), acceptanceRate
+    fração (source `accepted/total` NÃO arredondado — 2/3, 1/3), aiAdvantage só c/ ambos grupos
+    >0, byVersion passRate arredondado, XSS (`&lt;script&gt;`), error path (spy throw→error
+    page). `.property.test.ts` usa `fast-check`: total counts match filter, aiAdvantage
+    postconditions, byVersion soma=aiTotal, passRate 0 p/ grupo vazio, acceptanceRate=acc/total,
+    timestamp ISO, invariants HTML. `vi.mock('../logger')`+`vi.mock('../../config.js')` (fronteira).
+    Property-based real (§19.6). Sem teatro.
+  - Source: `summarizeGroup` guarda `total===0`; `acceptanceRate=accepted/total` (fração);
+    `aiAdvantage` só se `aiTotal>0 && manualTotal>0`;     `byVersion` `round(passed/count*100)`
+    (count>=1); `sanitizeHtml` em versões/descrição (XSS); try/catch→error page+loga. Sem defeito.
+- [shared] `__tests__/ai-effectiveness.test.ts` + `report/ai-effectiveness.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions concretas: acceptanceRate 50/67 (`round(acc/total*100)`),
+    totalModified/totalDeleted (`!accepted && reason`), byVersion v1=50%/v2=67%/v3=100%, trend
+    sort por data + rate (day3 0/1=0%), XSS (`&lt;script&gt;`), error path (spy throw). `buildCss`/
+    `buildHtmlPage` reais. Sem teatro.
+  - Source: `computeAiEffectiveness` trata `null/undefined`/empty→zeroed; `totalModified`=
+    `!accepted && modificationReason!=='deleted'`; `totalDeleted`=`!accepted && reason==='deleted'`;
+    `acceptanceRate=round(accepted/total*100)`; byVersion/trend arredondados (count/generated>=1);
+    `sanitizeHtml` em versões/datas (XSS); try/catch→error page+loga. Sem defeito.
+- [shared] `__tests__/benchmark-metrics.test.ts` + `quality/benchmark-metrics.ts` — **AUDITADO SÃO**
+  - Teste: fixture real `ageFixture` + JSON real; assertions exatas: full criteria 3/3=1,
+    parcial 1/3 (`toBeCloseTo(1/3)`), boundary 3/4=0.75 (boundariesToCheck [18,65,17,66]),
+    empty ranges→partition/boundary 0, empty array→0. Sem teatro.
+  - Source: `computeCoverageMetrics` try/catch p/ JSON.parse; não-array→zeroed;
+    `criteriaCoverage=totalCriteria>0?covered/total:0` (guarda divisão); partitions/boundaries
+    só se `ranges.length>0` c/ `totalPartitions/Boundaries>0` guards. Sem NaN. Sem defeito.
+- [shared] `__tests__/benchmark-validators.test.ts` + `quality/benchmark-validators.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions exatas p/ happy+edge: Invalid JSON, Missing/empty/null tests,
+    minTests alto, campos faltando (title/severity), JsonArray (object not array, steps não-array,
+    title<5, expectedResult<10), Classify (6 prefixos, sem-colon, whitespace). `ReportValidator`
+    real (não mockada). Sem teatro.
+  - Source: `validateJsonSchema` try/catch→'Invalid JSON', `!tests||!Array`→'Missing tests array',
+    `length<minTests`→msg específica, `validateAll`→primeiro erro; `validateJsonArray` valida
+    title(string len>=5)/steps(array não-vazio)/expectedResult(string len>=10) c/ erro por índice;
+    `validateClassify` regex `^(ASSERT|...):\s`+split. Sem silenciamento (erros específicos).
+    Sem defeito.
+- [shared] `__tests__/data-quality.test.ts` + `quality/data-quality.ts` — **AUDITADO SÃO**
+  - Teste: `makeDataHubMock()` (factory real, não `{}`); `vi.fn` só em accessors (shape exato);
+    assertions concretas: missing (sem dados), ok (válidos), degraded+note ('schema mismatch'),
+    minConfidence 0.3 (mínimo entre 0.8/0.3), doraMetrics singleton→presente. Sem teatro.
+  - Source: `summarizeDataQuality` usa só accessors tipados (`get*`) — DIP (AGENTS §6); datas
+    vazias puladas (`continue`); `valid = report ? report.valid : true` (sem report→não degrada
+    falso); `computeMinConfidence` guarda `Number.isFinite` (§24, NaN ignorado); `deriveStatus`
+    missing/degraded/ok. Sem silenciamento (notas em dados inválidos). Sem defeito.
+- [shared] `__tests__/pipeline-cost.test.ts` + `quality/pipeline-cost.ts` — **AUDITADO SÃO**
+  - Teste: `createTestHub()` (hub real, não `{}`); assertions exatas: single 60s→cost 0.01,
+    agregado (120+300+60)/60*0.01=0.08, cpm custom 0.05/zero, ENV var, **Rule 24: cpm -5→
+    DEFAULT + cost>=0**, **NaN→DEFAULT + isFinite**, sort desc, status pass/fail/unknown, period,
+    duration >1h (7200s), sem timestamps→0. `process.env` restaurado em finally (não vaza).
+    `nullAs`/`undefinedAs`/`nonNull`. Sem teatro.
+  - Source: `cpm` guarda `Number.isFinite && >=0`→DEFAULT (§24, rejeita neg/NaN, nunca custo
+    neg); `safeDuration` guarda `isFinite && >=0`→0; `cost=safeDuration/60*cpm` (>=0);
+    `avgCostPerRun=length>0?total/len:0`; `generatePipelineCostHtml` null→error page+loga,
+    `sanitizeHtml` (XSS), try/catch→error page. Sem defeito.
+- [shared] `__tests__/silent-regression.test.ts` + `quality/silent-regression.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions exatas: regression >threshold (z≈35.4), identical stdDev=0→
+    denom 0.001→z 9000, z-score exato (`toBeCloseTo` c/ cálculo manual), severidade critical>5/
+    high 3-5/medium 2-3/low 1-2, previousDurations, XSS (`&lt;script&gt;`), error null→page.
+    **Cobre NaN/Infinity/negativo (linha 195-217) verificando `isFinite`**. `nonNull`. Sem teatro.
+  - Source: `detectSilentRegression` `length<2`→skip, `computeMean/StdDev` guardam `isFinite`→0,
+    `denom=stdDev||STDDEV_DENOM_FALLBACK(0.001)` (evita div/0), `computeSeverity`→'none' se
+    `!isFinite`. NaN/Infinity NÃO propagam (§24/§25). `generateSilentRegressionHtml` null→error
+    page+loga, `sanitizeHtml` (XSS), try/catch. `SILENT_REGRESSION_PROVENANCE` documenta
+    thresholds (ISO 3534-2). Sem defeito.
+- [shared] `__tests__/suite-optimization.test.ts` + `quality/suite-optimization.ts` — **AUDITADO SÃO**
+  - Teste: dados reais; assertions exatas: none/quarantine/split(>15s)/parallelize(>10s)/
+    remove_wait(>7.5s & flaky<0.1)/speed_up(>5s), priority order (quarantine>split>...),
+    potentialSavings 21 (`max(0,dur-5)` somado), sort impact+duration, custom thresholds
+    fallback NaN/neg→defaults, XSS (`&lt;script&gt;`), unknown action→default variant.
+    `buildCss`/`buildHtmlPage` reais. Sem teatro.
+  - Source: `toFinite` (`typeof===number && isFinite && >=0 ? v : fallback`) em toda entrada
+    numérica (§24); `analyzeSuiteOptimization` if/else-if = prioridade explícita quarantine>
+    split>parallelize>remove_wait>speed_up>none; `potentialSavings+=max(0,dur-slow)`;
+    `generateOptimizationHtml` `sanitizeHtml` (XSS), `action.replace(/_/g,' ')`,
+    `actionVariant[action]??'default'` (fallback), try/catch→error page+loga `extractErrorMessage`.
+    Sem defeito.
+- [shared] `__tests__/targeted-retry.test.ts` + `quality/targeted-retry.ts` — **CORRIGIDO (PROD)**
+  - Defeito real de produção encontrado: `RetryResult.attempts` (contrato `number`) era sempre
+    `0` — variável local `attempts: string[]` declarada mas NUNCA preenchida (`attempts.push`
+    ausente); retornos usavam `attempts.length` (sempre 0). Telemetria silenciada (campo morto
+    viola contrato §25: consumer não distingue 0 tentativas de N). Corrigido na origem:
+    `let attempts = 0` incrementado em cada `tryLayer` (toda chamada LLM); retornos usam
+    `attempts`. Adicionado teste que exige `result.attempts > 0 && === mockLlmPrompt.calls`.
+  - Teste (pré-correção): `vi.mock('../llm/llm-metrics.js')` (fronteira); mocks de LLM/validators
+    c/ shape exato (`safeParse`/`validate`); assertions em data null/definido, layerFailures,
+    finalErrors. Sem teatro. Gap: `attempts` não era verificado (alinhado ao bug).
+  - Source: `generateWithRetry` 3 camadas (schema/inv/semantic) c/ retry por camada; `tryLayer`
+    catch→loga warn+null (não lança); `data: finalErrors.length===0 ? result : null` (não entrega
+    dado inválido); `finalErrors` reporta invariantes (não silencia). Sem outros defeitos.
+- [shared] `__tests__/run-comparison.test.ts` + `quality/run-comparison.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../llm/llm-client.js')` (fronteira externa LLM); `sanitizeForLlm` REAL (não
+    mockada, testada); assertions: retorna análise do LLM, `null,null`→'No run data provided',
+    secret `sk-...` NÃO aparece no userMsg, LLM error→`''`, **g-01: LLM rejeita string→`''`+loga
+    'Failed to compare runs'+'API quota exceeded' (não 'undefined')**. `nonNull`. Sem teatro.
+  - Source: `compareRuns` `null,null`→'No run data provided' (explícito); `sanitizeForLlm`
+    aplicado ANTES do LLM (segurança); try/catch→`rootLogger.error` c/ hint API key/network +
+    retorna `''` (logado, não silenciado §25). `runSummary` usa `calcRunPassRate` real + round.
+    Sem defeito.
 

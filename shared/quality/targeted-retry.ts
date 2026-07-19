@@ -80,12 +80,13 @@ export async function generateWithRetry<T>(
     context: { inputRaw: string; artifactType: string },
     config: RetryConfig = DEFAULT_CONFIG,
 ): Promise<RetryResult<T>> {
-    const attempts: string[] = [];
+    let attempts = 0;
     const layerFailures: { layer1: number; layer2: number; layer3: number } = { layer1: 0, layer2: 0, layer3: 0 };
 
     async function tryLayer(system: string, user: string, layer: string, hint: string): Promise<T | null> {
         const hintSystem = hint ? `${system}\n\n[${layer.toUpperCase()} VALIDATION FAILED]\n${hint}` : system;
 
+        attempts++;
         try {
             const result = await llmPromptFn({ ...opts, system: hintSystem, user });
             const parsed = schema.safeParse(result);
@@ -148,7 +149,7 @@ export async function generateWithRetry<T>(
     if (layer1Outcome.failed) {
         return {
             data: null,
-            attempts: attempts.length,
+            attempts,
             layerFailures,
             finalErrors: ['Layer 1: all retries exhausted'],
         };
@@ -157,7 +158,7 @@ export async function generateWithRetry<T>(
     if (result === null) {
         return {
             data: null,
-            attempts: attempts.length,
+            attempts,
             layerFailures,
             finalErrors: ['Layer 1: result is null after retries'],
         };
@@ -179,7 +180,7 @@ export async function generateWithRetry<T>(
 
     return {
         data: finalErrors.length === 0 ? result : null,
-        attempts: attempts.length,
+        attempts,
         layerFailures,
         finalErrors,
     };
