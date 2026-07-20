@@ -39,6 +39,8 @@ export interface BacklogHealthResult {
     densityByEpic: Array<{ epic: string; bugCount: number; testCount: number }>;
     totalIssues: number;
     score: number;
+    /** true quando nenhum issue real foi analisado (sem fabricação de 100%). */
+    noData?: boolean;
     timestamp: string;
 }
 
@@ -93,7 +95,9 @@ export function calculateBacklogScore(result: BacklogHealthResult): number {
     ]).size;
 
     const totalIssues = Number.isFinite(result.totalIssues) ? result.totalIssues : 0;
-    const effective = Math.max(totalIssues, totalFlagged, 1);
+    if (totalIssues === 0) return 0;
+
+    const effective = Math.max(totalIssues, totalFlagged);
 
     const unassignScore = Math.max(0, 100 - (result.unassignedIssues.length / effective) * 100);
     const staleScore = Math.max(0, 100 - (result.staleIssues.length / effective) * 100);
@@ -136,6 +140,7 @@ export function analyzeBacklogHealth(
         densityByEpic,
         totalIssues: limited.length,
         score: 0,
+        noData: limited.length === 0,
         timestamp: new Date().toISOString(),
     };
 
@@ -148,8 +153,9 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
         children:
             MetricCard({
                 label: 'Backlog Score',
-                value: String(result.score) + '%',
+                value: result.noData ? 'N/A' : String(result.score) + '%',
                 severity: (() => {
+                    if (result.noData) return 'warn';
                     if (result.score >= SCORE_THRESHOLD_SUCCESS) return 'success';
                     if (result.score >= SCORE_THRESHOLD_WARN) return 'warn';
                     return 'error';

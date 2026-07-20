@@ -109,7 +109,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             const html = generateBacklogHealthHtml(result);
 
             expect(html).toContain('backlog-health');
-            expect(html).toContain('100%');
+            expect(html).toContain('N/A');
             expect(html).not.toContain('Unassigned Issues (');
             expect(html).not.toContain('Stale Issues (');
             expect(html).not.toContain('Bugs Without Tests (');

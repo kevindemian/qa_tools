@@ -22,11 +22,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         const health = calculateHealthScore({ dataHub: hub });
         const flaky = calcFlakinessEntries(projectRuns.length >= 2 ? projectRuns : [], 2);
 
+        const coveragePct = hub.computed.coverage;
         const releaseScore = calculateReleaseScore(
-            80,
+            undefined,
             health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
-            70,
+            coveragePct,
             flaky.length > 0
                 ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
                 : 0,

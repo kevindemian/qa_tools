@@ -181,8 +181,9 @@ interface ParseResultWithError extends ParseResult {
 }
 
 function mapTestState(state: string | undefined): FlatTest['state'] {
-    if (state === 'passed') return 'passed';
-    if (state === 'failed') return 'failed';
+    const s = (state ?? '').toLowerCase();
+    if (s === 'passed') return 'passed';
+    if (s === 'failed' || s === 'error') return 'failed';
     return 'skipped';
 }
 
@@ -269,10 +270,11 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
     const summary = jsonData.results.summary;
 
     const tests: FlatTest[] = jsonData.results.tests.map((t) => {
+        const status = t.status.toLowerCase();
         let state: FlatTest['state'];
-        if (t.status === 'passed') {
+        if (status === 'passed') {
             state = 'passed';
-        } else if (t.status === 'failed') {
+        } else if (status === 'failed' || status === 'error') {
             state = 'failed';
         } else {
             state = 'skipped';

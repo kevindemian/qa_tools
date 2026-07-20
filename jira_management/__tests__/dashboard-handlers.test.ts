@@ -476,7 +476,7 @@ describe('Case26 — Release Score', () => {
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
 
-        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 85, 'pass', 70, expect.any(Number));
+        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 85, 'pass', undefined, expect.any(Number));
     });
 
     it('generates HTML with correct title', async () => {
@@ -605,7 +605,7 @@ describe('Case26 — Release Score', () => {
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
 
-        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 75, 'pass', 70, expect.any(Number));
+        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 75, 'pass', undefined, expect.any(Number));
     });
 
     it('uses health gate fail when health < 70', async () => {
@@ -636,7 +636,7 @@ describe('Case26 — Release Score', () => {
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
 
-        expect(calculateReleaseScore).toHaveBeenCalledWith(80, 55, 'fail', 70, expect.any(Number));
+        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 55, 'fail', undefined, expect.any(Number));
     });
 });
 

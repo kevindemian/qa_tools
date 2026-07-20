@@ -262,7 +262,7 @@ export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): strin
 export function buildReleaseSection(
     score: number,
     grade: string,
-    breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail' }>,
+    breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail'; noData?: boolean }>,
     recommendation: string,
 ): string {
     let scoreColor: string;
@@ -278,6 +278,8 @@ export function buildReleaseSection(
     for (const item of breakdown) {
         const statusColor = item.status === 'pass' ? 'var(--color-success)' : 'var(--color-error)';
         const statusIcon = item.status === 'pass' ? '\u2713' : '\u2717';
+        const statusText = item.noData ? 'no data' : item.status;
+        const scoreText = item.noData ? 'N/A' : String(item.score);
         breakdownHtml +=
             '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-subtle)">' +
             '<span style="color:var(--color-text-primary)">' +
@@ -290,11 +292,11 @@ export function buildReleaseSection(
             statusIcon +
             '</span> ' +
             '<span style="color:var(--color-text-secondary);margin:0 4px">' +
-            item.score +
+            scoreText +
             '</span>' +
             Badge({
                 variant: item.status === 'pass' ? 'pass' : 'fail',
-                children: item.status,
+                children: statusText,
             }) +
             '</span></div>';
     }

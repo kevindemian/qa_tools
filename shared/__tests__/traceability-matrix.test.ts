@@ -334,7 +334,7 @@ describe('GenerateTraceabilityHtml', () => {
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('Total Epics');
         expect(html).toContain('Total Tests');
-        expect(html).toContain('Overall Coverage');
+        expect(html).toContain('Overall Test Pass Rate');
     });
 
     it('contains tree structure with epic nodes', () => {

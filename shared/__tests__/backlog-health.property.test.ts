@@ -190,7 +190,10 @@ describe('GenerateBacklogHealthHtml — property-based', () => {
                 const html = generateBacklogHealthHtml(result);
 
                 expect(html).toContain('Backlog Score');
-                expect(html).toContain(String(result.score) + '%');
+
+                const expected = result.noData ? 'N/A' : String(result.score) + '%';
+
+                expect(html).toContain(expected);
             }),
             { numRuns: 50 },
         );

@@ -868,10 +868,10 @@ describe('Interactive-mode test exports', () => {
 
             // (a) função de score chamada com args reais (não mock vazio)
             expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                expect.any(Number),
+                undefined,
                 expect.any(Number),
                 expect.any(String),
-                expect.any(Number),
+                undefined,
                 expect.any(Number),
             );
             // (b) efeito colateral real: HTML escrito contém o score

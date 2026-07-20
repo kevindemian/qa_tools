@@ -44,6 +44,7 @@ export interface TraceabilityResult {
     nodes: TraceabilityNode[];
     totalEpics: number;
     totalTests: number;
+    /** Pass rate of linked tests across all epics (NOT requirements coverage — see HTML label). */
     overallCoverage: number;
     timestamp: string;
     /** EIXO C awareness: cross-referenced unified-model categories with provenance confidence + quality. */
@@ -403,7 +404,7 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                 MetricCard({ label: 'Total Epics', value: String(result.totalEpics) }) +
                 MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
                 MetricCard({
-                    label: 'Overall Coverage',
+                    label: 'Overall Test Pass Rate',
                     value: result.overallCoverage + '%',
                     severity: (() => {
                         if (result.overallCoverage >= 80) return 'success';

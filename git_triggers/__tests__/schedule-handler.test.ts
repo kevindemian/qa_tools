@@ -632,10 +632,10 @@ describe('Schedule Handler', () => {
             generateWeeklyQualityReport();
 
             expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                expect.any(Number),
+                undefined,
                 expect.any(Number),
                 expect.any(String),
-                expect.any(Number),
+                undefined,
                 expect.any(Number),
             );
 

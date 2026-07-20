@@ -171,8 +171,8 @@ describe('AnalyzeBugsWithoutTests', () => {
 });
 
 describe('CalculateBacklogScore', () => {
-    it('returns 100 for perfect result with no flagged issues', () => {
-        expect(calculateBacklogScore(emptyResult)).toBe(100);
+    it('returns 0 (no data) when there are zero real issues, never 100', () => {
+        expect(calculateBacklogScore(emptyResult)).toBe(0);
     });
 
     it('returns lower score for poor backlog health', () => {
@@ -264,7 +264,7 @@ describe('CalculateBacklogScore', () => {
             timestamp: new Date().toISOString(),
         };
 
-        expect(calculateBacklogScore(noFlags)).toBe(100);
+        expect(calculateBacklogScore(noFlags)).toBe(0);
     });
 });
 
@@ -281,13 +281,14 @@ describe('AnalyzeBacklogHealth', () => {
         expect(result.timestamp.length).toBeGreaterThan(0);
     });
 
-    it('handles empty input', () => {
+    it('handles empty input as no-data (score 0, never fabricated 100)', () => {
         const result = analyzeBacklogHealth([]);
 
         expect(result.unassignedIssues).toHaveLength(0);
         expect(result.staleIssues).toHaveLength(0);
         expect(result.bugsWithoutTests).toHaveLength(0);
-        expect(result.score).toBe(100);
+        expect(result.score).toBe(0);
+        expect(result.noData).toBeTruthy();
     });
 
     it('respects maxIssues option', () => {
@@ -320,5 +321,25 @@ describe('GenerateBacklogHealthHtml', () => {
         expect(html).toContain('PROJ-2');
         expect(html).toContain('PROJ-3');
         expect(html).toContain('PROJ-4');
+    });
+});
+
+describe('Characterization — backlog vazio nao reporta saude 100% (C6, verificacao 2026-07-20)', () => {
+    it('backlog sem issues nao tem score de saude perfeita', () => {
+        expect.hasAssertions();
+
+        const emptyResult: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 0,
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+        const score = calculateBacklogScore(emptyResult);
+
+        // Dado ausente nao pode ser apresentado como 100% (saude perfeita) — AGENTS.md §25 zero-silencing.
+        expect(score).not.toBe(100);
     });
 });

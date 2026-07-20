@@ -180,10 +180,10 @@ describe('Case26', () => {
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith(runs, 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                80,
+                undefined,
                 expect.any(Number),
                 expect.stringMatching(/^(pass|fail)$/),
-                70,
+                undefined,
                 expect.any(Number),
             );
             expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
@@ -201,10 +201,10 @@ describe('Case26', () => {
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                80,
+                undefined,
                 expect.any(Number),
                 expect.stringMatching(/^(pass|fail)$/),
-                70,
+                undefined,
                 expect.any(Number),
             );
         });

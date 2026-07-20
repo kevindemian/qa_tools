@@ -382,11 +382,12 @@ async function _dashboardReleaseScore(): Promise<void> {
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
     const flaky = calcFlakinessEntries(data.projectRuns, 2);
+    const coveragePct = dataHub.computed.coverage;
     const releaseScore = calculateReleaseScore(
-        80,
+        undefined,
         health.overall,
         health.overall >= 70 ? 'pass' : 'fail',
-        70,
+        coveragePct,
         flaky.length > 0
             ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
             : 0,
@@ -899,7 +900,8 @@ async function _handleMissingToken(projectName: string): Promise<GitProvider | n
         await _handleSetupWizard();
         return createManagerForProject(projectName, projectId);
     } catch (err) {
-        rootLogger.debug('Create manager for project failed: ' + formatErr(err));
+        rootLogger.error('Create manager for project failed after setup: ' + formatErr(err));
+        // Contract sentinel: setup wizard failed -> no manager available (caller handles null).
         return null;
     }
 }

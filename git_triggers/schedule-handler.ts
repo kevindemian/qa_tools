@@ -170,11 +170,12 @@ export function generateWeeklyQualityReport(): void {
         const dataHub = getDataHub();
         const health = calculateHealthScore({ dataHub });
         const flaky = calcFlakinessEntries(projectRuns, 2);
+        const coveragePct = dataHub.computed.coverage;
         const releaseScore = calculateReleaseScore(
-            80,
+            undefined,
             health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
-            70,
+            coveragePct,
             flaky.filter((f) => f.rate > 0.3).length > 0
                 ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
                 : 0,
