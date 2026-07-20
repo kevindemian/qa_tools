@@ -1411,6 +1411,18 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
      `shared/__tests__/path-utils.test.ts` → 6 passed. Pre-commit hooks (eslint/prettier/typecheck/validation)
      passaram. Push de correção PENDENTE (próximo commit).
 
+ - [CI §13 — run `29715830289` (sha `f5dc3be8`)] **CONCLUSÃO: failure → CORRIGIDO**
+   - Node 24 "Tests without coverage" falhou: `git_triggers/__tests__/ai-test-impact.test.ts` —
+     `assessTestImpact('feature/a','main','/path/mapping.json')` passava caminho absoluto do operador
+     por `sanitizePath(process.cwd(), ...)`. Mesmo padrão de case17. Corrigido em `ai-test-impact.ts`
+     (absoluto→`path.resolve`, relativo→`sanitizePath`). `sanitizePath` intacto.
+   - Verificação local: `ai-test-impact.test.ts` → 4 passed.
+
+ - [CI §13 — run `29716144641` (sha `313fcdd9`)] **CONCLUSÃO: success ✅**
+   - Todos os jobs OK (Quality + Test Node 22/24). Sem regressões. Hardening de `sanitizePath` totalmente
+     integrado com os 3 callers de caminho absoluto do operador (case17 x2, ai-test-impact x1). Mecanismo
+     de segurança `sanitizePath` preservado (ainda rejeita `../` escapes e absolutos não-autorizados).
+
 - [RESUMO `shared` top-level — lote 1] pr-report-core: SÃO. (/data-hub já 100% auditado acima.)
 - [shared] `result_parser.ts` + `__tests__/result_parser.test.ts` — **AUDITADO CORRIGIDO (prod) + teste regressão**
   - DEFEITO (descoberto via auditoria): `parseCtrfResults` (linha 283) `duration: t.duration` sem guard;
