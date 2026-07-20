@@ -15,12 +15,22 @@ export interface ArtifactParseResult {
     coverage?: RawCoverage;
 }
 
-const TEST_ARTIFACT_PATTERNS = ['ctrf', 'test-results', 'test-result', 'mochawesome', 'junit', 'e2e'];
+const TEST_ARTIFACT_PATTERNS = [
+    'ctrf',
+    'test-results',
+    'test-result',
+    'test-report',
+    'test_report',
+    'mochawesome',
+    'junit',
+    'e2e',
+];
 
 /**
  * Checks if an artifact name matches known test artifact patterns.
  *
- * Matches: ctrf, test-results, test-result, mochawesome, junit, e2e.
+ * Matches: ctrf, test-results, test-result, test-report, test_report,
+ * mochawesome, junit, e2e.
  * Excludes: generic 'test' alone (too broad, captures non-test artifacts).
  */
 export function isTestArtifact(name: string): boolean {

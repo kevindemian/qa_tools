@@ -107,6 +107,14 @@ describe('IsTestArtifact', () => {
         expect(isTestArtifact('e2e-results.json')).toBeTruthy();
     });
 
+    it('matches test-report artifacts (uploaded by ci.yml)', () => {
+        expect(isTestArtifact('test-report')).toBeTruthy();
+    });
+
+    it('matches test_report artifacts (underscore variant)', () => {
+        expect(isTestArtifact('test_report.json')).toBeTruthy();
+    });
+
     it('rejects generic test alone', () => {
         expect(isTestArtifact('test')).toBeFalsy();
     });

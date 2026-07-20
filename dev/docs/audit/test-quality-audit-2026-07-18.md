@@ -669,6 +669,35 @@ corrigido (`fbdaa854`). Sem safety theater restante. Ressalvas documentadas: XSS
 `shared/primitives/*` (contrato caller-escapes, não corrigido — exige mudança de contrato),
 `formatDuration(NaN)` em `pipeline-health-renderer.ts` (renderer puro, dado do DataHub).
 
+#### 20.5.1 Correção de causa raiz do CI `post-process` (2026-07-20)
+
+O job `post-process` (`qa-post-process.yml`) falhava no CI com erro
+`Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório
+manual indisponível em contexto não-interativo.` — o `pr-report` não gerava o `pr-report.html`,
+logo o artifact `pr-report-html` não era upado. Causa raiz identificada e corrigida (duas
+correções independentes, ambas na origem, respeitando o contrato de que o `pr-report` obtém
+dados **apenas do versionador**, nunca de fontes internas):
+
+1. **`shared/data-hub/artifact-parser.ts` — `TEST_ARTIFACT_PATTERNS` não reconhecia `test-report`.**
+   O `ci.yml` faz upload do artifact de teste com nome `test-report` (linha 139). O
+   `GitHubDataProvider.downloadTestArtifacts` filtra artifacts por `isTestArtifact(name)`;
+   como `test-report` não casa com nenhum padrão (`ctrf`, `test-results`, `test-result`,
+   `mochawesome`, `junit`, `e2e`), nenhum artifact era baixado/parseado → `parsedArtifacts`
+   vazio → Camada 7 (`NO_TTY`) → `Layer7UnavailableError` → erro. **Corrigido:** adicionado
+   `test-report` e `test_report` ao `TEST_ARTIFACT_PATTERNS`. (Coerente com o contrato: o
+   `pr-report` continua lendo exclusivamente do versionador; apenas classifica corretamente
+   o artifact retornado pela API.)
+2. **`shared/project-context.ts` — `parseRemoteUrl` não tolerava credencial embutida.**
+   Remotes `https://x-access-token:...@github.com/owner/repo.git` (ex.: checkout com PAT)
+   não eram classificados → `ensureSelfHostProject` falhava com erro enganoso. **Corrigido:**
+   `stripUserinfo()` remove o componente `userinfo` antes do parse (URL parsing correto, não
+   supressão: host não classificável ainda retorna `undefined` e `ensureSelfHostProject`
+   falha loud).
+
+Testes de regressão adicionados: `isTestArtifact('test-report')`/`('test_report')` em
+`artifact-parser.test.ts`; remotes com credencial em `project-context.test.ts`.
+Commits pendentes de push + monitoramento de CI (§13).
+
 ### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
 O subagent declarou 356/356 SÃO em `shared/` por **scans de assinatura + amostra

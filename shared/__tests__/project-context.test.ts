@@ -180,6 +180,32 @@ describe('EnsureSelfHostProject (self-host resolution)', () => {
         expect(self?.projectId).toBe('group/gl_proj');
     });
 
+    it('resolves a github remote with embedded credentials (token) without leaking userinfo', () => {
+        expect.hasAssertions();
+
+        initRepo('my_proj', 'https://x-access-token:secret-token@github.com/acme/my_proj.git');
+
+        ensureSelfHostProject('my_proj', repoDir);
+
+        const self = getSelfHostEntry();
+
+        expect(self?.provider).toBe('github');
+        expect(self?.projectId).toBe('acme/my_proj');
+    });
+
+    it('resolves a gitlab remote with embedded credentials (user:pass)', () => {
+        expect.hasAssertions();
+
+        initRepo('gl_proj', 'https://ci-user:ci-pass@gitlab.com/group/gl_proj.git');
+
+        ensureSelfHostProject('gl_proj', repoDir);
+
+        const self = getSelfHostEntry();
+
+        expect(self?.provider).toBe('gitlab');
+        expect(self?.projectId).toBe('group/gl_proj');
+    });
+
     it('throws (never silent) when package.json name does not match the requested project', () => {
         expect.hasAssertions();
 

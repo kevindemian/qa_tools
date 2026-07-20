@@ -22,12 +22,25 @@ export function getSelfHostEntry(): ProjectEntry | undefined {
  * Parse a git remote URL into `{ provider, projectId }`.
  * Supports SSH (`git@github.com:owner/repo.git`), HTTPS (`https://github.com/owner/repo.git`),
  * and GitLab equivalents. Returns undefined when the URL cannot be classified.
+ *
+ * URLs with embedded credentials (`https://user:token@host/owner/repo.git`) are normalized by
+ * stripping the `userinfo` component before classification — this is correct URL parsing, not
+ * error suppression: an unclassifiable host still returns undefined and `ensureSelfHostProject`
+ * still fails loud ("Projeto não registrado").
  */
 const SSH_REMOTE_RE = /^git@([^:]+):(.+)$/;
 const HTTP_REMOTE_RE = /^https?:\/\/([^/]+)\/(.+)$/;
+const USERINFO_RE = /^https?:\/\/[^@]+@/;
+
+function stripUserinfo(url: string): string {
+    if (USERINFO_RE.test(url)) {
+        return url.replace(USERINFO_RE, 'https://');
+    }
+    return url;
+}
 
 function parseRemoteUrl(url: string): { provider: 'github' | 'gitlab'; projectId: string } | undefined {
-    const trimmed = url.trim().replace(/\.git$/, '');
+    const trimmed = stripUserinfo(url.trim().replace(/\.git$/, ''));
     const sshMatch = SSH_REMOTE_RE.exec(trimmed);
     const httpMatch = HTTP_REMOTE_RE.exec(trimmed);
     const match = sshMatch ?? httpMatch;
