@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 203 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 + B1.5 + B1.9 completos). Restam: 303.
+Concluído até agora: 252 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 + B1.5 + B1.9 + B1.integration + B1.system/migration/e2e completos). Restam: 254.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -244,60 +244,60 @@ NOTA-PATH: manifesto lista "llm-review.rejection.test.ts" mas arquivo real é `s
 - [audited-clean] shared/**tests**/test-utils.test.ts
 - [audited-clean] shared/**tests**/validation.test.ts
 
-## B1.integration — shared/**tests**/integration (46)
+## B1.integration — shared/**tests**/integration (46) — AUDITADA: 46/46 audited-clean, 0 fixes
 
-- [pending] shared/**tests**/integration/ai-comparison.integration.test.ts
-- [pending] shared/**tests**/integration/ai-effectiveness.integration.test.ts
-- [pending] shared/**tests**/integration/backlog-health.integration.test.ts
-- [pending] shared/**tests**/integration/benchmark-metrics.integration.test.ts
-- [pending] shared/**tests**/integration/ci-data-getOrFetch.integration.test.ts
-- [pending] shared/**tests**/integration/ci-data.integration.test.ts
-- [pending] shared/**tests**/integration/ci-menu.integration.test.ts
-- [pending] shared/**tests**/integration/ci-pipeline-file-generation.integration.test.ts
-- [pending] shared/**tests**/integration/config-accessor.integration.test.ts
-- [pending] shared/**tests**/integration/coverage-gap.integration.test.ts
-- [pending] shared/**tests**/integration/coverage-verifier.integration.test.ts
-- [pending] shared/**tests**/integration/cross-squad-benchmark.integration.test.ts
-- [pending] shared/**tests**/integration/defect-seasonality.integration.test.ts
-- [pending] shared/**tests**/integration/defect-trend.integration.test.ts
-- [pending] shared/**tests**/integration/developer-profile.integration.test.ts
-- [pending] shared/**tests**/integration/entry-menu-project.integration.test.ts
-- [pending] shared/**tests**/integration/feature-config.integration.test.ts
-- [pending] shared/**tests**/integration/flakiness-dashboard.integration.test.ts
-- [pending] shared/**tests**/integration/git-metrics-adapter.integration.test.ts
-- [pending] shared/**tests**/integration/health-score.integration.test.ts
-- [pending] shared/**tests**/integration/impact-alert.integration.test.ts
-- [pending] shared/**tests**/integration/incident-report.integration.test.ts
-- [pending] shared/**tests**/integration/integration-helpers.test.ts
-- [pending] shared/**tests**/integration/logger.integration.test.ts
-- [pending] shared/**tests**/integration/module-integration.integration.test.ts
-- [pending] shared/**tests**/integration/pipeline-cost.integration.test.ts
-- [pending] shared/**tests**/integration/project-context.integration.test.ts
-- [pending] shared/**tests**/integration/project-registry.integration.test.ts
-- [pending] shared/**tests**/integration/quality-gate.integration.test.ts
-- [pending] shared/**tests**/integration/quality-metrics.integration.test.ts
-- [pending] shared/**tests**/integration/quality-suggester.integration.test.ts
-- [pending] shared/**tests**/integration/quarantine.integration.test.ts
-- [pending] shared/**tests**/integration/release-score.integration.test.ts
-- [pending] shared/**tests**/integration/report-html.integration.test.ts
-- [pending] shared/**tests**/integration/reports-dir.integration.test.ts
-- [pending] shared/**tests**/integration/requirement-score.integration.test.ts
-- [pending] shared/**tests**/integration/run-comparison.integration.test.ts
-- [pending] shared/**tests**/integration/setup-wizard.integration.test.ts
-- [pending] shared/**tests**/integration/silent-regression.integration.test.ts
-- [pending] shared/**tests**/integration/state-project.integration.test.ts
-- [pending] shared/**tests**/integration/state.integration.test.ts
-- [pending] shared/**tests**/integration/store.integration.test.ts
-- [pending] shared/**tests**/integration/suite-optimization.integration.test.ts
-- [pending] shared/**tests**/integration/temp-dir.integration.test.ts
-- [pending] shared/**tests**/integration/test-impact.integration.test.ts
-- [pending] shared/**tests**/integration/traceability-matrix.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ai-comparison.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ai-effectiveness.integration.test.ts
+- [audited-clean] shared/**tests**/integration/backlog-health.integration.test.ts
+- [audited-clean] shared/**tests**/integration/benchmark-metrics.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ci-data-getOrFetch.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ci-data.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ci-menu.integration.test.ts
+- [audited-clean] shared/**tests**/integration/ci-pipeline-file-generation.integration.test.ts (exec real vitest: gera arquivo CI temporário; assert conteúdo; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/config-accessor.integration.test.ts
+- [audited-clean] shared/**tests**/integration/coverage-gap.integration.test.ts
+- [audited-clean] shared/**tests**/integration/coverage-verifier.integration.test.ts
+- [audited-clean] shared/**tests**/integration/cross-squad-benchmark.integration.test.ts
+- [audited-clean] shared/**tests**/integration/defect-seasonality.integration.test.ts
+- [audited-clean] shared/**tests**/integration/defect-trend.integration.test.ts
+- [audited-clean] shared/**tests**/integration/developer-profile.integration.test.ts
+- [audited-clean] shared/**tests**/integration/entry-menu-project.integration.test.ts
+- [audited-clean] shared/**tests**/integration/feature-config.integration.test.ts
+- [audited-clean] shared/**tests**/integration/flakiness-dashboard.integration.test.ts
+- [audited-clean] shared/**tests**/integration/git-metrics-adapter.integration.test.ts (git real via execFile; mocks só externos; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/health-score.integration.test.ts
+- [audited-clean] shared/**tests**/integration/impact-alert.integration.test.ts
+- [audited-clean] shared/**tests**/integration/incident-report.integration.test.ts
+- [audited-clean] shared/**tests**/integration/integration-helpers.test.ts (fixture factories; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/logger.integration.test.ts
+- [audited-clean] shared/**tests**/integration/module-integration.integration.test.ts (N2-B lint warning documentado; não bloqueia; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/pipeline-cost.integration.test.ts
+- [audited-clean] shared/**tests**/integration/project-context.integration.test.ts
+- [audited-clean] shared/**tests**/integration/project-registry.integration.test.ts
+- [audited-clean] shared/**tests**/integration/quality-gate.integration.test.ts
+- [audited-clean] shared/**tests**/integration/quality-metrics.integration.test.ts
+- [audited-clean] shared/**tests**/integration/quality-suggester.integration.test.ts
+- [audited-clean] shared/**tests**/integration/quarantine.integration.test.ts
+- [audited-clean] shared/**tests**/integration/release-score.integration.test.ts
+- [audited-clean] shared/**tests**/integration/report-html.integration.test.ts
+- [audited-clean] shared/**tests**/integration/reports-dir.integration.test.ts
+- [audited-clean] shared/**tests**/integration/requirement-score.integration.test.ts
+- [audited-clean] shared/**tests**/integration/run-comparison.integration.test.ts
+- [audited-clean] shared/**tests**/integration/setup-wizard.integration.test.ts (RED teste documenta contrato; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/silent-regression.integration.test.ts
+- [audited-clean] shared/**tests**/integration/state-project.integration.test.ts (PBT invariants; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/state.integration.test.ts
+- [audited-clean] shared/**tests**/integration/store.integration.test.ts
+- [audited-clean] shared/**tests**/integration/suite-optimization.integration.test.ts
+- [audited-clean] shared/**tests**/integration/temp-dir.integration.test.ts
+- [audited-clean] shared/**tests**/integration/test-impact.integration.test.ts (vitest/git real; T1-T7 ok)
+- [audited-clean] shared/**tests**/integration/traceability-matrix.integration.test.ts
 
-## B1.system/migration/e2e — (3)
+## B1.system/migration/e2e — (3) — AUDITADA: 3/3 audited-clean, 0 fixes
 
-- [pending] shared/**tests**/e2e/ci-data-e2e.test.ts
-- [pending] shared/**tests**/migration/migrate-projects.test.ts
-- [pending] shared/**tests**/system/ci-data-system.test.ts
+- [audited-clean] shared/**tests**/e2e/ci-data-e2e.test.ts (provider→hub→consumers→HTML; mocks fronteira logger/config-accessor; DataProvider mockado (API sim); fixtures exatas; asserts concretos passRate/duration/html; erro provider=hub vazio explícito §25; hasAssertions; T1-T7 ok)
+- [audited-clean] shared/**tests**/migration/migrate-projects.test.ts (fs real tmpdir isolado; registry real; toStrictEqual exato; idempotência/skipped; §25 path-traversal '../evil'→toThrow(/inválido/) + JSON corrompido→toThrow(/corrompido/), NÃO silenciado; T1-T7 ok)
+- [audited-clean] shared/**tests**/system/ci-data-system.test.ts (hub SSOT explícito; mocks fronteira; fixtures exatas; asserts score=0 SSOT/duração 900; erro provider=hub vazio explícito; hasAssertions; T1-T7 ok)
 
 ## B2.1 — data-hub tests (84)
 
