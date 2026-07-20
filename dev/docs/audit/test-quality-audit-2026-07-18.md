@@ -1396,6 +1396,21 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
   - Veredito: falha de CI é cancelamento, não regressão. Confirmado por testes locais + hooks.
   - AÇÃO: documentado; não há correção de código pendente. Re-run manual pendente de permissão de token.
 
+ - [CI §13 — run `29715236386` (sha `2f517247`)] **CONCLUSÃO: failure → CORRIGIDO (defeito de produção revelado por hardening de sanitizePath)**
+   - Job "Test (Node 24)": step 8 "Tests without coverage (Node 24+)" → `failure`. Job "Test (Node 22)"
+     → `cancelled` (concurrency, como antes — não executou).
+   - Causa raiz: `case17.ts` aplicava `sanitizePath(process.cwd(), candidate)` a (1) `QA_MAPPING_PATH`
+     absoluto vindo de `Config.get` (operador) e (2) caminho de saída absoluto digitado pelo usuário no
+     prompt. O hardening de `sanitizePath` (confinamento real via `path.relative`) **corretamente** passou
+     a rejeitar esses caminhos absolutos fora de cwd — expondo uso incorreto em `case17` (falso positivo
+     histórico: o `sanitizePath` antigo deixava escapes absolutos passarem = vuln latente de traversal).
+   - Correção na origem (NÃO enfraqueceu `sanitizePath`): `case17.ts` `getMappingCandidates`/`_writeReportFile`
+     tratam caminho absoluto como intent do operador (`path.resolve` direto) e relativo continua confinado
+     via `sanitizePath(process.cwd(), ...)`. `sanitizePath` intacto (mecanismo de segurança preservado).
+   - Verificação local: `npx vitest run jira_management/commands/__tests__/case17.test.ts` → 21 passed;
+     `shared/__tests__/path-utils.test.ts` → 6 passed. Pre-commit hooks (eslint/prettier/typecheck/validation)
+     passaram. Push de correção PENDENTE (próximo commit).
+
 - [RESUMO `shared` top-level — lote 1] pr-report-core: SÃO. (/data-hub já 100% auditado acima.)
 - [shared] `result_parser.ts` + `__tests__/result_parser.test.ts` — **AUDITADO CORRIGIDO (prod) + teste regressão**
   - DEFEITO (descoberto via auditoria): `parseCtrfResults` (linha 283) `duration: t.duration` sem guard;

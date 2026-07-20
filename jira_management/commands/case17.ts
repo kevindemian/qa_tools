@@ -93,7 +93,8 @@ async function _writeReportFile(html: string, projectName: string): Promise<stri
     const defaultName = `report-${projectName}-${Date.now()}.html`;
     const outPath = await ask('Caminho de saída do HTML', { hint: 'ex: ./relatorio.html', default: '' });
     if (outPath.trim()) {
-        const resolvedPath = sanitizePath(process.cwd(), outPath.trim());
+        const trimmed = outPath.trim();
+        const resolvedPath = path.isAbsolute(trimmed) ? path.resolve(trimmed) : sanitizePath(process.cwd(), trimmed);
         fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
         fs.writeFileSync(resolvedPath, html, 'utf8');
         return resolvedPath;
@@ -434,12 +435,20 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 }
 
 function getMappingCandidates(): string[] {
-    return [Config.get('QA_MAPPING_PATH'), sanitizePath(process.cwd(), 'mapping.json')];
+    const configPath = Config.get('QA_MAPPING_PATH');
+    const candidates: string[] = [];
+    if (configPath) {
+        candidates.push(
+            path.isAbsolute(configPath) ? path.resolve(configPath) : sanitizePath(process.cwd(), configPath),
+        );
+    }
+    candidates.push(sanitizePath(process.cwd(), 'mapping.json'));
+    return candidates;
 }
 
-function parseTestFile(candidate: string): Map<string, string> | null {
+function parseTestFile(resolvedPath: string): Map<string, string> | null {
     try {
-        const raw = fs.readFileSync(sanitizePath(process.cwd(), candidate), 'utf8');
+        const raw = fs.readFileSync(resolvedPath, 'utf8');
         const data: { tests?: Array<Record<string, string>> } = JSON.parse(raw) as {
             tests?: Array<Record<string, string>>;
         };
@@ -458,7 +467,7 @@ function parseTestFile(candidate: string): Map<string, string> | null {
 
 function resolveMapping(): Map<string, string> {
     for (const candidate of getMappingCandidates()) {
-        if (!candidate || !fs.existsSync(sanitizePath(process.cwd(), candidate))) continue;
+        if (!fs.existsSync(candidate)) continue;
         const result = parseTestFile(candidate);
         if (result !== null) return result;
     }
