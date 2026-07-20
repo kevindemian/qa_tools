@@ -74,11 +74,11 @@ describe('Integration: HTML Report (FT-17)', () => {
                 runCount: 10,
                 timestamp: '2026-06-01T00:00:00Z',
                 dimensions: {
-                    passRate: { score: 90, status: 'pass' as const },
-                    flakyRate: { score: 85, status: 'pass' as const },
-                    coverage: { score: 80, status: 'pass' as const },
-                    suiteSpeed: { score: 75, status: 'fail' as const },
-                    executionRate: { score: 100, status: 'pass' as const },
+                    passRate: { score: 90, status: 'pass' as const, available: true },
+                    flakyRate: { score: 85, status: 'pass' as const, available: true },
+                    coverage: { score: 80, status: 'pass' as const, available: true },
+                    suiteSpeed: { score: 75, status: 'fail' as const, available: true },
+                    executionRate: { score: 100, status: 'pass' as const, available: true },
                 },
             };
             const html = generateHtmlReport(tests, { title: 'Health', healthScore });

@@ -359,11 +359,11 @@ describe('BuildHealthSection', () => {
         grade: 'excellent' as const,
         qualityGate: 'pass' as const,
         dimensions: {
-            passRate: { score: 100, status: 'pass' as const },
-            flakyRate: { score: 100, status: 'pass' as const },
-            coverage: { score: 90, status: 'pass' as const },
-            suiteSpeed: { score: 100, status: 'pass' as const },
-            executionRate: { score: 100, status: 'pass' as const },
+            passRate: { score: 100, status: 'pass' as const, available: true },
+            flakyRate: { score: 100, status: 'pass' as const, available: true },
+            coverage: { score: 90, status: 'pass' as const, available: true },
+            suiteSpeed: { score: 100, status: 'pass' as const, available: true },
+            executionRate: { score: 100, status: 'pass' as const, available: true },
         },
         runCount: 10,
         timestamp: '2026-06-03T00:00:00.000Z',
@@ -374,11 +374,11 @@ describe('BuildHealthSection', () => {
         grade: 'critical' as const,
         qualityGate: 'fail' as const,
         dimensions: {
-            passRate: { score: 30, status: 'fail' as const },
-            flakyRate: { score: 100, status: 'pass' as const },
-            coverage: { score: 50, status: 'fail' as const },
-            suiteSpeed: { score: 80, status: 'pass' as const },
-            executionRate: { score: 100, status: 'pass' as const },
+            passRate: { score: 30, status: 'fail' as const, available: true },
+            flakyRate: { score: 100, status: 'pass' as const, available: true },
+            coverage: { score: 50, status: 'fail' as const, available: true },
+            suiteSpeed: { score: 80, status: 'pass' as const, available: true },
+            executionRate: { score: 100, status: 'pass' as const, available: true },
         },
         runCount: 5,
         timestamp: '2026-06-03T00:00:00.000Z',
@@ -408,7 +408,7 @@ describe('BuildHealthSection', () => {
 
         expect(html).toContain('Pass Rate');
         expect(html).toContain('Flaky Rate');
-        expect(html).toContain('Coverage');
+        expect(html).toContain('Cobertura de testes Jira (steps)');
         expect(html).toContain('Suite Speed');
         expect(html).toContain('Execution Rate');
     });

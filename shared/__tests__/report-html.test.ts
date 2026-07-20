@@ -40,11 +40,11 @@ const HEALTH_SCORE: import('../types.js').HealthScoreResult = {
     runCount: 10,
     timestamp: '2026-05-31T00:00:00Z',
     dimensions: {
-        passRate: { score: 90, status: 'pass' },
-        flakyRate: { score: 85, status: 'pass' },
-        coverage: { score: 80, status: 'pass' },
-        suiteSpeed: { score: 75, status: 'fail' },
-        executionRate: { score: 100, status: 'pass' },
+        passRate: { score: 90, status: 'pass', available: true },
+        flakyRate: { score: 85, status: 'pass', available: true },
+        coverage: { score: 80, status: 'pass', available: true },
+        suiteSpeed: { score: 75, status: 'fail', available: true },
+        executionRate: { score: 100, status: 'pass', available: true },
     },
 };
 

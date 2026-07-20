@@ -31,6 +31,7 @@ import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality/quality-gate.js';
+import type { QualityGateStatus } from './quality/quality-gate.js';
 import { createCheckRun } from './ci/github-check-run.js';
 import { postPrComment } from './ci/github-pr-comment.js';
 import { generateHtmlReport } from './report/report-html.js';
@@ -369,7 +370,7 @@ async function handleQualityGate(
         await createCheckRun({
             name: 'Quality Gate',
             status: 'completed',
-            conclusion: qgResult.overall === 'pass' ? 'success' : 'failure',
+            conclusion: gateConclusion(qgResult.overall),
             output: {
                 title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100) | Grade: ${gradeStr}`,
                 summary: checkSummary,
@@ -564,27 +565,39 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 }
 
 // Markdown builders for PR comment sections
-function buildQGCHeckSummary(
-    result: {
-        overall: 'pass' | 'fail';
-        score: number;
-        checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
-    },
-    grade?: string,
-    artifactUrl?: string,
-): string {
-    const lines: string[] = [
-        `**Quality Gate: ${result.overall === 'pass' ? '✅ PASSED' : '❌ FAILED'}**`,
-        '',
-        `**Score:** ${result.score}/100`,
-    ];
+type QualityGateSummary = {
+    overall: QualityGateStatus;
+    score: number;
+    checks: Array<{ name: string; status: QualityGateStatus; score: number; threshold: number }>;
+};
+
+function gateStatusIcon(status: QualityGateStatus): string {
+    if (status === 'pass') return '✅';
+    if (status === 'unknown') return '❓';
+    return '❌';
+}
+
+function gateOverallLabel(overall: QualityGateStatus): { icon: string; word: string } {
+    if (overall === 'pass') return { icon: '✅', word: 'PASSED' };
+    if (overall === 'unknown') return { icon: '❓', word: 'UNKNOWN' };
+    return { icon: '❌', word: 'FAILED' };
+}
+
+function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'failure' {
+    if (overall === 'pass') return 'success';
+    if (overall === 'unknown') return 'neutral';
+    return 'failure';
+}
+
+function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifactUrl?: string): string {
+    const { icon, word } = gateOverallLabel(result.overall);
+    const lines: string[] = [`**Quality Gate: ${icon} ${word}**`, '', `**Score:** ${result.score}/100`];
     if (grade) {
         lines.push(`**Grade:** ${grade}`);
     }
     lines.push('', '| Check | Score | Threshold | Status |', '|---|---|---|---|');
     for (const check of result.checks) {
-        const icon = check.status === 'pass' ? '✅' : '❌';
-        lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${icon} |`);
+        lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${gateStatusIcon(check.status)} |`);
     }
     if (artifactUrl) {
         lines.push('', `📄 [Download HTML report](${artifactUrl})`);
@@ -592,19 +605,15 @@ function buildQGCHeckSummary(
     return lines.join('\n');
 }
 
-function buildQualityGateSection(result: {
-    overall: 'pass' | 'fail';
-    score: number;
-    checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
-}): string {
-    const statusIcon = result.overall === 'pass' ? '✅' : '❌';
+function buildQualityGateSection(result: QualityGateSummary): string {
+    const { icon, word } = gateOverallLabel(result.overall);
     const checkRows = result.checks.map(
-        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${c.status === 'pass' ? '✅' : '❌'} |`,
+        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${gateStatusIcon(c.status)} |`,
     );
 
     return [
         '',
-        `## 🛡️ Quality Gate: ${statusIcon} ${result.overall.toUpperCase()} (Score: ${result.score}/100)`,
+        `## 🛡️ Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
         '| Check | Actual | Threshold | Status |',
         '|---|---|---|---|',

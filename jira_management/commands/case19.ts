@@ -1,5 +1,6 @@
 /** History/Coverage dashboard — execution trends, flakiness analysis, health score, coverage gaps. */
 import { info, warn, title, divider, tableView, printError, showSelect, withSpinner } from '../../shared/ui/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcMetricsTrends } from '../../shared/data-hub/compute/metrics-trends.js';
@@ -61,16 +62,25 @@ function _showTrends(runs: MetricsRun[]): void {
     tableView(trendRows, ['Data', 'Total', 'Falhas', 'Pass Rate']);
 }
 
+function _healthGateIcon(gate: string): string {
+    if (gate === 'pass') return '✅';
+    if (gate === 'unknown') return '❓';
+    return '❌';
+}
+
+function _healthDimIcon(available: boolean, status: string): string {
+    if (!available) return '❓';
+    return status === 'pass' ? '✅' : '❌';
+}
+
 function _showHealthScore(runs: MetricsRun[]): void {
     if (runs.length < 5) return;
     divider();
     const health = calculateHealthScore({ dataHub: getDataHub() });
-    const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
+    const qcIcon = _healthGateIcon(health.qualityGate);
     title('Test Suite Health — ' + health.overall + '/100 (' + health.grade.replace(/_/g, ' ') + ') ' + qcIcon);
-    const dimEntries = Object.entries(health.dimensions) as Array<[string, { score: number; status: string }]>;
     const dimRows = (['passRate', 'flakyRate', 'coverage', 'suiteSpeed'] as const).map((dim) => {
-        const entry = dimEntries.find(([k]) => k === dim);
-        const dimData = entry?.[1];
+        const dimData = health.dimensions[dim];
 
         let dimLabel: string;
         if (dim === 'passRate') {
@@ -78,15 +88,16 @@ function _showHealthScore(runs: MetricsRun[]): void {
         } else if (dim === 'flakyRate') {
             dimLabel = 'Flaky Rate';
         } else if (dim === 'coverage') {
-            dimLabel = 'Coverage';
+            dimLabel = 'Cobertura de testes Jira (steps)';
         } else {
             dimLabel = 'Suite Speed';
         }
 
+        const statusIcon = _healthDimIcon(dimData.available, dimData.status);
         return {
             Dimensão: dimLabel,
-            Score: dimData?.score ?? 0,
-            Status: dimData?.status === 'pass' ? '✅' : '❌',
+            Score: dimData.available ? dimData.score : 'N/A',
+            Status: statusIcon,
         };
     });
     tableView(dimRows, ['Dimensão', 'Score', 'Status']);
@@ -112,6 +123,7 @@ async function showCoverage(c: CommandContext): Promise<void> {
     try {
         result = await analyzeCoverage(c.jiraResource, c.ctx.project_name);
     } catch (err: unknown) {
+        rootLogger.error('Falha ao analisar cobertura (showCoverage): ' + String(err));
         printError('Erro ao analisar cobertura', err);
         return;
     }

@@ -26,11 +26,13 @@ const THRESHOLDS = {
     minHealthScore: 70,
 } as const;
 
+export type QualityGateStatus = 'pass' | 'fail' | 'unknown';
+
 export interface QualityGateResult {
-    overall: 'pass' | 'fail';
+    overall: QualityGateStatus;
     checks: Array<{
         name: string;
-        status: 'pass' | 'fail';
+        status: QualityGateStatus;
         score: number;
         threshold: number;
         details: string;
@@ -52,7 +54,7 @@ export interface QualityGateOptions {
 
 interface GateCheck {
     name: string;
-    status: 'pass' | 'fail';
+    status: QualityGateStatus;
     score: number;
     threshold: number;
     details: string;
@@ -70,21 +72,29 @@ function _healthCheck(health: HealthScoreResult): GateCheck {
     };
 }
 
+function _availableStatus(dim: { available: boolean; score: number }, threshold: number): QualityGateStatus {
+    if (!dim.available) return 'unknown';
+    return dim.score >= threshold ? 'pass' : 'fail';
+}
+
 function _passRateCheck(health: HealthScoreResult): GateCheck {
-    const status = health.dimensions.passRate.score >= THRESHOLDS.minPassRate ? 'pass' : 'fail';
+    const dim = health.dimensions.passRate;
+    const status = _availableStatus(dim, THRESHOLDS.minPassRate);
     return {
         name: 'pass-rate',
         status,
-        score: health.dimensions.passRate.score,
+        score: dim.score,
         threshold: THRESHOLDS.minPassRate,
-        details: 'Pass rate: ' + health.dimensions.passRate.score + '% (threshold: ' + THRESHOLDS.minPassRate + '%)',
+        details: !dim.available
+            ? 'Pass rate: dados indisponíveis (N/A)'
+            : 'Pass rate: ' + dim.score + '% (threshold: ' + THRESHOLDS.minPassRate + '%)',
     };
 }
 
 /** Check flaky rate against threshold. Reads from DataHub.computed — SSOT. */
 function _flakyCheck(dataHub: DataHub): GateCheck {
     const flakyPct = dataHub.computed.flakyPercentage ?? 0;
-    const status = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
+    const status: GateCheck['status'] = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
     return {
         name: 'flaky-rate',
         status,
@@ -95,13 +105,16 @@ function _flakyCheck(dataHub: DataHub): GateCheck {
 }
 
 function _coverageCheck(health: HealthScoreResult): GateCheck {
-    const status = health.dimensions.coverage.score >= THRESHOLDS.minCoverage ? 'pass' : 'fail';
+    const dim = health.dimensions.coverage;
+    const status = _availableStatus(dim, THRESHOLDS.minCoverage);
     return {
         name: 'coverage',
         status,
-        score: health.dimensions.coverage.score,
+        score: dim.score,
         threshold: THRESHOLDS.minCoverage,
-        details: 'Coverage: ' + health.dimensions.coverage.score + '% (threshold: ' + THRESHOLDS.minCoverage + '%)',
+        details: !dim.available
+            ? 'Coverage: dados indisponíveis (N/A)'
+            : 'Coverage: ' + dim.score + '% (threshold: ' + THRESHOLDS.minCoverage + '%)',
     };
 }
 
@@ -109,7 +122,7 @@ function _coverageCheck(health: HealthScoreResult): GateCheck {
 function _suiteSpeedCheck(health: HealthScoreResult, dataHub: DataHub): GateCheck {
     const p95 = Number.isFinite(dataHub.computed.suiteSpeedP95) ? dataHub.computed.suiteSpeedP95 : 0;
     const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
-    const status = p95 <= thresholdMs ? 'pass' : 'fail';
+    const status: GateCheck['status'] = p95 <= thresholdMs ? 'pass' : 'fail';
     return {
         name: 'suite-speed',
         status,
@@ -131,8 +144,15 @@ function _buildChecks(checks: GateCheck[], health: HealthScoreResult, dataHub: D
 }
 
 function _aggregateResult(checks: GateCheck[]): QualityGateResult {
-    const overall = checks.every((c) => c.status === 'pass') ? 'pass' : 'fail';
-    const score = Math.round(checks.reduce((s, c) => s + c.score, 0) / checks.length);
+    const anyFail = checks.some((c) => c.status === 'fail');
+    const anyUnknown = checks.some((c) => c.status === 'unknown');
+    // A present-but-failing check is a hard fail; a missing (unknown) check is NOT
+    // silently forced to fail (user decision + AGENTS.md §24/§25).
+    let overall: QualityGateStatus = 'pass';
+    if (anyFail) overall = 'fail';
+    else if (anyUnknown) overall = 'unknown';
+    const scored = checks.filter((c) => c.status !== 'unknown');
+    const score = scored.length > 0 ? Math.round(scored.reduce((s, c) => s + c.score, 0) / scored.length) : 0;
     return { overall, checks, score, incompleteItems: [] };
 }
 
@@ -255,6 +275,12 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
     }
 }
 
+function gateStatusIcon(status: QualityGateStatus): string {
+    if (status === 'pass') return '✅';
+    if (status === 'unknown') return '❓';
+    return '❌';
+}
+
 export function formatQualityGateJson(result: QualityGateResult): string {
     return JSON.stringify(result, null, 2);
 }
@@ -262,13 +288,23 @@ export function formatQualityGateJson(result: QualityGateResult): string {
 export function formatQualityGateText(result: QualityGateResult): string {
     let output = '';
     output += '\n=== Quality Gate ===\n';
-    output += 'Overall: ' + (result.overall === 'pass' ? '✅ PASS' : '❌ FAIL') + '\n';
+    const overallLabel = gateStatusIcon(result.overall) + ' ' + result.overall.toUpperCase();
+    output += 'Overall: ' + overallLabel + '\n';
     output += 'Score: ' + result.score + '\n\n';
     output += 'Checks:\n';
     for (const check of result.checks) {
-        const icon = check.status === 'pass' ? '✅' : '❌';
         output +=
-            '  ' + icon + ' ' + check.name + ' — ' + check.score + '/' + check.threshold + ' — ' + check.details + '\n';
+            '  ' +
+            gateStatusIcon(check.status) +
+            ' ' +
+            check.name +
+            ' — ' +
+            check.score +
+            '/' +
+            check.threshold +
+            ' — ' +
+            check.details +
+            '\n';
     }
     output += '\n';
     return output;

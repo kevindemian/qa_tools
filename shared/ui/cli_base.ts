@@ -228,7 +228,9 @@ function _tryPrintHealthScore(): void {
         } else {
             gradeIcon = '🔴';
         }
-        const gateIcon = hs.qualityGate === 'pass' ? '✓' : '✗';
+        let gateIcon = '✗';
+        if (hs.qualityGate === 'pass') gateIcon = '✓';
+        else if (hs.qualityGate === 'unknown') gateIcon = '?';
         info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
     } catch (err) {
         rootLogger.debug('Health score unavailable: ' + formatErr(err));

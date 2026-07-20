@@ -86,11 +86,11 @@ function makeTraceabilityResult(overrides?: Partial<TraceabilityResult>): Tracea
 }
 
 const MOCK_DIMENSIONS = {
-    passRate: { score: 90, threshold: 80, status: 'pass' as const },
-    flakyRate: { score: 95, threshold: 80, status: 'pass' as const },
-    coverage: { score: 85, threshold: 70, status: 'pass' as const },
-    suiteSpeed: { score: 80, threshold: 70, status: 'pass' as const },
-    executionRate: { score: 90, threshold: 80, status: 'pass' as const },
+    passRate: { score: 90, threshold: 80, status: 'pass' as const, available: true },
+    flakyRate: { score: 95, threshold: 80, status: 'pass' as const, available: true },
+    coverage: { score: 85, threshold: 70, status: 'pass' as const, available: true },
+    suiteSpeed: { score: 80, threshold: 70, status: 'pass' as const, available: true },
+    executionRate: { score: 90, threshold: 80, status: 'pass' as const, available: true },
 };
 
 function makeReleaseScoreResult(overrides?: Partial<ReleaseScoreResult>): ReleaseScoreResult {
