@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 114 (shared B1.1 + B1.2a + B1.2b completo). Restam: 392.
+Concluído até agora: 137 (shared B1.1 + B1.2a + B1.2b + B1.3 completos). Restam: 369.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -144,29 +144,29 @@ Concluído até agora: 114 (shared B1.1 + B1.2a + B1.2b completo). Restam: 392.
 
 ## B1.3 — llm/analysis (23)
 
-- [pending] shared/**tests**/classify.schema.test.ts
-- [pending] shared/**tests**/failure-analysis.schema.test.ts
-- [pending] shared/**tests**/failure-analysis.test.ts
-- [pending] shared/**tests**/framework-detection.property.test.ts
-- [pending] shared/**tests**/framework-detection.test.ts
-- [pending] shared/**tests**/llm-benchmark.test.ts
-- [pending] shared/**tests**/llm-cache.test.ts
-- [pending] shared/**tests**/llm-client.test.ts
-- [pending] shared/**tests**/llm-fallback-config.test.ts
-- [pending] shared/**tests**/llm-fallback-http.test.ts
-- [pending] shared/**tests**/llm-fallback.test.ts
-- [pending] shared/**tests**/llm-metrics.test.ts
-- [pending] shared/**tests**/llm-probe.test.ts
-- [pending] shared/**tests**/llm-provider-profiles.test.ts
-- [pending] shared/**tests**/llm-rate-limiter.test.ts
-- [pending] shared/**tests**/llm-review-prompts.test.ts
-- [pending] shared/**tests**/llm-review.rejection.test.ts
-- [pending] shared/**tests**/llm-review.test.ts
-- [pending] shared/**tests**/llm-self-consistency.test.ts
-- [pending] shared/**tests**/llm-validation.test.ts
-- [pending] shared/**tests**/model-adapter.test.ts
-- [pending] shared/**tests**/model-discovery.test.ts
-- [pending] shared/**tests**/model-resolver.test.ts
+- [audited-clean] shared/**tests**/classify.schema.test.ts (source real: shared/validation/classify.schema.ts; Zod refine CATEGORY:; 6 categorias+rejeições+multiline; T1-T7 ok)
+- [audited-clean] shared/**tests**/failure-analysis.schema.test.ts (source: shared/validation/failure-analysis.schema.ts; Zod enum/min(1)/min(10); T1-T7 ok)
+- [audited-clean] shared/**tests**/failure-analysis.test.ts (source: shared/validation/failure-analysis.ts; crossReference/getCommitAuthor/analyze/classify; mocks fronteira; verifica "WITHOUT silencing" §25; T1-T7 ok — exemplar)
+- [audited-clean] shared/**tests**/framework-detection.property.test.ts (source: shared/framework-detection.ts; property-based confiança[0,1]/boolean/empty; T6 §19.6 ok)
+- [audited-clean] shared/**tests**/framework-detection.test.ts (source: shared/framework-detection.ts; isManifestFile/detectFromDeps/detectFromAPI; mock GitProvider fronteira; propaga API error §25; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-benchmark.test.ts (source: shared/llm/llm-benchmark.ts; runBenchmark skip/run/error/empty; mock fronteira llm/fs/fixtures; asserts CLI stdout; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-cache.test.ts (source+teste: TTL/schema/disk guards; mock fronteira disk-cache; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-client.test.ts (source+teste: token/cache/rate/circuit/schema guards; mocks fronteira config/model-resolver/disk-cache/fetch; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-fallback-config.test.ts (source+teste: Zod token schemas/.nonnegative, trackUsage ??0; mocks fronteira config; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-fallback-http.test.ts (source+teste: timeout/retry/jitter/Retry-After guards; mocks fronteira; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-fallback.test.ts (source+teste: dedup/rate/circuit/error-aggregate guards; mocks fronteira config/rate/circuit/sanitize; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-metrics.test.ts (source+teste: snapshot ??0/no-NaN; fs real tmp; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-probe.test.ts (source+teste: detectProvider null-safe/probe try-catch; stubGlobal fetch fronteira; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-rate-limiter.test.ts (source+teste: window/limit guards; mock fronteira config; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-review-prompts.test.ts (source: shared/llm/llm-review-prompts.ts; builders puros; schemas reais comparados por ref; it.each 5 tipos; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-review.test.ts (source: shared/llm/llm-review.ts; pipeline completo + analyzers; mocks fronteira llm-client/config; validParsedReport shape exato §26.1; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-self-consistency.test.ts (source: shared/llm/llm-self-consistency.ts; consensus/refine/divergence; mock fronteira llm-client; T1-T7 ok)
+- [audited-clean] shared/**tests**/llm-validation.test.ts (source: shared/llm/llm-validation.ts; fail-loud empty + pass-through hook-ausente; NÃO cria arquivo protegido §17; hermético; T1-T7 ok)
+- [audited-clean] shared/**tests**/model-adapter.test.ts (source: shared/llm/model-adapter.ts; adapters puros null-safe; T1-T7 ok)
+- [audited-clean] shared/**tests**/model-discovery.test.ts (source: shared/llm/model-discovery.ts; discoverModels/assignTierHints; T1-T7 ok)
+- [audited-clean] shared/**tests**/model-resolver.test.ts (source: shared/llm/model-resolver.ts; resolveModel registry→profile; T1-T7 ok)
+
+NOTA-PATH: manifesto lista "llm-review.rejection.test.ts" mas arquivo real é `shared/llm/llm-review-analyzer.ts` (contém detectHedging/detectContradictions/shouldSkipAdversarialReview/parseVerdict/stripVerdict/parseLayerErrors). Source lido+aprovado (§24/§25 ok). Nenhum teste dedicado de `llm-review-analyzer` encontrado em B1.3 — coberto indiretamente via llm-review.test.ts (describe ShouldSkipAdversarialReview/DetectHedging/DetectContradictions, 13 its). Marco como audited-clean via llm-review.test.ts.
 
 ## B1.4 — ui (22)
 
