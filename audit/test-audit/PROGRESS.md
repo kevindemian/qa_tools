@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 137 (shared B1.1 + B1.2a + B1.2b + B1.3 completos). Restam: 369.
+Concluído até agora: 159 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 completos). Restam: 347.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -170,28 +170,29 @@ NOTA-PATH: manifesto lista "llm-review.rejection.test.ts" mas arquivo real é `s
 
 ## B1.4 — ui (22)
 
-- [pending] shared/**tests**/box.test.ts
-- [pending] shared/**tests**/breadcrumbs.test.ts
-- [pending] shared/**tests**/cli_base.test.ts
-- [pending] shared/**tests**/entry-menu-logic.test.ts
-- [pending] shared/**tests**/entry-menu.test.ts
-- [pending] shared/**tests**/first-run.test.ts
-- [pending] shared/**tests**/output.test.ts
-- [pending] shared/**tests**/palette.test.ts
-- [pending] shared/**tests**/prompt-errors.test.ts
-- [pending] shared/**tests**/prompt-format.test.ts
-- [pending] shared/**tests**/prompt-input-base.test.ts
-- [pending] shared/**tests**/prompt-input-editor.test.ts
-- [pending] shared/**tests**/prompt-input-filepath.test.ts
-- [pending] shared/**tests**/prompt-input-inquirer.test.ts
-- [pending] shared/**tests**/prompt-input.test.ts
-- [pending] shared/**tests**/prompt-summary.test.ts
-- [pending] shared/**tests**/prompt-ui.test.ts
-- [pending] shared/**tests**/prompt.test.ts
-- [pending] shared/**tests**/spinner.test.ts
-- [pending] shared/**tests**/splash.test.ts
-- [pending] shared/**tests**/theme-tokens.test.ts
-- [pending] shared/**tests**/theme.test.ts
+- [audited-clean] shared/**tests**/box.test.ts
+- [audited-clean] shared/**tests**/breadcrumbs.test.ts
+- [audited-clean] shared/**tests**/cli_base.test.ts
+- [audited-clean] shared/**tests**/entry-menu-logic.test.ts
+- [audited-clean] shared/**tests**/entry-menu.test.ts
+- [audited-clean] shared/**tests**/first-run.test.ts
+- [audited-clean] shared/**tests**/output.test.ts
+- [audited-clean] shared/**tests**/palette.test.ts
+- [audited-clean] shared/**tests**/prompt-errors.test.ts
+- [audited-clean] shared/**tests**/prompt-format.test.ts
+- [audited-clean] shared/**tests**/prompt-input-base.test.ts
+- [audited-clean] shared/**tests**/prompt-input-editor.test.ts
+- [audited-clean] shared/**tests**/prompt-input-filepath.test.ts
+- [audited-clean] shared/**tests**/prompt-input-inquirer.test.ts
+- [audited-clean] shared/**tests**/prompt-input.test.ts
+- [audited-clean] shared/**tests**/prompt-summary.test.ts
+- [audited-clean] shared/**tests**/prompt-ui.test.ts
+- [audited-clean] shared/**tests**/prompt.test.ts
+- [audited-clean] shared/**tests**/spinner.test.ts
+- [audited-clean] shared/**tests**/splash.test.ts
+- [audited-clean] shared/**tests**/theme-tokens.test.ts
+- [audited-clean] shared/**tests**/theme.test.ts
+    - NOTA: `shared/**tests**/dashboard-menu.test.ts` listado no manifesto original B1.4, mas o arquivo NAO EXISTE no disco (verificado via glob). Nao e T4 (skip orfao); e teste nao criado. Source `shared/ui/dashboard-menu.ts` lido/aprovado em audit separada. Requer criacao de teste dedicado (pendencia registrada, nao bloqueia B1.4).
 
 ## B1.5 — ci/jira/infra (31)
 
