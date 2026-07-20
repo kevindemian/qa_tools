@@ -1,15 +1,18 @@
-image: node:lts
-
-cache:
-    key: $CI_COMMIT_REF_SLUG
-    paths:
-        - node_modules/
-
-test:
+stages:
+  - test
+jobs:
+  qa-tools:
     stage: test
+    image: node:lts
     script:
-        - npm ci
-        - npm run typecheck
-        - npx eslint . --ext .ts
-        - npm run unused-exports
-        - npm run test:coverage
+      - npm ci
+      - npx vitest run
+      - npx tsx git_triggers/main.ts pr-report --project qa_tools --no-ai
+        --no-flaky --no-quality
+    artifacts:
+      paths:
+        - reports
+      reports:
+        junit:
+          - reports/junit.xml
+

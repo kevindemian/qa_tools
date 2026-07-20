@@ -68,6 +68,13 @@ describe('GenerateGitLabCI', () => {
         expect(yaml).toContain('git_triggers/main.ts pr-report');
     });
 
+    it('passes --project with the client project name (not hardcoded)', () => {
+        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
+
+        expect(yaml).toContain('pr-report --project test-proj');
+        expect(yaml).not.toContain('pr-report --project qa_tools');
+    });
+
     it('does not add post-processing when prReport disabled', () => {
         const yaml = generateGitLabCI(MOCK_CTX_BASIC);
 

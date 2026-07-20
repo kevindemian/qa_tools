@@ -729,6 +729,22 @@ Nota de implantação: o cliente (ex.: GitLab `me-team-group/qatools`) roda o Se
 seu repo; o `project-name` gerado reflete o `package.json` name / remote do cliente, e o
 `pr-report` descobre o owner automaticamente via variáveis de CI do versionador.
 
+#### 20.5.3 Simetria GitLab — template passa `--project` dinâmico (2026-07-20)
+
+O `setup/templates/gitlab-ci.ts` gerava o job `pr-report` **sem `--project`** (ao
+contrário do `ci-injector` GitHub, que passa `--project ${{ inputs.project-name }}`).
+Sem `--project`, o `pr-report` no GitLab não recebia o projeto do cliente → dependia de
+`QA_CURRENT_PROJECT` ou falhava. **Causa raiz de assimetria / potencial hardcoded no
+GitLab.** **Corrigido:** o template GitLab agora emite
+`pr-report --project ${ctx.projectName} [flags]` (dinâmico, vindo do wizard). O
+`.gitlab-ci.yml` deste repo foi regenerado a partir do template (G2: só o template
+gera CI; sem edição manual) para validação no GitLab `me-team-group/qatools`. Teste de
+regressão em `gitlab-ci.test.ts` (`--project test-proj`, não `qa_tools`).
+
+Estado: correções de código commitadas (`0292db41` + este). Pendente de validação em CI
+(real) na conta com quota disponível (GitHub da conta atual esgotou minutos no plano
+gratuito; GitLab `me-team-group/qatools` tem token em `.env.local` para push/validação).
+
 ### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
 O subagent declarou 356/356 SÃO em `shared/` por **scans de assinatura + amostra

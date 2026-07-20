@@ -22,7 +22,9 @@ export function generateGitLabCI(ctx: SetupContext): string {
         ]
             .filter(Boolean)
             .join(' ');
-        scriptLines.push('npx tsx git_triggers/main.ts pr-report ' + flags);
+        scriptLines.push(
+            'npx tsx git_triggers/main.ts pr-report --project ' + ctx.projectName + (flags ? ' ' + flags : ''),
+        );
     }
 
     const job: JobConfig = {
