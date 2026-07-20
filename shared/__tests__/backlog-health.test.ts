@@ -291,10 +291,17 @@ describe('AnalyzeBacklogHealth', () => {
         expect(result.noData).toBeTruthy();
     });
 
-    it('respects maxIssues option', () => {
-        const result = analyzeBacklogHealth(sampleIssues, { maxIssues: 2 });
+    it('analyzes ALL issues (no silent truncation); maxIssues limits display only', () => {
+        const result = analyzeBacklogHealth(sampleIssues, { maxIssues: 1 });
 
-        expect(result.staleIssues.length).toBeLessThanOrEqual(2);
+        // Analysis covers every issue, not just the first maxIssues.
+        expect(result.staleIssues).toHaveLength(2); // PROJ-3, PROJ-4 (full set)
+        expect(result.totalIssues).toBe(sampleIssues.length);
+
+        const html = generateBacklogHealthHtml(result);
+
+        // A list longer than the limit is capped and the truncation is explicit (no silent data loss).
+        expect(html).toContain('Showing first 1 of');
     });
 });
 

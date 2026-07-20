@@ -30,6 +30,8 @@ export interface BacklogHealthIssue {
     type: string;
     priority: string;
     linkedTestCount: number;
+    /** Epic real (quando disponível na fonte). Fallback: prefixo do key. */
+    epic?: string;
 }
 
 export interface BacklogHealthResult {
@@ -41,6 +43,8 @@ export interface BacklogHealthResult {
     score: number;
     /** true quando nenhum issue real foi analisado (sem fabricação de 100%). */
     noData?: boolean;
+    /** Limite de EXIBIÇÃO das listas (não trunca a análise). Ausente = sem limite. */
+    displayLimit?: number;
     timestamp: string;
 }
 
@@ -115,15 +119,15 @@ export function analyzeBacklogHealth(
     options?: Partial<BacklogHealthOptions>,
 ): BacklogHealthResult {
     const opts = { ...DEFAULTS, ...options };
-    const limited = issues.slice(0, opts.maxIssues);
 
-    const unassigned = analyzeUnassignedIssues(limited);
-    const stale = analyzeStaleIssues(limited, opts);
-    const bugs = analyzeBugsWithoutTests(limited);
+    // Analisa TODOS os issues (sem truncagem silenciosa). maxIssues limita apenas a exibição.
+    const unassigned = analyzeUnassignedIssues(issues);
+    const stale = analyzeStaleIssues(issues, opts);
+    const bugs = analyzeBugsWithoutTests(issues);
 
     const epicMap = new Map<string, { bugCount: number; testCount: number }>();
-    for (const issue of limited) {
-        const epic = issue.key.split('-')[0] || 'UNKNOWN';
+    for (const issue of issues) {
+        const epic = (issue.epic ?? issue.key.split('-')[0]) || 'UNKNOWN';
         const entry = epicMap.get(epic) || { bugCount: 0, testCount: 0 };
         if (issue.type === 'Bug') entry.bugCount++;
         entry.testCount += issue.linkedTestCount;
@@ -138,9 +142,10 @@ export function analyzeBacklogHealth(
         staleIssues: stale,
         bugsWithoutTests: bugs,
         densityByEpic,
-        totalIssues: limited.length,
+        totalIssues: issues.length,
         score: 0,
-        noData: limited.length === 0,
+        noData: issues.length === 0,
+        displayLimit: opts.maxIssues,
         timestamp: new Date().toISOString(),
     };
 
@@ -185,7 +190,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Unassigned Issues (' + result.unassignedIssues.length + ')',
             variant: 'bordered',
             severity: 'warn',
-            children: buildIssueList(result.unassignedIssues),
+            children: buildIssueListCapped(result.unassignedIssues, result.displayLimit),
         });
     }
 
@@ -194,7 +199,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Stale Issues (' + result.staleIssues.length + ')',
             variant: 'bordered',
             severity: 'warn',
-            children: buildIssueList(result.staleIssues),
+            children: buildIssueListCapped(result.staleIssues, result.displayLimit),
         });
     }
 
@@ -203,7 +208,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Bugs Without Tests (' + result.bugsWithoutTests.length + ')',
             variant: 'bordered',
             severity: 'error',
-            children: buildIssueList(result.bugsWithoutTests),
+            children: buildIssueListCapped(result.bugsWithoutTests, result.displayLimit),
         });
     }
 
@@ -217,9 +222,11 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
     return '<div id="backlog-health">' + summaryCards + sectionsHtml + '</div>';
 }
 
-function buildIssueList(issues: BacklogHealthIssue[]): string {
+function buildIssueListCapped(issues: BacklogHealthIssue[], limit?: number): string {
+    const hasLimit = typeof limit === 'number' && limit >= 0;
+    const visible = hasLimit ? issues.slice(0, limit) : issues;
     let html = '<div style="max-height:300px;overflow-y:auto">';
-    for (const issue of issues) {
+    for (const issue of visible) {
         html += '<div style="padding:6px 0;border-bottom:1px solid var(--color-border-subtle);font-size:0.85rem">';
         html += '<span style="font-weight:600">' + sanitizeHtml(issue.key) + '</span>';
         html +=
@@ -228,6 +235,15 @@ function buildIssueList(issues: BacklogHealthIssue[]): string {
             '</span>';
         html += ' ' + Badge({ variant: issue.type === 'Bug' ? 'fail' : 'warn', children: issue.type });
         html += '</div>';
+    }
+    if (hasLimit && issues.length > limit) {
+        html +=
+            '<div style="padding:6px 0;color:var(--color-text-secondary);font-size:0.8rem">' +
+            'Showing first ' +
+            String(limit) +
+            ' of ' +
+            String(issues.length) +
+            ' issues.</div>';
     }
     html += '</div>';
     return html;

@@ -116,14 +116,19 @@ describe('Integration: Backlog Health (FT-28)', () => {
         });
     });
 
-    describe('FT-28c: maxIssues option limits scope', () => {
-        it('respects maxIssues when analyzing', async () => {
+    describe('FT-28c: maxIssues option limits display, not analysis', () => {
+        it('all issues analyzed; display capped with explicit note', async () => {
             expect.hasAssertions();
 
-            const { analyzeBacklogHealth } = await import('../../report/backlog-health.js');
-            const result = analyzeBacklogHealth(makeIssues(), { maxIssues: 2 });
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
+            const all = makeIssues();
+            const result = analyzeBacklogHealth(all, { maxIssues: 1 });
+            const html = generateBacklogHealthHtml(result);
 
-            expect(result.unassignedIssues.length + result.staleIssues.length).toBeLessThanOrEqual(2);
+            // Analysis is over the full set (not truncated to maxIssues).
+            expect(result.totalIssues).toBe(all.length);
+            // Display is capped and the truncation is explicit (no silent data loss).
+            expect(html).toContain('Showing first 1 of');
         });
     });
 });

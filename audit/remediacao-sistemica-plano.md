@@ -108,6 +108,26 @@ Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolad
 - **Nota:** callers (`case25`, `schedule-handler`, `interactive-mode`) continuam passando `undefined`
   (gap não populado em runtime) → empty-state explícito (Fase 7 fará o wire de `analyzeCoverageGaps`).
 
+### Fase 3 (#C7 truncagem, #C8 epic) — CONCLUÍDA (2026-07-20)
+
+- **#C7 (truncagem silenciosa):** `analyzeBacklogHealth` analisava só `issues.slice(0, maxIssues)`
+  (linha 118) → bugs além de `maxIssues` NUNCA eram contabilizados (score/densidade subcontados,
+  silencioso). **Raiz:** `maxIssues` é limite de EXIBIÇÃO, não de análise.
+    - Fix: análise sobre **todos** os issues; `totalIssues = issues.length`; `displayLimit: opts.maxIssues`
+      no resultado. `generateBacklogHealthHtml` renderiza no máx. `displayLimit` itens por lista e exibe
+      nota explícita `Showing first N of M issues.` quando há truncagem (nunca silenciosa — AGENTS §25).
+    - Testes que codificavam o defeito corrigidos (§19.5): `backlog-health.test.ts` "respects maxIssues"
+      → "analyzes ALL issues"; `integration/backlog-health.integration.test.ts` FT-28c → "maxIssues limits
+      display, not analysis". NOVO invariante property: `maxIssues` nunca trunca análise.
+- **#C8 (epic via prefixo do key):** `issue.key.split('-')[0]` inferia o epic do prefixo do KEY
+  (que é o PROJETO, não o epic). **Raiz:** `BacklogHealthIssue` não tinha campo de epic.
+    - Fix: `BacklogHealthIssue.epic?: string` (campo real, opcional); agrupamento por
+      `issue.epic ?? issue.key.split('-')[0] || 'UNKNOWN'` (campo real preferencial, fallback preservado
+      p/ fixtures/ausência). **Wire completo do epic real da fonte Jira** ficará na Fase 7 (#C2 data wiring),
+      pois os callers produtivos (`interactive-mode`, `schedule-handler`) hoje passam `[]` (sem issues reais).
+- **Gate:** `tsc --noEmit` limpo; eslint 0 erros; 38 testes backlog-health verdes + 74 testes de
+  schedule-handler/interactive-mode verdes (callers não afetados).
+
 ### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
 
 - Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.
