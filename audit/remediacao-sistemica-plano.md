@@ -62,3 +62,54 @@ a tipo:
 
 Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolado + CI monitorado
 (AGENTS.md §13) antes de avançar.
+
+---
+
+## Progresso (checkpoints)
+
+### Fase 0 — CONCLUÍDA
+
+- Commit `6c4099e8` (push GitLab main `24621a45` via Batch 1/docs).
+- `shared/types/availability.ts` + `shared/types/__tests__/availability.test.ts` (5 testes).
+
+### Fase 1 (C5) — CONCLUÍDA (2026-07-20)
+
+- Commit `678d2642` (push GitLab `24621a45..678d2642`).
+- types/bugs.ts: `HealthScoreDimensionResult.available`+`status:'unknown'`; `HealthScoreResult.qualityGate:'unknown'`.
+- health-score.ts: `evaluateQualityGate` 3-estados + renormalização sobre dims disponíveis; rótulo "Cobertura de testes Jira (steps)".
+- quality-gate.ts: 3-estados; `unknown` NÃO forçado a fail; conclusion `unknown`→`neutral`.
+- report-sections.ts / cli_base.ts / case19.ts / pr-report-core.ts: render `unknown`(❓)/N/A.
+- NOVO `shared/__tests__/health-score.robust.test.ts` (5): prova dim ausente→`unknown` (não fail), renormalização, presente-abaixo-limiar falha.
+- `tsc --noEmit` limpo; eslint 0 erros (quality-check: 13/13 checks ✅); 215 testes das suítes dependentes verdes.
+
+### Fase 2 (#C3) — CONCLUÍDA (2026-07-20)
+
+- **Objeto:** contratar o modelo único `CoverageGapResult` (canônico `shared/types/coverage.ts`)
+  em `shared/report/traceability-matrix.ts`; eliminar duplicata local (`CoverageGapItem`/`CoverageGapResult`
+  estreitos com `item.epic` + `byEpic:{total,covered,rawPct}`).
+- **Mudanças (raiz, não patch):**
+    - `traceability-matrix.ts`: importa `CoverageGapResult`/`CoverageGapItem` canônicos; `groupItemsByEpic`
+      agrupa por `item.epicKey ?? ''`; `buildStoryNode` usa `item.issueKey ?? epicKey` (fallback explícito p/
+      item sem `issueKey`); `byEpic` consumido por chave canônica.
+    - `shared/types/coverage.ts`: `CoverageGapItem.issueKey` tornou-se **opcional** (`issueKey?: string`) —
+      correção de contrato: um item de gap pode legitimamente não ter issueKey (atestado pelo teste
+      "handles item without issueKey" que exige fallback ao epic). Leitores (`coverage-gap.ts` `createEpicNode`/
+      `createChildNode`, `generate-coverage-gap-html.ts`) ganharam fallback `?? epicKey ?? ''`/`'—'`.
+    - **Fixtures de teste reconciliadas ao contrato canônico** (Fase TESTES — fixture não codifica mais o
+      contrato estreito): `traceability-matrix.test.ts` e `.integration.test.ts` via adapter de fixture
+      (`toCanonicalCoverage` mapeia `epic`→`epicKey`); `e2e/ci-data-e2e`, `system/ci-data-system`,
+      `robust` via `makeCoverageGapResult` (NOVO `shared/__tests__/coverage-fixture.ts`); `property.test.ts`
+      arb constrói `CoverageGapResult` canônico (incl. `gateConfig`/`hierarchy`/`trends`).
+    - `case21.test.ts` já usava o contrato canônico (sem ação).
+- **Gate:** `tsc --noEmit` limpo; eslint 0 erros (3 warnings não-bloqueantes `detect-object-injection`
+  em adapters de fixture, mesma classe dos pré-existentes); 96 testes das suítes de traceability/coverage
+  verdes + 149 testes de suítes de cenário/relatório verdes (interactive-mode 55, schedule-handler 19,
+  report-html 18, coverage-gap 8, generate-coverage-gap-html 14, etc.).
+- **Nota:** callers (`case25`, `schedule-handler`, `interactive-mode`) continuam passando `undefined`
+  (gap não populado em runtime) → empty-state explícito (Fase 7 fará o wire de `analyzeCoverageGaps`).
+
+### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
+
+- Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.
+- Pipelines anteriores `2691851959` (`24621a45`, Fase 0/Batch1) e `2690579847` (`d92c6a65`, base antes do trabalho de Fase) **também `failed`** com o mesmo padrão.
+- Conclusão: CI do GitLab sem runner executando jobs (falha infra independe do código). Gate local autoritativo (`scripts/quality-check.ts`: eslint 0 violações + 13 checks) passou integralmente. **Ação:** verificar disponibilidade de runner / config do pipeline no GitLab; não há defeito de código em Fase 1 a corrigir.

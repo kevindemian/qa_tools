@@ -23,23 +23,13 @@ import { describe, expect, it } from 'vitest';
 
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
 import { createTestHub } from './test-hub.js';
+import { makeCoverageGapResult } from './coverage-fixture.js';
 
 /** Fixture matching the function's consumed `CoverageGapResult` contract. */
 function realCoverageFixture() {
-    return {
-        items: [
-            {
-                epic: 'EPIC-1',
-                hasTest: true,
-                linkedTestKeys: ['TC-001', 'TC-002'],
-                issueKey: 'STORY-1',
-            },
-        ],
-        totals: { total: 1, covered: 1 },
-        byEpic: {
-            'EPIC-1': { total: 1, covered: 1, rawPct: 50 },
-        },
-    };
+    return makeCoverageGapResult({
+        'EPIC-1': { items: [{ issueKey: 'STORY-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'] }], rawPct: 50 },
+    });
 }
 
 function runWith(tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>) {

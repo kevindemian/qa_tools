@@ -13,6 +13,7 @@ import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
 import type { MetricsRun } from '../types/data-hub.js';
+import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../types/coverage.js';
 import { createTestHub } from './test-hub.js';
 
 vi.mock('../logger', () => ({
@@ -66,28 +67,47 @@ const CoverageResultArb = fc
         { minLength: 0, maxLength: 5 },
     )
     .map((entries) => {
-        const byEpic: Record<string, { total: number; covered: number; rawPct: number }> = {};
-        const items: Array<{
-            epic: string;
-            hasTest: boolean;
-            linkedTestKeys?: string[];
-            issueKey?: string;
-        }> = [];
+        const byEpic: Record<string, EpicCoverage> = {};
+        const items: CoverageGapItem[] = [];
         for (const e of entries) {
-            byEpic[e.epic] = { total: e.totalInEpic, covered: e.coveredInEpic, rawPct: e.rawPct };
+            byEpic[e.epic] = {
+                epicSummary: e.epic,
+                total: e.totalInEpic,
+                covered: e.coveredInEpic,
+                weightedPct: e.rawPct,
+                rawPct: e.rawPct,
+                gatePass: e.rawPct >= 50,
+                issues: [],
+            };
             items.push({
-                epic: e.epic,
+                issueKey: e.issueKey ?? e.epic,
+                summary: e.issueKey ?? e.epic,
+                type: 'Story',
+                status: 'Done',
                 hasTest: e.hasTest,
-                ...(e.testKeys.length > 0 ? { linkedTestKeys: e.testKeys } : {}),
-                ...(e.issueKey !== undefined ? { issueKey: e.issueKey } : {}),
+                linkedTestKeys: e.testKeys,
+                priority: 'Medium',
+                coverageWeight: 1,
+                epicKey: e.epic,
             });
         }
         const covered = entries.filter((e) => e.hasTest).length;
+        const total = entries.length;
+        const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
         return {
             items,
-            totals: { total: entries.length, covered },
+            totals: {
+                totalIssues: total,
+                covered,
+                gap: total - covered,
+                weightedCoveragePct: pct,
+                rawCoveragePct: pct,
+            },
             byEpic,
-        };
+            gateConfig: { minCoveragePct: 50, failingEpics: [] },
+            hierarchy: [],
+            trends: [],
+        } satisfies CoverageGapResult;
     });
 
 describe('BuildTraceabilityMatrix — property-based', () => {

@@ -107,9 +107,10 @@ function loadCoverageTrends(project: string): CoverageSnapshot[] {
 }
 
 function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHierarchyNode>): CoverageHierarchyNode {
-    if (!epicNodes.has(item.issueKey)) {
-        epicNodes.set(item.issueKey, {
-            key: item.issueKey,
+    const epicKey = item.issueKey ?? item.epicKey ?? item.summary;
+    if (!epicNodes.has(epicKey)) {
+        epicNodes.set(epicKey, {
+            key: epicKey,
             summary: item.summary,
             type: 'Epic',
             children: [],
@@ -119,8 +120,8 @@ function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHi
         });
     }
     return (
-        epicNodes.get(item.issueKey) ?? {
-            key: item.issueKey,
+        epicNodes.get(epicKey) ?? {
+            key: epicKey,
             summary: item.summary,
             type: 'Epic',
             children: [],
@@ -133,7 +134,7 @@ function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHi
 
 function createChildNode(item: CoverageGapItem): CoverageHierarchyNode {
     return {
-        key: item.issueKey,
+        key: item.issueKey ?? item.epicKey ?? '',
         summary: item.summary,
         type: item.type,
         children: [],

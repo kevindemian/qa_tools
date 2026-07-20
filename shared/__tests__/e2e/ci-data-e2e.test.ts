@@ -12,6 +12,7 @@ import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
+import { makeCoverageGapResult } from '../coverage-fixture.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -173,11 +174,12 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 },
             ];
 
-            const coverageResult = {
-                items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' }],
-                totals: { total: 1, covered: 1 },
-                byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
-            };
+            const coverageResult = makeCoverageGapResult({
+                'EPIC-1': {
+                    items: [{ issueKey: 'STORY-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'] }],
+                    rawPct: 100,
+                },
+            });
 
             const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
             const html = generateTraceabilityHtml(result);

@@ -2,18 +2,71 @@ import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/tra
 import type { MetricsRun, FlakyResult, RawData } from '../types/data-hub.js';
 import type { QualityCategory, QualityReport } from '../data-hub/quality.js';
 import type { DataSource } from '../types/data-hub.js';
+import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../types/coverage.js';
 import { rootLogger } from '../logger.js';
 import { nonNull } from '../test-utils.js';
 import { createTestHub } from './test-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
+/** Forma estreita histórica dos fixtures de cobertura (item.epic / byEpic estreito). */
+interface NarrowCoverageItem {
+    epic: string;
+    hasTest: boolean;
+    linkedTestKeys?: string[];
+    issueKey?: string;
+}
+interface NarrowCoverage {
+    items?: NarrowCoverageItem[];
+    totals?: { total: number; covered: number };
+    byEpic?: Record<string, { total: number; covered: number; rawPct: number }>;
+}
+
+/** Adapta fixtures estreitos (test-intent) para o contrato canônico CoverageGapResult (#C3). */
+function toCanonicalCoverage(c: NarrowCoverage): CoverageGapResult {
+    const items: CoverageGapItem[] = (c.items ?? []).map((it) => ({
+        ...(it.issueKey !== undefined ? { issueKey: it.issueKey } : {}),
+        summary: it.issueKey ?? '',
+        type: 'Story',
+        status: 'Done',
+        hasTest: it.hasTest,
+        linkedTestKeys: it.linkedTestKeys ?? [],
+        priority: 'Medium',
+        coverageWeight: 1,
+        epicKey: it.epic,
+    }));
+    const byEpic: Record<string, EpicCoverage> = {};
+    for (const [key, v] of Object.entries(c.byEpic ?? {})) {
+        byEpic[key] = {
+            epicSummary: key,
+            total: v.total,
+            covered: v.covered,
+            weightedPct: v.rawPct,
+            rawPct: v.rawPct,
+            gatePass: v.rawPct >= 50,
+            issues: [],
+        };
+    }
+    const total = c.totals?.total ?? items.length;
+    const covered = c.totals?.covered ?? items.filter((i) => i.hasTest).length;
+    const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+    return {
+        items,
+        totals: { totalIssues: total, covered, gap: total - covered, weightedCoveragePct: pct, rawCoveragePct: pct },
+        byEpic,
+        gateConfig: { minCoveragePct: 50, failingEpics: [] },
+        hierarchy: [],
+        trends: [],
+    };
+}
+
 /** Wrapper que injeta DataHub (SSOT) obrigatório, com flakyRate opcional. */
 function matrix(
     metrics: MetricsRun[],
-    coverage?: Parameters<typeof buildTraceabilityMatrix>[1],
+    coverage?: NarrowCoverage,
     flakyRate?: FlakyResult[],
 ): ReturnType<typeof buildTraceabilityMatrix> {
-    return buildTraceabilityMatrix(metrics, coverage, createTestHub({ flakyRate: flakyRate ?? [] }));
+    const canonical = coverage ? toCanonicalCoverage(coverage) : undefined;
+    return buildTraceabilityMatrix(metrics, canonical, createTestHub({ flakyRate: flakyRate ?? [] }));
 }
 
 function emptyMetrics(): MetricsRun[] {
