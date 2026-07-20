@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 111 (shared B1.1 + B1.2a + parte B1.2b). Restam: 395.
+Concluído até agora: 114 (shared B1.1 + B1.2a + B1.2b completo). Restam: 392.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -138,9 +138,9 @@ Concluído até agora: 111 (shared B1.1 + B1.2a + parte B1.2b). Restam: 395.
 - [audited-clean] shared/**tests**/silent-regression.test.ts
 - [audited-clean] shared/**tests**/suite-optimization.property.test.ts
 - [audited-clean] shared/**tests**/suite-optimization.test.ts
-- [pending] shared/**tests**/targeted-retry.test.ts
-- [pending] shared/**tests**/test-impact.property.test.ts
-- [pending] shared/**tests**/test-impact.test.ts
+- [audited-clean] shared/**tests**/targeted-retry.test.ts (par source+teste: guards retry/telemetry; mocks fronteira child_process/fs/logger; asserts concretos; T1-T7 ok)
+- [audited-clean] shared/**tests**/test-impact.property.test.ts (PBT invariants: no-dup/confidence/round-trip; mocks fronteira; T1-T7 ok)
+- [audited-clean] shared/**tests**/test-impact.test.ts (Tier1/2/3 + edge; mocks fronteira exatos; asserts toStrictEqual/toContain; T1-T7 ok)
 
 ## B1.3 — llm/analysis (23)
 
