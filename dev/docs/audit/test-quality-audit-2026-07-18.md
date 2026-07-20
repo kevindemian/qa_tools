@@ -669,6 +669,19 @@ corrigido (`fbdaa854`). Sem safety theater restante. Ressalvas documentadas: XSS
 `shared/primitives/*` (contrato caller-escapes, não corrigido — exige mudança de contrato),
 `formatDuration(NaN)` em `pipeline-health-renderer.ts` (renderer puro, dado do DataHub).
 
+**Encerramento de sessão (2026-07-20, pós-retomada):** as correções de CI de
+§20.5.1–§20.5.4 foram implementadas, cobertas por testes de regressão e pushadas para o
+GitLab (`5d7e11bc`→GitHub; `f0345f3a`, `b9ed6cc3`, `2518c6ea`→GitLab). Validação final local
+desta sessão: `vitest run` → **6922 passed / 506 files**; `tsc --noEmit` limpo; `type-coverage`
+99.95%; `no-swallow` OK; `semgrep:diff` OK (nenhuma supressão semântica); `gitleaks` sem leaks.
+As anotações internas "Commit pendente" em §20.6 (case17 `f5dc3be8`, ai-test-impact `313fcdd9`,
+result_parser `0222380c`) foram marcadas como commitadas — já estavam no histórico.
+Pendências fora do escopo da auditoria (aguardando decisão do usuário, não bloqueiam a
+conclusão): (a) G2 — reconciliação do `ci.yml` atual com `setup/templates/github-ci.ts`
+(`ci.yml` é artefato fora do gerador, proibido editar manualmente); (b) `chattr +i` em
+`audit-suppressions.ts` cria hazard de congelamento entre runs (§5). GitHub sem push (conta
+gratuita esgotou minutos); sincronização futura quando houver quota.
+
 #### 20.5.1 Correção de causa raiz do CI `post-process` (2026-07-20)
 
 O job `post-process` (`qa-post-process.yml`) falhava no CI com erro
@@ -1615,9 +1628,9 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
    - Correção na origem (NÃO enfraqueceu `sanitizePath`): `case17.ts` `getMappingCandidates`/`_writeReportFile`
      tratam caminho absoluto como intent do operador (`path.resolve` direto) e relativo continua confinado
      via `sanitizePath(process.cwd(), ...)`. `sanitizePath` intacto (mecanismo de segurança preservado).
-   - Verificação local: `npx vitest run jira_management/commands/__tests__/case17.test.ts` → 21 passed;
-     `shared/__tests__/path-utils.test.ts` → 6 passed. Pre-commit hooks (eslint/prettier/typecheck/validation)
-     passaram. Push de correção PENDENTE (próximo commit).
+    - Verificação local: `npx vitest run jira_management/commands/__tests__/case17.test.ts` → 21 passed;
+      `shared/__tests__/path-utils.test.ts` → 6 passed. Pre-commit hooks (eslint/prettier/typecheck/validation)
+      passaram. **Commitado: `f5dc3be8` (e `313fcdd9` para ai-test-impact, lote sanitizePath).**
 
  - [CI §13 — run `29715830289` (sha `f5dc3be8`)] **CONCLUSÃO: failure → CORRIGIDO**
    - Node 24 "Tests without coverage" falhou: `git_triggers/__tests__/ai-test-impact.test.ts` —
@@ -1638,7 +1651,7 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     propaga para `PrReportStats.duration` → display `"NaN"` (writeToJobSummary/buildSummaryTable).
   - CORREÇÃO NA ORIGEM: `duration: Number.isFinite(t.duration) ? t.duration : 0` (consistente com
     Mochawesome linha 200 `?? 0`). Teste de regressão adicionado (CTRF duration ausente→0 + stats
-    finito). 35 testes passam. Commit pendente (lote espaçado).
+     finito). 35 testes passam. **Commitado: `0222380c` (lote sanitizePath / result_parser).**
   - Teste existente: cobre Mochawesome/CTRF/dispatch/empty/null/undefined/error-file/summary-vs-
     computed; assertions concretas. Sem teatro. (Nota: teste já cobria Mochawesome duration ausente
     mas NÃO CTRF — lacuna fechada pela correção.)
