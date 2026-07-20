@@ -56,6 +56,13 @@ export class WorkflowBuilder {
 
     private jobsMap(): YAMLMap {
         const root = this.root();
+        // GitLab CI has NO `jobs:` key — jobs live at the document root.
+        // GitHub Actions nests them under `jobs:`. Branch on provider so the
+        // generated YAML matches the target CI schema (root-cause fix for
+        // GitLab "jobs config should contain at least one visible job").
+        if (this.provider === 'gitlab') {
+            return root;
+        }
         let jobs = root.get('jobs', true) as YAMLMap | undefined;
         if (!jobs) {
             jobs = new YAMLMap();
@@ -220,7 +227,11 @@ export class WorkflowBuilder {
     }
 
     toString(): string {
-        return this.doc.toString();
+        // lineWidth: 0 disables line wrapping so long `script:` commands (e.g. the
+        // pr-report invocation with multiple --flags) stay on a single line. Wrapping
+        // a script string across lines makes some CI parsers misread it as a job-level
+        // key, breaking the pipeline (GitLab: "jobs config should implement script/").
+        return this.doc.toString({ lineWidth: 0 });
     }
 
     setWorkflowName(name: string): this {

@@ -1,18 +1,15 @@
 stages:
   - test
-jobs:
-  qa-tools:
-    stage: test
-    image: node:lts
-    script:
-      - npm ci
-      - npx vitest run
-      - npx tsx git_triggers/main.ts pr-report --project qa_tools --no-ai
-        --no-flaky --no-quality
-    artifacts:
-      paths:
-        - reports
-      reports:
-        junit:
-          - reports/junit.xml
-
+qa-tools:
+  stage: test
+  image: node:lts
+  script:
+    - npm ci
+    - npx vitest run
+    - npx tsx git_triggers/main.ts pr-report --project qa_tools --no-ai --no-flaky --no-quality
+  artifacts:
+    paths:
+      - reports
+    reports:
+      junit:
+        - reports/junit.xml

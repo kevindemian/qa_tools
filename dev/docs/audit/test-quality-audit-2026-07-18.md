@@ -745,6 +745,22 @@ Estado: correções de código commitadas (`0292db41` + este). Pendente de valid
 (real) na conta com quota disponível (GitHub da conta atual esgotou minutos no plano
 gratuito; GitLab `me-team-group/qatools` tem token em `.env.local` para push/validação).
 
+#### 20.5.4 GitLab CI inválido — `WorkflowBuilder` emitia chave `jobs:` aninhada (2026-07-20)
+
+Ao validar no GitLab `me-team-group/qatools`, o pipeline falhou em `lint` com
+`jobs config should implement the script/run/trigger` + `should contain at least one
+visible job`. **Causa raiz:** o `setup/builder/workflow-builder.ts` sempre emitia os jobs
+sob a chave `jobs:` (padrão GitHub Actions). O **GitLab CI NÃO usa a chave `jobs:`** —
+os jobs ficam no nível raiz do documento. Com `jobs:` aninhado, o GitLab não reconhecia
+nenhum job → pipeline inválido. (A quebra de linha da string `pr-report` >80 cols pelo
+parser do GitLab era sintoma secundário, não a causa; a causa era a chave `jobs:`.)
+
+**Corrigido:** `WorkflowBuilder.jobsMap()` agora retorna o `root` diretamente quando
+`provider === 'gitlab'` (jobs no root) e mantém `jobs:` aninhado para GitHub. `toString`
+usa `lineWidth: 0` para evitar wrapping de `script` longos. `.gitlab-ci.yml` regenerado
+via template (G2). Validado contra `POST /ci/lint` do GitLab: `valid: true`. Teste de
+regressão em `workflow-builder.test.ts` (GitLab não emite `^\s*jobs:\s*$`).
+
 ### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
 O subagent declarou 356/356 SÃO em `shared/` por **scans de assinatura + amostra
