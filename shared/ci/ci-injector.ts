@@ -145,8 +145,20 @@ export function extractArtifactProducerJobName(ciYaml: string): string {
  * @returns Modified ci.yml content with post-process job appended
  */
 export function injectPostProcessJob(ciYaml: string, projectName: string): string {
-    // Idempotency guard: if post-process job already exists, do nothing
-    if (/^\s{2}post-process:/m.test(ciYaml)) return ciYaml;
+    // If post-process job already exists, UPDATE its project-name in place
+    // (wizard reconfiguration for a different client project) instead of
+    // ignoring the call. This is what makes `pr-report` client-configurable:
+    // the Setup/Reconfig Wizard can change the project without manual edits.
+    if (/^\s{2}post-process:/m.test(ciYaml)) {
+        const blockRegex = /(^\s{2}post-process:[\s\S]*?)(?=\n\s{2}[\w-]+:|(?![\s\S]))/m;
+        return ciYaml.replace(blockRegex, (block) => {
+            if (/^\s{6}project-name:\s*\S+/m.test(block)) {
+                return block.replace(/^\s{6}project-name:\s*\S+/m, `      project-name: ${projectName}`);
+            }
+            // Job exists but lacks project-name — insert it after the `uses:` line.
+            return block.replace(/^(\s{4}uses:.*)$/m, `$1\n      project-name: ${projectName}`);
+        });
+    }
 
     const producerJob = extractArtifactProducerJobName(ciYaml);
     const needsList = producerJob === 'test' ? '[test]' : `[${producerJob}]`;

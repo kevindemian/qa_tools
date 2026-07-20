@@ -698,6 +698,37 @@ Testes de regressão adicionados: `isTestArtifact('test-report')`/`('test_report
 `artifact-parser.test.ts`; remotes com credencial em `project-context.test.ts`.
 Commits pendentes de push + monitoramento de CI (§13).
 
+#### 20.5.2 pr-report não pode ser hardcoded — configurável via Wizard (2026-07-20)
+
+Requisito do usuário: "pr-report não pode ser hardcoded; deve ser configurável para a
+conta do cliente via wizard." Diagnóstico (leitura de `pr-report-core.ts`,
+`pr-report-setup-handler.ts`, `ci-injector.ts`, `setup/main.ts`, `cli-dispatch.ts`):
+
+- O **código** já é configurável: `pr-report-core.ts` recebe `projectName` de `--project`;
+  o owner/repo vem de `getCiEnv()` (`GITHUB_REPOSITORY` / `CI_PROJECT_ID`), não hardcoded.
+  O wizard `handlePrReportReconfig` usa `getCurrentProject()` e o Setup Wizard
+  (`setup/main.ts`) usa `ctx.projectName` (derivado de `gitInfo.repo` do cliente).
+- **Causa raiz do "hardcoded":** o `ci.yml` commitado deste repo tinha
+  `project-name: qa_tools` (gerado para o repo original), e `injectPostProcessJob`
+  (`ci-injector.ts`) tinha guarda de idempotência que **retornava o YAML inalterado se o
+  job `post-process` já existisse** → o wizard não conseguia *reconfigurar* o `project-name`
+  para a conta do cliente. O wizard existia mas estava ineficaz para atualizar.
+
+**Correção na origem:** `injectPostProcessJob` agora, quando o job `post-process` já existe,
+**atualiza** a linha `project-name:` in-place (substitui o valor, ou insere após `uses:` se
+ausente) em vez de ignorar a chamada. Isso torna o `pr-report` efetivamente configurável por
+cliente via Setup/Reconfig Wizard, sem edição manual de `ci.yml` (respeita G2: edição via
+`ci-injector`, não manual). Nenhuma mudança no contrato "dados vêm do versionador" (qatools
+não instalado no repo do cliente).
+
+Testes de regressão: `ci-injector.test.ts` (atualiza `project-name` / não duplica job);
+novo `git_triggers/__tests__/pr-report-reconfig-inject.test.ts` (reconfig real de
+`qa_tools` → `client-x` num `ci.yml` existente). Typecheck limpo.
+
+Nota de implantação: o cliente (ex.: GitLab `me-team-group/qatools`) roda o Setup Wizard no
+seu repo; o `project-name` gerado reflete o `package.json` name / remote do cliente, e o
+`pr-report` descobre o owner automaticamente via variáveis de CI do versionador.
+
 ### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
 O subagent declarou 356/356 SÃO em `shared/` por **scans de assinatura + amostra

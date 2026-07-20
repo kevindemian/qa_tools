@@ -213,10 +213,19 @@ describe('InjectPostProcessJob', () => {
         expect(result).toContain(ACTION_VERSIONS.CHECKOUT);
     });
 
-    it('is idempotent — does not inject when post-process already exists', () => {
-        const result = injectPostProcessJob(CI_ALREADY_HAS_POST_PROCESS, 'my-project');
+    it('updates project-name when post-process already exists (wizard reconfiguration)', () => {
+        const result = injectPostProcessJob(CI_ALREADY_HAS_POST_PROCESS, 'client-x');
 
-        expect(result).toBe(CI_ALREADY_HAS_POST_PROCESS);
+        expect(result).toContain('project-name: client-x');
+        expect(result).not.toContain('project-name: qa_tools');
+        // Rest of the job is preserved (no duplicate injection).
+        expect(result.match(/^\s{2}post-process:/gm)).toHaveLength(1);
+    });
+
+    it('does not duplicate the post-process job on reconfiguration', () => {
+        const result = injectPostProcessJob(CI_ALREADY_HAS_POST_PROCESS, 'client-x');
+
+        expect(result.match(/post-process:/g)).toHaveLength(1);
     });
 
     it('needs: points to the job that uploads the artifact, not the first job', () => {
