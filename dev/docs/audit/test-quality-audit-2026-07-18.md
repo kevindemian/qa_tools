@@ -1017,4 +1017,141 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     (rejected→registra fail c/ msg, não silenciado); 3 runners c/ try/catch→`passed:false`+`formatErr`;
     `readPrompt` catch→`''`+debug; SW-15 sinais qualidade passRate<50/<80; `isMain` guard CLI.
     Sem exceções. Sem defeito.
-
+- [shared] `data-hub/compute/run-pass-rate.ts` + `__tests__/compute/run-pass-rate.{test,property.test}.ts` — **AUDITADO SÃO (c/ ressalva sistêmica)**
+  - Teste: `toMatchObject` implícito; casos 0/100/mixed/round/large; property 0-100/zero-exec/
+    simetria. Assertions exatas. Sem teatro.
+  - Source: `calcRunPassRate` `executed===0→0` (§24: sem testes NÃO finge 100); `%` arredondado 2 casas.
+    **RESSALVA §24/§25.3:** não valida `Number.isFinite(passed/failed)`; usado em QUALITY GATE
+    (`case17.ts:308` `passRate < threshold`, `pr-report-core`, `run-comparison`) — entrada
+    não-finite (undefined de run malformado) → NaN silencioso que passa/falha gate. DEFEITO DE
+    PRODUÇÃO em aberto; correção dedicada (lançar em não-finite + atualizar callers) PENDENTE.
+- [shared] `data-hub/compute/run-failure-rate.ts` + `__tests__/compute/run-failure-rate.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `makeRun` factory (MetricsRun completo); empty/0/100/mixed/1-failure/round; property
+    0-100/empty/all-failed. Assertions exatas. Sem teatro.
+  - Source: `calcRunFailureRate` `runs.length===0→0`; `failedRuns=filter(r=>r.failed>0)`; `%`
+    arredondado. `MetricsRun.failed` tipado `number` (obrigatório). Sem NaN path. Sem defeito.
+- [shared] `data-hub/compute/pass-rate.ts` + `__tests__/compute/pass-rate.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `makeRun` factory (PipelineRun real); empty/100/0/mixed/ignora-sem-conclusion/single/
+    branch-filter(Gap3); property 0-100/empty/all-success. Assertions exatas. Sem teatro.
+  - Source: `calcPipelinePassRate` filtra branch(`head_branch??ref`) + `conclusion!=null`;
+    `withConclusion.length===0→0` (§24: não finge 100); `%` arredondado. Sem NaN path. Sem defeito.
+- [shared] `data-hub/compute/flaky-rate.ts` + `__tests__/compute/flaky-rate.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `makePipelineRun`/`makeJob` factories (shape real); empty/consistente→[], mixed→rate
+    33.33/runs3, 1-run→[], **cancelled/skipped NÃO flaky**, success+failure→flaky, multiple,
+    sort desc, branch-filter(Gap3). Assertions exatas. Property 0-100/empty. Sem teatro.
+  - Source: `calcFlakyFromPipelineRuns`→`buildJobHistory`(run id parse seguro string→parseInt,
+    `==null` skip)→`detectFlakyFromHistory`(`statuses.length<2` skip; `isFlaky`=success E
+    failure, exclui cancelled/skipped/error — domínio correto)→`makeFlakyResult`(`failCount/
+    length` arredondado), sort rate desc. Sem NaN path (length≥2). Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/flaky-percentage.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE**
+  - Source: `calcFlakyPercentage` `runs.length===0 || flakyRate.length===0→0`; `totalJobs=
+    countUniqueJobs` (`||1` p/ evitar div/0); `%` arredondado; ignora job sem name. Sem NaN path.
+    Sem defeito de produção.
+  - **LACUNA:** não existe `__tests__/compute/flaky-percentage*.test.ts` (função de domínio de
+    flakiness consumida por health-score/release-score sem cobertura direta). Gap registrado;
+    criação de teste exige escopo dedicado (não corrigido nesta passada).
+- [shared] `data-hub/compute/coverage.ts` + `__tests__/compute/coverage.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `toStrictEqual` exato; clamp 100/-10; preserve files; property total 0-100 (com
+    percentage neg/grande), statements===raw.total, files preserved. Sem teatro.
+  - Source: `calcCoverageFromRaw` **§24 compliant** — `Number.isFinite` guards (percentage/
+    covered/total) + clamp [0,100]; preserva `files`. (Contraste: `calcRunPassRate` NÃO tem
+    guards — confirma ressalva anterior.) Sem defeito.
+- [shared] `data-hub/compute/branch-health.ts` + `__tests__/compute/branch-health.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `makeRun`/`makeJob` factories; empty/single/separa-branches/ref-fallback/unknown-
+    fallback; failing empty/no-jobs/rates/slice-10/sort-desc. Property passRate 0-100, ≤10,
+    failureRate 0-100. Assertions exatas. Sem teatro.
+  - Source: `calcBranchBreakdown` `head_branch??ref??'unknown'`; `total>0?%:0` (sem div/0).
+    `calcTopFailingJobs` run id parse seguro (`==null` skip, string→parseInt), `total>0` push,
+    sort desc, `slice(0,10)`. Sem NaN path. Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/scoring.ts` + `__tests__/compute/scoring.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: boundaries exatos (95/85/75/65/50→excellent/good/needs_attention/poor/critical);
+    property grade válido (`float noNaN`). Sem teatro.
+  - Source: `computeGrade` **§24 exemplar** — `Number.isFinite`→lança em NaN/Infinity
+    (linha 27-29); boundaries ordem decrescente. Sem defeito.
+- [shared] `data-hub/compute/release-score.ts` + `__tests__/compute/release-score.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: allPass→100/excellent, allFail→0/critical, weighted 60 (3/5 peso1), **zero total
+    weight→0**, makeDimension pass/fail. Assertions exatas. Sem teatro.
+  - Source: `calcReleaseScore` `totalWeight===0→{score:0,grade:'critical'}` (evita div/0);
+    weighted sum; `computeGrade` herda guard NaN. `makeDimensionScore` `score>=threshold?pass:fail`.
+    Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/avg-duration.ts` + `__tests__/compute/avg-duration.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty→0, no-timing→0, single 300s, avg 450, satura 86400, **invalid dates skip**,
+    end<start→0; timing path 300/120/parseInt '42'/fallback. Assertions exatas. Sem teatro.
+  - Source: `calcAvgDuration` `durations.length===0→0`; IQR capping (`length<4` skip);
+    `Math.min(86400)` satura 24h; `extractFromTimestamp` **NaN guard + end≤start→undefined**
+    (linha 59). Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/suite-speed.ts` + `__tests__/compute/suite-speed.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty→0, no-duration→0, single 120000ms, P95 19000 (idx18→19s), ignore 0-dur,
+    multi-run; timing path 500/300/400/0. Assertions exatas. Sem teatro.
+  - Source: P95 `idx+??0`; `collectDurations` prioriza timing, fallback job.duration; ignora
+    `duration<=0`; timing path ignora skipped/pending. Sem NaN/div0. Sem defeito.
+- [shared] `data-hub/compute/test-duration-p95.ts` + `__tests__/compute/test-duration-p95.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty→0, all-skipped→0, single 500, P95 100(idx9), multi-run flat 250, skip 200,
+    **zero/negative ignored→200**. Assertions exatas. Sem teatro.
+  - Source: `Number.isFinite(test.duration) && >0` (§24 guard); P95 `??0`; ignora skipped.
+    Sem defeito.
+- [shared] `data-hub/compute/execution-rate.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE**
+  - Source: `calcExecutionRate` `withConclusion.length===0→0`; `%` arredondado. Sem NaN path.
+    Sem defeito de produção.
+  - **LACUNA:** não existe `__tests__/compute/execution-rate*.test.ts` (consumida por
+    health-score/release-score). Gap registrado; criação exige escopo dedicado.
+- [shared] `data-hub/compute/quarantine-status.ts` + `__tests__/compute/quarantine-status.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty→{0,0}; above(50≥30)→quarantine; below(20)→não; exact(30)→quarantine;
+    mixed→{3,2}; property flakyCount≥0/quarantined≤flaky/≥0. Assertions exatas. Sem teatro.
+  - Source: `calcQuarantineStatus` `filter(r.rate>=threshold)`; retorna counts (sem div/0).
+    Sem defeito.
+- [shared] `data-hub/compute/retry-flaky.ts` + `__tests__/compute/retry-flaky.test.ts` — **AUDITADO SÃO**
+  - Teste: GitHub attempt2→flaky(rate50), attempt1-fail→não, retry-still-fail→retried-não-flaky,
+    GitLab retried→flaky, **empty→NaN**, **non-array→NaN**(`@ts-expect-error`), **null skip**,
+    **non-finite attempt ignored**. Assertions exatas. Sem teatro.
+  - Source: `calcRetryFlaky` **§24/§25 exemplar** — `!Array.isArray→{...rate:NaN}`,
+    null skip, `Number.isFinite(attempt)` guard, **empty→rate NaN (no data NOT green)**;
+    `isRetried` GitHub attempt>1 / GitLab retried===true. Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/failure-reasons.ts` + `__tests__/compute/failure-reasons.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty/patterns(Error/Failure/Timeout/Exception/FATAL)/OOMKilled/dedupe/max5/
+    truncate100/aggregate/sort/max10/empty-array; property ≤5/≤100/≤10/count≥1. Sem teatro.
+  - Source: `extractFailureReasons` regex patterns, `match[0].slice(0,100)`, dedupe, `slice(0,5)`;
+    `calcTopFailureReasons` agrega counts, sort desc, `slice(0,10)`. Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/compute-cost.ts` + `__tests__/compute/compute-cost.test.ts` — **AUDITADO SÃO**
+  - Teste: aggregate(3000ms/150000ms/2.5min), missing-billable, **negative/NaN rejected**
+    (runCount1/1000ms/0), **non-array→empty**(`@ts-expect-error`), unmatched skip. Assertions
+    exatas. Sem teatro.
+  - Source: `calcComputeCost` **§24/§25 exemplar** — `!Array.isArray→{}`, `Number.isFinite`
+    guards duration/billable, negativos rejeitados, null/unmatched skip. Sem defeito.
+- [shared] `data-hub/compute/per-run-costs.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE**
+  - Source: `calcPerRunCosts` `safeRate=Number.isFinite&&>=0?rate:0` (§24), `Math.max(rawMinutes,0)`,
+    invalid dates→0, `runId??0`, `updated_at??now`. Sem defeito de produção.
+  - **LACUNA:** não existe `__tests__/compute/per-run-costs*.test.ts` (função de custo, domínio
+    crítico §24/§25). Gap registrado.
+- [shared] `data-hub/compute/metrics-runs.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE**
+  - Source: `convertToMetricsRuns` agrega stats, `run?.created_at ?? now`, sort timestamp,
+    `Number(runId)` p/ índice. Sem exceções. Sem defeito.
+  - **LACUNA:** não existe `__tests__/compute/metrics-runs*.test.ts`. Gap registrado.
+- [shared] `data-hub/compute/metrics-trends.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE + RESSALVA**
+  - Source: `calcMetricsTrends` `runs.slice(-window).map`, chama `calcRunPassRate({passed,
+    failed})` → **herda ressalva NaN de calcRunPassRate** (r.passed/failed undefined → NaN no
+    trend). `r.timestamp.slice(0,10)`. Sem exceções próprias. Sem defeito isolado.
+  - **LACUNA:** não existe `__tests__/compute/metrics-trends*.test.ts`. Gap registrado.
+- [shared] `data-hub/compute/trends.ts` + `__tests__/compute/trends.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty/single/windowSize(20→5)/mixed(100/0); property passRate 0-100, count 1. Sem teatro.
+  - Source: `calcTrendsFromPipelineRuns` `Math.min(100,Math.max(0,...))` clamp (D5.8),
+    `created_at?.slice(0,10) ?? 'unknown'`. Sem NaN path (passado 0 ou 1). Sem defeito.
+- [shared] `data-hub/compute/test-duration-map.ts` + `__tests__/compute/test-duration-map.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: empty/single/aggregate/excludes-skipped/excludes-zero-negative/all-skipped; `toPlain`
+    converte `Object.create(null)` p/ assert. Assertions exatas. Sem teatro.
+  - Source: `calcTestDurationMap` `Object.create(null)`; `skipped` skip; `!Number.isFinite(
+    test.duration) || <=0` skip (§24); agrega por title. Sem exceções. Sem defeito.
+- [shared] `data-hub/compute/flakiness-entries.ts` + `__tests__/compute/flakiness-entries.test.ts` — **AUDITADO SÃO**
+  - Teste: empty/consistent/mixed(pass2/fail1/total3)/minRuns/ignore-always-pass-fail/sort-desc;
+    rate 0/0-no-flaky/100-all-flaky/50-mixed/minRuns. Assertions exatas (comentários explicam
+    racional). Sem teatro.
+  - Source: `calcFlakinessEntries` pass+fail→flaky, `executedCount<minRuns` skip, rate `fail/
+    executed`, sort desc; `calculateFlakyTestRate` `qualifyingCount===0→0` (sem div/0). Sem NaN
+    path. Sem exceções. Sem defeito.
+- [RESUMO `data-hub/compute`] 28 arquivos: 22 SÃO + 6 LACUNA de teste (flaky-percentage,
+  execution-rate, per-run-costs, metrics-runs, metrics-trends) + 1 RESSALVA produção
+  (`calcRunPassRate` sem NaN guard, impacta quality gate em case17/pr-report-core/run-comparison;
+  herdada por metrics-trends). Correção de `calcRunPassRate` (lançar em não-finite + atualizar
+  14 callers) é item dedicado PENDENTE. Demais compute (coverage/avg-duration/suite-speed/
+  test-duration-p95/scoring/release-score/branch-health/retry-flaky/compute-cost/failure-reasons/
+  test-duration-map/flakiness-entries/trends) são §24/§25 compliant.
