@@ -1,6 +1,7 @@
 /** AI-powered test-impact assessment — analyze which tests to run based on code changes. */
 import { formatErr } from '../shared/errors.js';
 import fs from 'fs';
+import path from 'node:path';
 import { llmPrompt } from '../shared/llm/llm-client.js';
 import { sanitizePath } from '../shared/path-utils.js';
 import { rootLogger } from '../shared/logger.js';
@@ -15,7 +16,10 @@ interface MappingItem {
 function loadMappingTitles(mappingPath?: string): string[] {
     if (!mappingPath) return [];
     try {
-        const raw = fs.readFileSync(sanitizePath(process.cwd(), mappingPath), 'utf8');
+        const resolved = path.isAbsolute(mappingPath)
+            ? path.resolve(mappingPath)
+            : sanitizePath(process.cwd(), mappingPath);
+        const raw = fs.readFileSync(resolved, 'utf8');
         const parsed: unknown = JSON.parse(raw);
         const items: MappingItem[] = Array.isArray(parsed) ? (parsed as MappingItem[]) : [];
         if (items.length === 0) return [];
