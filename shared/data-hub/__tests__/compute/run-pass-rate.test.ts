@@ -40,5 +40,14 @@ describe('Compute/run-pass-rate', () => {
             expect.hasAssertions();
             expect(calcRunPassRate({ passed: 999, failed: 1 })).toBeCloseTo(99.9, 1);
         });
+
+        it('returns 0 (never NaN) when passed/failed are non-finite', () => {
+            expect.hasAssertions();
+            expect(calcRunPassRate({ passed: NaN, failed: 1 })).toBe(0);
+            expect(Number.isNaN(calcRunPassRate({ passed: NaN, failed: 1 }))).toBeFalsy();
+            expect(calcRunPassRate({ passed: 1, failed: NaN })).toBe(0);
+            expect(calcRunPassRate({ passed: Number.POSITIVE_INFINITY, failed: 2 })).toBe(0);
+            expect(calcRunPassRate({ passed: undefined as unknown as number, failed: 3 })).toBe(0);
+        });
     });
 });

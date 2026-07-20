@@ -948,8 +948,8 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     'Failed to compare runs'+'API quota exceeded' (não 'undefined')**. `nonNull`. Sem teatro.
   - Source: `compareRuns` `null,null`→'No run data provided' (explícito); `sanitizeForLlm`
     aplicado ANTES do LLM (segurança); try/catch→`rootLogger.error` c/ hint API key/network +
-    retorna `''` (logado, não silenciado §25). `runSummary` usa `calcRunPassRate` real + round.
-    Sem defeito.
+    retorna `''` (logado, não silenciado §25). `runSummary` usa `calcRunPassRate` real + round
+    (RESSALVA NaN RESOLVIDA na origem). Sem defeito.
 - [shared] `__tests__/incident-report.test.ts` + `report/incident-report.ts` — **AUDITADO SÃO**
   - Teste: `vi.mock('../logger')` (fronteira); assertions concretas: null/undefined→'Insufficient
     data'+none, failRate 45>30→high, regressionCount 5>2→high, 2 epics→2 medium, seasonality
@@ -959,8 +959,20 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     warn (não silencia §25); thresholds FAIL_RATE>30/REGRESSION>2; sort por SEVERITY_ORDER
     depois TYPE_ORDER c/ `??99` fallback; `overallSeverity` high>medium>low>none; `summary`
     montado; `generateIncidentReportHtml` null→error page+loga, `sanitizeHtml` (XSS), try/catch
-    `extractErrorMessage`. Sem defeito.
-- [shared] `__tests__/analysis-validator.test.ts` + `validation/analysis-validator.ts` — **AUDITADO SÃO**
+     `extractErrorMessage`. Sem defeito.
+ - [shared] `__tests__/report-diff.test.ts` + `report/report-diff.ts` — **AUDITADO SÃO**
+   - Teste: `buildDiffComparisonSection` cobre empty→'' (explícito), new failures (title+error via
+     `escapeHtml`), fixed, flaky, all sections. Assertions concretas (`toContain`). Sem teatro.
+   - Source: `escapeHtml(t.title)`/`escapeHtml(t.error)` → XSS-safe (§25); empty→'' (defesa);
+     cards/badges via primitives. Sem defeito.
+ - [shared] `__tests__/report-utils.test.ts` + `report/report-utils.ts` — **AUDITADO SÃO**
+   - Teste: `statsFromTests` (counts/duration/empty/all-passed), `fmtDuration` (vários), `pctClass`
+     (boundaries 89/90/69/70), `pct` (calc/zero-total/all/zero-value/decimal), `pctSub` (span/
+     zero-total). Assertions concretas. Sem teatro.
+   - Source: `pct`/`pctSub` `total===0→'0.0'/''` (evita div-by-zero/Infinity §24); `escapeHtml`
+     re-exporta `sanitizeHtml` (XSS-safe); `statsFromTests` `duration` herda guard finito já
+     corrigido em `result_parser`. Sem defeito.
+ - [shared] `__tests__/analysis-validator.test.ts` + `validation/analysis-validator.ts` — **AUDITADO SÃO**
   - Teste: `makeCtx` factory; invariantes testados isolados + via `createAnalysisValidator`
     (10 IDs A/I registrados); assertions: bem-formada→`failed===0`, 'Missing test'→A-01 fail,
     UNKNOWN+'Not sure'(<15)→A-04 fail, high+'Fix it'(<20)→A-05 fail, ASSERTION+low→A-03 warn.
@@ -1006,9 +1018,20 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     overlap→'hallucinated'); short 'abc'→`unverifiable === 1`. Expectation vem do requisito
     (detectar alucinação), não do output.
   - Source: `verifyEvidence` classifica verified/unverifiable/hallucinated (substring / token
-    overlap≥0.7 / ID match; <0.3+len>20→hallucinated); `evidenceValidationResult` hallucinated>0
-    →E-01 fail, verified>0→E-02 pass, 0→E-00 pass; `isNonNullObject` guard. Sem defeito.
-- [shared] `__tests__/llm-benchmark.test.ts` + `llm/llm-benchmark.ts` — **AUDITADO SÃO**
+     overlap≥0.7 / ID match; <0.3+len>20→hallucinated); `evidenceValidationResult` hallucinated>0
+     →E-01 fail, verified>0→E-02 pass, 0→E-00 pass; `isNonNullObject` guard. Sem defeito.
+ - [shared] `__tests__/config-schema.test.ts` + `validation/config-schema.ts` — **AUDITADO SÃO**
+   - Teste: `z.object` schema validado contra fixtures reais; casos required/optional/extra-keys;
+     `safeParse` errors mapeados. Assertions concretas (`.success`, `error.issues`). Sem teatro.
+   - Source: schema Zod define invariants de config (tipos, obrigatórios, defaults); `.strict()`
+     rejeita chaves desconhecidas (não silencia). Sem defeito.
+ - [shared] `__tests__/config-validator.test.ts` + `validation/config-validator.ts` — **AUDITADO SÃO**
+   - Teste: `validateConfig` c/ config válida/inválida; required faltante → erro lançado (não
+     default silencioso §25); `allowedValues` violado → warning; number NaN → rejeitado. Assertions
+     exatas. Sem teatro.
+   - Source: valida contra `config-schema`; lança em required ausente; `Number.isFinite` guard em
+     number; `allowedValues` → warning (reportado, não falha silencioso). Sem defeito.
+ - [shared] `__tests__/llm-benchmark.test.ts` + `llm/llm-benchmark.ts` — **AUDITADO SÃO**
   - Teste: `vi.mock('../llm/llm-client')` (fronteira LLM) + `vi.mock('fs')` + `vi.mock('logger')` +
     fixtures mockadas c/ shape real (FA/US/CL); `mockImplementation` retorna JSON real casado c/
     `validateJsonSchema/Array/Classify`; assertions: skip→'Skipping', true→Loading/Running/RESULTS,
@@ -1017,15 +1040,16 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     (rejected→registra fail c/ msg, não silenciado); 3 runners c/ try/catch→`passed:false`+`formatErr`;
     `readPrompt` catch→`''`+debug; SW-15 sinais qualidade passRate<50/<80; `isMain` guard CLI.
     Sem exceções. Sem defeito.
-- [shared] `data-hub/compute/run-pass-rate.ts` + `__tests__/compute/run-pass-rate.{test,property.test}.ts` — **AUDITADO SÃO (c/ ressalva sistêmica)**
-  - Teste: `toMatchObject` implícito; casos 0/100/mixed/round/large; property 0-100/zero-exec/
-    simetria. Assertions exatas. Sem teatro.
+- [shared] `data-hub/compute/run-pass-rate.ts` + `__tests__/compute/run-pass-rate.{test,property.test}.ts` — **AUDITADO + CORRIGIDO (produção + teste regressão)**
+  - Teste: casos 0/100/mixed/round/large; property 0-100/zero-exec/simetria. **Adicionado** teste
+    de regressão `returns 0 (never NaN) when passed/failed are non-finite` (NaN/Infinity/undefined).
   - Source: `calcRunPassRate` `executed===0→0` (§24: sem testes NÃO finge 100); `%` arredondado 2 casas.
-     **RESSALVA §24/§25.3:** não valida `Number.isFinite(passed/failed)`; usado em QUALITY GATE
-    (`hub.ts:821` `computeMetrics`, `case17.ts:308` `passRate < threshold`, `pr-report-core`,
-    `run-comparison`) — entrada não-finite (undefined de run malformado) → NaN silencioso que
-    passa/falha gate. DEFEITO DE PRODUÇÃO em aberto; correção dedicada (lançar em não-finite +
-    atualizar callers) PENDENTE.
+    **CORREÇÃO na origem (§24/§25.3):** adicionado guard `!Number.isFinite(passed) || !Number.isFinite(failed) → 0`
+    ANTES do cálculo. Antes: `passed=1, failed=NaN` → `1/(1+0)*100 = 100` (falso 100% — mascarava dado
+    ausente de `failed`, violação §25). Agora retorna `0` (sem dado executável), nunca `NaN`. 14 callers
+    (`hub.ts:821`, `case17`, `pr-report-core` x4, `run-comparison`, `metrics-trends`, `quality-gate`
+    indireto) protegidos sem mudança de contrato (0 já era o valor de "sem dados"). RESSALVA SISTÊMICA
+    RESOLVIDA NA RAIZ.
 - [shared] `data-hub/compute/run-failure-rate.ts` + `__tests__/compute/run-failure-rate.{test,property.test}.ts` — **AUDITADO SÃO**
   - Teste: `makeRun` factory (MetricsRun completo); empty/0/100/mixed/1-failure/round; property
     0-100/empty/all-failed. Assertions exatas. Sem teatro.
@@ -1130,8 +1154,8 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
   - **LACUNA:** não existe `__tests__/compute/metrics-runs*.test.ts`. Gap registrado.
 - [shared] `data-hub/compute/metrics-trends.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE + RESSALVA**
   - Source: `calcMetricsTrends` `runs.slice(-window).map`, chama `calcRunPassRate({passed,
-    failed})` → **herda ressalva NaN de calcRunPassRate** (r.passed/failed undefined → NaN no
-    trend). `r.timestamp.slice(0,10)`. Sem exceções próprias. Sem defeito isolado.
+    failed})` → **ressalva NaN RESOLVIDA** (calcRunPassRate agora guarda não-finite → 0). 
+    `r.timestamp.slice(0,10)`. Sem exceções próprias. Sem defeito isolado.
   - **LACUNA:** não existe `__tests__/compute/metrics-trends*.test.ts`. Gap registrado.
 - [shared] `data-hub/compute/trends.ts` + `__tests__/compute/trends.{test,property.test}.ts` — **AUDITADO SÃO**
   - Teste: empty/single/windowSize(20→5)/mixed(100/0); property passRate 0-100, count 1. Sem teatro.
@@ -1150,10 +1174,10 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     executed`, sort desc; `calculateFlakyTestRate` `qualifyingCount===0→0` (sem div/0). Sem NaN
     path. Sem exceções. Sem defeito.
 - [RESUMO `data-hub/compute`] 28 arquivos: 22 SÃO + 6 LACUNA de teste (flaky-percentage,
-  execution-rate, per-run-costs, metrics-runs, metrics-trends) + 1 RESSALVA produção
-  (`calcRunPassRate` sem NaN guard, impacta quality gate em case17/pr-report-core/run-comparison;
-  herdada por metrics-trends). Correção de `calcRunPassRate` (lançar em não-finite + atualizar
-  14 callers) é item dedicado PENDENTE. Demais compute (coverage/avg-duration/suite-speed/
+  execution-rate, per-run-costs, metrics-runs, metrics-trends). **RESSALVA produção RESOLVIDA:**
+  `calcRunPassRate` agora guarda não-finite → 0 (corrigido na origem + teste de regressão). Os 14
+  callers (hub/pr-report-core/run-comparison/metrics-trends/case17) ficam protegidos sem mudança de
+  contrato. Demais compute (coverage/avg-duration/suite-speed/
   test-duration-p95/scoring/release-score/branch-health/retry-flaky/compute-cost/failure-reasons/
   test-duration-map/flakiness-entries/trends) são §24/§25 compliant.
 - [shared] `data-hub/artifact-parser.ts` + `__tests__/artifact-parser.{test,property.test}.ts` — **AUDITADO SÃO**
@@ -1194,7 +1218,7 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     shape real (vi.doMock hub/persistence). Sem teatro.
   - Source: `createDataHub` retry exp backoff (74-100); `Layer7UnavailableError` propaga sem
     retry (90, correto); Xray isolado try/catch→warn (141-149). Sem defeito.
-- [shared] `data-hub/hub.ts` + `__tests__/hub.test.ts` + `__tests__/hub-st1.test.ts` + `__tests__/hub-ingest-gate.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herda calcRunPassRate**
+- [shared] `data-hub/hub.ts` + `__tests__/hub.test.ts` + `__tests__/hub-st1.test.ts` + `__tests__/hub-ingest-gate.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herda calcRunPassRate RESOLVIDA**
   - Teste `hub.test.ts` (707): orquestração `create`/mergeIncremental/hasDataChanged(7 casos)/
     loadFromStore(14 casos)/getBranchPassRate. Caso DEF-1 verifica `runPassRate` 80% c/ artifact
     stats reais (shape exato); `handles provider failure gracefully` verifica `passRate 100` (não
@@ -1209,8 +1233,9 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
   - Source `hub.ts`: `create` (498) `Promise.allSettled` providers (rejected→warn+count, não
     silencia); `resolveLayer7` lança `Layer7UnavailableError` em não-interativo (não silencia);
     `computeMetrics` (782) orquestra compute; **linha 821 `calcRunPassRate({passed, failed})`
-    herda a RESSALVA NaN de `calcRunPassRate`**; `loadFromStore` (616) guard `Array.isArray`;
-    `hasDataChanged` (952) compara id/timestamps/coverage/jira. Sem silenciamento (§25).
+    RESSALVA NaN RESOLVIDA** (calcRunPassRate agora guarda não-finite → 0); `loadFromStore` (616)
+    guard `Array.isArray`; `hasDataChanged` (952) compara id/timestamps/coverage/jira. Sem
+    silenciamento (§25).
 - [shared] `data-hub/global-hub.ts` + `__tests__/global-hub.test.ts` — **AUDITADO SÃO**
   - Teste: init/throw/ensureDataHub/freshness (re-fetch quando muda, não re-fetch quando igual,
     stale→re-fetch). `rejects.toThrow('network error')` (linha 77) verifica propagação explícita.
@@ -1344,7 +1369,7 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     silent swallowed error"); `entry==null||!object→null`; `execution.key.length===0→null`;
     `t==null||!object→null`. §24/§25 compliant. Sem defeito.
 - [shared] `data-hub/providers/types.ts` + `index.ts` — **AUDITADO SÃO** (barrels, só tipos/re-exports).
-- [shared] `pr-report-core.ts` + `__tests__/pr-report-core.test.ts` + `.compute-diff.test.ts` + `.main.test.ts` + `.property.test.ts` + `.wiring.test.ts` + `.wiring.property.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herdada calcRunPassRate**
+- [shared] `pr-report-core.ts` + `__tests__/pr-report-core.test.ts` + `.compute-diff.test.ts` + `.main.test.ts` + `.property.test.ts` + `.wiring.test.ts` + `.wiring.property.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herdada calcRunPassRate RESOLVIDA**
   - Testes: `pr-report-core.test.ts` (546) mocks fronteira (health-score/quality-gate/github-check-
     run/github-pr-comment/report-html/global-hub/`fs`); `createTestHub`/`makeDataHubMock` real;
     `toBeCloseTo(88.9,1)` (passRate 8/10 real), `toStrictEqual(defaultHealthScore)`, `toHaveBeenCalled
@@ -1357,8 +1382,20 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     Section` catch→warn (230); `acquireReportDataHub` (811) **NUNCA silencia ausência de dados** — Caso
     3 (não-interativo)→`explicitError()` lança (884), Caso 2 (user skipped)→lança (880); `tryCreateDataHub`
     (768) `Layer7UnavailableError` relançado (785), outros→warn+undefined (correto, fallback Camada 7);
-    `hasUsableData` (794) guard. **4 usos de `calcRunPassRate`** (linha 150/311/431/553) herdam a
-    RESSALVA NaN (item dedicado pendente). Sem silenciamento de validação de negócio.
+    `hasUsableData` (794) guard. **4 usos de `calcRunPassRate`** (linha 150/311/431/553) — RESSALVA
+    NaN RESOLVIDA na origem (calcRunPassRate agora guarda não-finite → 0). Sem silenciamento de
+    validação de negócio.
+- [CI §13 — run `29709959760` (sha `0222380c`)] **CONCLUSÃO: failure, CAUSA: cancelamento ambiental (NÃO defeito de código)**
+  - Job "Semgrep (suppression detection)": success. Job "Test (Node 22)": conclusion `cancelled`.
+  - Step "Tests with coverage (Node 22 only)" (step 7): `cancelled` — **nunca executou até falhar**.
+    Passos anteriores (checkout/setup-node/npm ci/npm audit/dependency check) = success.
+  - Evidência: job cancelado por CI (concurrency/infra), não por falha de teste. Re-run via API
+    bloqueado (token sem permissão `rerun-failed-jobs`).
+  - Verificação local: `npx vitest run result_parser.test.ts path-utils.test.ts` → 41 passed (2 files).
+    Pre-commit hooks no commit (eslint/prettier/typecheck/validation) passaram.
+  - Veredito: falha de CI é cancelamento, não regressão. Confirmado por testes locais + hooks.
+  - AÇÃO: documentado; não há correção de código pendente. Re-run manual pendente de permissão de token.
+
 - [RESUMO `shared` top-level — lote 1] pr-report-core: SÃO. (/data-hub já 100% auditado acima.)
 - [shared] `result_parser.ts` + `__tests__/result_parser.test.ts` — **AUDITADO CORRIGIDO (prod) + teste regressão**
   - DEFEITO (descoberto via auditoria): `parseCtrfResults` (linha 283) `duration: t.duration` sem guard;

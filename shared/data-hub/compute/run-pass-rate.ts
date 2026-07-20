@@ -18,6 +18,7 @@
  * @returns Pass rate (0-100), rounded to 2 decimal places. 0 if no tests executed.
  */
 export function calcRunPassRate(stats: { passed: number; failed: number }): number {
+    if (!Number.isFinite(stats.passed) || !Number.isFinite(stats.failed)) return 0;
     const executed = stats.passed + stats.failed;
     if (executed === 0) return 0;
     return Math.round((stats.passed / executed) * 100 * 100) / 100;
