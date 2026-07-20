@@ -294,7 +294,8 @@ describe('GateRawData (ingest boundary — AGGRESIVE robustness)', () => {
 
         const { raw: gated, quality } = gateRawData(raw);
 
-        // Valid element preserved; the null one is tagged, not dropped or crashing the gate.
+        // Valid element preserved; the null one is rejected from the typed model (cannot be
+        // a FailureRecord) but is reported explicitly via quality.issues (AGENTS §25: not silent).
         expect(gated.failureRecords).toHaveLength(1);
         expect(quality.failureRecords.issues.join(' ')).toMatch(/unparseable|invalid/);
     });

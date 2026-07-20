@@ -1021,10 +1021,11 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
   - Teste: `toMatchObject` implícito; casos 0/100/mixed/round/large; property 0-100/zero-exec/
     simetria. Assertions exatas. Sem teatro.
   - Source: `calcRunPassRate` `executed===0→0` (§24: sem testes NÃO finge 100); `%` arredondado 2 casas.
-    **RESSALVA §24/§25.3:** não valida `Number.isFinite(passed/failed)`; usado em QUALITY GATE
-    (`case17.ts:308` `passRate < threshold`, `pr-report-core`, `run-comparison`) — entrada
-    não-finite (undefined de run malformado) → NaN silencioso que passa/falha gate. DEFEITO DE
-    PRODUÇÃO em aberto; correção dedicada (lançar em não-finite + atualizar callers) PENDENTE.
+     **RESSALVA §24/§25.3:** não valida `Number.isFinite(passed/failed)`; usado em QUALITY GATE
+    (`hub.ts:821` `computeMetrics`, `case17.ts:308` `passRate < threshold`, `pr-report-core`,
+    `run-comparison`) — entrada não-finite (undefined de run malformado) → NaN silencioso que
+    passa/falha gate. DEFEITO DE PRODUÇÃO em aberto; correção dedicada (lançar em não-finite +
+    atualizar callers) PENDENTE.
 - [shared] `data-hub/compute/run-failure-rate.ts` + `__tests__/compute/run-failure-rate.{test,property.test}.ts` — **AUDITADO SÃO**
   - Teste: `makeRun` factory (MetricsRun completo); empty/0/100/mixed/1-failure/round; property
     0-100/empty/all-failed. Assertions exatas. Sem teatro.
@@ -1155,3 +1156,113 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
   14 callers) é item dedicado PENDENTE. Demais compute (coverage/avg-duration/suite-speed/
   test-duration-p95/scoring/release-score/branch-health/retry-flaky/compute-cost/failure-reasons/
   test-duration-map/flakiness-entries/trends) são §24/§25 compliant.
+- [shared] `data-hub/artifact-parser.ts` + `__tests__/artifact-parser.{test,property.test}.ts` — **AUDITADO SÃO**
+  - Teste: `vi.mock('../../result_parser'/'../../junit-xml-parser'/'../../logger')` (fronteira);
+    isCTRF/isJUnit/isMochawesome/isTestArtifact pos+neg; parseArtifactBuffer CTRF/JUnit/**inválido
+    →null**/CTRF-de-ZIP; parseZipBuffer vazio→[]/CTRF→1/múltiplos→2; parseArtifactBufferAll.
+    `isCtrfFormat` mock com shape real. Assertions exatas. Sem teatro.
+  - Source: orquestração de parsers; `extractCtrfCoverage` **§24 guard** (`typeof percentage===
+    'number' && Number.isFinite`); `parseZipBuffer` catch→`rootLogger.error` (não silencia);
+    `parseContent` null quando 0 testes (debug). Sem exceções. Sem defeito.
+- [shared] `data-hub/schemas.ts` + `__tests__/schemas.test.ts` + `__tests__/rawdata-schema.test.ts` — **AUDITADO SÃO**
+  - Teste: `schemas.test.ts` safeParse pos/neg, .loose, negativos, parse→null; `rawdata-schema.
+    test.ts` (Gap 1): missing runs/not-array/wrong-typed/failureReasons≠string[] → **toThrow**;
+    validateRawDataOrThrow throws; parseRawData→null. Assertions exatas. Sem teatro.
+  - Source: Zod schemas (FlatTest/MetricsRun/Coverage/PipelineRun/RawData); `parseMetrics*`
+    catch→`rootLogger.warn`+`null` (não silencia); `validateRawDataOrThrow` **lança** em
+    malformado (Gap 1, §25); `RawDataSchema` valida `runs` como PipelineRun[] (rejeita API
+    quebrada). Sem defeito.
+- [shared] `data-hub/raw-merge.ts` + `__tests__/raw-merge.test.ts` — **AUDITADO SÃO**
+  - Teste: accumulates/dedups/no-duplicate/same-key-diff-source/preserves-target/merges-object-
+    first-non-null/provenance-union/target-priority/no-op. Assertions exatas (`toStrictEqual`,
+    `toHaveLength`). Sem teatro.
+  - Source: `mergeCategoryArrays` appendDedup por natural key, first-non-null p/ obj;
+    `mergeProvenance` union (target priority); `appendDedup` trata undefined/length0 (linha 64).
+    Sem exceções. Sem defeito.
+- [shared] `data-hub/cache.ts` + `__tests__/cache.test.ts` — **AUDITADO SÃO**
+  - Teste: miss/hit/diff-repo/clear; multi-project independente/evict-only/isCacheValid/
+    overwrite/size; `getOrFetchWithLock` cached→no-fetch, miss→fetch, **concurrent dedup
+    (fetchFn 1x)**, fetch-after-release(2x). Assertions exatas (`toBe`,
+    `toHaveBeenCalledTimes(1)`). Sem teatro.
+  - Source: `getCachedHub` TTL expire+delete; `getOrFetchWithLock` race c/ lock timeout
+    (`Promise.race` rejeita em timeout, erro explícito linha 131; `.finally` libera lock).
+    Sem exceções. Sem defeito.
+- [shared] `data-hub/factory.ts` + `__tests__/factory.test.ts` — **AUDITADO SÃO**
+  - Teste: cached→returns; miss→delegates; **retry 3x**(callCount3); **throws after maxRetries**
+    (`rejects.toThrow('DataHub creation failed after 2 attempts')`); auto-persistence; caches-
+    after; **exp backoff [100,200]**(stubGlobal setTimeout). Mocks GitProvider/DataHubPersistence
+    shape real (vi.doMock hub/persistence). Sem teatro.
+  - Source: `createDataHub` retry exp backoff (74-100); `Layer7UnavailableError` propaga sem
+    retry (90, correto); Xray isolado try/catch→warn (141-149). Sem defeito.
+- [shared] `data-hub/hub.ts` + `__tests__/hub.test.ts` + `__tests__/hub-st1.test.ts` + `__tests__/hub-ingest-gate.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herda calcRunPassRate**
+  - Teste `hub.test.ts` (707): orquestração `create`/mergeIncremental/hasDataChanged(7 casos)/
+    loadFromStore(14 casos)/getBranchPassRate. Caso DEF-1 verifica `runPassRate` 80% c/ artifact
+    stats reais (shape exato); `handles provider failure gracefully` verifica `passRate 100` (não
+    coverage theater); mocks via `makeDataHubPersistenceMock`+`mockedSafe` (fronteira externa).
+    Sem teatro. **Gap:** nenhum teste cobre NaN em `passed`/`failed` (será coberto no item
+    `calcRunPassRate` dedicado).
+  - Teste `hub-st1.test.ts` (243): 16 métodos delegate→persistence via `vi.fn()` explícitos,
+    `.toHaveBeenCalledWith` c/ shape real. SSOT encapsulation. Sem teatro.
+  - Teste `hub-ingest-gate.test.ts` (129): ST-3 — `create` aplica quality gate na fronteira;
+    `confidence: NaN`→normalizado 0.9, `Number.isFinite` check explícito, `getQuality` valid/
+    invalid, quarantine SSOT. Gold standard §24/§25. Sem teatro.
+  - Source `hub.ts`: `create` (498) `Promise.allSettled` providers (rejected→warn+count, não
+    silencia); `resolveLayer7` lança `Layer7UnavailableError` em não-interativo (não silencia);
+    `computeMetrics` (782) orquestra compute; **linha 821 `calcRunPassRate({passed, failed})`
+    herda a RESSALVA NaN de `calcRunPassRate`**; `loadFromStore` (616) guard `Array.isArray`;
+    `hasDataChanged` (952) compara id/timestamps/coverage/jira. Sem silenciamento (§25).
+- [shared] `data-hub/global-hub.ts` + `__tests__/global-hub.test.ts` — **AUDITADO SÃO**
+  - Teste: init/throw/ensureDataHub/freshness (re-fetch quando muda, não re-fetch quando igual,
+    stale→re-fetch). `rejects.toThrow('network error')` (linha 77) verifica propagação explícita.
+    Sem teatro.
+  - Source: singleton + `ensureDataHub`; lança `Error` explícito se não inicializado/fetchFn
+    undefined (linha 13/52/63). Sem silenciamento (§25). `_dataHub` garantido não-null por guard.
+- [shared] `data-hub/persistence.ts` + `__tests__/persistence.test.ts` + `__tests__/persistence-st1.test.ts` + `__tests__/persistence-st3.test.ts` + `__tests__/persistence-cache.test.ts` — **AUDITADO SÃO**
+  - Teste `persistence.test.ts` (292): saveRun/coverage/classification/store/parseResult (shape
+    exato via `toStrictEqual`), max-runs=50, flush delegation. Mock backend Map-based real (não
+    mock-teatro). Sem teatro.
+  - Teste `persistence-st1.test.ts` (207): round-trip via `MemoryBackend` real, safeguards (missing
+    file→`[]`/`null`), overwrite semantics. Sem teatro.
+  - Teste `persistence-st3.test.ts` (105): store-gate defense-in-depth — NaN confidence normalizado,
+    dados inválidos tagged+stored (não dropped), `Number.isFinite` check. Gold §24/§25. Sem teatro.
+  - Teste `persistence-cache.test.ts` (228): `FsStoreBackend` real em tmpdir; isolamento SHA/projeto;
+    **§25 verificado**: write-fail→`toThrow('ENOSPC')`+`errorSpy` (linha 176); read-fail→`null`+
+    `warnSpy` (linha 192). Corrupt branch-index→`[]`. Sem teatro.
+  - Source `persistence.ts`: `readJson` catch→warn+`null` (tolerante, reportado); `writeJson` catch→
+    `rootLogger.error`+**`throw err`** (linha 89, não silencia §25); `loadMetricsStore` schema-fail→
+    `{runs:[]}` reportado (fallback de store corrupto, não silenciamento de validação de negócio);
+    save* categories → `validateAndScore*` (defense-in-depth, linha 226-279 comentário cita AGENTS
+    §25: TAG, not drop); `flush` re-lança erro. Sem defeito.
+- [shared] `data-hub/quality.ts` + `__tests__/quality.test.ts` + `__tests__/quality-ingest.test.ts` — **AUDITADO SÃO**
+  - Teste `quality.test.ts` (315): confidence por source, NaN/Infinity/negative normalization,
+    schema invalid tagged (não drop), dedup, provenance, gateRawData robustez. Caso linha 281
+    "null element does NOT throw" → `toHaveLength(1)` (linha 298): elemento `null` é **rejeitado do
+    modelo tipado** `FailureRecord[]` (não pode ser null num array tipado) MAS é **reportado
+    explicitamente** via `quality.issues` ("unparseable") — §25 cumprido (consumer distingue via
+    issues; gate não crasha). Comentário linha 297 esclarecido: "rejected from typed model, not
+    silent".
+  - Teste `quality-ingest.test.ts` (128): gateRawData NaN normalization, dedup, schema invalid tag,
+    missing provenance, preserve untouched fields, 9 categories. Sem teatro.
+  - Source `quality.ts`: `finite()` (51) `Number.isFinite` refine Zod — NaN/Infinity rejeitados em
+    todos os campos numéricos (§24.1); schemas com bounded confidence [0,1]; `validateAndScore`
+    (255) empty→`[]` valid; schema inválido→**mantém item original + tag** (linha 314-318, não drop);
+    elemento cuja `key()` lança (null/undefined) é **rejeitado do modelo tipado** + reportado via
+    `issues` (linha 273-278, correto: null não é `FailureRecord`, erro explícito ≠ silenciamento);
+    dedup por naturalKey; `processItem` catch (333-338) → `kind:'issue'` (defesa contra exceção não
+    antecipada, não atingível na prática pois Zod safeParse não lança). Sem silenciamento (§25): todo
+    dado inválido é tagged em `quality`. `gateRawData` (508) orquestra todos os gates; `...raw`
+    preserva outros campos; 9 categorias. Sem defeito.
+- [shared] `data-hub/test-source-fallback.ts` + `__tests__/test-source-fallback.test.ts` + `__tests__/test-source-fallback.property.test.ts` — **AUDITADO SÃO**
+  - Teste `test-source-fallback.test.ts` (269): validateTestFile (extensão/não-existe/CTRF/JUnit
+    válido c/ mock shape exato/parse error/empty), formatValidationResult, askTestSource (não-TTY/
+    CI/skip/válido/3-retry). `createTmpFile` c/ path-traversal guard (linha 43). Sem teatro.
+  - Teste `test-source-fallback.property.test.ts` (34): `fast-check` — `validateTestFile` sempre
+    retorna objeto c/ data/error; extensões inválidas sempre erro. PBT real (§19.6). Sem teatro.
+  - Source: `validateTestFile` (49) extensão inválida/não-existe/não-arquivo/parse error/`total===0`
+    → erros explícitos (não silenciados §25); `askTestSource` (135) `TEST_REPORT_PATH` inválido→warn+
+    continua, TTY→prompt, senão→`NO_TTY` explícito; `promptUserForFile` 3 attempts, isCancelError→
+    `USER_CANCELLED`, `!filePath`→`USER_SKIPPED`. Sem silenciamento. Sem defeito.
+- [RESUMO `data-hub` não-compute] hub/global-hub/persistence/quality/test-source-fallback: TODOS
+  SÃO. Itens de correção de produção em aberto: (1) `calcRunPassRate` NaN guard (impacta hub.ts:821,
+  case17, pr-report-core, run-comparison, metrics-trends) — item dedicado PENDENTE (requer atualizar
+  14 callers; não executado em lote para não violar §7 system consistency sem escopo dedicado).
