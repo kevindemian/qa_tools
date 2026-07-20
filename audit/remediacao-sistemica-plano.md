@@ -128,6 +128,27 @@ Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolad
 - **Gate:** `tsc --noEmit` limpo; eslint 0 erros; 38 testes backlog-health verdes + 74 testes de
   schedule-handler/interactive-mode verdes (callers não afetados).
 
+### Fase 4 (#C9) — NENHUMA AÇÃO (já resolvida em Batch 1)
+
+- `result_parser`/`coverage-gap`: erro de API → `failed` (não `0%`) já corrigido e testado no Batch 1.
+- Sem alteração adicional; checkpoint registrado para completude do plano.
+
+### Fase 5 (#C10 mapping index-pairing) — CONCLUÍDA (2026-07-20)
+
+- **#C10 (junção posicional + truncagem):** `tests.slice(0, tasksId.length)` descartava
+  silenciosamente testes além de `tasksId.length`; `tasksId.map((key,i)=>tests[i])` pareava por
+  índice posicional sem validação (ordem divergente → mapeamento errado/`(untitled)`).
+- **Raiz:** o join tasksId[i]↔tests[i] é posicional (chaves Jira criadas a partir de `tests` na
+  mesma ordem); não há chave estável adicional no modelo. Fixo: (1) **remove `slice`** — nenhum
+  teste descartado; (2) **valida contagem** e emite `rootLogger.warn` explícito quando
+  `tasksId.length != tests.length` (§25 — zero silenciamento); (3) entradas sem teste associado
+  marcadas `(no test associated)` em JSON e summary (não vazio/`(untitled)` ambíguo).
+- **Nota:** junção por chave estável completa exige identificador estável vindo do pipeline de
+  import (quando Jira reordenar/devolver parcial) — fora do modelo atual; rastreado como
+  melhoria de pipeline, não como contorno. Teste que codificava o defeito corrigido (§19.5).
+- **Gate:** `tsc --noEmit` limpo; eslint 0 erros (warnings pré-existentes `detect-non-literal-fs`
+  não-bloqueantes); 20 testes mapping/import verdes.
+
 ### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
 
 - Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.

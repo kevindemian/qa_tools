@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { info, isQuiet } from '../shared/ui/prompt.js';
 import { reportsDir } from '../shared/infra/temp-dir.js';
+import { rootLogger } from '../shared/logger.js';
 import type { TestCase } from '../shared/types.js';
 import { generatePreviewMarkdown } from './import-prep.js';
 
@@ -40,13 +41,24 @@ class MappingFileGenerator {
             });
         }
 
-        const createdTests = tests.slice(0, tasksId.length);
-        const mappings = this._buildMappings(tasksId, createdTests);
+        // C10: sem truncagem silenciosa. O join tasksId[i] <-> tests[i] é posicional (as chaves
+        // Jira são criadas a partir de `tests` na mesma ordem). Divergência de contagem indica
+        // inconsistência do pipeline de import — superfície explicitamente, não silencia.
+        if (tasksId.length !== tests.length) {
+            rootLogger.warn(
+                'Mapping: tasksId.length (' +
+                    tasksId.length +
+                    ') != tests.length (' +
+                    tests.length +
+                    '). O mapeamento pode estar incompleto/desalinhado.',
+            );
+        }
+        const mappings = this._buildMappings(tasksId, tests);
 
         try {
             this._writeJsonMapping(outDir, baseName, sourcePath, projectName, mappings);
-            this._writeMdMapping(outDir, baseName, sourcePath, createdTests, tasksId);
-            this._writeSummaryTxt(outDir, baseName, tasksId, createdTests);
+            this._writeMdMapping(outDir, baseName, sourcePath, tests, tasksId);
+            this._writeSummaryTxt(outDir, baseName, tasksId, tests);
         } catch (err: unknown) {
             throw new Error('Falha ao escrever arquivos de mapeamento: ' + formatErr(err), { cause: err });
         }
@@ -55,12 +67,14 @@ class MappingFileGenerator {
     private _buildMappings(tasksId: string[], tests: TestCase[]): MappingEntry[] {
         return tasksId.map((key, i) => {
             const test = (Reflect.get(tests, i) as TestCase | undefined) || emptyTestCase();
-            const m: MappingEntry = { title: test.title || '', key };
-            if (test.description) m.description = test.description;
-            if (test.precondition && test.precondition.length > 0) {
+            const unpaired = !Reflect.has(tests, i);
+            // Marca explicitamente entradas sem teste associado (não vazio/(untitled) ambíguo).
+            const m: MappingEntry = { title: unpaired ? '(no test associated)' : test.title || '', key };
+            if (!unpaired && test.description) m.description = test.description;
+            if (!unpaired && test.precondition && test.precondition.length > 0) {
                 m.precondition = test.precondition.map((p) => p.value).join(', ');
             }
-            if (test.steps.length) {
+            if (!unpaired && test.steps.length) {
                 m.steps = test.steps.map((s) => ({
                     Action: s.fields.Action || '',
                     Data: s.fields.Data || '',
@@ -121,7 +135,8 @@ class MappingFileGenerator {
             tasksId
                 .map((key, i) => {
                     const test = (Reflect.get(tests, i) as TestCase | undefined) || emptyTestCase();
-                    return key + ': ' + (test.title || '(untitled)');
+                    const unpaired = !Reflect.has(tests, i);
+                    return key + ': ' + (unpaired ? '(no test associated)' : test.title || '(untitled)');
                 })
                 .join('\n') + '\n';
         fs.writeFileSync(txtPath, txtContent, 'utf8');
