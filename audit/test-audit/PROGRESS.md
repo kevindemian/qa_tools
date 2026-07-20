@@ -1,10 +1,23 @@
 # Test Suite Audit — Manifesto de Progresso
 
-Escopo: auditoria de arquivos de teste de `shared/` (T1-T7).
+Escopo: auditoria MANUAL dois-a-dois (source+teste) de TODOS os 506 arquivos de teste do repo
+(`*.test.ts`/`*.spec.ts`). Método obrigatório: leitura integral arquivo-a-arquivo, em pares
+source+teste (§16/§20.1/§20.6/§21). NENHUMA conclusão por grep/scan/amostragem é válida.
 T1=teste codifica bug | T2=assert fraco | T3=mock shape violado (§26.1) | T4=.skip/.todo órfão | T5=coverage theater | T6=falha engolida | T7=suppress no teste
 Ação: opção1=apagar+criar | opção2=corrigir in-place.
 
 Status: pending | audited-clean | fixed-Tx
+
+INVENTÁRIO (506):
+
+- shared: 356 (B1.1/B1.2a/B1.2b/B1.3/B1.4/B1.5/B1.9/B1.integration/B1.system/B2.1/B2.2/B2.3)
+- git_triggers: 42 (B3)
+- jira_management: 73 (B4)
+- scripts: 8 (B5)
+- setup: 14 (B6)
+- e2e: 13 (B7)
+
+Concluído até agora: 111 (shared B1.1 + B1.2a + parte B1.2b). Restam: 395.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -75,7 +88,6 @@ Status: pending | audited-clean | fixed-Tx
 - [fixed-T3] shared/**tests**/report-html.test.ts (opção2: removeu vi.mock local config-accessor/logger → env real)
 - [fixed-T3] shared/**tests**/report-sections.test.ts (opção2: removeu vi.mock local report-table → buildTestTable real)
 - [audited-clean] shared/**tests**/report-scripts.test.ts
-- [audited-clean] shared/**tests**/report-sections.test.ts
 - [audited-clean] shared/**tests**/report-styles.test.ts
 - [audited-clean] shared/**tests**/report-table.test.ts
 - [audited-clean] shared/**tests**/report-types.test.ts
@@ -110,13 +122,6 @@ Status: pending | audited-clean | fixed-Tx
 - [audited-clean] shared/**tests**/evidence-validator.test.ts
 - [audited-clean] shared/**tests**/health-score.property.test.ts
 - [audited-clean] shared/**tests**/health-score.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.compute-diff.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.main.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.property.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.wiring.property.test.ts
-- [audited-clean] shared/**tests**/pr-report-core.wiring.test.ts
-- [audited-clean] shared/**tests**/pr-report.test.ts
 - [audited-clean] shared/**tests**/quality-gate.property.test.ts
 - [audited-clean] shared/**tests**/quality-gate.test.ts
 - [audited-clean] shared/**tests**/quality-metrics.property.test.ts
@@ -405,4 +410,169 @@ Status: pending | audited-clean | fixed-Tx
 
 ## B2.3 — tests/** (integration/e2e repo-level)
 
-- [pending] (a definir na Fase B2)
+- (vazio — nenhum arquivo de teste repo-level fora dos blocos já listados)
+
+## B3 — git_triggers (42)
+
+- [pending] git_triggers/**tests**/ai-pr-desc.test.ts
+- [pending] git_triggers/**tests**/ai-test-impact.test.ts
+- [pending] git_triggers/**tests**/batch-mode.test.ts
+- [pending] git_triggers/**tests**/case00-handler.test.ts
+- [pending] git_triggers/**tests**/cli-args.test.ts
+- [pending] git_triggers/**tests**/cli-dispatch-selfhost.test.ts
+- [pending] git_triggers/**tests**/cli-dispatch.test.ts
+- [pending] git_triggers/**tests**/git-provider-base.test.ts
+- [pending] git_triggers/**tests**/git-provider-factory.property.test.ts
+- [pending] git_triggers/**tests**/git-provider-factory.test.ts
+- [pending] git_triggers/**tests**/github-api.test.ts
+- [pending] git_triggers/**tests**/github-branch.test.ts
+- [pending] git_triggers/**tests**/github-expanded.test.ts
+- [pending] git_triggers/**tests**/github-issues.test.ts
+- [pending] git_triggers/**tests**/github-pr.test.ts
+- [pending] git_triggers/**tests**/github-workflow.test.ts
+- [pending] git_triggers/**tests**/github_manager.test.ts
+- [pending] git_triggers/**tests**/gitlab-api.test.ts
+- [pending] git_triggers/**tests**/gitlab-branch.test.ts
+- [pending] git_triggers/**tests**/gitlab-issues.test.ts
+- [pending] git_triggers/**tests**/gitlab-pr.test.ts
+- [pending] git_triggers/**tests**/gitlab-workflow.test.ts
+- [pending] git_triggers/**tests**/gitlab_manager.test.ts
+- [pending] git_triggers/**tests**/integration-handlers.test.ts
+- [pending] git_triggers/**tests**/integration/interactive-showDataHubSummary.integration.test.ts
+- [pending] git_triggers/**tests**/integration/pipeline-health.integration.test.ts
+- [pending] git_triggers/**tests**/integration/session-state-ensureDataHub.integration.test.ts
+- [pending] git_triggers/**tests**/interactive-mode.test.ts
+- [pending] git_triggers/**tests**/llm-pipeline.test.ts
+- [pending] git_triggers/**tests**/main.test.ts
+- [pending] git_triggers/**tests**/mr-handler.test.ts
+- [pending] git_triggers/**tests**/nivelar.test.ts
+- [pending] git_triggers/**tests**/pipeline-handler.test.ts
+- [pending] git_triggers/**tests**/pipeline-health-html.property.test.ts
+- [pending] git_triggers/**tests**/pipeline-health.test.ts
+- [pending] git_triggers/**tests**/pipeline-jira.test.ts
+- [pending] git_triggers/**tests**/pr-report-reconfig-inject.test.ts
+- [pending] git_triggers/**tests**/pr-report-setup-handler.test.ts
+- [pending] git_triggers/**tests**/schedule-handler.test.ts
+- [pending] git_triggers/**tests**/session-state.test.ts
+- [pending] git_triggers/**tests**/test-results.test.ts
+- [pending] git_triggers/**tests**/ui-helpers.test.ts
+
+## B4 — jira_management (73)
+
+- [pending] jira_management/**tests**/constants.test.ts
+- [pending] jira_management/**tests**/coverage-cloud.test.ts
+- [pending] jira_management/**tests**/coverage.test.ts
+- [pending] jira_management/**tests**/create_tests.test.ts
+- [pending] jira_management/**tests**/csv-import-schema.test.ts
+- [pending] jira_management/**tests**/csv_resource.test.ts
+- [pending] jira_management/**tests**/dashboard-handlers.test.ts
+- [pending] jira_management/**tests**/import-loop.test.ts
+- [pending] jira_management/**tests**/import-orchestrator.test.ts
+- [pending] jira_management/**tests**/import-prep-parsers.test.ts
+- [pending] jira_management/**tests**/import-prep-preview.test.ts
+- [pending] jira_management/**tests**/import-prep-validation.test.ts
+- [pending] jira_management/**tests**/import-prep.test.ts
+- [pending] jira_management/**tests**/import-safety-harness.test.ts
+- [pending] jira_management/**tests**/integration-handlers.test.ts
+- [pending] jira_management/**tests**/integration-menu-connectivity.test.ts
+- [pending] jira_management/**tests**/issue-linker.test.ts
+- [pending] jira_management/**tests**/jira-resource-sprint-cloud.test.ts
+- [pending] jira_management/**tests**/jira-resource-sprint.test.ts
+- [pending] jira_management/**tests**/jira-resource-types.test.ts
+- [pending] jira_management/**tests**/jira-resource-version.test.ts
+- [pending] jira_management/**tests**/jira_link_manager.test.ts
+- [pending] jira_management/**tests**/jira_resource.test.ts
+- [pending] jira_management/**tests**/link-operations.test.ts
+- [pending] jira_management/**tests**/link-types.test.ts
+- [pending] jira_management/**tests**/main.test.ts
+- [pending] jira_management/**tests**/mapping-file-generator.test.ts
+- [pending] jira_management/**tests**/menu-data.test.ts
+- [pending] jira_management/**tests**/package_version_manager.test.ts
+- [pending] jira_management/**tests**/precondition-handler.test.ts
+- [pending] jira_management/**tests**/precondition-importer.test.ts
+- [pending] jira_management/**tests**/precondition-matcher.test.ts
+- [pending] jira_management/**tests**/result_reporter-cloud.test.ts
+- [pending] jira_management/**tests**/result_reporter.test.ts
+- [pending] jira_management/**tests**/test-case-factory.test.ts
+- [pending] jira_management/**tests**/test-execution-creator-cloud.test.ts
+- [pending] jira_management/**tests**/test-execution-creator.test.ts
+- [pending] jira_management/**tests**/ui-helpers.test.ts
+- [pending] jira_management/**tests**/xray-client.test.ts
+- [pending] jira_management/**tests**/xray-history.test.ts
+- [pending] jira_management/commands/**tests**/case01.integration.test.ts
+- [pending] jira_management/commands/**tests**/case01.test.ts
+- [pending] jira_management/commands/**tests**/case02.integration.test.ts
+- [pending] jira_management/commands/**tests**/case02.test.ts
+- [pending] jira_management/commands/**tests**/case03.test.ts
+- [pending] jira_management/commands/**tests**/case04.test.ts
+- [pending] jira_management/commands/**tests**/case05.test.ts
+- [pending] jira_management/commands/**tests**/case06.test.ts
+- [pending] jira_management/commands/**tests**/case07.test.ts
+- [pending] jira_management/commands/**tests**/case08.test.ts
+- [pending] jira_management/commands/**tests**/case09.test.ts
+- [pending] jira_management/commands/**tests**/case10.test.ts
+- [pending] jira_management/commands/**tests**/case11.test.ts
+- [pending] jira_management/commands/**tests**/case12.test.ts
+- [pending] jira_management/commands/**tests**/case13.test.ts
+- [pending] jira_management/commands/**tests**/case14.test.ts
+- [pending] jira_management/commands/**tests**/case15.test.ts
+- [pending] jira_management/commands/**tests**/case16.test.ts
+- [pending] jira_management/commands/**tests**/case17-helpers.test.ts
+- [pending] jira_management/commands/**tests**/case17.test.ts
+- [pending] jira_management/commands/**tests**/case18.schema.test.ts
+- [pending] jira_management/commands/**tests**/case18.test.ts
+- [pending] jira_management/commands/**tests**/case19.test.ts
+- [pending] jira_management/commands/**tests**/case20.test.ts
+- [pending] jira_management/commands/**tests**/case21.test.ts
+- [pending] jira_management/commands/**tests**/case22.test.ts
+- [pending] jira_management/commands/**tests**/case23.test.ts
+- [pending] jira_management/commands/**tests**/case24.test.ts
+- [pending] jira_management/commands/**tests**/case26.test.ts
+- [pending] jira_management/commands/**tests**/context.test.ts
+- [pending] jira_management/commands/**tests**/handlers.test.ts
+- [pending] jira_management/commands/**tests**/index.test.ts
+- [pending] jira_management/commands/**tests**/test-execution-flow.test.ts
+
+## B5 — scripts (8)
+
+- [pending] scripts/**tests**/audit-suppressions.test.ts
+- [pending] scripts/**tests**/audit/structural.test.ts
+- [pending] scripts/**tests**/eslint-plugins/no-swallow.test.ts
+- [pending] scripts/**tests**/opencode-db-maintenance.test.ts
+- [pending] scripts/**tests**/qa.test.ts
+- [pending] scripts/**tests**/quality-check.test.ts
+- [pending] scripts/**tests**/validation-hook.test.ts
+- [pending] scripts/**tests**/validation-hook.units.test.ts
+
+## B6 — setup (14)
+
+- [pending] setup/**tests**/builder/workflow-builder.test.ts
+- [pending] setup/**tests**/config-writer.integration.test.ts
+- [pending] setup/**tests**/config-writer.test.ts
+- [pending] setup/**tests**/detector.integration.test.ts
+- [pending] setup/**tests**/detector.test.ts
+- [pending] setup/**tests**/main.test.ts
+- [pending] setup/**tests**/reporter-ast.test.ts
+- [pending] setup/**tests**/reporter-isolate.test.ts
+- [pending] setup/**tests**/reporter-security.test.ts
+- [pending] setup/**tests**/secure-io.test.ts
+- [pending] setup/**tests**/templates/github-ci.test.ts
+- [pending] setup/**tests**/templates/gitlab-ci.test.ts
+- [pending] setup/**tests**/templates/pre-push-hook.test.ts
+- [pending] setup/**tests**/templates/qa-post-process-workflow.test.ts
+
+## B7 — e2e (13)
+
+- [pending] e2e/**tests**/_min-test.test.ts
+- [pending] e2e/**tests**/csv-import-errors.test.ts
+- [pending] e2e/**tests**/csv-import.test.ts
+- [pending] e2e/**tests**/entry-to-project.test.ts
+- [pending] e2e/**tests**/friendly-error-paths.test.ts
+- [pending] e2e/**tests**/gen-report-complete.test.ts
+- [pending] e2e/**tests**/handlers-happy-paths.test.ts
+- [pending] e2e/**tests**/llm-pipeline.test.ts
+- [pending] e2e/**tests**/result-pipeline.test.ts
+- [pending] e2e/**tests**/smoke-jira-cloud.test.ts
+- [pending] e2e/**tests**/smoke-startup.test.ts
+- [pending] e2e/**tests**/smoke-xray-cloud.test.ts
+- [pending] e2e/**tests**/testexec.test.ts
