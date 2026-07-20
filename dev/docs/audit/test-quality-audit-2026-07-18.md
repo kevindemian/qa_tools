@@ -696,7 +696,8 @@ dados **apenas do versionador**, nunca de fontes internas):
 
 Testes de regressão adicionados: `isTestArtifact('test-report')`/`('test_report')` em
 `artifact-parser.test.ts`; remotes com credencial em `project-context.test.ts`.
-Commits pendentes de push + monitoramento de CI (§13).
+Commitado (`5d7e11bc`) e pushado para GitHub. Monitoramento de CI suspenso: conta gratuita
+do GitHub esgotou a quota de minutos (ver §20.5.4 para o caminho GitLab de validação).
 
 #### 20.5.2 pr-report não pode ser hardcoded — configurável via Wizard (2026-07-20)
 
@@ -741,9 +742,9 @@ GitLab.** **Corrigido:** o template GitLab agora emite
 gera CI; sem edição manual) para validação no GitLab `me-team-group/qatools`. Teste de
 regressão em `gitlab-ci.test.ts` (`--project test-proj`, não `qa_tools`).
 
-Estado: correções de código commitadas (`0292db41` + este). Pendente de validação em CI
-(real) na conta com quota disponível (GitHub da conta atual esgotou minutos no plano
-gratuito; GitLab `me-team-group/qatools` tem token em `.env.local` para push/validação).
+Estado: correções de código commitadas (`0292db41` + este). Validação em CI: ver estado
+consolidado em §20.5.4 (GitHub sem minutos; GitLab `me-team-group/qatools` com `.gitlab-ci.yml`
+válido porém aguardando *identity verification* da conta para executar o pipeline).
 
 #### 20.5.4 GitLab CI inválido — `WorkflowBuilder` emitia chave `jobs:` aninhada (2026-07-20)
 
@@ -759,7 +760,22 @@ parser do GitLab era sintoma secundário, não a causa; a causa era a chave `job
 `provider === 'gitlab'` (jobs no root) e mantém `jobs:` aninhado para GitHub. `toString`
 usa `lineWidth: 0` para evitar wrapping de `script` longos. `.gitlab-ci.yml` regenerado
 via template (G2). Validado contra `POST /ci/lint` do GitLab: `valid: true`. Teste de
-regressão em `workflow-builder.test.ts` (GitLab não emite `^\s*jobs:\s*$`).
+regressão em `workflow-builder.test.ts` (GitLab não emite linha `jobs:` solitária).
+
+**Estado de implantação / validação (2026-07-20):**
+- GitHub (`kevindemian/qa_tools`): parado em `f0345f3a` — conta gratuita esgotou a quota
+  de minutos do GitHub Actions neste mês. Push suspenso até a virada da quota (ou upgrade).
+  Correções de §20.5.1–§20.5.4 NÃO foram sincronizadas com o GitHub ainda.
+- GitLab (`me-team-group/qatools`): push realizado até `b9ed6cc3` (só GitLab, por decisão
+  do usuário). O `.gitlab-ci.yml` é sintaticamente válido (`ci/lint` → `valid: true`) e o
+  job `qa-tools` executa `pr-report --project qa_tools` em linha única. **Bloqueio de
+  execução:** a conta GitLab exige *identity verification* para rodar CI jobs
+  (`POST /pipeline` → `400 Identity verification is required in order to run CI jobs`).
+  Não é defeito de código — o pipeline só inicia após o usuário concluir a verificação de
+  identidade na GitLab. Assim que liberado, o monitoramento do pipeline (§13) confirma a
+  geração/upload do `pr-report.html`.
+- Todos os testes de regressão passam localmente (`typecheck` limpo). Commits GitLab:
+  `f0345f3a` (template `--project` dinâmico) + `b9ed6cc3` (jobs no root / lint válido).
 
 ### 20.6 Decisão — REVISADA (2026-07-19, retomada)
 
