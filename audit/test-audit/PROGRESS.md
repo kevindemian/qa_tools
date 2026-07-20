@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 159 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 completos). Restam: 347.
+Concluído até agora: 190 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 + B1.5 completos). Restam: 316.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -194,39 +194,39 @@ NOTA-PATH: manifesto lista "llm-review.rejection.test.ts" mas arquivo real é `s
 - [audited-clean] shared/**tests**/theme.test.ts
     - NOTA: `shared/**tests**/dashboard-menu.test.ts` listado no manifesto original B1.4, mas o arquivo NAO EXISTE no disco (verificado via glob). Nao e T4 (skip orfao); e teste nao criado. Source `shared/ui/dashboard-menu.ts` lido/aprovado em audit separada. Requer criacao de teste dedicado (pendencia registrada, nao bloqueia B1.4).
 
-## B1.5 — ci/jira/infra (31)
+## B1.5 — ci/jira/infra (31) — AUDITADA: 31/31 audited-clean, 0 fixes
 
-- [pending] shared/**tests**/ci-data-incremental.test.ts
-- [pending] shared/**tests**/ci-data.test.ts
-- [pending] shared/**tests**/ci-detect.test.ts
-- [pending] shared/**tests**/ci-injector.test.ts
-- [pending] shared/**tests**/circuit-breaker.test.ts
-- [pending] shared/**tests**/disk-cache.test.ts
-- [pending] shared/**tests**/git-metrics-adapter.property.test.ts
-- [pending] shared/**tests**/git-metrics-adapter.test.ts
-- [pending] shared/**tests**/git-provider-error.test.ts
-- [pending] shared/**tests**/git-sha.test.ts
-- [pending] shared/**tests**/host-semaphore.test.ts
-- [pending] shared/**tests**/http-client.test.ts
-- [pending] shared/**tests**/jira-auth.test.ts
-- [pending] shared/**tests**/jira-client.test.ts
-- [pending] shared/**tests**/jira-helper.test.ts
-- [pending] shared/**tests**/junit-xml-parser.property.test.ts
-- [pending] shared/**tests**/junit-xml-parser.test.ts
-- [pending] shared/**tests**/log-parser-failure-records.test.ts
-- [pending] shared/**tests**/log-parser.property.test.ts
-- [pending] shared/**tests**/log-parser.test.ts
-- [pending] shared/**tests**/logger.test.ts
-- [pending] shared/**tests**/open.test.ts
-- [pending] shared/**tests**/proxy-config.test.ts
-- [pending] shared/**tests**/publish.test.ts
-- [pending] shared/**tests**/result_parser.test.ts
-- [pending] shared/**tests**/store-backend.fallback.test.ts
-- [pending] shared/**tests**/store-backend.test.ts
-- [pending] shared/**tests**/temp-dir.property.test.ts
-- [pending] shared/**tests**/temp-dir.test.ts
-- [pending] shared/**tests**/tls.test.ts
-- [pending] shared/**tests**/xray-cloud-client.test.ts
+- [audited-clean] shared/**tests**/ci-data-incremental.test.ts
+- [audited-clean] shared/**tests**/ci-data.test.ts
+- [audited-clean] shared/**tests**/ci-detect.test.ts
+- [audited-clean] shared/**tests**/ci-injector.test.ts
+- [audited-clean] shared/**tests**/circuit-breaker.test.ts
+- [audited-clean] shared/**tests**/disk-cache.test.ts
+- [audited-clean] shared/**tests**/git-metrics-adapter.property.test.ts
+- [audited-clean] shared/**tests**/git-metrics-adapter.test.ts
+- [audited-clean] shared/**tests**/git-provider-error.test.ts
+- [audited-clean] shared/**tests**/git-sha.test.ts
+- [audited-clean] shared/**tests**/host-semaphore.test.ts
+- [audited-clean] shared/**tests**/http-client.test.ts
+- [audited-clean] shared/**tests**/jira-auth.test.ts
+- [audited-clean] shared/**tests**/jira-client.test.ts
+- [audited-clean] shared/**tests**/jira-helper.test.ts
+- [audited-clean] shared/**tests**/junit-xml-parser.property.test.ts
+- [audited-clean] shared/**tests**/junit-xml-parser.test.ts
+- [audited-clean] shared/**tests**/log-parser-failure-records.test.ts
+- [audited-clean] shared/**tests**/log-parser.property.test.ts
+- [audited-clean] shared/**tests**/log-parser.test.ts
+- [audited-clean] shared/**tests**/logger.test.ts
+- [audited-clean] shared/**tests**/open.test.ts
+- [audited-clean] shared/**tests**/proxy-config.test.ts
+- [audited-clean] shared/**tests**/publish.test.ts
+- [audited-clean] shared/**tests**/result_parser.test.ts
+- [audited-clean] shared/**tests**/store-backend.fallback.test.ts
+- [audited-clean] shared/**tests**/store-backend.test.ts
+- [audited-clean] shared/**tests**/temp-dir.property.test.ts
+- [audited-clean] shared/**tests**/temp-dir.test.ts
+- [audited-clean] shared/**tests**/tls.test.ts
+- [audited-clean] shared/**tests**/xray-cloud-client.test.ts
 
 ## B1.9 — other (13)
 
