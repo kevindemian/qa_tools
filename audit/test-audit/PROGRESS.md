@@ -17,7 +17,7 @@ INVENTÁRIO (506):
 - setup: 14 (B6)
 - e2e: 13 (B7)
 
-Concluído até agora: 190 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 + B1.5 completos). Restam: 316.
+Concluído até agora: 203 (shared B1.1 + B1.2a + B1.2b + B1.3 + B1.4 + B1.5 + B1.9 completos). Restam: 303.
 
 ## B1.1 — core utils (27) — AUDITADA: 27/27 audited-clean, 0 fixes
 
@@ -228,21 +228,21 @@ NOTA-PATH: manifesto lista "llm-review.rejection.test.ts" mas arquivo real é `s
 - [audited-clean] shared/**tests**/tls.test.ts
 - [audited-clean] shared/**tests**/xray-cloud-client.test.ts
 
-## B1.9 — other (13)
+## B1.9 — other (13) — AUDITADA: 13/13 audited-clean, 0 fixes
 
-- [pending] shared/**tests**/config.test.ts
-- [pending] shared/**tests**/github-check-run.test.ts
-- [pending] shared/**tests**/github-pr-comment.test.ts
-- [pending] shared/**tests**/pipeline-cost.property.test.ts
-- [pending] shared/**tests**/pipeline-cost.test.ts
-- [pending] shared/**tests**/pipeline-schema.test.ts
-- [pending] shared/**tests**/pipeline-validator.test.ts
-- [pending] shared/**tests**/quarantine.property.test.ts
-- [pending] shared/**tests**/quarantine.test.ts
-- [pending] shared/**tests**/test-case-validator.test.ts
-- [pending] shared/**tests**/test-suite.schema.test.ts
-- [pending] shared/**tests**/test-utils.test.ts
-- [pending] shared/**tests**/validation.test.ts
+- [audited-clean] shared/**tests**/config.test.ts
+- [audited-clean] shared/**tests**/github-check-run.test.ts
+- [audited-clean] shared/**tests**/github-pr-comment.test.ts
+- [audited-clean] shared/**tests**/pipeline-cost.property.test.ts
+- [audited-clean] shared/**tests**/pipeline-cost.test.ts
+- [audited-clean] shared/**tests**/pipeline-schema.test.ts
+- [audited-clean] shared/**tests**/pipeline-validator.test.ts
+- [audited-clean] shared/**tests**/quarantine.property.test.ts
+- [audited-clean] shared/**tests**/quarantine.test.ts
+- [audited-clean] shared/**tests**/test-case-validator.test.ts
+- [audited-clean] shared/**tests**/test-suite.schema.test.ts
+- [audited-clean] shared/**tests**/test-utils.test.ts
+- [audited-clean] shared/**tests**/validation.test.ts
 
 ## B1.integration — shared/**tests**/integration (46)
 
