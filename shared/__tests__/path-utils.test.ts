@@ -27,5 +27,10 @@ describe('Shared/path-utils', () => {
             expect.hasAssertions();
             expect(sanitizePath('/base', 'a/../b')).toBe('/base/b');
         });
+
+        it('allows a filename containing ".." without a separator (no traversal)', () => {
+            expect.hasAssertions();
+            expect(sanitizePath('/base', 'my..file.txt')).toBe('/base/my..file.txt');
+        });
     });
 });

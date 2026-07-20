@@ -280,7 +280,7 @@ export function parseCtrfResults(jsonData: CtrfData): ParseResult {
         return {
             title: t.name || '',
             state,
-            duration: t.duration,
+            duration: Number.isFinite(t.duration) ? t.duration : 0,
             ...(t.message !== undefined ? { error: t.message } : {}),
             ...(t.suite ? { fullTitle: t.suite + ' > ' + (t.name || '') } : {}),
         };

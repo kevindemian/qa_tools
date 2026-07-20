@@ -6,9 +6,11 @@ import path from 'node:path';
  * as long as they don't use ../ to escape.
  */
 export function sanitizePath(base: string, untrustedPath: string): string {
-    const normalized = path.normalize(untrustedPath);
-    if (normalized.includes('..')) {
-        throw new Error(`Path traversal detected: ${untrustedPath} contains ..`);
+    const resolved = path.resolve(base, untrustedPath);
+    const normalizedBase = path.resolve(base);
+    const rel = path.relative(normalizedBase, resolved);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+        throw new Error(`Path traversal detected: ${untrustedPath}`);
     }
-    return path.resolve(base, untrustedPath);
+    return resolved;
 }

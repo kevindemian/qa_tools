@@ -1262,7 +1262,254 @@ source+teste, arquivo por arquivo. Sem grep/scripts como descoberta.
     → erros explícitos (não silenciados §25); `askTestSource` (135) `TEST_REPORT_PATH` inválido→warn+
     continua, TTY→prompt, senão→`NO_TTY` explícito; `promptUserForFile` 3 attempts, isCancelError→
     `USER_CANCELLED`, `!filePath`→`USER_SKIPPED`. Sem silenciamento. Sem defeito.
-- [RESUMO `data-hub` não-compute] hub/global-hub/persistence/quality/test-source-fallback: TODOS
-  SÃO. Itens de correção de produção em aberto: (1) `calcRunPassRate` NaN guard (impacta hub.ts:821,
-  case17, pr-report-core, run-comparison, metrics-trends) — item dedicado PENDENTE (requer atualizar
-  14 callers; não executado em lote para não violar §7 system consistency sem escopo dedicado).
+- [shared] `data-hub/index.ts` — **AUDITADO SÃO** (barrel puro, só re-exports; sem lógica).
+- [shared] `data-hub/metrics/csv-exporter.ts` — **AUDITADO SÃO**
+  - Source: `flattenMetrics`+`toCsv` (serialização). `String(row.value)` de NaN produz "NaN" no CSV
+    (serializa, não silencia — exporter não é quality gate). Sem lógica de decisão. Sem defeito.
+- [shared] `data-hub/metrics/csv-importer.ts` — **AUDITADO SÃO**
+  - Source: `safeNumber` (3) `Number.isFinite?num:fallback` (§24); `importMetricsCsv` (12) csv vazio/
+    sem header/`passRate` ausente → `null` explícito (não silenciado); `KNOWN_METRICS` whitelist
+    (rejeita métricas desconhecidas); `result['passRate']===undefined→null`. §25 ok. Sem defeito.
+- [shared] `data-hub/metrics/json-exporter.ts` — **AUDITADO SÃO**
+  - Source: `exportMetricsJson` (serialização); `importMetricsJson` (20) `validateMetricsShape`
+    whitelist top-keys → `null` em inválido; catch→`rootLogger.debug`+`null`. §25 ok. Sem defeito.
+- [shared] `data-hub/__tests__/metrics/csv.test.ts` + `__tests__/metrics/json-exporter.test.ts` — **AUDITADO SÃO**
+  - csv.test.ts (139): round-trip, CSV inválido→null, sem header→null, only-header→null, unknown
+    ignoradas, NaN→fallback 0 (linha 133, documenta `safeNumber` §24), campos preservados. Assertions
+    concretas. json-exporter.test.ts (77): export/import round-trip, invalid JSON→null, missing
+    required→null. Sem teatro.
+- [shared] `data-hub/extractors/failure-classifier.ts` + `__tests__/extractors/failure-classifier.test.ts` — **AUDITADO SÃO**
+  - Teste (113): warning→broken, error→failed, name fallback, NaN line→undefined, finite line,
+    empty→`[]`, priority gitlab>steps>annotations>log, fallback log. Assertions concretas. Sem teatro.
+  - Source: `failureEntryToRecord` (122) `line` guard `==null||!isFinite→undefined` (§24); `name`
+    fallback 'Unknown failure'; `status` warning→'broken' (distinção preservada); `confidence`/`source`/
+    `category` NUNCA dropados (§25, linha 117). `classifyFailures` (138) prioridade + fallback `[]`
+    (vazio explícito). Sem silenciamento. Sem defeito.
+- [shared] `data-hub/extractors/annotations-extractor.ts` + `__tests__/extractors/annotations-extractor.test.ts` — **AUDITADO SÃO**
+  - Teste: `!Array.isArray→[]`, filter failed/error, confidence 0.8 (structured). Assertions concretas.
+  - Source: `gitlabTestCasesToFailureRecords` (27) `!Array.isArray→[]`; `status` failed/error→
+    failed/broken; `detectFileLine` (line undefined preservado). Sem exceções. Sem defeito.
+- [shared] `data-hub/extractors/commit-log-extractor.ts` + `__tests__/extractors/commit-log-extractor.test.ts` — **AUDITADO SÃO**
+  - Teste: GitHub head_commit + GitLab title, author/date, cap GIT_HISTORY_RUNS, empty→''. Sem teatro.
+  - Source: `buildCommitLog` (29) função pura; `hc.message ?? ''`, `author?.name ?? 'unknown'`,
+    `created_at` string slice. Sem exceções. Sem defeito.
+- [shared] `data-hub/extractors/coverage-extractor.ts` + `__tests__/extractors/coverage-extractor-branches.test.ts` — **AUDITADO SÃO**
+  - Teste (branches): cada fonte (ctrf/gitlab/log/json/checkRun) → RawCoverage; JSON percentage NaN→
+    null (linha 73); invalid log→null. Assertions concretas.
+  - Source: `extractCoverage` (85) cascade; cada `fromX` valida `Number.isFinite` → `null` (linha 30/
+    53/62/77, §24/§25: não retorna percentage NaN); `fromCtrf` `total/covered ?? 0`. Sem defeito.
+- [shared] `data-hub/extractors/coverage-files-extractor.ts` + `__tests__/extractors/coverage-files-extractor.test.ts` + `__tests__/extractors/coverage-files-extractor-full.test.ts` — **AUDITADO SÃO**
+  - Testes: coverage-files-extractor (branches/guards) + full (integration). Assertions concretas.
+  - Source (388): `buildLines` (82) `!isFinite(total)||!isFinite(covered)||total<=0→undefined` (NUNCA
+    NaN/Infinity/fabricated, linha 13 comentário §25); `value==null→[]` (66); catches registram
+    (158/239/316/372). §24/§25 exemplar. Sem defeito.
+- [shared] `data-hub/extractors/framework-detector.ts` — **AUDITADO SÃO (fonte) + LACUNA DE TESTE**
+  - Source: `detectFrameworkCascade` (28) try/catch; `ExternalError` (auth/permission/rateLimit/
+    network/server)→`warn` ao usuário (não silenciado §25); outros→debug; fallback `{framework:
+    'unknown', confidence:0}` explícito. Sem silenciamento. Sem defeito de produção.
+  - **LACUNA:** não existe `__tests__/extractors/framework-detector.test.ts` (consumido por hub/
+    createDataHub). Gap registrado; criação exige escopo dedicado.
+- [shared] `data-hub/providers/composite-provider.ts` + `__tests__/providers/composite-provider.test.ts` — **AUDITADO SÃO**
+  - Teste: `Promise.allSettled` rejects→skipped+warn; merge runs dedup/append; coverage first-non-null;
+    jiraIssues/framework merge; xray merge dedup. Assertions concretas. Sem teatro.
+  - Source: `fetchRawData` `Promise.allSettled`; `rejected`→`rootLogger.warn` (linha 35, reportado não
+    silenciado §25)+`continue`; merge dedup por run id, first-non-null, Xray dedup. Sem silenciamento.
+    Sem defeito.
+- [shared] `data-hub/providers/github-provider.ts` + `__tests__/providers/github-provider.test.ts` — **AUDITADO SÃO**
+  - Teste: fetchRawData, jobs/artifacts/check-runs/log fetch, deployments/releases/security/issues/PR
+    extraction, reporter prediction, framework, NaN/undefined handling, empty/404→graceful. Assertions
+    concretas (shape real). Sem teatro.
+  - Source (940): `Number.isFinite` guards em agregações (409/873/887/902/904); `isNaN(num)?undefined`
+    (327, campo omitido se NaN, não fabricado); `catch`→`rootLogger.debug`+`[]`/`null` (tolerância a
+    provider indisponível, reportado — não silenciamento de validação de negócio §25); `getDeployments/
+    getReleases/...` typeof guard→`[]`. §24/§25 compliant. Sem defeito.
+- [shared] `data-hub/providers/gitlab-provider.ts` + `__tests__/providers/gitlab-provider.test.ts` + `__tests__/providers/gitlab-expanded.test.ts` — **AUDITADO SÃO**
+  - Testes: fetchRawData, jobs/artifacts/test-report/log/coverage/framework, DORA mapping (`Number.
+    isFinite` 167-170), deployments/releases/security/issues/PR, NaN/undefined, empty/404. Assertions
+    concretas. Sem teatro.
+  - Source (553): `Number.isFinite` em DORA (167-170) e agregações; `isNaN(num)?undefined` (324, 518);
+    `catch`→`rootLogger.debug`+graceful (345/365/390/404/417/443/465/501/518); tolerância a provider
+    indisponível reportada. §24/§25 compliant. Sem defeito.
+- [shared] `data-hub/providers/jira-provider.ts` + `__tests__/providers/jira-provider.test.ts` — **AUDITADO SÃO**
+  - Teste: searchJiraIssues→RawJiraIssue map, extractName/Number/Key/Sprint, assignee/reporter/
+    components/labels/sprint/storyPoints/parentKey, missing fields→undefined/''/[]. Assertions
+    concretas. Sem teatro.
+  - Source (109): `extractName`/`extractNameList`/`extractNumber`(`Number.isFinite` 32)/`extractKey`/
+    `extractSprintName` defensivos → `undefined`/`[]` (não lançam, não fabricam); `mapIssue` `??''`/
+    `??undefined`/`??[]`. §24/§25 compliant. Sem defeito.
+- [shared] `data-hub/providers/xray-provider.ts` + `__tests__/providers/xray-provider.test.ts` + `__tests__/providers/xray-expanded.test.ts` + `__tests__/xray-integration.test.ts` — **AUDITADO SÃO**
+  - Testes: Xray testExecutions/testRuns→RawData, empty payload→ignored, garbled fields→null (209/245/
+    256), extraction defensiva. Assertions concretas. Sem teatro.
+  - Source (329): defensive extraction (linha 9-12: "missing/garbled fields never throw... never a
+    silent swallowed error"); `entry==null||!object→null`; `execution.key.length===0→null`;
+    `t==null||!object→null`. §24/§25 compliant. Sem defeito.
+- [shared] `data-hub/providers/types.ts` + `index.ts` — **AUDITADO SÃO** (barrels, só tipos/re-exports).
+- [shared] `pr-report-core.ts` + `__tests__/pr-report-core.test.ts` + `.compute-diff.test.ts` + `.main.test.ts` + `.property.test.ts` + `.wiring.test.ts` + `.wiring.property.test.ts` — **AUDITADO SÃO (fonte) + RESSALVA herdada calcRunPassRate**
+  - Testes: `pr-report-core.test.ts` (546) mocks fronteira (health-score/quality-gate/github-check-
+    run/github-pr-comment/report-html/global-hub/`fs`); `createTestHub`/`makeDataHubMock` real;
+    `toBeCloseTo(88.9,1)` (passRate 8/10 real), `toStrictEqual(defaultHealthScore)`, `toHaveBeenCalled
+    With(objectContaining coverageSource/diffComparison/conclusion)`. Sem teatro. `compute-diff.test.ts`
+    (100) cobre undefined/identical/newFailures/newPasses/flaky/skipped; `getResult` lança se undefined
+    (força explícito). `main.test.ts` (200) mocks fronteira + `makeDataHubMock` real. `.property`/`.wiring`
+    seguem padrão. Sem teatro.
+  - Source: `validatePrReportStats` (471) compara stats vs tests.reduce e **`rootLogger.warn`** se
+    divergirem (não silencia §25); `runQualityGate` catch→warn+undefined (381, reportado); `buildFlaky
+    Section` catch→warn (230); `acquireReportDataHub` (811) **NUNCA silencia ausência de dados** — Caso
+    3 (não-interativo)→`explicitError()` lança (884), Caso 2 (user skipped)→lança (880); `tryCreateDataHub`
+    (768) `Layer7UnavailableError` relançado (785), outros→warn+undefined (correto, fallback Camada 7);
+    `hasUsableData` (794) guard. **4 usos de `calcRunPassRate`** (linha 150/311/431/553) herdam a
+    RESSALVA NaN (item dedicado pendente). Sem silenciamento de validação de negócio.
+- [RESUMO `shared` top-level — lote 1] pr-report-core: SÃO. (/data-hub já 100% auditado acima.)
+- [shared] `result_parser.ts` + `__tests__/result_parser.test.ts` — **AUDITADO CORRIGIDO (prod) + teste regressão**
+  - DEFEITO (descoberto via auditoria): `parseCtrfResults` (linha 283) `duration: t.duration` sem guard;
+    se CTRF test sem `duration`, `stats.duration` (linha 300 `reduce(s+t.duration)`) vira **NaN** →
+    propaga para `PrReportStats.duration` → display `"NaN"` (writeToJobSummary/buildSummaryTable).
+  - CORREÇÃO NA ORIGEM: `duration: Number.isFinite(t.duration) ? t.duration : 0` (consistente com
+    Mochawesome linha 200 `?? 0`). Teste de regressão adicionado (CTRF duration ausente→0 + stats
+    finito). 35 testes passam. Commit pendente (lote espaçado).
+  - Teste existente: cobre Mochawesome/CTRF/dispatch/empty/null/undefined/error-file/summary-vs-
+    computed; assertions concretas. Sem teatro. (Nota: teste já cobria Mochawesome duration ausente
+    mas NÃO CTRF — lacuna fechada pela correção.)
+- [shared] `sanitize.ts` + `__tests__/sanitize.test.ts` — **AUDITADO SÃO**
+  - Fonte: redactUrlsWithCredentials/truncateStacktrace/sanitizeTerminal puros; SECRET_PATTERNS
+    redacta; re-export sanitizeHtml. Sem NaN/segurança issue.
+  - Teste: Bearer/OpenAI/GitHub/Google/private-key(multi+single)/URL-creds/safe-pass-through/
+    HuggingFace/npm/Slack/refresh/truncate(curto+longo)/combinado/HTML-XSS/ANSI. Assertions
+    concretas (`toContain`/`not.toContain`/`toHaveLength`). Sem teatro.
+- [shared] `log-parser.ts` + `__tests__/log-parser.test.ts` — **AUDITADO SÃO**
+  - Fonte: cumpre §24/§25 — `safeInt`→NaN (não silencia), `isValidCounts` isFiniteCount
+    (int/finito/>=0), `parseTestSummaryFromLogs` vazio→`testCounts` undefined (NÃO mascara zero),
+    HANDLERS jest/vitest/dotnet/pytest/mocha com safeInt, stripAnsi CSI/OSC endurecido,
+    `extractFailures` reset lastIndex. Sem silenciamento.
+  - Teste: vitest/jest/pytest/mocha/goTest counts, mensagens falha, vazio→undefined, sem-teste→
+    undefined, detectFileLine V8/async/parenthesized/regression (file undefined). Concreto. Sem teatro.
+- [shared] `junit-xml-parser.ts` + `__tests__/junit-xml-parser.test.ts` — **AUDITADO SÃO**
+  - Fonte: `normalizeTime` (null→0, parseFloat+isFinite guard) previne NaN em duration; parseTestcase
+    failure/error/skipped/passed; parseJUnitXml try/catch→debug+null (caller decide); processSuites
+    duration usa normalizeTime. Sem silenciamento.
+  - Teste: válido(stats toStrictEqual), failure msg, skipped count, invalid→null, empty→zeros,
+    multi-testsuite merge, attachment tags, classname ausente, failure+stack. Concreto. Sem teatro.
+- [shared] `safe-json.ts` + `__tests__/safe-json.test.ts` — **AUDITADO SÃO**
+  - Fonte: `safeParseJson<T>(raw, fallback)` — try/catch→warn+fallback (fallback fornecido pelo
+    caller, não mascarado pelo util). §25 compliant.
+  - Teste: válido/fallback(malformed/empty/undefined) + **property-based** (fast-check jsonValue vs
+    JSON.parse; fallback exato para non-JSON via Symbol sentinel). Alta qualidade (§19.6). Sem teatro.
+- [shared] `escape.ts` — **AUDITADO SÃO** (fonte; `sanitizeHtml` re-export testado em sanitize.test.ts/escape.test.ts). Map total garante lookup sem fallback.
+- [shared] `errors.ts` + `__tests__/errors.test.ts` — **AUDITADO SÃO**
+  - Fonte: hierarquia Llm*/DataIntegrity/DataFetch/ExternalError (kind/status/scope/resource/
+    operation/remediation explícitos, não silencia); `classifyGitError` (401/403/404/429/5xx/network→
+    ExternalError com remediation, erros de rede propagam); `formatErr`/`humanizeError` garantem non-empty.
+  - Teste: classifyGitError (401/403-scope/403-generic/404/429/5xx/network/unknown), formatErr/
+    getErrorMessage/humanizeError, isCancelError, hierarquia de classes. Concreto. Sem teatro.
+- [shared] `quoted-string.ts` — **AUDITADO SÃO** (fonte; teste em quoted-string.test.ts). isPreconditionKey/
+    extractPreconditionKey/parseQuotedValue (CSV quoted multi-line/escaped). RESSALVA MENOR: parseQuotedValue
+    reconstrói Map por iteração (ineficiente, não defeito); aspa única → value ''. Sem silenciamento.
+- [shared] `date-utils.ts` — **AUDITADO SÃO** (fonte; teste date-utils.test.ts). formatDateISO aritmética
+    manual timezone-independent.
+- [shared] `path-utils.ts` + `__tests__/path-utils.test.ts` — **AUDITADO CORRIGIDO (prod) + teste regressão**
+  - DEFEITO (descoberto via auditoria): implementação `normalized.includes('..')` rejeitava FALSO POSITIVO
+    nomes válidos contendo `..` (ex. `my..file.txt`) — não checava confinamento real.
+  - CORREÇÃO NA ORIGEM: `path.resolve` + `path.relative(base, resolved)`; rejeita só se `rel.startsWith('..')`
+    ou `isAbsolute(rel)` (confinamento real). Teste de regressão `my..file.txt`→resolve (não lança) adicionado.
+  - Teste existente: plain/nested/traversal(parent+mid)/`a/../b` (normaliza, não lança). Concreto. Sem teatro.
+- [shared] `framework-detection.ts` + `__tests__/framework-detection.property.test.ts` — **AUDITADO SÃO**
+  - Fonte: isManifestFile (regex), detectFrameworkFromDeps (pure, unknown/0), detectFrameworkFromAPI
+    (content==null→unknown soft; parse error→debug+unknown; erros de auth/rede PROPAGAM ExternalError, não
+    silenciam — comentado). RESSALVA MENOR: spread de `pkg['dependencies']` undefined é silencioso (aceitável).
+  - Teste: **property-based** (confidence 0..1, isManifestFile boolean, empty→unknown/0, known deps→
+    non-unknown). Alta qualidade (§19.6). Sem teatro.
+- [shared] `config-accessor.ts` + `__tests__/config-accessor.test.ts` — **AUDITADO SÃO**
+  - Fonte: Config singleton + overrides; `_resolve` valida `allowedValues`→**lança** (não silencia);
+    toBool/toInt conforme schema. RESSALVA MENOR: chave não-schema cai em envVal direto (esperado).
+  - Teste: env var/default/override/override-vs-env/unknown→''/boolean/number/NaN→default/**invalid
+    xrayMode/jiraMode lança**/logDir de QA_TOOLS_LOGS_DIR/set/reset/create/setAutoConfirm/getAllPrefixed/
+    validateRequiredEnv (falta→lança, presente→não). Alta cobertura. Sem teatro.
+- [shared] `feature-config.ts` + `__tests__/feature-config.test.ts` — **AUDITADO SÃO**
+  - Fonte: loadFeatureConfig (!exists→warn+{} documentado "NOT explicit disable"; schema fail→warn+{};
+    catch→warn+{}); ensureDir/save catch→warn+rethrow; getPrReportConfig??default; resolvePublishTarget
+    fallback provider. Todos reportam via warn; default vazio é comportamento documentado, não silenciamento.
+  - Teste: hermético (chdir tmp), absent→{}, invalid schema→{}, load/save/get/set por projeto,
+    isPrReportEnabled, resolvePublishTarget (gitlab/github), isAi/Quality/FlakySkipped. Alta qualidade. Sem teatro.
+- [shared] `field-names.ts` + `__tests__/field-names.test.ts` — **AUDITADO SÃO**. normalizeFieldName/
+    sanitizeCellValue (??'' para célula). Teste: canonical/lower/camel/under/hyphen/upper/\r/whitespace/
+    unknown pass-through; sanitizeCellValue (\r strip, \n preserve, null/undefined/empty/middle\r). Concreto.
+- [shared] `parse-project-flag.ts` + `__tests__/parse-project-flag.test.ts` — **AUDITADO SÃO**. parseProjectFlag
+    itera argv, ignora valor que parece flag. Teste: --project/-p/valor-flag/sem-flag/vazio. Concreto.
+- [shared] `logger.ts` — **AUDITADO SÃO** (fonte; sem teste dedicado, coberto indiretamente via mock em ~todos
+    os testes). maskDeep mascara recursivamente campos sensíveis (token/secret/key/password/authorization),
+    não muta original; _writeFile JSON.stringify(maskDeep(data)); catch→stderr+retorna; _ensureDir catch→
+    stderr+false. RESSALVA MENOR: maskDeep não mascara valores NON-STRING sob chave secreta (ex. password:12345678
+    numérico) — gap de segurança menor, baixo impacto (senhas tipicamente strings). Sem silenciamento.
+- [shared] `open.ts` + `__tests__/open.test.ts` — **AUDITADO SÃO**
+  - Fonte: validateTarget (rejeita shell metachars/len>2048), ALLOWED_CMDS allowlist (open/cmd/cmd.exe/
+    xdg-open), spawn(array args, sem shell) — **anti shell-injection (§8)**; isWsl catch→warn+false.
+  - Teste: mocks child_process/os/fs/config (fronteira); spawn error/exit/fallback; plataformas
+    (WSL/linux/darwin/win32/unknown); toWinPath fallback (copy+convert, writeFileSync throw→null,
+    wslpath invalid→null); getWinTempDir; getDocsOutputDir; openWithFallback (browser/dir/path). Mock shape
+    fidelity (toStrictEqual exato em getOsOpenCommand). Verifica fallback chamado. Alta qualidade. Sem teatro.
+- [shared] `state.ts` + `__tests__/state.test.ts` — **AUDITADO SÃO**
+  - Fonte: isPathWithinBase (traversal block), resolveProjectName→lança se inválido (não silencia),
+    ensureStateDir catch→warn+false, tryRecoverBackup/renameCorrupted catch→warn+rootLogger.error,
+    loadOperational corrupted→warn+recover, writeStateAtomic catch→warn+error. Todos reportam. §25 compliant.
+  - Teste: hermético (mockFs spy); load(empty/parsed), save, update(mutate+persist), backup recovery,
+    migration old→new, corrupted sem backup→{}, **warn quando corrompido**, backup fail→error, rename fail→
+    error, save write fail→error, mkdirSync throw→{}, migrate catch→warn, getStatePath, updateTyped. Verifica
+    rootLogger.warn/error. Alta qualidade. Sem teatro.
+- [shared] `project-paths.ts` — **AUDITADO SÃO** (fonte; coberto por project-registry/project-context/env-loader
+    tests). isValidProjectName allowlist `^[A-Za-z0-9._-]+$` (rejeita `..`/absoluto/separadores = traversal guard);
+    projectConfigDir/projectEnvPath→lançam se inválido.
+- [shared] `project-context.ts` + `__tests__/project-context.test.ts` — **AUDITADO SÃO**
+  - Fonte: parseRemoteUrl/resolveRemoteUrl (PATH-free, worktree pointer), setCurrentProject→lança (traversal/
+    não registrado), ensureSelfHostProject→lança em TODOS os caminhos de falha (fail-loud, nunca silent),
+    loadProjectConfig valida+lança. RESSALVA: nenhuma de silenciamento.
+  - Teste: hermético (XDG_CONFIG_HOME=tmp), getCurrentProject/Dir/isSelected/setCurrentProject/clear/
+    loadProjectConfig/ensureSelfHostProject/getSelfHostEntry. Padrão consistente. Alta qualidade.
+- [shared] `project-registry.ts` + `__tests__/project-registry.test.ts` — **AUDITADO SÃO**
+  - Fonte: toRegistry **null-prototype** (anti prototype-pollution `__proto__`/`valueOf`); loadRegistry
+    ausente→vazio, corrupt→backup, sem backup→**lança** (não silencia); saveRegistry valida Zod→lança;
+    addProject/updateProject/removeProject fail-loud. RESSALVA: nenhuma de silenciamento.
+  - Teste: hermético (XDG_CONFIG_HOME=tmp), load empty/add/get (e demais). Padrão consistente. Alta qualidade.
+- [shared] `publish.ts` + `__tests__/publish.test.ts` — **AUDITADO SÃO**
+  - Fonte: publishToS3 (dest vazio→error+return; execFileSync array args sem shell; catch→error),
+    publishToGhPages (clone fail→warn+tmpdir; commit/push catch→error), getOriginUrl catch→warn+'origin',
+    isValidTarget, publishReport (alvo inválido→error+return). Operações reportam erro via logger (não são
+    quality gate nem validação de dado — acceptable fire-and-forget).
+  - Teste: mocks child_process/fs/logger (fronteira); verifica execFileSync chamado com args EXATOS
+    ('/usr/bin/aws', ['s3','cp',...] — array, sem shell), logger.error para alvo inválido. Mock shape fidelity.
+- [shared] `session-context.ts` + `__tests__/session-context.test.ts` — **AUDITADO SÃO**
+  - Fonte: isNonNullObject (anti prototype-pollution), withBusy try/finally, tryLoadFromCache (!sha→null;
+    corrupt→warn+fallthrough), resolveTestDataSource fallback sequencial (cache→CI/DataHub→branch→null,
+    caller decide), _getLatestTestResultFromDataHub (!init→null). Sem silenciamento de dado.
+  - Teste: mocks git-sha/store-backend/global-hub (fronteira) + makeDataHubMock/createMockStore. Padrão
+    consistente. Alta qualidade.
+- [shared] `vitest-ctrf-reporter.ts` + `__tests__/vitest-ctrf-reporter.test.ts` — **AUDITADO SÃO**
+  - Fonte: vitestStateToCtrfStatus (default 'other'), extractErrorInfo (state!=failed→{}; errors vazio→{}),
+    onTestCaseResult (pending→return; duration??0 guard; flaky=passed&&retry>0), onTestRunEnd (counts;
+    totalDuration=reduce guardado por ??0, sem NaN; flaky/retried counts; CTRF data). RESSALVA MENOR:
+    onTestRunEnd mkdirSync/writeFileSync sem try/catch (lança em falha de escrita = fail-loud, aceitável).
+  - Teste: hermético (reports-test/); verifica CTRF gerado compatível com isCtrfFormat()/parseTestResults
+    (**round-trip com result_parser.ts** — geração+consumo validados juntos). Alta qualidade.
+- [shared] `env-loader.ts` + `__tests__/env-loader.test.ts` + `__tests__/env-loader-overlay.test.ts` — **AUDITADO SÃO**
+  - Fonte (SH-3b): logViaRootLogger .catch safeguard (§24); SECRET_PATTERNS/warnSecretsInFile (secret-scan
+    safety mechanism, catch→stderr não silencia); ensureDotenv idempotente (isTest→hermético .env.test;
+    produção→.env.local+.env+secret-scan+overlay; isValidProjectName→overlay ou warn se inválido); envVal
+    (||fallback); toBool/toInt (toInt NaN→fallback, NaN guard); applyProjectEnvOverlay (!name→no-op; inválido→
+    lança; catch→logViaRootLogger('error')+**re-throw** §25); writeProjectEnvOverlay (inválido→lança; escrita
+    atômica). 96.11% stmts cobertura.
+  - Teste env-loader.test.ts (418): hermético (fs real tmp), ensureDotenv idempotente, envVal, toBool, toInt,
+    apply/writeOverlay, reloadDotenv, warnSecretsInFile. env-loader-overlay.test.ts (49): hermético, apply
+    over globals, no-op quando ausente (explícito), **throw em path traversal**, ''→no-op. Concreto. Sem teatro.
+- [shared] `config.test.ts` (500) — **AUDITADO SÃO** (cobre config-accessor + env-loader; ambas fontes já
+    validadas SÃO; padrão hermético consistente com os testes dedicados).
+- [shared] `prompt-summary.ts` (types) + `__tests__/prompt-summary.test.ts` — **AUDITADO SÃO** (RESSALVA MENOR:
+    testes de UI confirmam apenas `output.print` chamado com any(String), não conteúdo — dentro do permitido
+    por §19.8 que não exige testar console output exceto CLI e2e; teste de execution-link valida conteúdo).
+- [shared] `deps.ts` — **AUDITADO SÃO** (barrel de imports de terceiros; sem lógica própria; sem teste necessário
+    §19.8 — terceiros não testados).
+- [RESUMO `data-hub` COMPLETO] hub/global-hub/persistence/quality/test-source-fallback/index/metrics(3)/
+  extractors(6)/providers(6): TODOS SÃO. LACUNAS de teste: `framework-detector.ts` (fonte SÃO, sem
+  `__tests__`); + as 6 LACUNAS de `compute/` (flaky-percentage/execution-rate/per-run-costs/metrics-runs/
+  metrics-trends + já documentadas). Itens de correção de produção em aberto: `calcRunPassRate` NaN
+  guard (impacta hub.ts:821, case17, pr-report-core, run-comparison, metrics-trends) — item dedicado
+  PENDENTE (requer atualizar 14 callers; não executado em lote para não violar §7 system consistency
+  sem escopo dedicado). Demais `data-hub` (compute/extractors/providers/metrics) são §24/§25 compliant.

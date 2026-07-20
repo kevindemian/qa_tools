@@ -129,6 +129,23 @@ describe('ParseTestResults (Mochawesome input)', () => {
         expect(nonNull(result.tests[0]).duration).toBe(0);
     });
 
+    it('defaults missing CTRF duration to 0 and keeps stats.duration finite', () => {
+        const input = {
+            results: {
+                summary: { tests: 2, passed: 1, failed: 1, skipped: 0, pending: 0, other: 0, start: 0, stop: 0 },
+                tests: [
+                    { name: 'T1', status: 'passed' as const, duration: 100 },
+                    { name: 'T2', status: 'failed' as const },
+                ],
+            },
+        };
+        const result = parseCtrfResults(input as unknown as Parameters<typeof parseCtrfResults>[0]);
+
+        expect(nonNull(result.tests[1]).duration).toBe(0);
+        expect(Number.isFinite(result.stats.duration)).toBeTruthy();
+        expect(result.stats.duration).toBe(100);
+    });
+
     it('handles result without suites property', () => {
         const input = {
             results: [{}],
