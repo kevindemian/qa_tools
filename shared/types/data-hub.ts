@@ -15,6 +15,7 @@ import type { FlatTest, ParseResult } from '../result_parser.js';
 import type { CoverageSnapshot } from './coverage.js';
 import type { QualityReport, QualityCategory } from '../data-hub/quality.js';
 import type { QuarantineStore } from '../validation/quarantine.js';
+import type { AiGenerationRecord } from '../types/llm.js';
 
 /** Quality engineering metrics snapshot — invariant fire rates, layer pass rates, drift detection. */
 export interface QualityMetricsSnapshot {
@@ -102,6 +103,8 @@ export interface RawData {
     doraMetrics?: DoraMetrics;
     /** Generic project-manager issues (GitHub Issues / GitLab Issues). */
     pmIssues?: RawIssue[];
+    /** AI generation feedback records for requirement quality analysis. */
+    aiRecords?: AiGenerationRecord[];
     /** Per-file coverage breakdown. */
     coverageFiles?: CoverageFile[];
     /** Performance metrics extracted from CI. */

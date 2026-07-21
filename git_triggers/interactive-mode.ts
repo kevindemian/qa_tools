@@ -73,7 +73,6 @@ import {
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
 import { tryBatchMode, handlePipelineHealth } from './batch-mode.js';
-import { generatePrDescription } from './ai-pr-desc.js';
 import { interactiveBugReportFlow } from '../shared/report/bug-report.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
@@ -103,7 +102,6 @@ import { compareAiVsManual } from '../shared/report/ai-comparison.js';
 import { computeCrossSquadBenchmark } from '../shared/quality/cross-squad-benchmark.js';
 import { buildDeveloperProfile } from '../shared/quality/developer-profile.js';
 import { analyzeSuiteOptimization } from '../shared/quality/suite-optimization.js';
-import { analyzeBacklogHealth } from '../shared/report/backlog-health.js';
 import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
 import { calculatePipelineCost } from '../shared/quality/pipeline-cost.js';
@@ -113,6 +111,8 @@ import { runQualityGate, formatQualityGateText } from '../shared/quality/quality
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
 import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
+import { mapJiraIssuesToBacklogHealth, analyzeBacklogHealth } from '../shared/report/backlog-health.js';
+import type { RawJiraIssue } from '../shared/types/data-hub.js';
 import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
@@ -125,6 +125,7 @@ import { showDocs } from '../shared/report/show-docs.js';
 import { showDashboardMenu } from '../shared/ui/dashboard-menu.js';
 import type { DashboardDef } from '../shared/ui/dashboard-menu.js';
 import type { CliArgs } from './cli-args.js';
+import { generatePrDescription } from './ai-pr-desc.js';
 
 const validateEnv = createValidateEnv([
     { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticação GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
@@ -481,7 +482,10 @@ async function _dashboardSuiteOptimization(): Promise<void> {
 }
 
 async function _dashboardBacklogHealth(): Promise<void> {
-    const backlog = analyzeBacklogHealth([]);
+    const hub = getDataHub();
+    const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
+    const issues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
+    const backlog = analyzeBacklogHealth(issues);
     await _generateAndOpenDashboard(generateBacklogHealthHtml(backlog), 'backlog-health', 'Backlog Health');
 }
 

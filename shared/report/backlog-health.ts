@@ -6,6 +6,7 @@
 
 import { sanitizeHtml } from '../escape.js';
 import { Card, MetricCard, MetricGrid, Badge } from '../primitives/index.js';
+import type { RawJiraIssue } from '../types/data-hub.js';
 
 /**
  * Dimension 5 Provenance — documents the source and justification for each weight and threshold.
@@ -51,6 +52,24 @@ export interface BacklogHealthResult {
 export interface BacklogHealthOptions {
     staleDays: number;
     maxIssues: number;
+}
+
+/**
+ * Maps RawJiraIssue[] (from DataHub) to BacklogHealthIssue[] for analysis.
+ * Epic field uses real `parentKey` when available; falls back to key prefix.
+ * linkedTestCount defaults to 0 (caller can enrich from traceability if needed).
+ */
+export function mapJiraIssuesToBacklogHealth(issues: RawJiraIssue[]): BacklogHealthIssue[] {
+    return issues.map((issue) => ({
+        key: issue.key,
+        summary: issue.summary,
+        assignee: issue.assignee ?? null,
+        updated: issue.updated,
+        type: issue.type,
+        priority: issue.priority ?? 'Medium',
+        linkedTestCount: 0,
+        epic: issue.parentKey ?? issue.key.split('-')[0] ?? 'UNKNOWN',
+    }));
 }
 
 const DEFAULTS: BacklogHealthOptions = {

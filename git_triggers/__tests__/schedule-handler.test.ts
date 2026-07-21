@@ -90,6 +90,7 @@ vi.mock('../../shared/report/ai-effectiveness.js', () => ({
         timestamp: new Date().toISOString(),
     })),
     generateAiEffectivenessHtml: vi.fn(() => '<section>ai</section>'),
+    convertGenerationRecordsToFeedback: vi.fn(() => ({ records: [] })),
 }));
 vi.mock('../../shared/report/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(() => ({
@@ -120,6 +121,7 @@ vi.mock('../../shared/report/backlog-health.js', () => ({
         timestamp: new Date().toISOString(),
     })),
     generateBacklogHealthHtml: vi.fn(() => '<section>backlog</section>'),
+    mapJiraIssuesToBacklogHealth: vi.fn((issues: unknown[]) => issues),
 }));
 vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     aggregateDefectSeasonality: vi.fn(() => ({ peakDay: 'Monday', byDay: { Monday: 3 } })),
@@ -239,7 +241,10 @@ vi.mock('../../shared/quality/quality-gate.js', () => ({
     formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
-    writeReport: vi.fn((name: string) => sanitizePath(os.tmpdir(), name)),
+    writeReport: vi.fn((name: string, content: string) => {
+        (globalThis as unknown).__lastWriteReportContent = content;
+        return sanitizePath(os.tmpdir(), name);
+    }),
 }));
 vi.mock('../../shared/jira/jira-client.js', () => ({ default: vi.fn() }));
 
@@ -276,6 +281,17 @@ import {
 } from '../schedule-handler.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
+import { writeReport } from '../../shared/infra/temp-dir.js';
+import { calculateReleaseScore } from '../../shared/quality/release-score.js';
+import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
+import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
+import { runQualityGate } from '../../shared/quality/quality-gate.js';
+import { buildIncidentReport } from '../../shared/report/incident-report.js';
+const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
+
+const mockManager = createMockGitProvider();
+
 const mockPrompt = vi.mocked(prompt);
 const mockPushHistory = vi.mocked(pushHistory);
 const mockPrintError = vi.mocked(printError);
@@ -290,16 +306,6 @@ const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
 const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
-import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
-import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
-import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
-import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
-import { runQualityGate } from '../../shared/quality/quality-gate.js';
-import { buildIncidentReport } from '../../shared/report/incident-report.js';
-const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
-
-const mockManager = createMockGitProvider();
 
 describe('Schedule Handler', () => {
     beforeAll(async () => {
@@ -618,9 +624,12 @@ describe('Schedule Handler', () => {
                             tests: [{ title: 't2', duration: 55, flakiness: 0.4 }],
                         },
                     ],
+                    coverage: 65,
                 },
                 raw: {
                     failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
+                    jiraIssues: [],
+                    aiRecords: [],
                 },
             } as never);
         }
@@ -635,7 +644,7 @@ describe('Schedule Handler', () => {
                 undefined,
                 expect.any(Number),
                 expect.any(String),
-                undefined,
+                65,
                 expect.any(Number),
             );
 
@@ -675,6 +684,7 @@ describe('Schedule Handler', () => {
             seedTwoRunsHub();
             generateWeeklyQualityReport();
 
+            expect(mockPrintError).not.toHaveBeenCalled();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenPath = mockWriteReport.mock.calls[0]?.[0] as string;
@@ -688,7 +698,8 @@ describe('Schedule Handler', () => {
             seedTwoRunsHub();
             generateWeeklyQualityReport();
 
-            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+            const calls = mockWriteReport.mock.calls;
+            const writtenHtml = calls[calls.length - 1]?.[1] as string;
 
             expect(writtenHtml).toContain('<h1>Weekly Quality Report — proj1</h1>');
             expect(writtenHtml).toContain('<h2>Quality Gate</h2>');

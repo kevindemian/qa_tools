@@ -248,6 +248,7 @@ vi.mock('../../shared/report/backlog-health.js', () => ({
         score: 65,
         timestamp: new Date().toISOString(),
     })),
+    mapJiraIssuesToBacklogHealth: vi.fn((issues: unknown[]) => issues),
 }));
 vi.mock('../../shared/report/incident-report.js', () => ({
     generateIncidentReportHtml: vi.fn(() => ''),

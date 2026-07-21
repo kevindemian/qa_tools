@@ -7,12 +7,21 @@ import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
+import {
+    computeAiEffectiveness,
+    generateAiEffectivenessHtml,
+    convertGenerationRecordsToFeedback,
+} from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
-import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
+import {
+    mapJiraIssuesToBacklogHealth,
+    analyzeBacklogHealth,
+    generateBacklogHealthHtml,
+} from '../shared/report/backlog-health.js';
+import type { RawJiraIssue } from '../shared/types/data-hub.js';
 import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
 import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
 import { compareAiVsManual, generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
@@ -182,10 +191,16 @@ export function generateWeeklyQualityReport(): void {
         );
         const defects = aggregateDefectTrends(failureClassifications);
         const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, dataHub);
-        const aiResult = computeAiEffectiveness({ records: [] });
-        const backlog = analyzeBacklogHealth([]);
 
-        /* Fase 2 dashboards */
+        const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
+        const backlogIssues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
+        const backlog = analyzeBacklogHealth(backlogIssues);
+
+        const aiRecords = hub.raw.aiRecords ?? null;
+        const aiStore = convertGenerationRecordsToFeedback(aiRecords ?? undefined);
+        const aiResult = computeAiEffectiveness(aiStore);
+        const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
+
         const seasonality = aggregateDefectSeasonality(failureClassifications);
         const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
         const devProfile = buildDeveloperProfile(
@@ -201,7 +216,6 @@ export function generateWeeklyQualityReport(): void {
         );
         const optimization = analyzeSuiteOptimization(flatTests);
 
-        /* Cross-squad benchmark: aggregate health across all projects */
         const projectNames = [...new Set(effectiveRuns.map((r) => r.project))];
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
@@ -220,7 +234,6 @@ export function generateWeeklyQualityReport(): void {
             }),
         );
 
-        /* Fase 3 dashboards */
         const failRate = calcRunFailureRate(projectRuns);
 
         const uncoveredEpics: string[] = matrix.nodes.reduce((acc: string[], n) => {
@@ -247,7 +260,6 @@ export function generateWeeklyQualityReport(): void {
         );
 
         const pipelineCost = calculatePipelineCost(undefined, getDataHub());
-        const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];
         const qgDataHub = getDataHub();
