@@ -13,6 +13,8 @@ import {
     convertGenerationRecordsToFeedback,
 } from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
+import JiraClient from '../shared/jira/jira-client.js';
+import Config from '../shared/config-accessor.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
@@ -28,6 +30,7 @@ import { compareAiVsManual, generateAiComparisonHtml } from '../shared/report/ai
 import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
 import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
 import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
+import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
@@ -157,7 +160,7 @@ function extractTrendCategories(trends: { categories: Record<string, number> }[]
     return [...categories];
 }
 
-export function generateWeeklyQualityReport(): void {
+export async function generateWeeklyQualityReport(): Promise<void> {
     try {
         if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
@@ -201,6 +204,14 @@ export function generateWeeklyQualityReport(): void {
         const aiResult = computeAiEffectiveness(aiStore);
         const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
 
+        // Fase 9: Compute real coverage gap analysis for incident/impact reports
+        const jiraResource = new JiraClient(
+            Config.get('jiraPersonalToken'),
+            Config.get('jiraBaseUrl') + '/rest/api/2',
+            Config.get('jiraMode'),
+        );
+        const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+
         const seasonality = aggregateDefectSeasonality(failureClassifications);
         const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
         const devProfile = buildDeveloperProfile(
@@ -236,10 +247,14 @@ export function generateWeeklyQualityReport(): void {
 
         const failRate = calcRunFailureRate(projectRuns);
 
-        const uncoveredEpics: string[] = matrix.nodes.reduce((acc: string[], n) => {
-            if (n.coverage < 100) acc.push(n.epic);
-            return acc;
-        }, []);
+        // Use real coverage gap analysis for uncovered epics
+        const uncoveredEpics: string[] = coverageGapResult.gateConfig.failingEpics;
+        // Fallback to traceability matrix if no coverage gap data
+        if (uncoveredEpics.length === 0) {
+            matrix.nodes.forEach((n) => {
+                if (n.coverage < 100) uncoveredEpics.push(n.epic);
+            });
+        }
 
         const incidentReport = buildIncidentReport(
             failRate,
@@ -247,6 +262,7 @@ export function generateWeeklyQualityReport(): void {
             seasonality.peakDay,
             uncoveredEpics,
             health.overall,
+            coverageGapResult,
         );
 
         const trendCategories = extractTrendCategories(defects.trends);
@@ -257,6 +273,7 @@ export function generateWeeklyQualityReport(): void {
             trendCategories.slice(0, 5),
             health.dimensions.coverage.score,
             uncoveredEpics,
+            coverageGapResult,
         );
 
         const pipelineCost = calculatePipelineCost(undefined, getDataHub());

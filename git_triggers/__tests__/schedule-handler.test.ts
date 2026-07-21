@@ -247,6 +247,20 @@ vi.mock('../../shared/infra/temp-dir.js', () => ({
     }),
 }));
 vi.mock('../../shared/jira/jira-client.js', () => ({ default: vi.fn() }));
+vi.mock('../../shared/report/coverage-gap.js', () => ({
+    analyzeCoverageGaps: vi.fn(() => ({
+        totals: { totalIssues: 10, covered: 7, gap: 3, rawCoveragePct: 70, weightedCoveragePct: 70 },
+        gateConfig: { failingEpics: ['EPIC-1'], passingEpics: ['EPIC-2'] },
+        items: [],
+        byEpic: {
+            'EPIC-1': { total: 5, covered: 3, gatePass: false, items: [] },
+            'EPIC-2': { total: 5, covered: 4, gatePass: true, items: [] },
+        },
+        hierarchy: [],
+        trends: [],
+        timestamp: new Date().toISOString(),
+    })),
+}));
 
 vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
@@ -567,15 +581,21 @@ describe('Schedule Handler', () => {
     });
 
     describe('GenerateWeeklyQualityReport', () => {
-        it('warns when no project selected', () => {
+        it('warns when no project selected', async () => {
+            expect.hasAssertions();
+
             vi.mocked(getCurrentProject).mockReturnValue('');
-            generateWeeklyQualityReport();
+
+            await generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('warns when less than 2 runs and git fallback fails', () => {
+        it('warns when less than 2 runs and git fallback fails', async () => {
+            expect.hasAssertions();
+
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
+
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -593,7 +613,7 @@ describe('Schedule Handler', () => {
                 },
                 raw: { failureClassifications: [] },
             } as never);
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
         });
@@ -634,11 +654,11 @@ describe('Schedule Handler', () => {
             } as never);
         }
 
-        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', () => {
+        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
                 undefined,
@@ -666,6 +686,7 @@ describe('Schedule Handler', () => {
                 expect.any(Array),
                 expect.any(Number),
                 expect.any(Array),
+                expect.anything(),
             );
             expect(mockCalculatePipelineCost).toHaveBeenCalledWith(undefined, expect.anything());
             expect(mockRunQualityGate).toHaveBeenCalledWith(expect.objectContaining({ project: 'proj1' }));
@@ -675,14 +696,15 @@ describe('Schedule Handler', () => {
                 expect.any(String),
                 expect.any(Array),
                 expect.any(Number),
+                expect.anything(),
             );
         });
 
-        it('writes exactly one report file with the project-specific path', () => {
+        it('writes exactly one report file with the project-specific path', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             expect(mockPrintError).not.toHaveBeenCalled();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
@@ -692,11 +714,11 @@ describe('Schedule Handler', () => {
             expect(writtenPath).toContain('weekly-quality-proj1.html');
         });
 
-        it('renders every dashboard section in the generated HTML', () => {
+        it('renders every dashboard section in the generated HTML', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             const calls = mockWriteReport.mock.calls;
             const writtenHtml = calls[calls.length - 1]?.[1] as string;

@@ -494,21 +494,27 @@ async function _dashboardIncidentReport(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
     const testDurationMap = calcTestDurationMap(data.projectRuns);
     const regression = detectSilentRegression(testDurationMap);
     const seasonality = aggregateDefectSeasonality(data.failureClassifications);
     const failRate = calcRunFailureRate(data.projectRuns);
-    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
-        if (n.coverage < 100) acc.push(n.epic);
-        return acc;
-    }, []);
+
+    // Fase 9: Use real coverage gap analysis
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+
     const incidentReport = buildIncidentReport(
         failRate,
         regression.regressions.length,
         seasonality.peakDay,
         uncoveredEpics,
         health.overall,
+        coverageGapResult,
     );
     await _generateAndOpenDashboard(generateIncidentReportHtml(incidentReport), 'incident-report', 'Incident Report');
 }
@@ -527,11 +533,16 @@ async function _dashboardImpactAlert(): Promise<void> {
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
     const defects = aggregateDefectTrends(data.failureClassifications);
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
-    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
-        if (n.coverage < 100) acc.push(n.epic);
-        return acc;
-    }, []);
+
+    // Fase 9: Use real coverage gap analysis
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+
     const trendCategories = new Set<string>();
     for (const t of defects.trends) {
         for (const cat of Object.keys(t.categories)) {
@@ -544,6 +555,7 @@ async function _dashboardImpactAlert(): Promise<void> {
         [...trendCategories].slice(0, 5),
         health.dimensions.coverage.score,
         uncoveredEpics,
+        coverageGapResult,
     );
     await _generateAndOpenDashboard(generateImpactAlertHtml(impactAlert), 'impact-alert', 'Pipeline Impact Alert');
 }
@@ -781,7 +793,7 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         return Promise.resolve(false);
     },
     r: () => {
-        generateWeeklyQualityReport();
+        void generateWeeklyQualityReport();
         return Promise.resolve(false);
     },
 };

@@ -32,7 +32,7 @@ describe('FilterHighFlakiness', () => {
             },
         ];
 
-        const result = filterHighFlakiness(entries, 30);
+        const result = filterHighFlakiness(entries, { thresholdPct: 30 });
 
         expect(result).toHaveLength(2);
         expect(result[0]?.title).toBe('Very Flaky');
@@ -44,11 +44,11 @@ describe('FilterHighFlakiness', () => {
             { title: 'Stable', project: 'test', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
 
-        expect(filterHighFlakiness(entries, 30)).toStrictEqual([]);
+        expect(filterHighFlakiness(entries, { thresholdPct: 30 })).toStrictEqual([]);
     });
 
     it('returns empty array for empty input', () => {
-        expect(filterHighFlakiness([], 30)).toStrictEqual([]);
+        expect(filterHighFlakiness([], { thresholdPct: 30 })).toStrictEqual([]);
     });
 });
 
@@ -66,7 +66,7 @@ describe('GenerateFlakinessHtml', () => {
             },
         ];
 
-        const html = generateFlakinessHtml(entries);
+        const html = generateFlakinessHtml(entries, 'Flakiness Dashboard', { thresholds: { thresholdPct: 30 } });
 
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Login Flaky');
@@ -79,7 +79,7 @@ describe('GenerateFlakinessHtml', () => {
             { title: 'Mild', project: 'test', passCount: 7, failCount: 3, skipCount: 0, totalRuns: 10, rate: 0.3 },
         ];
 
-        const html = generateFlakinessHtml(entries);
+        const html = generateFlakinessHtml(entries, 'Flakiness Dashboard', { thresholds: { thresholdPct: 30 } });
 
         expect(html).toContain('Mild');
         expect(html).toContain('30%');
@@ -97,7 +97,7 @@ describe('GenerateFlakinessHtml', () => {
             rate: 0.9,
         }));
 
-        const html = generateFlakinessHtml(entries);
+        const html = generateFlakinessHtml(entries, 'Flakiness Dashboard', { thresholds: { thresholdPct: 30 } });
 
         expect(html).toContain('data-severity="error"');
         expect(html).toContain('7');
@@ -108,7 +108,7 @@ describe('GenerateFlakinessHtml', () => {
             { title: 'Stable', project: 'test', passCount: 9, failCount: 1, skipCount: 0, totalRuns: 10, rate: 0.1 },
         ];
 
-        const html = generateFlakinessHtml(entries);
+        const html = generateFlakinessHtml(entries, 'Flakiness Dashboard', { thresholds: { thresholdPct: 30 } });
 
         expect(html).toContain('No tests exceed');
     });

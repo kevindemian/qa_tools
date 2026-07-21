@@ -304,7 +304,22 @@ vi.mock('../../shared/quality/quality-gate.js', () => ({
 }));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
-vi.mock('../../shared/report/coverage-gap.js', () => ({ analyzeCoverageGaps: vi.fn(() => []) }));
+vi.mock('../../shared/report/coverage-gap.js', () => ({
+    analyzeCoverageGaps: vi.fn(() =>
+        Promise.resolve({
+            totals: { totalIssues: 10, covered: 7, gap: 3, rawCoveragePct: 70, weightedCoveragePct: 70 },
+            gateConfig: { failingEpics: ['EPIC-1'], passingEpics: ['EPIC-2'] },
+            items: [],
+            byEpic: {
+                'EPIC-1': { total: 5, covered: 3, gatePass: false, items: [] },
+                'EPIC-2': { total: 5, covered: 4, gatePass: true, items: [] },
+            },
+            hierarchy: [],
+            trends: [],
+            timestamp: new Date().toISOString(),
+        }),
+    ),
+}));
 vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
     generateGitMetricsRuns: vi.fn(() => []),
     generateGitFailureClassifications: vi.fn(() => []),

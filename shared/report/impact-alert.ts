@@ -12,6 +12,7 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Card } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
+import type { CoverageGapResult } from '../types/coverage.js';
 
 /**
  * Dimension 5 Provenance — documents the source and justification for alert thresholds.
@@ -180,6 +181,7 @@ export function analyzePipelineImpact(
     topFailures: string[],
     coveragePct: number | null | undefined,
     uncoveredEpics: string[],
+    _coverageGapResult?: CoverageGapResult,
 ): ImpactAlertResult {
     // Rule 24 — non-finite metrics are missing data, not "low". Never generate false critical alerts from NaN.
     if (passRate == null || coveragePct == null || !Number.isFinite(passRate) || !Number.isFinite(coveragePct)) {

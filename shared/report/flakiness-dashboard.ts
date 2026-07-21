@@ -14,30 +14,66 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Badge, Sparkline } from '../primitives/index.js';
 
-const THRESHOLD_PCT = 30;
-const ERROR_SEVERITY_THRESHOLD = 5;
-const HIGH_FLAKINESS_PCT = 50;
-
-/** Filter flaky entries whose rate exceeds a percentage threshold. */
-export function filterHighFlakiness(flaky: FlakinessEntry[], thresholdPct = THRESHOLD_PCT): FlakinessEntry[] {
-    return flaky.filter((f) => Number.isFinite(f.rate) && f.rate * 100 >= thresholdPct);
+export interface FlakinessThresholds {
+    /** Percentage threshold to flag a test as flaky (default: 30) */
+    thresholdPct: number;
+    /** Number of high-flakiness tests that triggers error severity (default: 5) */
+    errorSeverityThreshold: number;
+    /** Percentage above which a test is considered highly flaky (default: 50) */
+    highFlakinessPct: number;
 }
 
-function buildFlakinessSummary(high: FlakinessEntry[], flaky: FlakinessEntry[]): string {
+const DEFAULT_THRESHOLDS: FlakinessThresholds = {
+    thresholdPct: 30,
+    errorSeverityThreshold: 5,
+    highFlakinessPct: 50,
+};
+
+function validateThresholds(t: Partial<FlakinessThresholds> | undefined): FlakinessThresholds {
+    const merged = { ...DEFAULT_THRESHOLDS, ...(t ?? {}) };
+    if (!Number.isFinite(merged.thresholdPct) || merged.thresholdPct < 0 || merged.thresholdPct > 100) {
+        throw new Error('thresholdPct must be a finite number between 0 and 100');
+    }
+    if (!Number.isFinite(merged.errorSeverityThreshold) || merged.errorSeverityThreshold < 0) {
+        throw new Error('errorSeverityThreshold must be a finite non-negative number');
+    }
+    if (!Number.isFinite(merged.highFlakinessPct) || merged.highFlakinessPct < 0 || merged.highFlakinessPct > 100) {
+        throw new Error('highFlakinessPct must be a finite number between 0 and 100');
+    }
+    if (merged.highFlakinessPct < merged.thresholdPct) {
+        throw new Error('highFlakinessPct must be >= thresholdPct');
+    }
+    return merged;
+}
+
+/** Filter flaky entries whose rate exceeds a percentage threshold. */
+export function filterHighFlakiness(
+    flaky: FlakinessEntry[],
+    thresholds: Partial<FlakinessThresholds> | undefined = DEFAULT_THRESHOLDS,
+): FlakinessEntry[] {
+    const t = validateThresholds(thresholds);
+    return flaky.filter((f) => Number.isFinite(f.rate) && f.rate * 100 >= t.thresholdPct);
+}
+
+function buildFlakinessSummary(
+    high: FlakinessEntry[],
+    flaky: FlakinessEntry[],
+    thresholds: FlakinessThresholds,
+): string {
     return MetricGrid({
         children:
             MetricCard({
                 label: 'Total Flaky Tests',
                 value: String(high.length),
-                severity: high.length > ERROR_SEVERITY_THRESHOLD ? 'error' : 'warn',
+                severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
             }) +
-            MetricCard({ label: 'Threshold', value: '>' + THRESHOLD_PCT + '%' }) +
+            MetricCard({ label: 'Threshold', value: '>' + thresholds.thresholdPct + '%' }) +
             MetricCard({ label: 'All Candidates', value: String(flaky.length) }),
     });
 }
 
-function buildFlakinessTable(high: FlakinessEntry[]): string {
-    if (high.length === 0) return '<p>No tests exceed the ' + THRESHOLD_PCT + '% flakiness threshold.</p>';
+function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresholds): string {
+    if (high.length === 0) return '<p>No tests exceed the ' + thresholds.thresholdPct + '% flakiness threshold.</p>';
     let html =
         '<div style="overflow-x:auto;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><table style="width:100%;border-collapse:collapse;background:var(--color-surface-card);font-size:0.875rem;color:var(--color-text-primary)">' +
         '<thead style="background:var(--color-surface-elevated)"><tr>' +
@@ -50,7 +86,7 @@ function buildFlakinessTable(high: FlakinessEntry[]): string {
         '</tr></thead><tbody>';
     for (const f of high) {
         const pct = Math.round(f.rate * 100);
-        const severity = pct >= HIGH_FLAKINESS_PCT ? 'high' : 'medium';
+        const severity = pct >= thresholds.highFlakinessPct ? 'high' : 'medium';
         const rowStyle =
             'border-bottom:1px solid var(--color-border-subtle);transition:background 0.15s" onmouseover="this.style.background=\'var(--color-surface-elevated)\'" onmouseout="this.style.background=\'\'">';
         html += '<tr style="' + rowStyle;
@@ -84,6 +120,8 @@ function buildFlakinessTable(high: FlakinessEntry[]): string {
 export interface FlakinessOptions {
     /** EIXO C awareness: surface failure-records provenance confidence + getQuality('failureRecords'). */
     dataHub?: DataHub;
+    /** Configurable thresholds for flakiness detection. */
+    thresholds?: Partial<FlakinessThresholds>;
 }
 
 const FLAKINESS_CSS = `
@@ -94,7 +132,8 @@ const FLAKINESS_CSS = `
 
 export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, options?: FlakinessOptions): string {
     try {
-        const high = filterHighFlakiness(flaky);
+        const thresholds = validateThresholds(options?.thresholds);
+        const high = filterHighFlakiness(flaky, thresholds);
         const pageTitle = title || 'Flakiness Dashboard';
         const sourceBanner = buildSourceQualityBanner(options?.dataHub);
         const bodyContent =
@@ -102,8 +141,8 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
             sanitizeHtml(pageTitle) +
             '</h1>' +
             sourceBanner +
-            buildFlakinessSummary(high, flaky) +
-            buildFlakinessTable(high);
+            buildFlakinessSummary(high, flaky, thresholds) +
+            buildFlakinessTable(high, thresholds);
         return buildHtmlPage({
             title: pageTitle,
             styles: buildCss() + FLAKINESS_CSS,

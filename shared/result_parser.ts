@@ -181,10 +181,12 @@ interface ParseResultWithError extends ParseResult {
 }
 
 function mapTestState(state: string | undefined): FlatTest['state'] {
-    const s = (state ?? '').toLowerCase();
+    if (state == null) return 'skipped';
+    const s = state.toLowerCase();
     if (s === 'passed') return 'passed';
     if (s === 'failed' || s === 'error') return 'failed';
-    return 'skipped';
+    if (s === 'skipped' || s === 'pending') return 'skipped';
+    throw new Error(`Unknown test state: "${state}" — expected passed|failed|error|skipped|pending`);
 }
 
 function _flattenTests(suite: MochawesomeSuite, parentTitle?: string): FlatTest[] {

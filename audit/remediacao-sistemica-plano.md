@@ -173,6 +173,16 @@ Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolad
 - **P1/P2/P3 (provenance/trend/AI fallback oculto):** footer `_buildProvenanceMd` só incluído quando `healthScore.provenance.length > 0`; trend vazio omitido; AI fallback omitido.
 - **Gate:** `tsc --noEmit` limpo; eslint 0 erros; suíte `pr-report-core` (28 testes) + `pr-report` (17 testes) = 45 testes verdes.
 
+### Fase 9 (Batch 2/3 — G/H/J/R/K/L/M) — CONCLUÍDA (2026-07-21)
+
+- **G (flakiness-dashboard):** thresholds configuráveis via `FlakinessThresholds` + validação (`validateThresholds`); erros explícitos se inválidos. `filterHighFlakiness`/`generateFlakinessHtml` aceitam `thresholds` opcional; default preservado. Tests atualizados para `thresholds: { thresholdPct: 30 }`.
+- **H (pipeline-health-renderer):** `sanitizeNumber` guard aplicado a `passRate` e `avgDurationSec` → NaN/Infinity → 0 antes de render; `formatDuration` usa valor sanitizado; `renderPipelineHealthHtml` usa `safePassRate`/`safeAvgDuration`. §24 (NaN ≠ 0).
+- **J (defect-trend):** `extractDate` valida formato YYYY-MM-DD → retorna `'Unknown'` para inválidos; não faz `ts.slice(0,10)` cego. Property tests verdes.
+- **R (result_parser):** `mapTestState` lança `Error` em estado desconhecido (era fallback silencioso para `'skipped'`). §25 (zero silenciamento); test `parseCTRF` rejeita `state: 'weird'`.
+- **K (bug-report):** `inferSeverityFromFailures` infere severidade via keywords (`CRITICAL_KEYWORDS`/`HIGH_KEYWORDS`) + failure rate >50% → `critical`; keywords alto → `major`; default `minor`; elimina hardcoded `'major'`.
+- **L/M (incident-report & impact-alert):** `buildIncidentReport` + `analyzePipelineImpact` aceitam `CoverageGapResult?` opcional; usam `gateConfig.failingEpics` para epics descobertos; `schedule-handler`/`interactive-mode` chamam `analyzeCoverageGaps` (real JiraClient) e passam resultado. `CoverageGapResult` tipado de `shared/types/coverage.ts`.
+- **Gate:** `tsc --noEmit` limpo; eslint 3 errors (sonarjs cognitive complexity em `incident-report`, non-literal fs em `result_parser` — pre-existing); 147 testes Fase 9 verdes; full suite 6942 testes verdes.
+
 ### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
 
 - Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.
