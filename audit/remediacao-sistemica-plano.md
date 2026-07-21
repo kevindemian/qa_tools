@@ -165,6 +165,14 @@ Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolad
 - **Requirements:** `calculateRequirementScores` chamado com `aiRecords ?? undefined` — empty-state explícito quando sem records.
 - **Gate:** `tsc --noEmit` limpo; eslint 0 erros; `schedule-handler` 19 testes + `interactive-mode` 55 testes + `backlog-health` 23 testes + `ai-effectiveness` 14 testes + `requirement-score` 18 testes = 129 testes verdes.
 
+### Fase 8 (PR Report — sinal/ruído, rótulos honestos) — CONCLUÍDA (2026-07-21)
+
+- **O1 (cobertura de código no comentário):** nova seção `## Code Coverage` no PR comment (via `buildCoverageSection`) — usa `resolveCoverageForReport(dataHub)` (SSOT DataHub); ícone ✅/⚠️/❌ por threshold; mostra source + detail.
+- **O2 (diff no comentário):** nova seção `## Diff Comparison` (via `buildDiffSection`) — lista _new failures_, _fixed tests_, _flaky changed_; usa `options.diffComparison` já computado em `generatePrReport` (prev run vs current).
+- **O3 (rótulo honesto AI):** `buildAiAnalysisSection(llmAvailable: boolean)` só renderiza quando LLM de fato configurado (`LLM_API_KEY` presente); sem seção fantasma "available when LLM configured".
+- **P1/P2/P3 (provenance/trend/AI fallback oculto):** footer `_buildProvenanceMd` só incluído quando `healthScore.provenance.length > 0`; trend vazio omitido; AI fallback omitido.
+- **Gate:** `tsc --noEmit` limpo; eslint 0 erros; suíte `pr-report-core` (28 testes) + `pr-report` (17 testes) = 45 testes verdes.
+
 ### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
 
 - Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.

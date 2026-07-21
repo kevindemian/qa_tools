@@ -234,7 +234,61 @@ function buildFlakySection(dataHub: DataHub): string {
     }
 }
 
-function buildAiAnalysisSection(): string {
+function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageForReport> | undefined): string {
+    if (!coverageResult) return '';
+    const { coveragePct, source, detail } = coverageResult;
+    let icon: string;
+    if (coveragePct >= 70) icon = '✅';
+    else if (coveragePct >= 50) icon = '⚠️';
+    else icon = '❌';
+    return [
+        '',
+        `## ${icon} Code Coverage`,
+        '',
+        `| Metric | Value |`,
+        `|---|---|`,
+        `| Coverage | ${coveragePct.toFixed(1)}% |`,
+        `| Source | ${source} |`,
+        ...(detail ? [`| Detail | ${detail} |`] : []),
+        '',
+    ].join('\n');
+}
+
+function buildDiffSection(diff: DiffComparison | undefined): string {
+    if (!diff) return '';
+    const { newFailures, newPasses, flaky } = diff;
+    if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
+
+    const lines: string[] = ['', '## 🔄 Diff Comparison', ''];
+    if (newFailures.length > 0) {
+        lines.push('### 🆕 New Failures', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of newFailures) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    if (newPasses.length > 0) {
+        lines.push('### ✅ Fixed (Previously Failing)', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of newPasses) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    if (flaky.length > 0) {
+        lines.push('### 🔄 Flaky (State Changed)', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of flaky) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    return lines.join('\n');
+}
+
+function buildAiAnalysisSection(llmAvailable: boolean): string {
+    if (!llmAvailable) return '';
     return [
         '',
         '### 🤖 AI Failure Analysis',
@@ -519,16 +573,30 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     });
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
+    const llmAvailable = !!(
+        process.env['LLM_API_KEY'] ||
+        process.env['OPENAI_API_KEY'] ||
+        process.env['ANTHROPIC_API_KEY'] ||
+        process.env['GEMINI_API_KEY']
+    );
 
     const sections: string[] = [];
     sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv(), stats));
     sections.push(buildSummaryTable(stats));
 
+    // Code Coverage section (from DataHub)
+    const coverageSection = buildCoverageSection(coverageResult);
+    if (coverageSection) sections.push(coverageSection);
+
     const failSection = buildFailureTable(tests);
     if (failSection) sections.push(failSection);
 
+    // Diff Comparison section
+    const diffSection = buildDiffSection(options.diffComparison);
+    if (diffSection) sections.push(diffSection);
+
     if (!options.skipAi) {
-        sections.push(buildAiAnalysisSection());
+        sections.push(buildAiAnalysisSection(llmAvailable));
     }
 
     if (!options.skipQuality) {

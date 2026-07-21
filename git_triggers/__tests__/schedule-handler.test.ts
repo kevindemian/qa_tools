@@ -242,7 +242,7 @@ vi.mock('../../shared/quality/quality-gate.js', () => ({
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn((name: string, content: string) => {
-        (globalThis as unknown).__lastWriteReportContent = content;
+        (globalThis as { __lastWriteReportContent?: string }).__lastWriteReportContent = content;
         return sanitizePath(os.tmpdir(), name);
     }),
 }));
