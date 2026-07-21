@@ -2,15 +2,17 @@ import { defineConfig } from 'vitest/config';
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
 import { vitestAffected } from 'vitest-affected';
 
+const vitestAffectedPlugin = !process.env['CI']
+    ? vitestAffected({
+          fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
+          staleCacheDays: 14,
+          maxSelectiveRuns: 50,
+          shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
+      })
+    : undefined;
+
 export default defineConfig({
-    plugins: [
-        vitestAffected({
-            fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
-            staleCacheDays: 14,
-            maxSelectiveRuns: 50,
-            shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
-        }),
-    ],
+    plugins: [...(vitestAffectedPlugin ? [vitestAffectedPlugin] : [])],
     test: {
         globals: true,
         environment: 'node',
