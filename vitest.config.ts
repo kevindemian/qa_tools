@@ -23,20 +23,21 @@ export default defineConfig({
         // continua existindo e é executado fora do CI. Correção de raiz
         // (hermetizar com nock/mock de LLM) está em aberto como tech-debt —
         // ver dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
-        exclude: process.env['CI']
-            ? [
-                  '**/node_modules/**',
-                  '**/e2e/**',
-                  '**/__tests__/integration/**',
-                  // `**/*cloud*.test.ts` is retained ONLY for the subset that performs real
-                  // external-network calls (Xray/Jira cloud) without mocking the fetch boundary.
-                  // Tests that mock `global.fetch` (result_reporter-cloud, test-execution-creator-cloud)
-                  // remain excluded by this pattern as tech-debt — they should be hermitized and
-                  // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
-                  '**/*cloud*.test.ts',
-                  '**/.stryker-tmp/**',
-              ]
-            : ['**/node_modules/**', '**/.stryker-tmp/**'],
+        exclude:
+            process.env['CI'] || process.env['STRYKER_ACTIVE']
+                ? [
+                      '**/node_modules/**',
+                      '**/e2e/**',
+                      '**/__tests__/integration/**',
+                      // `**/*cloud*.test.ts` is retained ONLY for the subset that performs real
+                      // external-network calls (Xray/Jira cloud) without mocking the fetch boundary.
+                      // Tests that mock `global.fetch` (result_reporter-cloud, test-execution-creator-cloud)
+                      // remain excluded by this pattern as tech-debt — they should be hermitized and
+                      // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
+                      '**/*cloud*.test.ts',
+                      '**/.stryker-tmp/**',
+                  ]
+                : ['**/node_modules/**', '**/.stryker-tmp/**'],
         testTimeout: 15000,
         hookTimeout: 30000,
         teardownTimeout: 5000,

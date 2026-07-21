@@ -16,6 +16,7 @@
         "scripts/__tests__/validation-hook*.test.ts"
     ],
     "env": {
-        "STRYKER_ACTIVE": "true"
+        "STRYKER_ACTIVE": "true",
+        "CI": "true"
     }
 }
