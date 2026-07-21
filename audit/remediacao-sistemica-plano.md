@@ -149,6 +149,15 @@ Ordem 0→9. Cada fase encerra com `tsc --noEmit` + suíte verde + commit isolad
 - **Gate:** `tsc --noEmit` limpo; eslint 0 erros (warnings pré-existentes `detect-non-literal-fs`
   não-bloqueantes); 20 testes mapping/import verdes.
 
+### Fase 6 (#C1/#C2/#C3/#C4 coverage-gap) — CONCLUÍDA (2026-07-21)
+
+- **#C1 (paginação quebrada):** `collectAllPages` não passava `startAt`; `searchJiraIssuesCore` já paginava internamente (retorna todas as páginas). **Fix:** substituído por `fetchAllIssues` — chamada única a `searchJiraIssues(jql, 200)`; sem loop manual, sem `startAt` quebrado.
+- **#C2 (troca `recentJql` como workaround):** `if (totalCount > maxIssues) recentJql = ...` trocava o JQL base por um filtro de 30 dias (workaround p/ paginação quebrada). **Fix:** removido — `searchJiraIssues` já coleta tudo; `maxIssues` agora ignorado no fluxo (usado só p/ exibição em Fase 7/8 se necessário).
+- **#C3 (erro → 0 silencioso):** `fetchTotalCount` fazia `catch { return 0 }`. **Fix:** removido `fetchTotalCount`; `fetchAllIssues` **não faz catch** — erro propaga para caller (`case21.ts` já trata explicitamente com try/catch). §25 (zero silenciamento).
+- **#C4 (linkage truncado):** `fetchLinkedTestsBatch` fazia `issueKeys.slice(0, 50)` — só os primeiros 50 issues recebiam linkage de Tests. **Fix:** batch em chunks de 50 (`for (let i=0; i<keys.length; i+=50)`) — **todos** os issueKeys processados.
+- **Testes (17 corrigidos / 8 mantidos):** testes que codificavam `fetchTotalCount` → 1ª chamada, `collectAllPages` com catch silencioso, `slice(0,50)` e swap `recentJql` reescritos (§19.5). 25 testes coverage-gap verdes; suíte dependente (case21, coverage-gap-utils, HTML, property, integração) 72 testes verdes.
+- **Gate:** `tsc --noEmit` limpo; eslint 0 erros; 72 testes verdes.
+
 ### CI (GitLab) — FALHA INFRAESTRUTURA PRÉ-EXISTENTE (não é regressão de código)
 
 - Pipeline `2691911580` (sha `678d2642`) → `failed`, **jobs vazios**, `created_at==updated_at` (nenhum job executou), `yaml_errors:null`.
