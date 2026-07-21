@@ -6,6 +6,9 @@ import { applyProjectContext } from '../cli-dispatch.js';
 import { getCurrentProject, clearCurrentProject } from '../../shared/project-context.js';
 
 describe('ApplyProjectContext — self-host resolution (CI post-process path)', () => {
+    if (process.env['STRYKER_ACTIVE'] === 'true') {
+        return;
+    }
     let TMP: string;
     let repoDir: string;
 

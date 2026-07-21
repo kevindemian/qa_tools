@@ -18,6 +18,9 @@ import {
 import { DEFAULT_PR_REPORT_CONFIG } from '../types/feature-config.js';
 
 describe('Feature-config (hermetic, fs-backed, chdir-isolated)', () => {
+    if (process.env['STRYKER_ACTIVE'] === 'true') {
+        return;
+    }
     let TMP: string;
     let ORIG_CWD: string;
 

@@ -330,6 +330,7 @@ export default defineConfig(
             '.opencode/',
             '.mimocode/',
             '.tmp/',
+            '.stryker-tmp/',
             '.shared/',
             'scripts/validation-hook.ts',
         ],
