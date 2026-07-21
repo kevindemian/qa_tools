@@ -1,7 +1,16 @@
 import { defineConfig } from 'vitest/config';
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
+import { vitestAffected } from 'vitest-affected';
 
 export default defineConfig({
+    plugins: [
+        vitestAffected({
+            fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
+            staleCacheDays: 14,
+            maxSelectiveRuns: 50,
+            shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
+        }),
+    ],
     test: {
         globals: true,
         environment: 'node',
@@ -25,8 +34,9 @@ export default defineConfig({
                   // remain excluded by this pattern as tech-debt — they should be hermitized and
                   // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
                   '**/*cloud*.test.ts',
+                  '**/.stryker-tmp/**',
               ]
-            : ['**/node_modules/**'],
+            : ['**/node_modules/**', '**/.stryker-tmp/**'],
         testTimeout: 15000,
         hookTimeout: 30000,
         teardownTimeout: 5000,

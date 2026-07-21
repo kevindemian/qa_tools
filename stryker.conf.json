@@ -1,0 +1,21 @@
+{
+    "$schema": "https://stryker-mutator.io/schema/stryker-schema.json",
+    "mutate": ["shared/", "jira_management/", "git_triggers/"],
+    "testRunner": "vitest",
+    "coverageAnalysis": "perTest",
+    "thresholds": { "high": 80, "low": 60, "break": 60 },
+    "reporters": ["html", "clear-text", "progress", "json"],
+    "incremental": true,
+    "concurrency": 1,
+    "maxConcurrentTestRunners": 1,
+    "timeoutMS": 300000,
+    "ignorePatterns": [
+        "scripts/quality-check.ts",
+        "scripts/validation-hook.ts",
+        "scripts/__tests__/quality-check.test.ts",
+        "scripts/__tests__/validation-hook*.test.ts"
+    ],
+    "env": {
+        "STRYKER_ACTIVE": "true"
+    }
+}

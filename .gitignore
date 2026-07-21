@@ -63,6 +63,9 @@ gemini-code-*
 # === Container build context (local only, not part of the project) ===
 .container/
 
+# === Config duplicates (tautest TS vs JSON; only JSON is canonical) ===
+tautest.config.ts
+
 # === Windows artifacts ===
 nul
 .llm-cache/
@@ -79,3 +82,7 @@ qa-quarantine.json
 archive/
 .stryker-tmp/
 research/
+.tautest/
+
+# === vitest-affected cache (generated) ===
+.vitest-affected/
