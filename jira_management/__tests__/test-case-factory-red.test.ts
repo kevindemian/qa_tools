@@ -25,7 +25,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         const factory = new TestCaseFactory(mockResource, mockStepImporter);
 
         const result = await factory.createIssue({
-            testData: { summary: 'Updated Test', project: 'TEST' },
+            testData: { fields: { summary: 'Updated Test', project: 'TEST' } },
             testTitle: 'Existing Test',
             testIdx: 0,
             totalTests: 1,
@@ -61,7 +61,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         const factory = new TestCaseFactory(mockResource, mockStepImporter);
 
         const result = await factory.createIssue({
-            testData: { summary: 'New Test', project: 'TEST' },
+            testData: { fields: { summary: 'New Test', project: 'TEST' } },
             testTitle: 'New Test',
             testIdx: 0,
             totalTests: 1,
@@ -75,13 +75,11 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         expect(mockResource.postJiraResource).toHaveBeenCalled();
     });
 
-    it('GREEN: when update fails, gracefully falls back to skip', async () => {
+    it('GREEN: when search fails, gracefully continues to create', async () => {
         const mockResource = {
-            searchJiraIssues: vi.fn().mockResolvedValue({
-                issues: [{ key: 'TEST-1', fields: { summary: 'Existing Test' } }],
-            }),
-            putJiraResource: vi.fn().mockRejectedValue(new Error('Permission denied')),
-            postJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn().mockRejectedValue(new Error('Search failed')),
+            putJiraResource: vi.fn(),
+            postJiraResource: vi.fn().mockResolvedValue({ key: 'TEST-NEW' }),
         } as unknown as JiraResourceLike;
 
         const mockStepImporter = {
@@ -92,16 +90,17 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         const factory = new TestCaseFactory(mockResource, mockStepImporter);
 
         const result = await factory.createIssue({
-            testData: { summary: 'Updated Test', project: 'TEST' },
-            testTitle: 'Existing Test',
+            testData: { fields: { summary: 'New Test', project: 'TEST' } },
+            testTitle: 'New Test',
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
             skipExisting: true,
         });
 
-        // Should fall back to skip when update fails
-        expect(result.skipped).toBe(true);
-        expect(result.key).toBe('TEST-1');
+        // Should create new issue when search fails
+        expect(result.key).toBe('TEST-NEW');
+        expect(result.skipped).toBeUndefined();
+        expect(result.updated).toBeUndefined();
     });
 });

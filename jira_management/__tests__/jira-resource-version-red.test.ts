@@ -10,15 +10,19 @@ import { rootLogger } from '../../shared/logger.js';
 
 function createMockResource(
     searchResponses: Array<{ issues: Array<{ key: string; fields: { summary: string } }>; nextPageToken?: string }>,
+    isCloud = true,
 ): JiraResourceLike {
     let callCount = 0;
     return {
-        baseUrl: 'https://example.atlassian.net/rest/api/3',
-        postToApiRoot: vi.fn().mockImplementation(() => {
-            const response = searchResponses[callCount] ?? { issues: [] };
-            callCount++;
-            return response;
-        }),
+        baseUrl: isCloud ? 'https://example.atlassian.net/rest/api/3' : 'https://jira.example.com/rest/api/2',
+        jiraMode: isCloud ? 'cloud' : 'server',
+        postToApiRoot: isCloud
+            ? vi.fn().mockImplementation(() => {
+                  const response = searchResponses[callCount] ?? { issues: [] };
+                  callCount++;
+                  return response;
+              })
+            : undefined,
         getJiraResource: vi.fn(),
     } as unknown as JiraResourceLike;
 }
@@ -41,9 +45,7 @@ describe('BUG 5: Cloud pagination infinite loop without nextPageToken', () => {
     });
 
     it('GREEN: handles empty results gracefully', async () => {
-        const mockResource = createMockResource([
-            { issues: [] },
-        ]);
+        const mockResource = createMockResource([{ issues: [] }]);
 
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = EMPTY', 1);
 
@@ -51,9 +53,7 @@ describe('BUG 5: Cloud pagination infinite loop without nextPageToken', () => {
     });
 
     it('GREEN: handles single page results', async () => {
-        const mockResource = createMockResource([
-            { issues: [{ key: 'TEST-1', fields: { summary: 'Test 1' } }] },
-        ]);
+        const mockResource = createMockResource([{ issues: [{ key: 'TEST-1', fields: { summary: 'Test 1' } }] }]);
 
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 1);
 

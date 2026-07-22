@@ -121,7 +121,7 @@ import { createMockJiraResource } from '../../shared/test-utils/factories/jira-r
 import { createMockLinkManager } from '../../shared/test-utils/factories/link-manager-factory.js';
 
 type CsvImportOutcomeForTest =
-    | { ok: true; result: { summary: string; sourcePath: string; failedLinks: string[] } }
+    | { ok: true; result: { summary: string; sourcePath: string; failedLinks?: string[] } }
     | { ok: false; reason: string };
 function expectOk(r: CsvImportOutcomeForTest) {
     if (!r.ok) throw new Error('expected import ok, got failure');
@@ -806,8 +806,8 @@ describe('UpdateCrossReferences', () => {
         expect.hasAssertions();
 
         const updateCrossRefSpy = vi
-            .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<void>>()
-            .mockResolvedValue(undefined);
+            .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<string[]>>()
+            .mockResolvedValue([]);
         const linker: IssueLinker = {
             jiraResource: createMockJiraResource(),
             linkManager: createMockLinkManager(),

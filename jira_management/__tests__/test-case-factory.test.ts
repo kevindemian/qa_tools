@@ -18,7 +18,7 @@ import type { Mock } from 'vitest';
 import TestCaseFactory from '../test-case-factory.js';
 
 function createMockImporter() {
-    return { importStep: vi.fn() };
+    return { importStep: vi.fn(), setSteps: vi.fn() };
 }
 
 describe('TestCaseFactory', () => {

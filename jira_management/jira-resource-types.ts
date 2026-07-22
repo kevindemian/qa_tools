@@ -29,6 +29,9 @@ export interface SearchResponse {
     total: number;
 }
 
+/** Valid Jira operation modes. */
+type JiraMode = 'server' | 'cloud';
+
 /** Minimal interface for JiraResource methods consumed by sub-resource modules. */
 export interface JiraResourceLike {
     getJiraResource: <T = JsonObject>(resourceUrl: string) => Promise<T>;
@@ -37,6 +40,7 @@ export interface JiraResourceLike {
     /** Optional: POST to a Cloud-specific API root (e.g. /rest/agile/1.0). Present on real JiraResource. */
     postToApiRoot?: (relativePath: string, data: unknown) => Promise<JsonObject | null>;
     baseUrl: string;
+    jiraMode?: JiraMode;
     log: Logger;
     getProjectId: (projectName: string) => Promise<string>;
     getProjectVersions: (projectId: string) => Promise<VersionData[]>;

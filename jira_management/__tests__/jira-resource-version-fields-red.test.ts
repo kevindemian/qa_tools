@@ -14,6 +14,7 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         let capturedBody: Record<string, unknown> = {};
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
+            jiraMode: 'cloud',
             postToApiRoot: vi.fn().mockImplementation((_url: string, body: Record<string, unknown>) => {
                 capturedBody = body;
                 return {
@@ -31,15 +32,14 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
 
         // Verify the result has key and fields.summary
         expect(result.issues).toHaveLength(1);
-        expect(result.issues).toBeDefined();
-        expect(result.issues!.length).toBeGreaterThan(0);
-        expect(result.issues![0]!.key).toBe('TEST-1');
+        expect(result.issues[0]!.key).toBe('TEST-1');
         expect(result.issues[0]!.fields!['summary']).toBe('Test Issue');
     });
 
     it('GREEN: handles missing fields gracefully', async () => {
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
+            jiraMode: 'cloud',
             postToApiRoot: vi.fn().mockResolvedValue({
                 issues: [{ key: 'TEST-1', fields: {} }],
                 isLast: true,
@@ -50,14 +50,13 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 10);
 
         expect(result.issues).toHaveLength(1);
-        expect(result.issues).toBeDefined();
-        expect(result.issues!.length).toBeGreaterThan(0);
-        expect(result.issues![0]!.key).toBe('TEST-1');
+        expect(result.issues[0]!.key).toBe('TEST-1');
     });
 
     it('GREEN: handles null fields gracefully', async () => {
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
+            jiraMode: 'cloud',
             postToApiRoot: vi.fn().mockResolvedValue({
                 issues: [{ key: 'TEST-1', fields: null }],
                 isLast: true,
@@ -68,8 +67,6 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 10);
 
         expect(result.issues).toHaveLength(1);
-        expect(result.issues).toBeDefined();
-        expect(result.issues!.length).toBeGreaterThan(0);
-        expect(result.issues![0]!.key).toBe('TEST-1');
+        expect(result.issues[0]!.key).toBe('TEST-1');
     });
 });

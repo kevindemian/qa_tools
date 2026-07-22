@@ -1,7 +1,6 @@
 /** Jira version management: create, publish, list, and assign fix versions to issues. */
 import { formatDateISO } from '../shared/date-utils.js';
 import { success, info, extractErrorMessage, ProgressBar } from '../shared/ui/prompt.js';
-import { rootLogger } from '../shared/logger.js';
 import type { Logger } from '../shared/logger.js';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
 import {
@@ -22,7 +21,7 @@ import {
     NO_UNRELEASED_VERSIONS,
 } from './constants.js';
 import type { JsonObject } from '../shared/types.js';
-import { isAtlassianCloud } from '../shared/jira/jira-auth.js';
+import { isAtlassianCloudGateway } from '../shared/jira/jira-auth.js';
 import { normalizeJqlForCloud } from '../shared/jira/jira-client.js';
 
 function sanitizeJqlValue(value: string): string {
@@ -42,44 +41,38 @@ interface SearchPage {
 /**
  * Fetch a single page of search results.
  *
- * Jira Cloud's POST /rest/api/3/search/jql rejects `startAt` inside the request body
- * (HTTP 400 "Invalid request payload"); it must be supplied as a query parameter. The
- * Cloud response also signals the last page via `isLast` (not `total`).
+ * Jira Cloud (API v3) uses `nextPageToken` for pagination — `startAt` is accepted
+ * but ignored when a token is present. The response carries `isLast` only on the
+ * terminal page (some versions always return `isLast=false` and rely on the
+ * absence/presence of `nextPageToken` to signal continuation).
  */
 async function fetchSearchPage(
     resource: JiraResourceLike,
     jql: string,
     startAt: number,
     maxResults: number,
-    nextPageToken?: string,
+    nextPageToken?: string | null,
 ): Promise<SearchPage> {
-    if (isAtlassianCloud(resource.baseUrl) && typeof resource.postToApiRoot === 'function') {
-        const body: Record<string, unknown> = {
+    const isCloud = resource.jiraMode === 'cloud' || isAtlassianCloudGateway(resource.baseUrl);
+    if (isCloud && typeof resource.postToApiRoot === 'function') {
+        const query = nextPageToken ? `nextPageToken=${encodeURIComponent(nextPageToken)}` : `startAt=${startAt}`;
+        const res = await resource.postToApiRoot(`/rest/api/3/search/jql?${query}`, {
             jql: normalizeJqlForCloud(jql),
             maxResults,
             fields: ['summary'],
-        };
-        if (nextPageToken) {
-            body['nextToken'] = nextPageToken;
-        } else {
-            body['startAt'] = startAt;
-        }
-        const res = await resource.postToApiRoot('/rest/api/3/search/jql', body);
-        const page = (res ?? { issues: [] }) as {
+        });
+        const page = (res ?? {}) as {
             issues?: JiraIssue[];
             isLast?: boolean;
             total?: number;
             nextPageToken?: string;
         };
-        const result: SearchPage = {
+        return {
             issues: page.issues ?? [],
             isLast: page.isLast === true,
             total: typeof page.total === 'number' ? page.total : null,
+            nextPageToken: typeof page.nextPageToken === 'string' ? page.nextPageToken : null,
         };
-        if (page.nextPageToken) {
-            result.nextPageToken = page.nextPageToken;
-        }
-        return result;
     }
     const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
     const data = await resource.getJiraResource<SearchResponse>(url);
@@ -100,10 +93,12 @@ export async function searchJiraIssuesCore(
         let startAt = 0;
         let total: number | null = null;
         let pages = 0;
-        let nextPageToken: string | undefined;
+        let cloudToken: string | null | undefined;
+
+        const isCloud = resource.jiraMode === 'cloud' || isAtlassianCloudGateway(resource.baseUrl);
 
         while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            const page = await fetchSearchPage(resource, jql, startAt, maxResults, nextPageToken);
+            const page = await fetchSearchPage(resource, jql, startAt, maxResults, cloudToken);
             pages++;
 
             const decision = classifySearchPage(page, startAt, maxResults, allIssues, total, log);
@@ -111,12 +106,13 @@ export async function searchJiraIssuesCore(
             allIssues.push(...page.issues);
             if (decision.stop) break;
 
-            // Cloud API uses nextPageToken for pagination
-            if (page.nextPageToken) {
-                nextPageToken = page.nextPageToken;
-            } else {
-                startAt += maxResults;
-            }
+            cloudToken = page.nextPageToken;
+            startAt += maxResults;
+
+            // Cloud (API v3) uses nextPageToken for pagination. When the token is null,
+            // Cloud has no more pages — but may still set isLast=false. Break to avoid
+            // infinite loop (default offset-based pagination never terminates for Cloud).
+            if (isCloud && !page.nextPageToken) break;
         }
 
         return { issues: allIssues, total: allIssues.length };
@@ -170,7 +166,6 @@ export async function getProjectVersions(resource: JiraResourceLike, projectId: 
     try {
         return await resource.getJiraResource<VersionData[]>(`project/${projectId}/versions`);
     } catch (err: unknown) {
-        rootLogger.warn(`jira-resource-version: Erro ao buscar versões do projeto '${projectId}': ${extractErrorMessage(err)}`);
         resource.log.error(`Erro ao buscar versões do projeto '${projectId}': ${extractErrorMessage(err)}`);
         return [];
     }
@@ -277,7 +272,6 @@ export async function getReleaseTasks(
 
         return issuesData.issues.map((issue) => `[${issue.key}] - ${issue.fields.summary}`);
     } catch (err: unknown) {
-        rootLogger.warn(`jira-resource-version: Erro getReleaseTasks: ${extractErrorMessage(err)}`);
         resource.log.error(`Erro getReleaseTasks: ${extractErrorMessage(err)}`);
         return [];
     }

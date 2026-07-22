@@ -49,12 +49,13 @@ interface CreateIssueOptions {
     total: number;
     opLog: ReturnType<typeof rootLogger.child>;
     results: TestResult[];
+    checkOnly?: boolean;
 }
 
 async function createIssueForTest(
     opts: CreateIssueOptions,
-): Promise<{ key: string | null; skipped: boolean } | 'abort' | 'continue' | null> {
-    const { factory, test, testTitle, projectName, jiraLabels, t, total, opLog, results } = opts;
+): Promise<{ key: string | null; skipped: boolean; updated?: boolean } | 'abort' | 'continue' | null> {
+    const { factory, test, testTitle, projectName, jiraLabels, t, total, opLog, results, checkOnly } = opts;
     const testData = buildTestData(test, projectName, jiraLabels);
     const issueResult = await factory.createIssue({
         testData,
@@ -63,7 +64,12 @@ async function createIssueForTest(
         totalTests: total,
         opLog,
         skipExisting: true,
+        ...(checkOnly !== undefined ? { checkOnly } : {}),
     });
+
+    if (issueResult.updated) {
+        return { key: issueResult.key ?? null, skipped: false, updated: true };
+    }
 
     if (issueResult.skipped) {
         return { key: issueResult.key ?? null, skipped: true };
@@ -90,10 +96,11 @@ interface LinkTestRelationsOptions {
     opLog: ReturnType<typeof rootLogger.child>;
     testTitle: string;
     results: TestResult[];
+    replaceSteps?: boolean;
 }
 
 async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRelationsResult> {
-    const { linker, test, createdTestIssue, factory, opLog, testTitle, results } = opts;
+    const { linker, test, createdTestIssue, factory, opLog, testTitle, results, replaceSteps } = opts;
     let errored = false;
     const failedLinkKeys: string[] = [];
 
@@ -104,7 +111,7 @@ async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRe
         failedLinkKeys.push(...precOutcome.keys);
     }
 
-    const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog);
+    const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog, replaceSteps);
     if (stepsResult && stepsResult.action === 'abort') {
         results.push({ status: 'error', label: testTitle, message: 'Falha ao criar steps' });
         return { abort: true, errored: true, failedLinkKeys };
@@ -290,6 +297,7 @@ interface ProcessOneTestOptions {
     reportInfo: (msg: string) => void;
     reportPrint: (msg: string) => void;
     failedLinks: string[];
+    isCheckpoint?: boolean;
 }
 
 function recordSkippedTest(results: TestResult[], testTitle: string): void {
@@ -299,7 +307,7 @@ function recordSkippedTest(results: TestResult[], testTitle: string): void {
 async function _finalizeAfterIssueCreation(
     opts: ProcessOneTestOptions & {
         createdTestIssue: { key: string };
-        issueResult: { key: string | null; skipped: boolean };
+        issueResult: { key: string | null; skipped: boolean; updated?: boolean };
     },
 ): Promise<'abort' | 'continue'> {
     const {
@@ -325,13 +333,24 @@ async function _finalizeAfterIssueCreation(
         createdTestIssue,
         issueResult,
     } = opts;
-    inMemoryTasksId.push(createdTestIssue.key);
-    if (issueResult.skipped) {
+    if (!opts.isCheckpoint) inMemoryTasksId.push(createdTestIssue.key);
+    if (issueResult.skipped && !issueResult.updated) {
         recordSkippedTest(results, testTitle);
         return 'continue';
     }
-    saveCheckpoint({ sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText });
-    const linkState = await linkTestRelations({ linker, test, createdTestIssue, factory, opLog, testTitle, results });
+    if (!issueResult.skipped && !opts.isCheckpoint) {
+        saveCheckpoint({ sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText });
+    }
+    const linkState = await linkTestRelations({
+        linker,
+        test,
+        createdTestIssue,
+        factory,
+        opLog,
+        testTitle,
+        results,
+        ...(issueResult.updated ? { replaceSteps: true } : {}),
+    });
     if (linkState.failedLinkKeys.length) failedLinks.push(...linkState.failedLinkKeys);
     if (linkState.abort) return 'abort';
     const testStatus = linkState.errored ? 'error' : 'ok';
@@ -344,7 +363,19 @@ async function _finalizeAfterIssueCreation(
 }
 
 async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
-    const { test, testTitle, factory, projectName, jiraLabels, t, total, opLog, results } = opts;
+    const {
+        test,
+        testTitle,
+        factory,
+        projectName,
+        jiraLabels,
+        t,
+        total,
+        opLog,
+        results,
+        isCheckpoint,
+        inMemoryTasksId,
+    } = opts;
     const issueResult = await createIssueForTest({
         factory,
         test,
@@ -355,13 +386,23 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         total,
         opLog,
         results,
+        ...(isCheckpoint !== undefined ? { checkOnly: isCheckpoint } : {}),
     });
-    if (!issueResult || issueResult === 'continue') return 'continue';
+    if (!issueResult || issueResult === 'continue') {
+        if (!isCheckpoint) inMemoryTasksId.push('');
+        return 'continue';
+    }
     if (issueResult === 'abort') return 'abort';
+    const { updated, ...rest } = issueResult;
+    const issueResultTyped: { key: string | null; skipped: boolean; updated?: boolean } = {
+        ...rest,
+        ...(updated !== undefined ? { updated } : {}),
+    };
+    if (isCheckpoint && !issueResult.updated) return 'continue';
     return _finalizeAfterIssueCreation({
         ...opts,
         createdTestIssue: { key: issueResult.key as string },
-        issueResult,
+        issueResult: issueResultTyped,
     });
 }
 
@@ -386,12 +427,12 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
         failedLinks,
     } = opts;
 
-    for (let t = resumeFrom; t < tests.length; t++) {
+    for (let t = 0; t < tests.length; t++) {
         const test = Reflect.get(tests, t);
         const testTitle = test.title;
-        if (!isQuiet()) reportInfo('Criando: ' + testTitle);
-        inMemoryTasksText.push(testTitle);
-
+        const isCheckpoint = t < resumeFrom;
+        if (!isQuiet()) reportInfo((isCheckpoint ? 'Verificando: ' : 'Criando: ') + testTitle);
+        if (!isCheckpoint) inMemoryTasksText.push(testTitle);
         const signal = await processCreationAndLinking({
             t,
             test,
@@ -414,6 +455,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
             reportInfo,
             reportPrint,
             failedLinks,
+            isCheckpoint,
         });
         if (signal === 'abort') break;
     }

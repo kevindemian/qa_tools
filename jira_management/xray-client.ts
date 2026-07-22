@@ -7,6 +7,7 @@ import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 
 export interface XrayStepImporter {
     importStep(issueKey: string, stepIndex: number, step: TestStep): Promise<void>;
+    setSteps(issueKey: string, steps: TestStep[]): Promise<void>;
 }
 
 class ServerStepImporter implements XrayStepImporter {
@@ -17,6 +18,13 @@ class ServerStepImporter implements XrayStepImporter {
             index: stepIndex,
             ...step,
         });
+    }
+
+    async setSteps(issueKey: string, steps: TestStep[]): Promise<void> {
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            if (step) await this.importStep(issueKey, i + 1, step);
+        }
     }
 }
 
@@ -76,6 +84,23 @@ class CloudStepImporter implements XrayStepImporter {
             },
         };
         await this.cloudClient.graphqlMutation(mutation, variables, clientId, clientSecret);
+    }
+
+    /** Replace ALL steps of a test atomically.
+     *  Uses `setTestSteps` mutation — safe for both new and existing tests. */
+    async setSteps(issueKey: string, steps: TestStep[]): Promise<void> {
+        const { clientId, clientSecret } = this._getCredentials();
+        const issueId = await this._resolveNumericId(issueKey);
+        await this.cloudClient.setTestSteps(
+            issueId,
+            steps.map((s) => ({
+                action: s.fields.Action ?? '',
+                result: s.fields['Expected Result'] ?? '',
+                data: s.fields.Data ?? '',
+            })),
+            clientId,
+            clientSecret,
+        );
     }
 }
 

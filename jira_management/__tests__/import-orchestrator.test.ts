@@ -154,7 +154,6 @@ describe('Import Orchestrator', () => {
                 summary: 'DRY-RUN simulado',
                 status: 'ok',
                 sourcePath: '/p.csv',
-                failedLinks: [],
             });
         });
     });
@@ -176,6 +175,7 @@ describe('Import Orchestrator', () => {
                 results,
                 tests: makeTestCases(2),
                 linker,
+                failedLinks: [],
                 inMemoryTasksId: ['T-1'],
                 inMemoryTasksText: ['Test 1'],
                 sourcePath: '/p.csv',
@@ -186,7 +186,6 @@ describe('Import Orchestrator', () => {
                 onBusy,
                 info: vi.fn(),
                 printSummary: vi.fn(),
-                failedLinks: [],
             });
 
             expect(result?.status).toBe('error');
@@ -209,6 +208,7 @@ describe('Import Orchestrator', () => {
                 inMemoryTasksId: ['T-1'],
                 jiraLabels: [],
                 sourcePath: '/p.csv',
+                failedLinks: [],
                 sourceType: 'csv',
                 linker,
                 info: vi.fn(),
