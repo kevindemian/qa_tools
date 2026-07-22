@@ -150,8 +150,8 @@ jobs:
             project-name: qa_tools
 
     mutation:
-        name: Mutation Testing (PR-scoped)
-        if: github.event_name == 'pull_request'
+        name: Mutation Testing (diff-scoped)
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
         runs-on: ubuntu-latest
         needs: quality
         timeout-minutes: 15
@@ -162,7 +162,7 @@ jobs:
         steps:
             - uses: actions/checkout@v5
               with:
-                  fetch-depth: 0
+                  fetch-depth: 2
             - uses: actions/setup-node@v6
               with:
                   node-version-file: .node-version
@@ -170,10 +170,15 @@ jobs:
             - run: npm ci
             - name: Initialize tautest
               run: npx tautest init --yes --runner vitest --no-install
-            - name: Run PR-scoped mutation testing
+            - name: Run diff-scoped mutation testing
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode
+              run: |
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                    npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode
+                  else
+                    npx tautest run --base HEAD~1 --threshold 60 --prompt-style opencode
+                  fi
             - name: Upload mutation report
               uses: actions/upload-artifact@v7
               if: always()
