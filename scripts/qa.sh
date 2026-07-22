@@ -10,6 +10,9 @@
 #   - UID/GID mapeados do host (keep-id)
 #   - Volume do projeto atual em /project
 #   - Config do opencode montado como read-only
+#   - Init para signal forwarding e zombie reaping (--init)
+#   - no-new-privileges para prevenir escalonamento
+#   - pids-limit para prevenir fork bombs
 #
 # USO:
 #   qa <argumentos-do-opencode>
@@ -78,11 +81,31 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
     ENV_FILE="${ENV_FILE} --env-file ${PROJECT_ROOT}/.env"
 fi
 
+# ── Variáveis de ambiente do host ────────────────────────────────────────────
+# Passa variáveis específicas do host para o container
+HOST_ENV_FLAGS=""
+if [[ -n "${OPENCODE_SKIP_DB_CHECK:-}" ]]; then
+    HOST_ENV_FLAGS="${HOST_ENV_FLAGS} -e OPENCODE_SKIP_DB_CHECK=${OPENCODE_SKIP_DB_CHECK}"
+fi
+if [[ -n "${OPENCODE_DB_TIMEOUT_MS:-}" ]]; then
+    HOST_ENV_FLAGS="${HOST_ENV_FLAGS} -e OPENCODE_DB_TIMEOUT_MS=${OPENCODE_DB_TIMEOUT_MS}"
+fi
+if [[ -n "${OPENCODE_DB_RUNTIME_INTERVAL:-}" ]]; then
+    HOST_ENV_FLAGS="${HOST_ENV_FLAGS} -e OPENCODE_DB_RUNTIME_INTERVAL=${OPENCODE_DB_RUNTIME_INTERVAL}"
+fi
+if [[ -n "${OPENCODE_DB_SIZE_WARN_MB:-}" ]]; then
+    HOST_ENV_FLAGS="${HOST_ENV_FLAGS} -e OPENCODE_DB_SIZE_WARN_MB=${OPENCODE_DB_SIZE_WARN_MB}"
+fi
+if [[ -n "${OPENCODE_DB_RUNTIME_DISABLE:-}" ]]; then
+    HOST_ENV_FLAGS="${HOST_ENV_FLAGS} -e OPENCODE_DB_RUNTIME_DISABLE=${OPENCODE_DB_RUNTIME_DISABLE}"
+fi
+
 # ── Execução ────────────────────────────────────────────────────────────────
 
 exec podman run --rm -it \
     --replace \
     --name opencode-qa \
+    --init \
     --user "$(id -u):$(id -g)" \
     --userns keep-id \
     -v "${PROJECT_ROOT}:/project:rw,z" \
@@ -90,6 +113,7 @@ exec podman run --rm -it \
     -v "${OPENCODE_DATA_HOME}:/home/coder/.local/share/opencode:rw,z" \
     ${GITCONFIG_MOUNT} \
     ${ENV_FILE} \
+    ${HOST_ENV_FLAGS} \
     -w /project \
     --read-only \
     --tmpfs /tmp:nosuid,size=128m \
@@ -97,6 +121,12 @@ exec podman run --rm -it \
     --tmpfs /home/coder/.local/state:noexec,size=128m \
     --tmpfs /home/coder/.cache:noexec,size=64m \
     --cap-drop ALL \
+    --security-opt no-new-privileges \
+    --pids-limit 256 \
+    --stop-signal SIGTERM \
+    --stop-timeout 10 \
+    --no-hosts \
+    --http-proxy=false \
     --network host \
     "${IMAGE}" \
     "$@"
