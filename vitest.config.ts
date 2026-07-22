@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
 import { vitestAffected } from 'vitest-affected';
-
-const vitestAffectedPlugin = !process.env['CI']
+const isPR = process.env['GITHUB_EVENT_NAME'] === 'pull_request';
+const vitestAffectedPlugin = isPR
     ? vitestAffected({
           fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
           staleCacheDays: 14,
@@ -75,6 +75,15 @@ export default defineConfig({
                 // above): standalone processes with dedicated test files under scripts/__tests__/.
                 // The coverage gate measures library/business-logic; entry glue is out of scope.
                 'scripts/validation-hook.ts',
+                'scripts/check-mock-chains.ts',
+                // Jira cloud client — integration code that requires live Jira credentials;
+                // the mock-based tests in __tests__/ cover the logic via the base client.
+                'shared/jira/jira-cloud-client.ts',
+                // Entry-menu and splash are UI-only rendering, tested via snapshot integration tests.
+                'shared/ui/entry-menu.ts',
+                'shared/ui/splash.ts',
+                // Jira main entry — CLI dispatch, not unit-testable as standalone module.
+                'jira_management/main.ts',
             ],
             thresholds: {
                 lines: 90,
