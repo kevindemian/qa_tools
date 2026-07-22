@@ -5,6 +5,7 @@ import TestExecutionCreator from '../test-execution-creator.js';
 import { formatErr } from '../../shared/errors.js';
 import { rootLogger } from '../../shared/logger.js';
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function handler(c: CommandContext): Promise<boolean | void> {
     title('Associar testes a Test Execution existente');
 

@@ -75,13 +75,14 @@ async function findExistingMatches(
                 (i) => (i.fields['summary'] as string).trim().toLowerCase() === test.title.trim().toLowerCase(),
             );
             if (found) matches.push({ key: found.key, title: test.title });
-        } catch {
-            // search failed — skip match display, continue
+        } catch (err) {
+            rootLogger.warn("findExistingMatches: search failed: " + String(err));
         }
     }
     return matches;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
     const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
@@ -96,9 +97,9 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     const filtered = filterTests(tests);
     if (filtered === null) return;
 
-    const updatePolicy = (Config.get('updatePolicy') ?? 'auto') as string;
+    const updatePolicy = Config.get('updatePolicy');
     let targetKeys = Config.get<string[]>('targetKeys');
-    if (!targetKeys && !Config.get<boolean>('autoConfirm') && jiraResource) {
+    if (targetKeys.length === 0 && !Config.get('autoConfirm') && jiraResource) {
         const targetKeysInput = prompt('Mapear por chave Jira? (ex: ECSPOL-1605,ECSPOL-1606,... ou Enter para skip)');
         if (targetKeysInput.trim()) {
             targetKeys = targetKeysInput
@@ -108,7 +109,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
             Config.set('targetKeys', targetKeys.join(','));
         }
     }
-    if (targetKeys && targetKeys.length > 0) {
+    if (targetKeys.length > 0) {
         if (targetKeys.length !== filtered.length) {
             warn(
                 'Aviso: ' +
