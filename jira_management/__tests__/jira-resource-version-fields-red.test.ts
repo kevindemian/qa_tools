@@ -10,7 +10,9 @@ import type { JiraResourceLike } from '../jira-resource-types.js';
 import { rootLogger } from '../../shared/logger.js';
 
 describe('BUG 11: Cloud API missing fields[] in POST body', () => {
-    it('RED: Cloud API returns issues with key and fields.summary', async () => {
+    it('red: cloud api returns issues with key and fields.summary', async () => {
+        expect.hasAssertions();
+
         let capturedBody: Record<string, unknown> = {};
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
@@ -28,15 +30,17 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 10);
 
         // Verify the POST body includes fields: ['summary']
-        expect(capturedBody['fields']).toEqual(['summary']);
+        expect(capturedBody['fields']).toStrictEqual(['summary']);
 
         // Verify the result has key and fields.summary
         expect(result.issues).toHaveLength(1);
-        expect(result.issues[0]!.key).toBe('TEST-1');
-        expect(result.issues[0]!.fields!['summary']).toBe('Test Issue');
+        expect(result.issues[0]?.key).toBe('TEST-1');
+        expect((result.issues[0] as { fields: Record<string, unknown> }).fields['summary']).toBe('Test Issue');
     });
 
-    it('GREEN: handles missing fields gracefully', async () => {
+    it('green: handles missing fields gracefully', async () => {
+        expect.hasAssertions();
+
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
             jiraMode: 'cloud',
@@ -50,10 +54,12 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 10);
 
         expect(result.issues).toHaveLength(1);
-        expect(result.issues[0]!.key).toBe('TEST-1');
+        expect(result.issues[0]?.key).toBe('TEST-1');
     });
 
-    it('GREEN: handles null fields gracefully', async () => {
+    it('green: handles null fields gracefully', async () => {
+        expect.hasAssertions();
+
         const mockResource: JiraResourceLike = {
             baseUrl: 'https://example.atlassian.net/rest/api/3',
             jiraMode: 'cloud',
@@ -67,6 +73,6 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 10);
 
         expect(result.issues).toHaveLength(1);
-        expect(result.issues[0]!.key).toBe('TEST-1');
+        expect(result.issues[0]?.key).toBe('TEST-1');
     });
 });

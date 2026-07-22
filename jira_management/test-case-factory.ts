@@ -18,7 +18,7 @@ interface StepsResult {
     action?: string;
 }
 
-type UpdatePolicy = 'auto' | 'skip' | 'prompt';
+
 
 interface CreateIssueParams {
     testData: JsonObject;
@@ -39,12 +39,13 @@ class TestCaseFactory {
         this.stepImporter = stepImporter;
     }
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     async _attemptUpdate(params: CreateIssueParams): Promise<CreateIssueResult | null> {
         const { testData, testTitle, opLog } = params;
         if (!testTitle) return null;
 
         const targetKeys = Config.get<string[]>('targetKeys');
-        const targetKey = targetKeys?.[params.testIdx];
+        const targetKey = targetKeys[params.testIdx];
         if (targetKey) {
             return this._attemptUpdateByKey(params, targetKey);
         }
@@ -58,10 +59,10 @@ class TestCaseFactory {
             );
             if (matches.length === 0) return null;
 
-            const policy: UpdatePolicy = (Config.get('updatePolicy') ?? 'auto') as UpdatePolicy;
+            const policy = Config.get('updatePolicy');
 
             if (matches.length === 1) {
-                const key = matches[0]!.key;
+                const key = matches[0]?.key ?? '';
                 if (policy === 'skip') {
                     if (!isQuiet()) warn('Issue existente pulada: ' + key);
                     opLog.info('Issue existente pulada', { key, title: testTitle });
@@ -99,7 +100,7 @@ class TestCaseFactory {
                 const answer = prompt('Selecione a issue para atualizar (1-' + matches.length + ', Enter = pular): ');
                 const idx = parseInt(answer, 10);
                 if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
-                    const chosenKey = matches[idx - 1]!.key;
+                    const chosenKey = matches[idx - 1]?.key ?? '';
                     await this.jiraResource.putJiraResource('issue/' + chosenKey, {
                         fields: (testData as Record<string, unknown>)['fields'],
                     });
@@ -125,10 +126,10 @@ class TestCaseFactory {
         const { testData, testTitle, opLog } = params;
         try {
             const issue = await this.jiraResource.getJiraResource<{ key?: string }>('issue/' + targetKey);
-            if (!issue || !issue.key) {
+            if (!issue.key) {
                 warn('Issue ' + targetKey + ' nao encontrada no Jira — abortando');
                 opLog.info('Target key nao encontrada', { key: targetKey, title: testTitle });
-                return { key: targetKey as string, skipped: true };
+                return { key: targetKey, skipped: true };
             }
             await this.jiraResource.putJiraResource('issue/' + issue.key, {
                 fields: (testData as Record<string, unknown>)['fields'],
@@ -144,15 +145,16 @@ class TestCaseFactory {
                 (err instanceof Error ? err.message : String(err));
             rootLogger.warn('test-case-factory: ' + msg);
             warn('[aviso] ' + msg);
-            return { key: targetKey as string, skipped: true };
+            return { key: targetKey, skipped: true };
         }
     }
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
         const { testData, testTitle, testIdx, totalTests, opLog, skipExisting, checkOnly } = params;
 
         const targetKeys = Config.get<string[]>('targetKeys');
-        const hasTargetKey = targetKeys && testIdx < targetKeys.length && targetKeys[testIdx];
+        const hasTargetKey = targetKeys[testIdx];
 
         if (skipExisting && testTitle) {
             const result = await this._attemptUpdate(params);
@@ -160,23 +162,23 @@ class TestCaseFactory {
                 if (result.updated) return result;
                 if (result.ambiguous || checkOnly) return { skipped: true };
                 if (hasTargetKey) {
-                    warn('Target key ' + targetKeys![testIdx] + ' falhou — issue NAO pode ser criada');
+                    warn('Target key ' + targetKeys[testIdx] + ' falhou — issue NAO pode ser criada');
                     opLog.info('Target key update falhou, criacao bloqueada', {
-                        key: targetKeys![testIdx],
+                        key: targetKeys[testIdx],
                         title: testTitle,
                     });
-                    return { key: targetKeys![testIdx] as string, skipped: true };
+                    return { key: targetKeys[testIdx] as string, skipped: true };
                 }
                 return result;
             }
             if (checkOnly) return { skipped: true };
             if (hasTargetKey) {
-                warn('Target key ' + targetKeys![testIdx] + ' nao encontrada — issue NAO pode ser criada');
+                warn('Target key ' + targetKeys[testIdx] + ' nao encontrada — issue NAO pode ser criada');
                 opLog.info('Target key nao encontrada, criacao bloqueada', {
-                    key: targetKeys![testIdx],
+                    key: targetKeys[testIdx],
                     title: testTitle,
                 });
-                return { key: targetKeys![testIdx] as string, skipped: true };
+                return { key: targetKeys[testIdx] as string, skipped: true };
             }
         }
 
@@ -194,6 +196,7 @@ class TestCaseFactory {
         }
     }
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     async postSteps(
         issueKey: string,
         test: TestCase,

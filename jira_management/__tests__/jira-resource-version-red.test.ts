@@ -28,7 +28,9 @@ function createMockResource(
 }
 
 describe('BUG 5: Cloud pagination infinite loop without nextPageToken', () => {
-    it('RED: current code loops infinitely when nextPageToken is not handled', async () => {
+    it('red: current code loops infinitely when nextpagetoken is not handled', async () => {
+        expect.hasAssertions();
+
         // Mock returns same data with nextPageToken but current code ignores it
         // Use maxResults=1 so pagination continues (1 issue < 1 maxResults would stop)
         const mockResource = createMockResource([
@@ -40,11 +42,14 @@ describe('BUG 5: Cloud pagination infinite loop without nextPageToken', () => {
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 1);
 
         // With the fix, we should get all 3 issues
+
         expect(result.issues).toHaveLength(3);
-        expect(result.issues.map((i) => i.key)).toEqual(['TEST-1', 'TEST-2', 'TEST-3']);
+        expect(result.issues.map((i) => i.key)).toStrictEqual(['TEST-1', 'TEST-2', 'TEST-3']);
     });
 
-    it('GREEN: handles empty results gracefully', async () => {
+    it('green: handles empty results gracefully', async () => {
+        expect.hasAssertions();
+
         const mockResource = createMockResource([{ issues: [] }]);
 
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = EMPTY', 1);
@@ -52,16 +57,23 @@ describe('BUG 5: Cloud pagination infinite loop without nextPageToken', () => {
         expect(result.issues).toHaveLength(0);
     });
 
-    it('GREEN: handles single page results', async () => {
+    it('green: handles single page results', async () => {
+        expect.hasAssertions();
+
         const mockResource = createMockResource([{ issues: [{ key: 'TEST-1', fields: { summary: 'Test 1' } }] }]);
 
         const result = await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 1);
 
         expect(result.issues).toHaveLength(1);
-        expect(result.issues[0]!.key).toBe('TEST-1');
+
+        const firstIssue = result.issues[0];
+
+        expect(firstIssue?.key ?? '').toBe('TEST-1');
     });
 
-    it('GREEN: stops when nextPageToken is undefined', async () => {
+    it('green: stops when nextpagetoken is undefined', async () => {
+        expect.hasAssertions();
+
         const mockResource = createMockResource([
             { issues: [{ key: 'TEST-1', fields: { summary: 'Test 1' } }], nextPageToken: 'token1' },
             { issues: [{ key: 'TEST-2', fields: { summary: 'Test 2' } }] },

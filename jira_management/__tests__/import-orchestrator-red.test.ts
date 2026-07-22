@@ -7,7 +7,9 @@ import { describe, it, expect } from 'vitest';
 
 // Test the fix by verifying the code uses jiraResource instead of jiraResourceXray
 describe('BUG 8: CloudStepImporter receives wrong resource', () => {
-    it('RED: verify fix was applied correctly', async () => {
+    it('red: verify fix was applied correctly', async () => {
+        expect.hasAssertions();
+
         // Read the import-orchestrator.ts file and check the fix
         const fs = await import('node:fs');
         const content = fs.readFileSync(
@@ -20,7 +22,9 @@ describe('BUG 8: CloudStepImporter receives wrong resource', () => {
         expect(content).not.toContain('createStepImporter(jiraResourceXray');
     });
 
-    it('GREEN: verify the fix is in place', async () => {
+    it('green: verify the fix is in place', async () => {
+        expect.hasAssertions();
+
         const fs = await import('node:fs');
         const content = fs.readFileSync(
             '/home/kdemian/PROJETOS/qa_tools/qa_tools/jira_management/import-orchestrator.ts',
@@ -32,6 +36,7 @@ describe('BUG 8: CloudStepImporter receives wrong resource', () => {
         const createStepLine = lines.find(
             (l) => l.includes('createStepImporter(') && !l.includes('import'),
         );
+
         expect(createStepLine).toContain('jiraResource');
         expect(createStepLine).not.toContain('jiraResourceXray');
     });
