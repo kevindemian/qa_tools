@@ -174,11 +174,18 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
+                  EXIT_CODE=0
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode
+                    npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode || EXIT_CODE=$?
                   else
-                    npx tautest run --base HEAD~1 --threshold 60 --prompt-style opencode
+                    npx tautest run --base HEAD~1 --threshold 60 --prompt-style opencode || EXIT_CODE=$?
                   fi
+                  # Exit code 2 = no production files to mutate (expected for test-only changes)
+                  if [ "${EXIT_CODE}" = "2" ]; then
+                    echo "No production files changed — skipping mutation testing"
+                    exit 0
+                  fi
+                  exit ${EXIT_CODE}
             - name: Upload mutation report
               uses: actions/upload-artifact@v7
               if: always()

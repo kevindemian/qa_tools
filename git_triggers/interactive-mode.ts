@@ -954,6 +954,32 @@ async function _initDataHubBackground(): Promise<void> {
 }
 
 /**
+ * Compute health score from DataHub (must be called after DataHub init).
+ */
+function _computeHealthScore(): { score: number; grade: string } | undefined {
+    try {
+        const hub = getDataHub();
+        const health = calculateHealthScore({ dataHub: hub });
+        return { score: health.overall, grade: health.grade };
+    } catch (err) {
+        rootLogger.debug('Health score failed: ' + formatErr(err));
+        return undefined;
+    }
+}
+
+/**
+ * Show splash screen with health score.
+ */
+async function _showSplashWithHealth(healthScore: { score: number; grade: string } | undefined): Promise<void> {
+    try {
+        await showSplash(undefined, undefined, undefined, undefined, healthScore);
+    } catch (err) {
+        rootLogger.debug('Splash failed: ' + formatErr(err));
+        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+    }
+}
+
+/**
  * Runs the interactive mode — validates environment, shows splash, and enters menu loop.
  * @param args Parsed CLI arguments
  */
@@ -972,22 +998,10 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     await _initDataHubBackground();
 
     // Compute health score AFTER DataHub is initialized
-    let healthScore: { score: number; grade: string } | undefined;
-    try {
-        const hub = getDataHub();
-        const health = calculateHealthScore({ dataHub: hub });
-        healthScore = { score: health.overall, grade: health.grade };
-    } catch (err) {
-        rootLogger.debug('Health score failed: ' + formatErr(err));
-    }
+    const healthScore = _computeHealthScore();
 
     // Show splash AFTER health score is computed
-    try {
-        await showSplash(undefined, undefined, undefined, undefined, healthScore);
-    } catch (err) {
-        rootLogger.debug('Splash failed: ' + formatErr(err));
-        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-    }
+    await _showSplashWithHealth(healthScore);
 
     clearBreadcrumbs();
     pushBreadcrumb('GIT');

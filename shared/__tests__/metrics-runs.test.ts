@@ -35,8 +35,8 @@ function makeRun(id: number, overrides: Partial<PipelineRun> = {}): PipelineRun 
     };
 }
 
-describe('convertToMetricsRuns', () => {
-    describe('BUG FIX: project field must come from runs array, not be empty', () => {
+describe('ConvertToMetricsRuns', () => {
+describe('Bug Fix: project field must come from runs array, not be empty', () => {
         it('sets project from matching run when runs array is provided', () => {
             const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
                 [12345, [makeArtifact()]],
@@ -46,7 +46,7 @@ describe('convertToMetricsRuns', () => {
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
             expect(result).toHaveLength(1);
-            expect(result[0]!.project).toBe('main');
+            expect(result[0]?.project).toBe('main');
         });
 
         it('sets correct project for multiple runs with different IDs', () => {
@@ -63,8 +63,9 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            const projects = result.map((r) => r.project).sort();
-            expect(projects).toEqual(['feature-a', 'feature-b', 'main']);
+            const projects = result.map((r) => r.project).sort((a, b) => a.localeCompare(b));
+
+            expect(projects).toStrictEqual(['feature-a', 'feature-b', 'main']);
         });
 
         it('handles large CI run IDs (e.g., 12345) correctly — the original bug', () => {
@@ -75,7 +76,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0]!.project).toBe('develop');
+            expect(result[0]?.project).toBe('develop');
         });
 
         it('returns empty project when run ID not found in runs array', () => {
@@ -86,7 +87,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0]!.project).toBe('');
+            expect(result[0]?.project).toBe('');
         });
 
         it('returns empty project when runs array is not provided', () => {
@@ -96,11 +97,11 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts);
 
-            expect(result[0]!.project).toBe('');
+            expect(result[0]?.project).toBe('');
         });
     });
 
-    describe('BUG FIX: timestamp must come from runs array', () => {
+    describe('Bug Fix: timestamp must come from runs array', () => {
         it('uses created_at from matching run', () => {
             const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
                 [12345, [makeArtifact()]],
@@ -111,7 +112,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0]!.timestamp).toBe('2026-07-20T08:30:00Z');
+            expect(result[0]?.timestamp).toBe('2026-07-20T08:30:00Z');
         });
 
         it('uses current time when run not found (fallback)', () => {
@@ -124,13 +125,14 @@ describe('convertToMetricsRuns', () => {
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
             const after = Date.now();
-            const ts = new Date(result[0]!.timestamp).getTime();
+            const ts = new Date(result[0]?.timestamp).getTime();
+
             expect(ts).toBeGreaterThanOrEqual(before);
             expect(ts).toBeLessThanOrEqual(after);
         });
     });
 
-    describe('aggregation', () => {
+    describe('Aggregation', () => {
         it('sums stats across multiple artifacts in same run', () => {
             const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
                 [100, [makeArtifact({ passed: 5, failed: 1 }), makeArtifact({ passed: 3, failed: 2 })]],
@@ -139,9 +141,9 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0]!.passed).toBe(8);
-            expect(result[0]!.failed).toBe(3);
-            expect(result[0]!.total).toBe(13);
+            expect(result[0]?.passed).toBe(8);
+            expect(result[0]?.failed).toBe(3);
+            expect(result[0]?.total).toBe(13);
         });
 
         it('sorts by timestamp descending (newest first)', () => {
@@ -158,9 +160,9 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0]!.timestamp).toBe('2026-07-22T10:00:00Z');
-            expect(result[1]!.timestamp).toBe('2026-07-21T10:00:00Z');
-            expect(result[2]!.timestamp).toBe('2026-07-20T10:00:00Z');
+            expect(result[0]?.timestamp).toBe('2026-07-22T10:00:00Z');
+            expect(result[1]?.timestamp).toBe('2026-07-21T10:00:00Z');
+            expect(result[2]?.timestamp).toBe('2026-07-20T10:00:00Z');
         });
     });
 });
