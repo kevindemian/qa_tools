@@ -157,8 +157,8 @@ export class XrayCloudClient {
             throw new Error('addTestsToTestExecution requires at least one test issue id');
         }
         const mutation = `
-            mutation AddTestsToTestExecution($testExecIssueId: String!, $testIssueIds: [String!]!) {
-                addTestsToTestExecution(testExecIssueId: $testExecIssueId, testIssueIds: $testIssueIds) {
+            mutation AddTestsToTestExecution($issueId: String!, $testIssueIds: [String!]!) {
+                addTestsToTestExecution(issueId: $issueId, testIssueIds: $testIssueIds) {
                     addedTests
                     warning
                 }
@@ -166,7 +166,7 @@ export class XrayCloudClient {
         `;
         await this.graphqlMutation(
             mutation,
-            { testExecIssueId: testExecutionIssueId, testIssueIds },
+            { issueId: testExecutionIssueId, testIssueIds },
             clientId,
             clientSecret,
         );

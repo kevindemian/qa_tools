@@ -42,6 +42,19 @@ export function isAtlassianCloudGateway(baseUrl: string): boolean {
     }
 }
 
+/** Returns true when the base URL targets any Atlassian Cloud instance.
+ *  Covers both gateway (`api.atlassian.com/ex/jira/...`) and direct
+ *  Cloud URLs (`*.atlassian.net`). */
+export function isAtlassianCloud(baseUrl: string): boolean {
+    if (isAtlassianCloudGateway(baseUrl)) return true;
+    try {
+        const u = new URL(baseUrl);
+        return u.hostname.endsWith('.atlassian.net');
+    } catch {
+        return false;
+    }
+}
+
 /** Compute the Authorization header value based on Jira mode.
  *
  *  @param token - Personal Access Token (server) or email:apiToken (cloud), or a

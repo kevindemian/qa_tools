@@ -48,6 +48,9 @@ export const ALIASES: Record<string, string> = {
     'atualizar-package': '5',
     package: '5',
     verificar: '6',
+    'associar-te': '28',
+    'associar-testes': '28',
+    'associate': '28',
     status: '6',
     fechar: '7',
     publicar: '8',
@@ -131,6 +134,7 @@ export const SUB_MENUS: Record<string, MenuItem[]> = {
     tests: [
         { id: '1', label: 'Criar testes a partir de CSV' },
         { id: '13', label: 'Criar Test Execution para testes existentes' },
+        { id: '28', label: 'Associar testes a Test Execution existente' },
         { id: '15', label: 'Importar testes de JSON' },
         { id: '18', label: 'Gerar testes via User Story (IA)' },
         { id: '11', label: 'Gerar template (CSV/JSON)' },

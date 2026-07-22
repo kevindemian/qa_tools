@@ -9,6 +9,7 @@ interface CreateIssueResult {
     key?: string;
     action?: string;
     skipped?: boolean;
+    updated?: boolean;
 }
 
 interface StepsResult {
@@ -35,28 +36,60 @@ class TestCaseFactory {
 
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
         const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
+
+        // Try to find and update existing issue if skipExisting is enabled
         if (skipExisting && testTitle) {
-            try {
-                const jql = `project = "${((testData as Record<string, unknown>)['project'] as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
-                const existing = await this.jiraResource.searchJiraIssues(jql, 5);
-                const found = existing.issues.find(
-                    (i) => (i.fields['summary'] as string).trim().toLowerCase() === testTitle.trim().toLowerCase(),
-                );
-                if (found) {
-                    const key = found.key;
-                    if (!isQuiet()) promptInfo('Issue já existe, pulando: ' + key);
-                    opLog.info('Issue pulada (já existe)', { key, title: testTitle });
-                    return { key, skipped: true };
-                }
-            } catch (err) {
-                const msg =
-                    'busca de issue existente falhou (criação prosseguirá): ' +
-                    (err instanceof Error ? err.message : String(err));
-                rootLogger.warn('test-case-factory: ' + msg);
-                warn('[aviso] ' + msg);
-            }
+            const updateResult = await this._tryUpdateExisting(testData, testTitle, opLog);
+            if (updateResult) return updateResult;
         }
 
+        // Create new issue
+        return this._createNewIssue(testData, testTitle, testIdx, totalTests, opLog);
+    }
+
+    private async _tryUpdateExisting(
+        testData: JsonObject,
+        testTitle: string,
+        opLog: { info: (msg: string, meta?: LogContext) => void },
+    ): Promise<CreateIssueResult | null> {
+        const jql = `project = "${((testData as Record<string, unknown>)['project'] as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
+        
+        let existing;
+        try {
+            existing = await this.jiraResource.searchJiraIssues(jql, 5);
+        } catch (err) {
+            rootLogger.warn('test-case-factory: busca de issue existente falhou: ' + (err instanceof Error ? err.message : String(err)));
+            return null;
+        }
+
+        const found = existing.issues.find(
+            (i) => (i.fields['summary'] as string).trim().toLowerCase() === testTitle.trim().toLowerCase(),
+        );
+
+        if (!found) return null;
+
+        const key = found.key;
+        try {
+            await this.jiraResource.putJiraResource(`issue/${key}`, { fields: testData });
+            if (!isQuiet()) promptInfo('Issue atualizada: ' + key);
+            opLog.info('Issue atualizada', { key, title: testTitle });
+            return { key, updated: true };
+        } catch (updateErr) {
+            const msg = 'falha ao atualizar issue ' + key + ': ' + (updateErr instanceof Error ? updateErr.message : String(updateErr));
+            rootLogger.warn('test-case-factory: ' + msg);
+            warn('[aviso] ' + msg);
+            if (!isQuiet()) promptInfo('Issue já existe, pulando: ' + key);
+            return { key, skipped: true };
+        }
+    }
+
+    private async _createNewIssue(
+        testData: JsonObject,
+        testTitle: string,
+        testIdx: number,
+        totalTests: number,
+        opLog: { info: (msg: string, meta?: LogContext) => void },
+    ): Promise<CreateIssueResult> {
         try {
             const issue = await this.jiraResource.postJiraResource<JsonObject>('issue', testData);
             if (!isQuiet()) success('Issue criada: ' + String(issue['key']));

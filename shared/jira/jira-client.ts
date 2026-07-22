@@ -104,28 +104,44 @@ class JiraClient implements JiraResourceLike {
 
     async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
         checkCircuitBreaker('jira-client');
+        const start = Date.now();
         try {
             const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
             recordCircuitSuccess('jira-client');
+            const elapsed = Date.now() - start;
+            if (elapsed > 1000) {
+                rootLogger.warn(`[timing] GET ${resourceUrl} ${elapsed}ms`);
+            } else {
+                rootLogger.debug(`[timing] GET ${resourceUrl} ${elapsed}ms`);
+            }
             return response.data;
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('GET ' + resourceUrl + ' failed: ' + formatErr(err));
+            const elapsed = Date.now() - start;
+            rootLogger.error('GET ' + resourceUrl + ' failed (' + elapsed + 'ms): ' + formatErr(err));
             throw err;
         }
     }
 
     async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
         checkCircuitBreaker('jira-client');
+        const start = Date.now();
         try {
             const response = await this.axiosInstance.post<T>(`/${resourceUrl}`, data);
             recordCircuitSuccess('jira-client');
+            const elapsed = Date.now() - start;
+            if (elapsed > 1000) {
+                rootLogger.warn(`[timing] POST ${resourceUrl} ${elapsed}ms`);
+            } else {
+                rootLogger.debug(`[timing] POST ${resourceUrl} ${elapsed}ms`);
+            }
             return response.data;
         } catch (err: unknown) {
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
+            const elapsed = Date.now() - start;
+            rootLogger.error(`Erro POST /${resourceUrl} (${elapsed}ms): ${extractErrorMessage(err)}`, {
                 status: axiosErr.response?.status,
                 resourceUrl,
             });

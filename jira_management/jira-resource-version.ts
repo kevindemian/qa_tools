@@ -22,7 +22,7 @@ import {
     NO_UNRELEASED_VERSIONS,
 } from './constants.js';
 import type { JsonObject } from '../shared/types.js';
-import { isAtlassianCloudGateway } from '../shared/jira/jira-auth.js';
+import { isAtlassianCloud } from '../shared/jira/jira-auth.js';
 import { normalizeJqlForCloud } from '../shared/jira/jira-client.js';
 
 function sanitizeJqlValue(value: string): string {
@@ -36,6 +36,7 @@ interface SearchPage {
     issues: JiraIssue[];
     isLast: boolean;
     total: number | null;
+    nextPageToken?: string | null;
 }
 
 /**
@@ -50,18 +51,35 @@ async function fetchSearchPage(
     jql: string,
     startAt: number,
     maxResults: number,
+    nextPageToken?: string,
 ): Promise<SearchPage> {
-    if (isAtlassianCloudGateway(resource.baseUrl) && typeof resource.postToApiRoot === 'function') {
-        const res = await resource.postToApiRoot(`/rest/api/3/search/jql?startAt=${startAt}`, {
+    if (isAtlassianCloud(resource.baseUrl) && typeof resource.postToApiRoot === 'function') {
+        const body: Record<string, unknown> = {
             jql: normalizeJqlForCloud(jql),
             maxResults,
-        });
-        const page = (res ?? { issues: [] }) as { issues?: JiraIssue[]; isLast?: boolean; total?: number };
-        return {
+            fields: ['summary'],
+        };
+        if (nextPageToken) {
+            body['nextToken'] = nextPageToken;
+        } else {
+            body['startAt'] = startAt;
+        }
+        const res = await resource.postToApiRoot('/rest/api/3/search/jql', body);
+        const page = (res ?? { issues: [] }) as {
+            issues?: JiraIssue[];
+            isLast?: boolean;
+            total?: number;
+            nextPageToken?: string;
+        };
+        const result: SearchPage = {
             issues: page.issues ?? [],
             isLast: page.isLast === true,
             total: typeof page.total === 'number' ? page.total : null,
         };
+        if (page.nextPageToken) {
+            result.nextPageToken = page.nextPageToken;
+        }
+        return result;
     }
     const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
     const data = await resource.getJiraResource<SearchResponse>(url);
@@ -82,9 +100,10 @@ export async function searchJiraIssuesCore(
         let startAt = 0;
         let total: number | null = null;
         let pages = 0;
+        let nextPageToken: string | undefined;
 
         while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            const page = await fetchSearchPage(resource, jql, startAt, maxResults);
+            const page = await fetchSearchPage(resource, jql, startAt, maxResults, nextPageToken);
             pages++;
 
             const decision = classifySearchPage(page, startAt, maxResults, allIssues, total, log);
@@ -92,7 +111,12 @@ export async function searchJiraIssuesCore(
             allIssues.push(...page.issues);
             if (decision.stop) break;
 
-            startAt += maxResults;
+            // Cloud API uses nextPageToken for pagination
+            if (page.nextPageToken) {
+                nextPageToken = page.nextPageToken;
+            } else {
+                startAt += maxResults;
+            }
         }
 
         return { issues: allIssues, total: allIssues.length };

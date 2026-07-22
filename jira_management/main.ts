@@ -396,6 +396,7 @@ async function main(): Promise<void> {
         rootLogger.info('  --version      Exibe a versao');
         rootLogger.info('  --csv <path>   Importa um CSV de testes sem menu interativo (headless)');
         rootLogger.info('  --auto         Forca AUTO_CONFIRM (usado com --csv em automacao/CI)');
+        rootLogger.info('  --target-keys  Chaves Jira para update ordenado (ex: KEY-1,KEY-2,...)');
         gracefulExit(ExitCode.OK);
         return;
     }
@@ -409,6 +410,22 @@ async function main(): Promise<void> {
     }
     const projectName = parseProjectFlag(process.argv);
     if (projectName) setCurrentProject(projectName);
+    
+    // Handle --auto flag
+    if (process.argv.includes('--auto')) {
+        Config.setAutoConfirm(true);
+    }
+    
+    // Handle --target-keys flag
+    const targetKeysArg = process.argv.find((arg) => arg.startsWith('--target-keys='));
+    if (targetKeysArg) {
+        const keys = targetKeysArg.split('=')[1]?.split(',').map((k) => k.trim()).filter(Boolean);
+        if (keys && keys.length > 0) {
+            Config.set('targetKeys', keys.join(','));
+            info(`Target keys: ${keys.join(', ')}`);
+        }
+    }
+    
     const envResult = validateEnv();
     ensureDirs();
     registerCleanup();
