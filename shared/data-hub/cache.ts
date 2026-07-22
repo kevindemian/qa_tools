@@ -71,6 +71,38 @@ export function clearCache(): void {
 export function clearRepoCache(repo: string): void {
     _cache.delete(repo);
 }
+/**
+ * Invalidate cache if the hub's data is older than the given threshold.
+ * Useful when new pipeline runs are detected and cache may be stale.
+ *
+ * @param repo - Repository identifier.
+ * @param maxAgeMs - Maximum acceptable age in milliseconds (default: 5 minutes).
+ * @returns true if cache was invalidated, false if still valid.
+ */
+export function invalidateStale(repo: string, maxAgeMs: number = CACHE_TTL_MS): boolean {
+    const entry = _cache.get(repo);
+    if (entry == null) return false;
+
+    const age = Date.now() - entry.timestamp;
+    if (age > maxAgeMs) {
+        _cache.delete(repo);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Get cache age in milliseconds for a repo.
+ *
+ * @param repo - Repository identifier.
+ * @returns Age in ms, or -1 if not cached.
+ */
+export function getCacheAge(repo: string): number {
+    const entry = _cache.get(repo);
+    if (entry == null) return -1;
+    return Date.now() - entry.timestamp;
+}
+
 
 /**
  * Check if cache is valid for a repo.

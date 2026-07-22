@@ -879,20 +879,6 @@ async function _initEnvironment(): Promise<void> {
     } catch (err) {
         rootLogger.debug('Env setup failed: ' + formatErr(err));
     }
-    let healthScore: { score: number; grade: string } | undefined;
-    try {
-        const hub = getDataHub();
-        const health = calculateHealthScore({ dataHub: hub });
-        healthScore = { score: health.overall, grade: health.grade };
-    } catch (err) {
-        rootLogger.debug('Health score failed: ' + formatErr(err));
-    }
-    try {
-        await showSplash(undefined, undefined, undefined, undefined, healthScore);
-    } catch (err) {
-        rootLogger.debug('Splash failed: ' + formatErr(err));
-        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-    }
     sessionLog.info('Sessão iniciada');
 }
 
@@ -984,6 +970,24 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     const { projectName, names, manager: m } = result;
 
     await _initDataHubBackground();
+
+    // Compute health score AFTER DataHub is initialized
+    let healthScore: { score: number; grade: string } | undefined;
+    try {
+        const hub = getDataHub();
+        const health = calculateHealthScore({ dataHub: hub });
+        healthScore = { score: health.overall, grade: health.grade };
+    } catch (err) {
+        rootLogger.debug('Health score failed: ' + formatErr(err));
+    }
+
+    // Show splash AFTER health score is computed
+    try {
+        await showSplash(undefined, undefined, undefined, undefined, healthScore);
+    } catch (err) {
+        rootLogger.debug('Splash failed: ' + formatErr(err));
+        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+    }
 
     clearBreadcrumbs();
     pushBreadcrumb('GIT');

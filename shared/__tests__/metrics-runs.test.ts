@@ -11,6 +11,8 @@ import type { PipelineRun } from '../types/ci-cd.js';
 
 function makeArtifact(overrides: Partial<ArtifactParseResult['data']['stats']> = {}): ArtifactParseResult {
     return {
+        fileName: 'test-results.xml',
+        format: 'junit',
         data: {
             stats: {
                 passed: 10,
@@ -21,7 +23,7 @@ function makeArtifact(overrides: Partial<ArtifactParseResult['data']['stats']> =
             },
             tests: [],
         },
-    } as ArtifactParseResult;
+    } as unknown as ArtifactParseResult;
 }
 
 function makeRun(id: number, overrides: Partial<PipelineRun> = {}): PipelineRun {
@@ -44,7 +46,7 @@ describe('convertToMetricsRuns', () => {
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
             expect(result).toHaveLength(1);
-            expect(result[0].project).toBe('main');
+            expect(result[0]!.project).toBe('main');
         });
 
         it('sets correct project for multiple runs with different IDs', () => {
@@ -73,7 +75,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0].project).toBe('develop');
+            expect(result[0]!.project).toBe('develop');
         });
 
         it('returns empty project when run ID not found in runs array', () => {
@@ -84,7 +86,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0].project).toBe('');
+            expect(result[0]!.project).toBe('');
         });
 
         it('returns empty project when runs array is not provided', () => {
@@ -94,7 +96,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts);
 
-            expect(result[0].project).toBe('');
+            expect(result[0]!.project).toBe('');
         });
     });
 
@@ -109,7 +111,7 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0].timestamp).toBe('2026-07-20T08:30:00Z');
+            expect(result[0]!.timestamp).toBe('2026-07-20T08:30:00Z');
         });
 
         it('uses current time when run not found (fallback)', () => {
@@ -122,7 +124,7 @@ describe('convertToMetricsRuns', () => {
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
             const after = Date.now();
-            const ts = new Date(result[0].timestamp).getTime();
+            const ts = new Date(result[0]!.timestamp).getTime();
             expect(ts).toBeGreaterThanOrEqual(before);
             expect(ts).toBeLessThanOrEqual(after);
         });
@@ -137,9 +139,9 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0].passed).toBe(8);
-            expect(result[0].failed).toBe(3);
-            expect(result[0].total).toBe(13);
+            expect(result[0]!.passed).toBe(8);
+            expect(result[0]!.failed).toBe(3);
+            expect(result[0]!.total).toBe(13);
         });
 
         it('sorts by timestamp descending (newest first)', () => {
@@ -156,9 +158,9 @@ describe('convertToMetricsRuns', () => {
 
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
-            expect(result[0].timestamp).toBe('2026-07-22T10:00:00Z');
-            expect(result[1].timestamp).toBe('2026-07-21T10:00:00Z');
-            expect(result[2].timestamp).toBe('2026-07-20T10:00:00Z');
+            expect(result[0]!.timestamp).toBe('2026-07-22T10:00:00Z');
+            expect(result[1]!.timestamp).toBe('2026-07-21T10:00:00Z');
+            expect(result[2]!.timestamp).toBe('2026-07-20T10:00:00Z');
         });
     });
 });
