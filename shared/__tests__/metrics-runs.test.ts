@@ -125,7 +125,7 @@ describe('Bug Fix: project field must come from runs array, not be empty', () =>
             const result = convertToMetricsRuns(parsedArtifacts, runs);
 
             const after = Date.now();
-            const ts = new Date(result[0]?.timestamp).getTime();
+            const ts = new Date(result[0]?.timestamp ?? '').getTime();
 
             expect(ts).toBeGreaterThanOrEqual(before);
             expect(ts).toBeLessThanOrEqual(after);
