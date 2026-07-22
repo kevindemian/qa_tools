@@ -602,8 +602,8 @@ async function main(): Promise<void> {
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        console.error('[startup] Health score failed:', err);
-        rootLogger.error('Health score failed: ' + String(err));
+        // DataHub may not be initialized in headless mode — this is expected.
+        rootLogger.debug('[startup] Health score unavailable: ' + String(err));
     }
     console.error('[startup] Calling showSplash...');
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
