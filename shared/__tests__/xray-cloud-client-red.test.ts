@@ -7,8 +7,10 @@ import { describe, it, expect } from 'vitest';
 
 // Test the mutation string directly without going through authentication
 describe('BUG 19: GraphQL arg name testExecIssueId should be issueId', () => {
-    it('rED: verify mutation string contains issueId', () => {
+    it('red: verify mutation string contains issueid', () => {
+        expect.hasAssertions();
         // This is the actual mutation from the codebase
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const mutation = `
             mutation AddTestsToTestExecution($issueId: String!, $testIssueIds: [String!]!) {
                 addTestsToTestExecution(issueId: $issueId, testIssueIds: $testIssueIds) {
@@ -23,7 +25,9 @@ describe('BUG 19: GraphQL arg name testExecIssueId should be issueId', () => {
         expect(mutation).not.toContain('testExecIssueId');
     });
 
-    it('gREEN: verify correct mutation structure', () => {
+    it('green: verify correct mutation structure', () => {
+        expect.hasAssertions();
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const mutation = `
             mutation AddTestsToTestExecution($issueId: String!, $testIssueIds: [String!]!) {
                 addTestsToTestExecution(issueId: $issueId, testIssueIds: $testIssueIds) {
