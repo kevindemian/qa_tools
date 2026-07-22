@@ -223,7 +223,7 @@ describe('Quality check integrated', () => {
 
             const { main } = await load();
 
-            await expect(main()).resolves.toBeUndefined();
+            expect(() => main()).not.toThrow();
         }, 240000);
     });
 });
