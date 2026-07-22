@@ -52,17 +52,23 @@ export async function checkJiraStatus(baseUrl: string, token: string, mode?: Jir
         const http = _cache.http ?? (await import('http'));
         const mod = baseUrl.startsWith('https') ? https : http;
         const authHeader = createJiraAuthHeader(token, mode ?? 'server');
+        console.error('[splash] checkJiraStatus: GET ' + baseUrl + '/rest/api/2/myself');
         await new Promise<void>((resolve, reject) => {
             const req = mod.get(
                 baseUrl + '/rest/api/2/myself',
                 { headers: { Authorization: authHeader.Authorization }, timeout: 2000 },
                 (res: import('http').IncomingMessage) => {
+                    console.error('[splash] checkJiraStatus response status: ' + res.statusCode);
                     res.resume();
                     resolve();
                 },
             );
-            req.on('error', reject);
+            req.on('error', (e) => {
+                console.error('[splash] checkJiraStatus error: ' + e.message);
+                reject(e);
+            });
             req.setTimeout(2000, () => {
+                console.error('[splash] checkJiraStatus TIMEOUT after 2s');
                 req.destroy();
                 reject(new Error('timeout'));
             });
@@ -70,7 +76,8 @@ export async function checkJiraStatus(baseUrl: string, token: string, mode?: Jir
         const ms = Date.now() - start;
         return { label: 'Jira API', status: 'ok', detail: '🟢 online (' + ms + 'ms)' };
     } catch (err) {
-        rootLogger.debug('Jira status check failed: ' + (err instanceof Error ? err.message : String(err)));
+        console.error('[splash] checkJiraStatus FAILED: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.error('Jira status check failed: ' + (err instanceof Error ? err.message : String(err)));
         return { label: 'Jira API', status: 'error', detail: '🔴 offline' };
     }
 }

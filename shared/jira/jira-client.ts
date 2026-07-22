@@ -10,7 +10,6 @@
  *  issuing requests and record success/failure after completion. */
 import { formatErr } from '../errors.js';
 import { createHttpClient } from '../infra/http-client.js';
-import { extractErrorMessage } from '../ui/prompt.js';
 import { rootLogger } from '../logger.js';
 import { createJiraAuthHeader, isAtlassianCloudGateway, type JiraMode } from './jira-auth.js';
 import Config from '../config-accessor.js';
@@ -91,61 +90,75 @@ class JiraClient implements JiraResourceLike {
     async postToApiRoot(relativePath: string, data: unknown): Promise<JsonObject | null> {
         const root = this.baseUrl.replace(/\/rest\/api\/2\/?$/i, '');
         const url = root + '/' + relativePath.replace(/^\//, '');
+        const t0 = performance.now();
         try {
             const response = await this.axiosInstance.post<JsonObject>(url, data);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] POST ${url} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] POST ${url} ${Math.round(elapsed)}ms`);
             return response.status === 204 ? null : response.data;
         } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('POST ' + url + ' failed: ' + formatErr(err));
+            rootLogger.error(`[timing] POST ${url} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`);
             throw err;
         }
     }
 
     async getJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
         checkCircuitBreaker('jira-client');
+        const t0 = performance.now();
         try {
             const response = await this.axiosInstance.get<T>(`/${resourceUrl}`);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] GET /${resourceUrl} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] GET /${resourceUrl} ${Math.round(elapsed)}ms`);
             recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('GET ' + resourceUrl + ' failed: ' + formatErr(err));
+            rootLogger.error(`[timing] GET /${resourceUrl} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`);
             throw err;
         }
     }
 
     async postJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T> {
         checkCircuitBreaker('jira-client');
+        const t0 = performance.now();
         try {
             const response = await this.axiosInstance.post<T>(`/${resourceUrl}`, data);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] POST /${resourceUrl} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] POST /${resourceUrl} ${Math.round(elapsed)}ms`);
             recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error(`Erro POST /${resourceUrl}: ${extractErrorMessage(err)}`, {
-                status: axiosErr.response?.status,
-                resourceUrl,
-            });
+            rootLogger.error(`[timing] POST /${resourceUrl} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`);
             throw err;
         }
     }
 
     async putJiraResource<T = JsonObject>(resourceUrl: string, data: unknown): Promise<T | null> {
         checkCircuitBreaker('jira-client');
+        const t0 = performance.now();
         try {
             const response = await this.axiosInstance.put<T>(`/${resourceUrl}`, data);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] PUT /${resourceUrl} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] PUT /${resourceUrl} ${Math.round(elapsed)}ms`);
             recordCircuitSuccess('jira-client');
             return response.status === 204 ? null : response.data;
         } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error(`Erro PUT /${resourceUrl}: ${extractErrorMessage(err)}`, {
-                resourceUrl,
-                status: axiosErr.response?.status,
-            });
+            rootLogger.error(`[timing] PUT /${resourceUrl} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`);
             throw err;
         }
     }
@@ -153,14 +166,19 @@ class JiraClient implements JiraResourceLike {
     async getFromOriginPath<T = JsonObject>(path: string): Promise<T> {
         checkCircuitBreaker('jira-client');
         const url = `${this.originUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
+        const t0 = performance.now();
         try {
             const response = await this.axiosInstance.get<T>(url);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] GET ${url} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] GET ${url} ${Math.round(elapsed)}ms`);
             recordCircuitSuccess('jira-client');
             return response.data;
         } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
             const axiosErr = err as { response?: { status?: number }; code?: string };
             if (!axiosErr.response) recordCircuitFailure('jira-client');
-            rootLogger.error('GET from origin ' + path + ' failed: ' + formatErr(err));
+            rootLogger.error(`[timing] GET ${url} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`);
             throw err;
         }
     }

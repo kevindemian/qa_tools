@@ -2,6 +2,7 @@ import Config from '../shared/config-accessor.js';
 import JiraResource from './jira_resource.js';
 import JiraLinkManager from './jira_link_manager.js';
 import CsvResource from './csv_resource.js';
+import TestExecutionCreator from './test-execution-creator.js';
 import PackageVersionManager from './package_version_manager.js';
 import { showSplash } from '../shared/ui/splash.js';
 import type { JiraMode } from '../shared/jira/jira-auth.js';
@@ -114,17 +115,108 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             return ExitCode.ERROR;
         }
 
-        const { summary, status, failedLinks } = outcome.result;
+        const { summary, status, failedLinks, inMemoryTasksId } = outcome.result;
         if (failedLinks.length) {
             printError(summary, undefined);
         } else {
             info(summary);
         }
+
+        if (process.argv.includes('--create-te') && inMemoryTasksId.length > 0) {
+            info('Criando Test Execution...');
+            const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
+            const csvName = csvPath.split('/').pop() ?? csvPath;
+            const teResult = await createTests.createTestExecutionWithLinks({
+                testExecutionCreator: executor,
+                projectName: res.ctx.project_name,
+                testKeys: inMemoryTasksId,
+                csvName,
+            });
+            if (teResult) {
+                info('Test Execution criada: ' + teResult.key + ' — ' + teResult.summary);
+            } else {
+                warn('Falha ao criar Test Execution');
+            }
+        }
+
         res.pushHistory('csv-import', summary, status);
         return status === 'ok' ? ExitCode.OK : ExitCode.ERROR;
     } catch (err) {
         printError('Erro inesperado na importacao CSV', err);
         res.pushHistory('csv-import', 'erro', 'error');
+        return ExitCode.ERROR;
+    }
+}
+
+/** Headless associate: links existing test issues to an existing Test Execution.
+ *  Validates all keys before attempting association. Returns ExitCode.ERROR with
+ *  explicit per-key error messages on failure. */
+export async function runAssociateTe(res: RuntimeResources, teKey: string, testKeys: string[]): Promise<ExitCode> {
+    const opLog = rootLogger.child({ session: 'associate-te-headless' });
+    info('Associando testes à Test Execution ' + teKey + '...');
+
+    // ── Validate TE key ──────────────────────────────────────────────────
+    let teIssue: { key: string; fields: { summary?: string; issuetype?: { name: string } } };
+    try {
+        teIssue = await res.jiraResource.getJiraResource<{
+            key: string;
+            fields: { summary?: string; issuetype?: { name: string } };
+        }>('issue/' + teKey);
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Test Execution não encontrada: ' + teKey + ' — ' + msg);
+        opLog.error('TE lookup failed', { teKey, error: msg });
+        res.pushHistory('associate-te', 'TE não encontrada: ' + teKey, 'error');
+        return ExitCode.ERROR;
+    }
+    if (teIssue.fields.issuetype?.name !== 'Test Execution') {
+        const actualType = teIssue.fields.issuetype?.name || 'desconhecido';
+        rootLogger.error('"' + teKey + '" não é uma Test Execution (tipo: ' + actualType + ')');
+        res.pushHistory('associate-te', teKey + ' não é TE (tipo: ' + actualType + ')', 'error');
+        return ExitCode.ERROR;
+    }
+    info('  TE validada: ' + teKey + ' — ' + (teIssue.fields.summary || '(sem título)'));
+
+    // ── Validate each test key ───────────────────────────────────────────
+    const invalidKeys: string[] = [];
+    const validKeys: string[] = [];
+    for (const key of testKeys) {
+        try {
+            await res.jiraResource.getJiraResource<{ key: string }>('issue/' + key);
+            validKeys.push(key);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            rootLogger.error('Issue não encontrada: ' + key + ' — ' + msg);
+            invalidKeys.push(key);
+        }
+    }
+
+    if (invalidKeys.length > 0) {
+        rootLogger.error(
+            invalidKeys.length + ' issue(s) inválida(s): ' + invalidKeys.join(', ') + '. Nenhuma associação realizada.',
+        );
+        res.pushHistory('associate-te', 'issues inválidas: ' + invalidKeys.join(', '), 'error');
+        return ExitCode.ERROR;
+    }
+
+    info('  ' + validKeys.length + ' teste(s) validado(s). Associando...');
+
+    // ── Associate ────────────────────────────────────────────────────────
+    try {
+        const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
+        const result = await executor.addTestsToExistingExecution(teKey, validKeys);
+        if (!result) {
+            rootLogger.error('Falha ao associar testes à ' + teKey);
+            res.pushHistory('associate-te', 'falha na associação: ' + teKey, 'error');
+            return ExitCode.ERROR;
+        }
+        info('OK  ' + validKeys.length + ' teste(s) associado(s) à ' + result.key + ' — ' + result.summary);
+        res.pushHistory('associate-te', result.key + ' (' + validKeys.length + ' testes)', 'ok');
+        return ExitCode.OK;
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        rootLogger.error('Erro ao associar testes à ' + teKey + ': ' + msg);
+        res.pushHistory('associate-te', 'erro: ' + msg, 'error');
         return ExitCode.ERROR;
     }
 }
@@ -204,26 +296,47 @@ if (Config.get('debug')) {
     info('Jira Token: ' + mask(personal_token));
 }
 
-const validateEnv = createValidateEnv([
-    { key: 'JIRA_BASE_URL', label: 'JIRA_BASE_URL', example: 'JIRA_BASE_URL=https://seu-jira-server' },
-    {
-        key: 'JIRA_PERSONAL_TOKEN',
-        label: 'JIRA_PERSONAL_TOKEN (token de autenticação)',
-        example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui',
-    },
-    {
-        key: 'XRAY_BASE_URL',
-        label: 'XRAY_BASE_URL (obrigatorio para criar testes)',
-        example: 'XRAY_BASE_URL=https://seu-xray-server',
-    },
-]);
+const _validateEnvConfigs = (): Array<{ key: string; label: string; example: string }> => {
+    const configs: Array<{ key: string; label: string; example: string }> = [
+        { key: 'JIRA_BASE_URL', label: 'JIRA_BASE_URL', example: 'JIRA_BASE_URL=https://seu-jira-server' },
+        {
+            key: 'JIRA_PERSONAL_TOKEN',
+            label: 'JIRA_PERSONAL_TOKEN (token de autenticação)',
+            example: 'JIRA_PERSONAL_TOKEN=seu-token-aqui',
+        },
+    ];
+    const xrayMode = Config.get('xrayMode');
+    if (xrayMode !== 'cloud') {
+        configs.push({
+            key: 'XRAY_BASE_URL',
+            label: 'XRAY_BASE_URL (obrigatorio para criar testes)',
+            example: 'XRAY_BASE_URL=https://seu-xray-server',
+        });
+    } else {
+        configs.push(
+            {
+                key: 'xrayClientId',
+                label: 'XRAY_CLIENT_ID (obrigatorio Xray Cloud)',
+                example: 'XRAY_CLIENT_ID=seu-client-id',
+            },
+            {
+                key: 'xrayClientSecret',
+                label: 'XRAY_CLIENT_SECRET (obrigatorio Xray Cloud)',
+                example: 'XRAY_CLIENT_SECRET=seu-client-secret',
+            },
+        );
+    }
+    return configs;
+};
+
+const validateEnv = createValidateEnv(_validateEnvConfigs());
 
 async function initializeSession() {
     if (!_isJiraConfigured()) {
         info('ℹ Jira não configurado. Comandos que dependem de Jira exibirão orientação de configuração.');
     }
 
-    const jiraResource = new JiraResource(personal_token, base_url + '/rest/api/2', jira_mode);
+    const jiraResource = new JiraResource(personal_token, base_url, jira_mode);
     const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
     const linkManager = new JiraLinkManager(jiraResource);
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
@@ -245,11 +358,13 @@ async function initializeSession() {
     }
 
     if (_isJiraConfigured() && ctx.project_name) {
-        const jql = 'project=' + ctx.project_name;
+        console.error('[init] Validating project: getJiraResource(project/' + ctx.project_name + ')');
         try {
-            await jiraResource.searchJiraIssues(jql, 1);
+            await jiraResource.getJiraResource('project/' + ctx.project_name);
+            console.error('[init] project lookup OK');
         } catch (err) {
-            rootLogger.debug('Jira project validation failed: ' + String(err));
+            console.error('[init] project lookup FAILED: ' + String(err));
+            rootLogger.error('[init] Jira project validation failed: ' + String(err));
             warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
         }
     }
@@ -396,6 +511,22 @@ async function main(): Promise<void> {
         rootLogger.info('  --version      Exibe a versao');
         rootLogger.info('  --csv <path>   Importa um CSV de testes sem menu interativo (headless)');
         rootLogger.info('  --auto         Forca AUTO_CONFIRM (usado com --csv em automacao/CI)');
+        rootLogger.info('  --update-policy <auto|skip|prompt>');
+        rootLogger.info('                 auto: atualiza automaticamente');
+        rootLogger.info('                 skip: pula issues existentes');
+        rootLogger.info('                 prompt: pergunta o que fazer');
+        rootLogger.info('  --target-keys <KEY1,KEY2,...>');
+        rootLogger.info('                 atualiza issues por chave, na ordem do CSV');
+        rootLogger.info('  --create-te    Cria Test Execution e associa todos os testes ao final');
+        rootLogger.info('  --associate-te <TE_KEY>');
+        rootLogger.info('                 associa testes a uma Test Execution existente');
+        rootLogger.info('  --tests <KEY1,KEY2,...>');
+        rootLogger.info('                 lista de keys dos testes para associar (usado com --associate-te)');
+        rootLogger.info('');
+        rootLogger.info('Exemplos:');
+        rootLogger.info(
+            '  npx tsx jira_management/main.ts --associate-te ECSPOL-1624 --tests ECSPOL-1605,ECSPOL-1606,ECSPOL-1607',
+        );
         gracefulExit(ExitCode.OK);
         return;
     }
@@ -403,6 +534,58 @@ async function main(): Promise<void> {
         rootLogger.info(pkg.version);
         gracefulExit(ExitCode.OK);
         return;
+    }
+    if (process.argv.includes('--auto')) {
+        Config.setAutoConfirm(true);
+    }
+    const upIdx = process.argv.indexOf('--update-policy');
+    if (upIdx !== -1 && upIdx + 1 < process.argv.length) {
+        const val: string = process.argv[upIdx + 1] ?? '';
+        if (!['auto', 'skip', 'prompt'].includes(val)) {
+            rootLogger.error('--update-policy deve ser auto, skip ou prompt');
+            process.exit(ExitCode.ERROR);
+        }
+        if (Config.get<boolean>('autoConfirm') && val === 'prompt') {
+            rootLogger.warn('--auto ativo, --update-policy=prompt ignorado; usando auto');
+            Config.set('updatePolicy', 'auto');
+        } else {
+            Config.set('updatePolicy', val);
+        }
+    }
+    const tkIdx = process.argv.indexOf('--target-keys');
+    if (tkIdx !== -1 && tkIdx + 1 < process.argv.length) {
+        const raw: string = process.argv[tkIdx + 1] ?? '';
+        const keys = raw
+            .split(',')
+            .map((k) => k.trim())
+            .filter(Boolean);
+        if (keys.length === 0) {
+            rootLogger.error('--target-keys requer pelo menos uma chave separada por vírgula');
+            process.exit(ExitCode.ERROR);
+        }
+        Config.set('targetKeys', keys);
+    }
+    const atIdx = process.argv.indexOf('--associate-te');
+    if (atIdx !== -1 && atIdx + 1 < process.argv.length) {
+        const teKey = (process.argv[atIdx + 1] ?? '').trim().toUpperCase();
+        if (!teKey) {
+            rootLogger.error('--associate-te requer uma key de Test Execution (ex: ECSPOL-1624)');
+            process.exit(ExitCode.ERROR);
+        }
+        Config.set('associateTeKey', teKey);
+    }
+    const testsIdx = process.argv.indexOf('--tests');
+    if (testsIdx !== -1 && testsIdx + 1 < process.argv.length) {
+        const raw: string = process.argv[testsIdx + 1] ?? '';
+        const keys = raw
+            .split(',')
+            .map((k) => k.trim().toUpperCase())
+            .filter(Boolean);
+        if (keys.length === 0) {
+            rootLogger.error('--tests requer pelo menos uma chave separada por vírgula (ex: ECSPOL-1605,ECSPOL-1606)');
+            process.exit(ExitCode.ERROR);
+        }
+        Config.set('associateTestKeys', keys.join(','));
     }
     if (process.stdout.isTTY && !_shouldNoClear()) {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
@@ -419,27 +602,34 @@ async function main(): Promise<void> {
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        rootLogger.debug('Health score failed: ' + String(err));
+        console.error('[startup] Health score failed:', err);
+        rootLogger.error('Health score failed: ' + String(err));
     }
+    console.error('[startup] Calling showSplash...');
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
+    console.error('[startup] showSplash done');
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {
         // env setup offered
     }
+    console.error('[startup] Calling maybeRunFirstRunWizard...');
     try {
         await maybeRunFirstRunWizard();
     } catch (err) {
-        rootLogger.debug('Setup wizard failed: ' + String(err));
+        console.error('[startup] Setup wizard failed:', err);
+        rootLogger.error('Setup wizard failed: ' + String(err));
     }
+    console.error('[startup] maybeRunFirstRunWizard done');
 
     // Early SIGINT handler: protege contra crash durante prompts síncronos
     // (readline-sync) que ocorrem dentro de initializeSession.
     // Removido após initializeSession e substituído pelo handler definitivo.
     const _earlyHandler = () => {};
     process.on('SIGINT', _earlyHandler);
-
+    console.error('[startup] Calling initializeSession (Jira API)...');
     const res = await initializeSession();
+    console.error('[startup] initializeSession done');
 
     process.removeListener('SIGINT', _earlyHandler);
     setupSigint(
@@ -447,9 +637,22 @@ async function main(): Promise<void> {
         () => res.printSessionSummary(),
     );
 
+    const associateTeKey = Config.get<string | undefined>('associateTeKey');
+    const associateTestKeysStr = Config.get<string | undefined>('associateTestKeys');
+    const associateTestKeys = associateTestKeysStr ? associateTestKeysStr.split(',').filter(Boolean) : [];
+    if (associateTeKey && associateTestKeys.length > 0) {
+        console.error('[startup] Calling runAssociateTe...');
+        const code = await runAssociateTe(res, associateTeKey, associateTestKeys);
+        console.error('[startup] runAssociateTe done, code:', code);
+        gracefulExit(code);
+        return;
+    }
+
     const headlessCsvPath = parseCsvArg(process.argv);
     if (headlessCsvPath) {
+        console.error('[startup] Calling runHeadlessCsvImport...');
         const code = await runHeadlessCsvImport(res, headlessCsvPath);
+        console.error('[startup] runHeadlessCsvImport done, code:', code);
         gracefulExit(code);
         return;
     }

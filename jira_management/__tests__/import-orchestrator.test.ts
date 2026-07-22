@@ -199,7 +199,7 @@ describe('Import Orchestrator', () => {
             expect.hasAssertions();
 
             const linker = linkerMock({
-                updateCrossReferences: vi.fn().mockResolvedValue(undefined),
+                updateCrossReferences: vi.fn().mockResolvedValue([]),
             });
             const results = [{ status: 'ok' as const, label: 'Test 1', message: '' }];
             await postProcessCheckpoint({
@@ -212,6 +212,7 @@ describe('Import Orchestrator', () => {
                 sourceType: 'csv',
                 linker,
                 info: vi.fn(),
+                failedLinks: [],
             });
 
             expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));

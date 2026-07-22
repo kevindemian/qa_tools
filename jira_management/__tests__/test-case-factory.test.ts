@@ -4,6 +4,8 @@ const mockPrompt = vi.hoisted(() => ({
     warn: vi.fn(),
     onError: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
+    confirm: vi.fn(),
+    prompt: vi.fn(),
     ProgressBar: vi.fn<(...args: [total: number, options?: { width?: number }]) => { update: Mock; stop: Mock }>(
         function () {
             return { update: vi.fn(), stop: vi.fn() };
@@ -16,9 +18,10 @@ vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 import { createMockJiraResource } from '../../shared/test-utils/factories/jira-resource-factory.js';
 import type { Mock } from 'vitest';
 import TestCaseFactory from '../test-case-factory.js';
+import Config from '../../shared/config-accessor.js';
 
 function createMockImporter() {
-    return { importStep: vi.fn() };
+    return { importStep: vi.fn(), setSteps: vi.fn() };
 }
 
 describe('TestCaseFactory', () => {
@@ -38,6 +41,7 @@ describe('TestCaseFactory', () => {
 
     afterEach(() => {
         vi.resetAllMocks();
+        Config.reset();
     });
 
     describe('CreateIssue', () => {
@@ -108,7 +112,7 @@ describe('TestCaseFactory', () => {
         const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
         const opLog = { info: vi.fn() };
 
-        it('skips creation when existing issue found by title', async () => {
+        it('updates existing issue when found by title', async () => {
             expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
@@ -125,9 +129,11 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(result).toStrictEqual({ key: 'TEST-42', skipped: true });
-            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalledWith();
-            expect(opLog.info).toHaveBeenCalledWith('Issue pulada (já existe)', {
+            expect(result).toStrictEqual({ key: 'TEST-42', updated: true });
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-42', {
+                fields: { summary: 'Login Test' },
+            });
+            expect(opLog.info).toHaveBeenCalledWith('Issue atualizada', {
                 key: 'TEST-42',
                 title: 'Login Test',
             });
@@ -192,7 +198,7 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
-        it('shows prompt info when quiet is false and issue skipped', async () => {
+        it('shows success message when quiet is false and issue updated', async () => {
             expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
@@ -210,7 +216,191 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(mockPrompt.info).toHaveBeenCalledWith('Issue já existe, pulando: TEST-42');
+            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada: TEST-42');
+        });
+
+        it('skips when multiple matches with auto policy', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'TEST-40', fields: { summary: 'Login Test' } },
+                    { key: 'TEST-42', fields: { summary: 'Login Test' } },
+                ],
+                total: 2,
+            });
+            mockPrompt.isQuiet.mockReturnValue(false);
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Login Test',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ skipped: true });
+            expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
+            expect(mockPrompt.warn).toHaveBeenCalled();
+            expect(mockPrompt.info).toHaveBeenCalled();
+        });
+
+        it('skips when multiple matches with skip policy', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'TEST-40', fields: { summary: 'Login Test' } },
+                    { key: 'TEST-42', fields: { summary: 'Login Test' } },
+                ],
+                total: 2,
+            });
+            Config.set('updatePolicy', 'skip');
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Login Test',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ skipped: true });
+            expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
+        });
+
+        it('updates selected match when multiple matches with prompt policy', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'TEST-40', fields: { summary: 'Login Test' } },
+                    { key: 'TEST-42', fields: { summary: 'Login Test' } },
+                ],
+                total: 2,
+            });
+            mockPrompt.isQuiet.mockReturnValue(false);
+            mockPrompt.prompt.mockReturnValue('2');
+            Config.set('updatePolicy', 'prompt');
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Login Test',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'TEST-42', updated: true });
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-42', {
+                fields: { summary: 'Login Test' },
+            });
+            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada: TEST-42');
+        });
+
+        it('skips on Enter when multiple matches with prompt policy', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'TEST-40', fields: { summary: 'Login Test' } },
+                    { key: 'TEST-42', fields: { summary: 'Login Test' } },
+                ],
+                total: 2,
+            });
+            mockPrompt.isQuiet.mockReturnValue(false);
+            mockPrompt.prompt.mockReturnValue('');
+            Config.set('updatePolicy', 'prompt');
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Login Test',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ skipped: true });
+            expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
+            expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('CreateIssue with targetKeys', () => {
+        const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
+        const opLog = { info: vi.fn() };
+
+        beforeEach(() => {
+            Config.set('targetKeys', ['ECSPOL-1605', 'ECSPOL-1606', 'ECSPOL-1607']);
+        });
+
+        afterEach(() => {
+            Config.set('targetKeys', undefined);
+        });
+
+        it('updates by target key when targetKeys is set', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.getJiraResource.mockResolvedValue({ key: 'ECSPOL-1605' });
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Some Title',
+                testIdx: 0,
+                totalTests: 3,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
+            expect(mockJiraResource['getJiraResource']).toHaveBeenCalledWith('issue/ECSPOL-1605');
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/ECSPOL-1605', {
+                fields: { summary: 'Login Test' },
+            });
+        });
+
+        it('returns skipped when target key not found in Jira', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.getJiraResource.mockResolvedValue({});
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Some Title',
+                testIdx: 0,
+                totalTests: 3,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'ECSPOL-1605', skipped: true });
+        });
+
+        it('skips target key when testIdx exceeds targetKeys length', async () => {
+            expect.hasAssertions();
+
+            Config.set('targetKeys', ['ECSPOL-1605']);
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [{ key: 'TEST-99', fields: { summary: 'Some Title' } }],
+                total: 1,
+            });
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Some Title',
+                testIdx: 2,
+                totalTests: 3,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'TEST-99', updated: true });
         });
     });
 

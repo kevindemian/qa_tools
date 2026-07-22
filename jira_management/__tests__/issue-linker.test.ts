@@ -231,9 +231,11 @@ describe('IssueLinker', () => {
                 { title: 'Test1', group: 'G1', steps: [] },
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
-            await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+            const failed = await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
 
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
+            expect(mockPrompt.onError).toHaveBeenCalled();
+            expect(failed).toContain('TEST-1');
         });
 
         it('handles putJiraResource error', async () => {
@@ -247,9 +249,12 @@ describe('IssueLinker', () => {
                 { title: 'Test1', group: 'G1', steps: [] },
                 { title: 'Test2', group: 'G1', steps: [] },
             ];
-            await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
+            const failed = await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
 
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
+            expect(mockPrompt.onError).toHaveBeenCalled();
+            expect(failed).toContain('TEST-1');
+            expect(failed).toContain('TEST-2');
         });
 
         it('writes green char on success when not quiet', async () => {

@@ -113,6 +113,38 @@ export class XrayCloudClient {
         }
     }
 
+    /** Replace ALL steps of a test atomically.
+     *  Xray Cloud has no single "setTestSteps" mutation.
+     *  Strategy: removeAllTestSteps → addTestStep for each step. */
+    async setTestSteps(
+        testIssueId: string,
+        steps: Array<{ action: string; result: string; data: string }>,
+        clientId: string,
+        clientSecret: string,
+    ): Promise<void> {
+        if (!testIssueId) throw new Error('setTestSteps requires a test issue id');
+        const removeAllMutation = `
+            mutation RemoveAllTestSteps($issueId: String!) {
+                removeAllTestSteps(issueId: $issueId)
+            }
+        `;
+        await this.graphqlMutation(removeAllMutation, { issueId: testIssueId }, clientId, clientSecret);
+
+        const addStepMutation = `
+            mutation AddTestStep($issueId: String!, $step: CreateStepInput!) {
+                addTestStep(issueId: $issueId, step: $step) {
+                    id
+                    action
+                    data
+                    result
+                }
+            }
+        `;
+        for (const step of steps) {
+            await this.graphqlMutation(addStepMutation, { issueId: testIssueId, step }, clientId, clientSecret);
+        }
+    }
+
     /** Associate one or more Pre-condition issues to a Test in Xray Cloud.
      *  Uses the native GraphQL `addPreconditionsToTest` mutation (numeric issue ids),
      *  which does NOT depend on the Jira "Pre-Condition" issue link type.
@@ -157,19 +189,14 @@ export class XrayCloudClient {
             throw new Error('addTestsToTestExecution requires at least one test issue id');
         }
         const mutation = `
-            mutation AddTestsToTestExecution($testExecIssueId: String!, $testIssueIds: [String!]!) {
-                addTestsToTestExecution(testExecIssueId: $testExecIssueId, testIssueIds: $testIssueIds) {
+            mutation AddTestsToTestExecution($issueId: String!, $testIssueIds: [String!]!) {
+                addTestsToTestExecution(issueId: $issueId, testIssueIds: $testIssueIds) {
                     addedTests
                     warning
                 }
             }
         `;
-        await this.graphqlMutation(
-            mutation,
-            { testExecIssueId: testExecutionIssueId, testIssueIds },
-            clientId,
-            clientSecret,
-        );
+        await this.graphqlMutation(mutation, { issueId: testExecutionIssueId, testIssueIds }, clientId, clientSecret);
         return testIssueIds.length;
     }
 }

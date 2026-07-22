@@ -35,31 +35,43 @@ interface SearchPage {
     issues: JiraIssue[];
     isLast: boolean;
     total: number | null;
+    nextPageToken?: string | null;
 }
 
 /**
  * Fetch a single page of search results.
  *
- * Jira Cloud's POST /rest/api/3/search/jql rejects `startAt` inside the request body
- * (HTTP 400 "Invalid request payload"); it must be supplied as a query parameter. The
- * Cloud response also signals the last page via `isLast` (not `total`).
+ * Jira Cloud (API v3) uses `nextPageToken` for pagination — `startAt` is accepted
+ * but ignored when a token is present. The response carries `isLast` only on the
+ * terminal page (some versions always return `isLast=false` and rely on the
+ * absence/presence of `nextPageToken` to signal continuation).
  */
 async function fetchSearchPage(
     resource: JiraResourceLike,
     jql: string,
     startAt: number,
     maxResults: number,
+    nextPageToken?: string | null,
 ): Promise<SearchPage> {
-    if (isAtlassianCloudGateway(resource.baseUrl) && typeof resource.postToApiRoot === 'function') {
-        const res = await resource.postToApiRoot(`/rest/api/3/search/jql?startAt=${startAt}`, {
+    const isCloud = resource.jiraMode === 'cloud' || isAtlassianCloudGateway(resource.baseUrl);
+    if (isCloud && typeof resource.postToApiRoot === 'function') {
+        const query = nextPageToken ? `nextPageToken=${encodeURIComponent(nextPageToken)}` : `startAt=${startAt}`;
+        const res = await resource.postToApiRoot(`/rest/api/3/search/jql?${query}`, {
             jql: normalizeJqlForCloud(jql),
             maxResults,
+            fields: ['summary'],
         });
-        const page = (res ?? { issues: [] }) as { issues?: JiraIssue[]; isLast?: boolean; total?: number };
+        const page = (res ?? {}) as {
+            issues?: JiraIssue[];
+            isLast?: boolean;
+            total?: number;
+            nextPageToken?: string;
+        };
         return {
             issues: page.issues ?? [],
             isLast: page.isLast === true,
             total: typeof page.total === 'number' ? page.total : null,
+            nextPageToken: typeof page.nextPageToken === 'string' ? page.nextPageToken : null,
         };
     }
     const url = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&startAt=${startAt}`;
@@ -81,9 +93,12 @@ export async function searchJiraIssuesCore(
         let startAt = 0;
         let total: number | null = null;
         let pages = 0;
+        let cloudToken: string | null | undefined;
+
+        const isCloud = resource.jiraMode === 'cloud' || isAtlassianCloudGateway(resource.baseUrl);
 
         while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            const page = await fetchSearchPage(resource, jql, startAt, maxResults);
+            const page = await fetchSearchPage(resource, jql, startAt, maxResults, cloudToken);
             pages++;
 
             const decision = classifySearchPage(page, startAt, maxResults, allIssues, total, log);
@@ -91,7 +106,13 @@ export async function searchJiraIssuesCore(
             allIssues.push(...page.issues);
             if (decision.stop) break;
 
+            cloudToken = page.nextPageToken;
             startAt += maxResults;
+
+            // Cloud (API v3) uses nextPageToken for pagination. When the token is null,
+            // Cloud has no more pages — but may still set isLast=false. Break to avoid
+            // infinite loop (default offset-based pagination never terminates for Cloud).
+            if (isCloud && !page.nextPageToken) break;
         }
 
         return { issues: allIssues, total: allIssues.length };

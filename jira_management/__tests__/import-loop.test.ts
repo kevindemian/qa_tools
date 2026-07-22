@@ -49,10 +49,11 @@ const makeLinker = (): Mocked<IssueLinker> => {
 
 const makeFactory = (): Mocked<TestCaseFactory> => {
     const mockJiraResource: Mocked<JiraResourceLike> = createMockJiraResource();
-    const stepImporter: XrayStepImporter = { importStep: vi.fn() };
+    const stepImporter: XrayStepImporter = { importStep: vi.fn(), setSteps: vi.fn() };
     return {
         createIssue: vi.fn(),
         postSteps: vi.fn(),
+        _attemptUpdate: vi.fn(),
         jiraResource: mockJiraResource,
         stepImporter,
     };

@@ -225,7 +225,7 @@ function validateCsvTests(tests: TestCase[]): { errors: string[]; warnings: stri
 }
 
 /** Update cross-references between test cases that reference each other by index. */
-async function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<void> {
+async function updateCrossReferences(linker: IssueLinker, tests: TestCase[], ids: string[]): Promise<string[]> {
     return linker.updateCrossReferences(tests, ids);
 }
 

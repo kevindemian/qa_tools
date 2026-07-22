@@ -10,7 +10,7 @@ import { update as updateState } from '../shared/state.js';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
-import { info, warn, isQuiet, print, printSummary } from '../shared/ui/prompt.js';
+import { info, warn, isQuiet, print, printSummary, prompt } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import { createStepImporter, type XrayStepImporter } from './xray-client.js';
 
@@ -57,10 +57,33 @@ interface PrepareTestRunOptions {
     jiraLabels: string[];
     onBusy: (busy: boolean) => void;
     warn: (msg: string) => void;
+    jiraResource?: JiraResourceLike;
+}
+
+async function findExistingMatches(
+    jiraResource: JiraResourceLike,
+    tests: TestCase[],
+    project: string,
+): Promise<Array<{ key: string; title: string }>> {
+    const matches: Array<{ key: string; title: string }> = [];
+    for (const test of tests) {
+        if (!test.title) continue;
+        try {
+            const jql = `project = "${project.replace(/"/g, '\\"')}" AND summary = "${test.title.replace(/"/g, '\\"')}"`;
+            const result = await jiraResource.searchJiraIssues(jql, 5);
+            const found = result.issues.find(
+                (i) => (i.fields['summary'] as string).trim().toLowerCase() === test.title.trim().toLowerCase(),
+            );
+            if (found) matches.push({ key: found.key, title: test.title });
+        } catch {
+            // search failed — skip match display, continue
+        }
+    }
+    return matches;
 }
 
 async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
-    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn } = opts;
+    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
     if (validationResult === undefined) return;
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
@@ -72,6 +95,42 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
 
     const filtered = filterTests(tests);
     if (filtered === null) return;
+
+    const updatePolicy = (Config.get('updatePolicy') ?? 'auto') as string;
+    let targetKeys = Config.get<string[]>('targetKeys');
+    if (!targetKeys && !Config.get<boolean>('autoConfirm') && jiraResource) {
+        const targetKeysInput = prompt('Mapear por chave Jira? (ex: ECSPOL-1605,ECSPOL-1606,... ou Enter para skip)');
+        if (targetKeysInput.trim()) {
+            targetKeys = targetKeysInput
+                .split(',')
+                .map((k) => k.trim())
+                .filter(Boolean);
+            Config.set('targetKeys', targetKeys);
+        }
+    }
+    if (targetKeys && targetKeys.length > 0) {
+        if (targetKeys.length !== filtered.length) {
+            warn(
+                'Aviso: ' +
+                    targetKeys.length +
+                    ' target-keys informados, mas ' +
+                    filtered.length +
+                    ' testes no CSV. Apenas os primeiros ' +
+                    Math.min(targetKeys.length, filtered.length) +
+                    ' serao mapeados.',
+            );
+        }
+        info('Modo ordenado: ' + filtered.length + ' teste(s) serao mapeados por chave Jira');
+        for (let i = 0; i < Math.min(targetKeys.length, filtered.length); i++) {
+            info('  CSV[' + (i + 1) + '] → ' + targetKeys[i]);
+        }
+    } else if (jiraResource && !Config.get<boolean>('autoConfirm')) {
+        const matches = await findExistingMatches(jiraResource, filtered, project_name);
+        if (matches.length > 0) {
+            info(matches.length + ' teste(s) ja existem no Jira: ' + matches.map((m) => m.key).join(', '));
+            info('Politica: --update-policy=' + updatePolicy);
+        }
+    }
 
     if (!confirmOrCancel()) {
         warn(OPERATION_CANCELLED);
@@ -137,6 +196,7 @@ async function finalizeTestCreation({
         sourceType,
         linker,
         info,
+        failedLinks,
     });
 
     info('Passo 5 de 5: Finalizando...');
@@ -177,10 +237,22 @@ interface PostProcessCheckpointOptions {
     sourceType: string;
     linker: IssueLinker;
     info: (msg: string) => void;
+    failedLinks: string[];
 }
 
 async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promise<void> {
-    const { results, tests, projectName, inMemoryTasksId, jiraLabels, sourcePath, sourceType, linker, info } = opts;
+    const {
+        results,
+        tests,
+        projectName,
+        inMemoryTasksId,
+        jiraLabels,
+        sourcePath,
+        sourceType,
+        linker,
+        info,
+        failedLinks,
+    } = opts;
     if (results.filter((r) => r.status === 'ok').length === tests.length) {
         updateState((state) => {
             delete state['_checkpoint'];
@@ -189,7 +261,11 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
 
     if (tests.some((t) => t.group) && results.length > 0) {
         info('Atualizando descrições com cross-references...');
-        await linker.updateCrossReferences(tests, inMemoryTasksId);
+        const crossRefFailed = await linker.updateCrossReferences(tests, inMemoryTasksId);
+        if (crossRefFailed.length > 0) {
+            failedLinks.push(...crossRefFailed.map((k) => 'cross-ref:' + k));
+            info('Aviso: ' + crossRefFailed.length + ' cross-reference(s) falharam: ' + crossRefFailed.join(', '));
+        }
     }
 
     info('Gerando arquivos de mapeamento...');
@@ -202,10 +278,10 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
 
 function testCreationSetup(
     jiraResource: JiraResourceLike,
-    jiraResourceXray: JiraResourceLike,
+    _jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
-    const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
+    const stepImporter = createStepImporter(jiraResource, Config.get('xrayMode'));
     return {
         stepImporter,
         factory: new TestCaseFactory(jiraResource, stepImporter),
@@ -279,6 +355,7 @@ async function createTestsFromTestCases(
         jiraLabels: params.jiraLabels,
         onBusy: params.onBusy,
         warn,
+        jiraResource: params.jiraResource,
     });
     if (prepared === undefined || 'summary' in prepared) return prepared;
     const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;

@@ -52,7 +52,8 @@ async function updateGroupLinks(
     jiraResource: JiraResourceLike,
     group: CrossRefGroup,
     crossLog: ReturnType<typeof rootLogger.child>,
-): Promise<void> {
+): Promise<string[]> {
+    const failed: string[] = [];
     for (const member of group.members) {
         const others = group.members
             .filter((m) => m.id !== member.id)
@@ -80,12 +81,20 @@ async function updateGroupLinks(
             crossLog.info('  ' + member.id + ': descrição atualizada');
         } catch (err: unknown) {
             const status = (err as { response?: { status?: number } }).response?.status;
-            crossLog.error('Falha ao atualizar descrição de ' + member.id + ' no grupo "' + group.name + '"', {
-                status,
-            });
+            const msg =
+                'Falha ao atualizar descrição de ' +
+                member.id +
+                ' no grupo "' +
+                group.name +
+                '"' +
+                (status ? ' (HTTP ' + status + ')' : '');
+            crossLog.error(msg, { status });
             if (!isQuiet()) print(applyPalette('red')('x'));
+            onError('  Cross-ref "' + group.name + '"', err, { details: true });
+            failed.push(member.id);
         }
     }
+    return failed;
 }
 
 class IssueLinker {
@@ -144,16 +153,19 @@ class IssueLinker {
         }
     }
 
-    async updateCrossReferences(tests: TestCase[], ids: string[]): Promise<void> {
+    async updateCrossReferences(tests: TestCase[], ids: string[]): Promise<string[]> {
         const groups = buildCrossRefGroups(tests, ids);
         const crossLog = rootLogger.child({ operation: 'cross-ref' });
+        const allFailed: string[] = [];
 
         for (const group of Object.values(groups)) {
             if (group.members.length < MIN_GROUP_MEMBERS) continue;
             crossLog.info('Atualizando descrições do grupo "' + group.name + '" (' + group.members.length + ' issues)');
             await sleep(CROSS_REF_SLEEP_MS);
-            await updateGroupLinks(this.jiraResource, group, crossLog);
+            const failed = await updateGroupLinks(this.jiraResource, group, crossLog);
+            allFailed.push(...failed);
         }
+        return allFailed;
     }
 }
 
