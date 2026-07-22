@@ -201,7 +201,7 @@ export function printSessionSummary(): void {
         try {
             return loadState() as { history?: Array<{ status: string; op: string; detail: string }> };
         } catch (err) {
-            rootLogger.debug('Failed to load session state: ' + (err instanceof Error ? err.message : String(err)));
+            rootLogger.warn('Failed to load session state: ' + (err instanceof Error ? err.message : String(err)));
             return {};
         }
     })();

@@ -9,6 +9,7 @@
  *    - test_cases_template.json (86 lines, 5 example cases, comprehensive) */
 import { formatErr } from '../../shared/errors.js';
 import { success, error, info, ask } from '../../shared/ui/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
 import fs from 'fs';
 import path from 'path';
 import type { CommandContext } from './context.js';
@@ -37,6 +38,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         success(`Template ${fmt} gerado em: ${tmplPath}`);
         c.pushHistory('gerar-template', `${fmt}: ${tmplPath}`, 'ok');
     } catch (err) {
+        rootLogger.warn(`case11: Não foi possível copiar template de "${src}": ${formatErr(err)}`);
         error(`Não foi possível copiar template de "${src}": ${formatErr(err)}`);
         return;
     }

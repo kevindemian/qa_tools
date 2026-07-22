@@ -112,7 +112,7 @@ function ensureWalMode(): string | null {
     try {
         return runSqlite('PRAGMA journal_mode=WAL;');
     } catch (err) {
-        rootLogger.debug(`[db-maintenance] Failed to set WAL mode: ${String(err)}`);
+        rootLogger.warn(`[db-maintenance] Failed to set WAL mode: ${String(err)}`);
         return null;
     }
 }
@@ -139,7 +139,7 @@ function checkMountDevice(dbPath: string): string | null {
         }
         return null;
     } catch (err) {
-        rootLogger.debug(`[db-maintenance] Mount device check failed: ${String(err)}`);
+        rootLogger.warn(`[db-maintenance] Mount device check failed: ${String(err)}`);
         return null;
     }
 }

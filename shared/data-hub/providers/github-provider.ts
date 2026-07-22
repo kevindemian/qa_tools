@@ -598,7 +598,7 @@ export class GitHubDataProvider implements DataProvider {
             if (!Array.isArray(raw)) return [];
             return raw.map((d) => this.mapDeployment(d)).filter((d): d is Deployment => d != null);
         } catch (err) {
-            rootLogger.debug(`GitHub: deployments fetch failed: ${extractErrorMessage(err)}`);
+            rootLogger.warn(`GitHub: deployments fetch failed: ${extractErrorMessage(err)}`);
             return [];
         }
     }
@@ -632,7 +632,7 @@ export class GitHubDataProvider implements DataProvider {
             if (!Array.isArray(raw)) return [];
             return raw.map((r) => this.mapRelease(r)).filter((r): r is Release => r != null);
         } catch (err) {
-            rootLogger.debug(`GitHub: releases fetch failed: ${extractErrorMessage(err)}`);
+            rootLogger.warn(`GitHub: releases fetch failed: ${extractErrorMessage(err)}`);
             return [];
         }
     }
@@ -667,7 +667,7 @@ export class GitHubDataProvider implements DataProvider {
             if (!Array.isArray(raw)) return [];
             return raw.map((a) => this.mapSecurityFinding(a)).filter((f): f is SecurityFinding => f != null);
         } catch (err) {
-            rootLogger.debug(`GitHub: security alerts fetch failed: ${extractErrorMessage(err)}`);
+            rootLogger.warn(`GitHub: security alerts fetch failed: ${extractErrorMessage(err)}`);
             return [];
         }
     }
@@ -706,7 +706,7 @@ export class GitHubDataProvider implements DataProvider {
             if (!Array.isArray(raw)) return [];
             return raw.map((i) => this.mapPmIssue(i)).filter((i): i is RawIssue => i != null);
         } catch (err) {
-            rootLogger.debug(`GitHub: issues fetch failed: ${extractErrorMessage(err)}`);
+            rootLogger.warn(`GitHub: issues fetch failed: ${extractErrorMessage(err)}`);
             return [];
         }
     }
@@ -744,7 +744,7 @@ export class GitHubDataProvider implements DataProvider {
             if (!Array.isArray(raw)) return [];
             return raw.map((p) => this.mapPullRequest(p)).filter((p): p is RawPullRequest => p != null);
         } catch (err) {
-            rootLogger.debug(`GitHub: pull requests fetch failed: ${extractErrorMessage(err)}`);
+            rootLogger.warn(`GitHub: pull requests fetch failed: ${extractErrorMessage(err)}`);
             return [];
         }
     }

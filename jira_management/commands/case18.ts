@@ -61,6 +61,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             schema: TestCaseArraySchema,
         });
     } catch (err: unknown) {
+        rootLogger.warn('case18: Falha ao gerar casos de teste com IA: ' + formatErr(err));
         printError('Falha ao gerar casos de teste com IA', err);
         return;
     }
@@ -116,6 +117,7 @@ async function gatherInput(c: CommandContext): Promise<{
         const system = fs.readFileSync(templatePath, 'utf8');
         return { userStory, acceptanceCriteria, project, system };
     } catch (err: unknown) {
+        rootLogger.warn('case18: Erro ao ler template de prompt: ' + formatErr(err));
         printError('Erro ao ler template de prompt', err);
         return null;
     }

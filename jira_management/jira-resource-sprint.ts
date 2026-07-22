@@ -1,6 +1,7 @@
 /** Jira sprint management: add tasks to active sprint. */
 import { formatErr } from '../shared/errors.js';
 import { success, info, warn, extractErrorMessage } from '../shared/ui/prompt.js';
+import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
 import type { JiraResourceLike } from './jira-resource-types.js';
 import {
@@ -67,6 +68,7 @@ export async function getTransitionsForIssue(
         }
         return map;
     } catch (err: unknown) {
+        rootLogger.warn(`jira-resource-sprint: Erro GET issue/${issueKey}/transitions: ${extractErrorMessage(err)}`);
         resource.log.error(`Erro GET issue/${issueKey}/transitions: ${extractErrorMessage(err)}`);
         return {};
     }

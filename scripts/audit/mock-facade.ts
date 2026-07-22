@@ -14,6 +14,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { rootLogger } from '../../shared/logger.js';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -44,8 +45,8 @@ function* walk(dir: string): Generator<string> {
                 yield full;
             }
         }
-    } catch {
-        // permission denied, skip
+    } catch (err) {
+        rootLogger.warn(`[mock-facade] walk: skipping inaccessible path: ${String(err)}`);
     }
 }
 

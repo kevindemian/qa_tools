@@ -142,7 +142,14 @@ export function migrateLegacyState(config?: Config): void {
         let parsed: { [key: string]: unknown };
         try {
             parsed = JSON.parse(fs.readFileSync(path.resolve(legacy), UTF8)) as { [key: string]: unknown };
-        } catch {
+        } catch (err) {
+<<<<<<< Updated upstream
+            rootLogger.warn(
+                'state: Failed to parse legacy state file: ' + (err instanceof Error ? err.message : String(err)),
+            );
+=======
+            rootLogger.warn('state: Failed to parse legacy state file: ' + (err instanceof Error ? err.message : String(err)));
+>>>>>>> Stashed changes
             return; // legado corrompido: load() trata a recuperação
         }
         const globalKeys: { [key: string]: unknown } = {};
