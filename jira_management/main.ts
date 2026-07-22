@@ -358,11 +358,14 @@ async function initializeSession() {
     }
 
     if (_isJiraConfigured() && ctx.project_name) {
+        // eslint-disable-next-line no-console
         console.error('[init] Validating project: getJiraResource(project/' + ctx.project_name + ')');
         try {
             await jiraResource.getJiraResource('project/' + ctx.project_name);
+            // eslint-disable-next-line no-console
             console.error('[init] project lookup OK');
         } catch (err) {
+            // eslint-disable-next-line no-console
             console.error('[init] project lookup FAILED: ' + String(err));
             rootLogger.error('[init] Jira project validation failed: ' + String(err));
             warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
@@ -500,6 +503,7 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
     }
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function main(): Promise<void> {
     if (process.argv.includes('--help') || process.argv.includes('-h')) {
         rootLogger.info('QA Tools — Jira Management');
@@ -605,21 +609,26 @@ async function main(): Promise<void> {
         // DataHub may not be initialized in headless mode — this is expected.
         rootLogger.debug('[startup] Health score unavailable: ' + String(err));
     }
+    // eslint-disable-next-line no-console
     console.error('[startup] Calling showSplash...');
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
+    // eslint-disable-next-line no-console
     console.error('[startup] showSplash done');
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {
         // env setup offered
     }
+    // eslint-disable-next-line no-console
     console.error('[startup] Calling maybeRunFirstRunWizard...');
     try {
         await maybeRunFirstRunWizard();
     } catch (err) {
+        // eslint-disable-next-line no-console
         console.error('[startup] Setup wizard failed:', err);
         rootLogger.error('Setup wizard failed: ' + String(err));
     }
+    // eslint-disable-next-line no-console
     console.error('[startup] maybeRunFirstRunWizard done');
 
     // Early SIGINT handler: protege contra crash durante prompts síncronos
@@ -627,8 +636,10 @@ async function main(): Promise<void> {
     // Removido após initializeSession e substituído pelo handler definitivo.
     const _earlyHandler = () => {};
     process.on('SIGINT', _earlyHandler);
+    // eslint-disable-next-line no-console
     console.error('[startup] Calling initializeSession (Jira API)...');
     const res = await initializeSession();
+    // eslint-disable-next-line no-console
     console.error('[startup] initializeSession done');
 
     process.removeListener('SIGINT', _earlyHandler);
@@ -641,8 +652,10 @@ async function main(): Promise<void> {
     const associateTestKeysStr = Config.get<string | undefined>('associateTestKeys');
     const associateTestKeys = associateTestKeysStr ? associateTestKeysStr.split(',').filter(Boolean) : [];
     if (associateTeKey && associateTestKeys.length > 0) {
+        // eslint-disable-next-line no-console
         console.error('[startup] Calling runAssociateTe...');
         const code = await runAssociateTe(res, associateTeKey, associateTestKeys);
+        // eslint-disable-next-line no-console
         console.error('[startup] runAssociateTe done, code:', code);
         gracefulExit(code);
         return;
@@ -650,8 +663,10 @@ async function main(): Promise<void> {
 
     const headlessCsvPath = parseCsvArg(process.argv);
     if (headlessCsvPath) {
+        // eslint-disable-next-line no-console
         console.error('[startup] Calling runHeadlessCsvImport...');
         const code = await runHeadlessCsvImport(res, headlessCsvPath);
+        // eslint-disable-next-line no-console
         console.error('[startup] runHeadlessCsvImport done, code:', code);
         gracefulExit(code);
         return;
