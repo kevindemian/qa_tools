@@ -139,7 +139,7 @@ describe('Case20 - Bug Report handler', () => {
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
-        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAskConfirm.mockResolvedValueOnce(true); // pagination
         mockAskMultiline.mockResolvedValueOnce('Login button does nothing on Firefox 120 in production');
         mockAsk.mockResolvedValueOnce('');
         mockGenerateAi.mockResolvedValueOnce({
@@ -186,7 +186,7 @@ describe('Case20 - Bug Report handler', () => {
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
-        mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+        mockAskConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true); // pagination
         mockAskMultiline.mockResolvedValueOnce('Too short');
         mockAsk.mockResolvedValueOnce('');
         mockGenerateAi.mockResolvedValueOnce({
@@ -217,7 +217,7 @@ describe('Case20 - Bug Report handler', () => {
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
-        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAskConfirm.mockResolvedValueOnce(true); // pagination
         mockAskMultiline.mockResolvedValueOnce('Login button does nothing on Firefox 120 in production');
         mockAsk.mockResolvedValueOnce('PROJ-123, PROJ-456');
         mockGenerateAi.mockResolvedValueOnce({
@@ -255,7 +255,7 @@ describe('Case20 - Bug Report handler', () => {
         const pushHistory = vi.fn();
         const ctx = makeCtx({ pushHistory });
 
-        mockAskConfirm.mockResolvedValueOnce(true);
+        mockAskConfirm.mockResolvedValueOnce(true); // pagination
         mockAskMultiline.mockResolvedValueOnce('Checkout crashes on Safari when adding items to cart');
         mockGenerateAi.mockResolvedValueOnce(null);
         mockCollectManual.mockResolvedValueOnce({

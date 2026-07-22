@@ -320,7 +320,7 @@ describe('Failure-analysis', () => {
             expect.assertions(2);
 
             vi.mocked(llmPrompt)
-                .mockResolvedValueOnce('this has no category prefix')
+                .mockResolvedValueOnce('this has no category prefix') // pagination
                 .mockResolvedValueOnce('TIMEOUT: exceeded 5000ms')
                 .mockResolvedValueOnce('TIMEOUT: exceeded 5000ms');
 
@@ -335,7 +335,7 @@ describe('Failure-analysis', () => {
 
             const infoSpy = vi.spyOn(rootLogger, 'info').mockImplementation(() => undefined);
             vi.mocked(llmPrompt)
-                .mockResolvedValueOnce('ASSERTION: expected true but received false in the login flow assertion')
+                .mockResolvedValueOnce('ASSERTION: expected true but received false in the login flow assertion') // pagination
                 .mockResolvedValueOnce('ASSERTION: expected true but received false in the login flow assertion')
                 .mockResolvedValueOnce('FLAKY: intermittent network blip caused a sporadic non-deterministic fail');
 

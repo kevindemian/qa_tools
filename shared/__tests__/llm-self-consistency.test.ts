@@ -116,7 +116,7 @@ describe('ConsensusGenerate', () => {
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
         mockLlmPrompt
-            .mockResolvedValueOnce(BIG_OBJ)
+            .mockResolvedValueOnce(BIG_OBJ) // pagination
             .mockResolvedValueOnce(SMALL_VAL)
             .mockResolvedValueOnce({ tests: [{ title: 'Test Converged' }] });
 
@@ -132,7 +132,7 @@ describe('ConsensusGenerate', () => {
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
         mockLlmPrompt
-            .mockResolvedValueOnce(BIG_OBJ)
+            .mockResolvedValueOnce(BIG_OBJ) // pagination
             .mockResolvedValueOnce(SMALL_VAL)
             .mockResolvedValueOnce({ passing: false, _marked: true });
 
@@ -179,7 +179,7 @@ describe('ConsensusGenerate', () => {
         const BIG_OBJ = { items: Array.from({ length: 20 }, (_, i) => ({ id: i, name: `field-${i}` })) };
         const SMALL_VAL = { single: 'value' };
         mockLlmPrompt
-            .mockResolvedValueOnce(BIG_OBJ)
+            .mockResolvedValueOnce(BIG_OBJ) // pagination
             .mockResolvedValueOnce(SMALL_VAL)
             .mockResolvedValueOnce({ valid: 'refined' });
 

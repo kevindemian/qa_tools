@@ -38,7 +38,7 @@ describe('Case07', () => {
             expect.hasAssertions();
 
             const { askConfirm, ask } = await import('../../../shared/ui/prompt.js');
-            vi.mocked(askConfirm).mockResolvedValueOnce(true);
+            vi.mocked(askConfirm).mockResolvedValueOnce(true); // pagination
             vi.mocked(ask).mockResolvedValueOnce('Release v2.8.0');
             mockJiraResource.getReleaseTasks.mockResolvedValueOnce([
                 '[KEY-1] task one',

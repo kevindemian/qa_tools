@@ -270,7 +270,7 @@ describe('Handlers', () => {
             mockSessionContext.inMemoryTasksId = ['TEST-1', 'TEST-2'];
             mockSessionContext.inMemoryTasksText = ['Task one', 'Task two'];
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('v2.0.0');
+            prompt.ask.mockResolvedValueOnce('v2.0.0'); // pagination
             prompt.askConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
             mockJiraResource.updateFixVersions.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
             const mod = case04;
@@ -291,7 +291,7 @@ describe('Handlers', () => {
             mockSessionContext.inMemoryTasksText = ['Existing task'];
             const prompt = vi.mocked(promptModule);
             prompt.askConfirm
-                .mockResolvedValueOnce(false) // useInMemory = false
+                .mockResolvedValueOnce(false) // useInMemory = false // pagination
                 .mockResolvedValueOnce(true) // confirm fixVersion
                 .mockResolvedValueOnce(false); // don't add to sprint
             prompt.ask.mockResolvedValueOnce('MANUAL-1 MANUAL-2');
@@ -324,7 +324,7 @@ describe('Handlers', () => {
             prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
             prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
             prompt.askConfirm
-                .mockResolvedValueOnce(true) // useInMemory = true
+                .mockResolvedValueOnce(true) // useInMemory = true // pagination
                 .mockResolvedValueOnce(true) // confirm fixVersion
                 .mockResolvedValueOnce(true); // add to sprint
             const mod = case04;
@@ -342,7 +342,7 @@ describe('Handlers', () => {
             prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
             prompt.ask.mockResolvedValueOnce(''); // empty sprint ID
             prompt.askConfirm
-                .mockResolvedValueOnce(true) // useInMemory = true
+                .mockResolvedValueOnce(true) // useInMemory = true // pagination
                 .mockResolvedValueOnce(true) // confirm fixVersion
                 .mockResolvedValueOnce(true); // add to sprint
             const mod = case04;
@@ -361,7 +361,7 @@ describe('Handlers', () => {
             prompt.ask.mockResolvedValueOnce('v2.0.0'); // version name
             prompt.ask.mockResolvedValueOnce('6991'); // sprint ID
             prompt.askConfirm
-                .mockResolvedValueOnce(true) // useInMemory = true
+                .mockResolvedValueOnce(true) // useInMemory = true // pagination
                 .mockResolvedValueOnce(true) // confirm fixVersion
                 .mockResolvedValueOnce(true); // add to sprint
             const mod = case04;
@@ -477,7 +477,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('v2.0.0');
+            prompt.ask.mockResolvedValueOnce('v2.0.0'); // pagination
             prompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['[TEST-1] Fix bug', '[TEST-42] Add feature']);
             const mod = case07;
@@ -498,7 +498,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.ask.mockResolvedValueOnce('v2.0.0');
+            prompt.ask.mockResolvedValueOnce('v2.0.0'); // pagination
             prompt.askConfirm.mockResolvedValueOnce(true);
             mockJiraResource.getReleaseTasks.mockResolvedValueOnce(['TASK-1', 'TASK-2']);
             const mod = case07;
@@ -862,7 +862,7 @@ describe('Handlers', () => {
             expect.hasAssertions();
 
             mockJiraResource.axiosInstance.get
-                .mockResolvedValueOnce({ status: 200 })
+                .mockResolvedValueOnce({ status: 200 }) // pagination
                 .mockResolvedValueOnce({ status: 200 })
                 .mockResolvedValueOnce({ status: 200 });
             const mod = case12;

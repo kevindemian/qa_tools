@@ -226,7 +226,7 @@ describe('Llm Client', () => {
 
             // main fails 3x, fallback fails 3x, batch succeeds
             mockFetch
-                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500)) // pagination
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
@@ -362,7 +362,7 @@ describe('Llm Client', () => {
                 return {} as NodeJS.Timeout;
             }) as typeof global.setTimeout);
             mockFetch
-                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500)) // pagination
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
@@ -687,7 +687,7 @@ describe('Llm Client', () => {
                 }) as typeof global.setTimeout);
 
                 mockFetch
-                    .mockResolvedValueOnce(mockErrorResponse(500))
+                    .mockResolvedValueOnce(mockErrorResponse(500)) // pagination
                     .mockResolvedValueOnce(mockErrorResponse(500))
                     .mockResolvedValueOnce(mockErrorResponse(500))
                     .mockResolvedValueOnce(mockErrorResponse(500))

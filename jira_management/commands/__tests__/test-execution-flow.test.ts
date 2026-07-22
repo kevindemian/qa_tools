@@ -66,7 +66,7 @@ describe('Test Execution Flow', () => {
                 expect.hasAssertions();
 
                 vi.mocked(ask)
-                    .mockResolvedValueOnce('1')
+                    .mockResolvedValueOnce('1') // pagination
                     .mockResolvedValueOnce('exec-name')
                     .mockResolvedValueOnce('exec-title');
                 vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
@@ -90,7 +90,7 @@ describe('Test Execution Flow', () => {
                 expect.hasAssertions();
 
                 vi.mocked(ask)
-                    .mockResolvedValueOnce('1')
+                    .mockResolvedValueOnce('1') // pagination
                     .mockResolvedValueOnce('exec-name')
                     .mockResolvedValueOnce('exec-title');
                 vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
@@ -196,7 +196,7 @@ describe('Test Execution Flow', () => {
                 expect.hasAssertions();
 
                 vi.mocked(ask)
-                    .mockResolvedValueOnce('2')
+                    .mockResolvedValueOnce('2') // pagination
                     .mockResolvedValueOnce('1')
                     .mockResolvedValueOnce('s')
                     .mockResolvedValueOnce('TEST-TE-2');
@@ -227,7 +227,7 @@ describe('Test Execution Flow', () => {
                 expect.hasAssertions();
 
                 vi.mocked(ask)
-                    .mockResolvedValueOnce('2')
+                    .mockResolvedValueOnce('2') // pagination
                     .mockResolvedValueOnce('1')
                     .mockResolvedValueOnce('s')
                     .mockResolvedValueOnce('INVALID-KEY');

@@ -329,7 +329,7 @@ describe('TestExecutionCreator', () => {
 
         function setupHappy(extraFields?: Record<string, unknown>) {
             mockJiraResource.getJiraResource
-                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, ...extraFields } })
+                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, ...extraFields } }) // pagination
                 .mockResolvedValueOnce(defaultFields)
                 .mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValue({});
@@ -421,7 +421,7 @@ describe('TestExecutionCreator', () => {
             expect.hasAssertions();
 
             mockJiraResource.getJiraResource
-                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, customfield_10200: [] } })
+                .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, customfield_10200: [] } }) // pagination
                 .mockResolvedValueOnce(defaultFields)
                 .mockResolvedValueOnce({ fields: { issuelinks: [] } });
             mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));

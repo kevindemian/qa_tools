@@ -77,7 +77,7 @@ describe('Llm Pipeline', () => {
             expect.hasAssertions();
 
             mockLlmPrompt
-                .mockResolvedValueOnce(invalidParsedReport)
+                .mockResolvedValueOnce(invalidParsedReport) // pagination
                 .mockResolvedValueOnce(validParsedReport)
                 .mockResolvedValueOnce('PARTIAL - Minor issues.')
                 .mockResolvedValueOnce(validParsedReport)

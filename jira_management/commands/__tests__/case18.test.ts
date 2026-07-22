@@ -206,7 +206,7 @@ describe('Case18', () => {
             const origProjectName = baseContext.ctx.project_name;
             baseContext.ctx.project_name = '';
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual'); // pagination
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Acceptance criteria');
             prompt.ask.mockResolvedValueOnce('');
 
@@ -651,7 +651,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('jira');
+            prompt.showSelect.mockResolvedValueOnce('jira'); // pagination
             prompt.ask.mockResolvedValueOnce('PROJ-123');
             const getJiraResourceMock = vi.fn().mockResolvedValueOnce({
                 fields: { description: 'As a user, I want to login', summary: 'Login feature' },
