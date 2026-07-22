@@ -35,7 +35,9 @@ vi.mock('../../../shared/data-hub/compute/flakiness-entries', () => ({
 vi.mock('../../../shared/logger', () => ({
     rootLogger: {
         error: vi.fn(),
-        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn() }),
+        warn: vi.fn(),
+        child: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(),
+        warn: vi.fn() }),
     },
 }));
 
