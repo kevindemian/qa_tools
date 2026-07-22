@@ -23,12 +23,9 @@ vi.mock('../config-accessor.js', () => ({
 
 const safeCat = fc.string({ minLength: 1, maxLength: 10 }).map((s) => s.replace(/[^a-zA-Z0-9 _.-]/g, '_'));
 
-const dateArb = fc.date({ min: new Date('2020-01-01'), max: new Date('2026-12-31') }).map((d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-});
+const dateArb = fc
+    .tuple(fc.integer({ min: 2020, max: 2026 }), fc.integer({ min: 1, max: 12 }), fc.integer({ min: 1, max: 28 }))
+    .map(([y, m, d]) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
 
 const classArb: fc.Arbitrary<FailureClassification> = fc
     .record({
