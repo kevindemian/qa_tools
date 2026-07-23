@@ -19,6 +19,7 @@ const mockJiraResource = {
     getJiraResource: vi.fn(),
     postJiraResource: vi.fn(),
     putJiraResource: vi.fn(),
+    deleteJiraResource: vi.fn(),
     searchJiraIssues: mockSearch,
     getTransitionsForIssue: vi.fn(),
     transitionIssue: vi.fn(),

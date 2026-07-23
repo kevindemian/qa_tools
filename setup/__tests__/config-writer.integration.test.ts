@@ -11,12 +11,10 @@ runSuite('Config-writer — integração real (fs verdadeiro)', () => {
     let base: string;
 
     // runSuite resolve para describe (describe.skip se Stryker ativo)
-    // eslint-disable-next-line vitest/require-top-level-describe
     beforeEach(() => {
         base = mkdtempSync(join(tmpdir(), 'config-writer-int-'));
     });
 
-    // eslint-disable-next-line vitest/require-top-level-describe
     afterEach(() => {
         if (base) {
             rmSync(base, { recursive: true, force: true });

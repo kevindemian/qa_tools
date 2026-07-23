@@ -9,7 +9,6 @@ const isStryker = process.env['STRYKER_ACTIVE'] === 'true';
 
 // intentional: Stryker guard — exclude from mutation sandbox
 if (!isStryker) {
-    // eslint-disable-next-line vitest/no-conditional-tests
     describe('Git Sha', () => {
         afterAll(() => {
             fs.rmSync(tmpDir, { recursive: true, force: true });

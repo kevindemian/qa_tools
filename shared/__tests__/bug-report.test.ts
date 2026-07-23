@@ -424,6 +424,7 @@ describe('BugReport Service', () => {
             getJiraResource: Mock;
             postJiraResource: Mock;
             putJiraResource: Mock;
+            deleteJiraResource: Mock;
             searchJiraIssues: Mock;
             getTransitionsForIssue: Mock;
             transitionIssue: Mock;
@@ -434,6 +435,7 @@ describe('BugReport Service', () => {
                 getJiraResource: vi.fn(),
                 postJiraResource: vi.fn(),
                 putJiraResource: vi.fn(),
+                deleteJiraResource: vi.fn(),
                 searchJiraIssues: vi.fn(),
                 getTransitionsForIssue: vi.fn(),
                 transitionIssue: vi.fn(),
@@ -490,6 +492,7 @@ describe('BugReport Service', () => {
             postJiraResource: Mock;
             getJiraResource: Mock;
             putJiraResource: Mock;
+            deleteJiraResource: Mock;
             searchJiraIssues: Mock;
             getTransitionsForIssue: Mock;
             transitionIssue: Mock;
@@ -503,6 +506,7 @@ describe('BugReport Service', () => {
                 postJiraResource: vi.fn(),
                 getJiraResource: vi.fn(),
                 putJiraResource: vi.fn(),
+                deleteJiraResource: vi.fn(),
                 searchJiraIssues: vi.fn(),
                 getTransitionsForIssue: vi.fn(),
                 transitionIssue: vi.fn(),

@@ -208,11 +208,15 @@ class JiraClient implements JiraResourceLike {
         if (this.jiraMode === 'cloud') {
             // Jira Cloud removed GET/POST /rest/api/2/search (CHANGE-2046).
             // The supported endpoint is POST /rest/api/3/search/jql.
+            // v3 response: { issues, nextPageToken, isLast } — no `total` field.
             const res = await this.postToApiRoot('/rest/api/3/search/jql', {
                 jql: normalizeJqlForCloud(jql),
                 maxResults,
             });
-            return (res ?? { issues: [], total: 0 }) as unknown as SearchIssuesResponse;
+            const data = (res ?? {}) as Record<string, unknown>;
+            const issues = Array.isArray(data['issues']) ? data['issues'] : [];
+            // v3 has no `total`; use issues.length (accurate when result < maxResults).
+            return { issues: issues as SearchIssuesResponse['issues'], total: issues.length };
         }
         const query = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}`;
         return this.getJiraResource<SearchIssuesResponse>(query);
