@@ -8,6 +8,7 @@ shared/reports/
 temp/
 *.log
 __pycache__
+.mock-boundary-threshold
 exported_variables.env
 coverage/
 

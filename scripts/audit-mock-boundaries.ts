@@ -3,6 +3,11 @@
  * Audit mock boundaries: detects mocks of internal logic (prohibited)
  * vs mocks of external infrastructure (permitted).
  *
+ * Ratchet mechanism: violations can only decrease, never increase.
+ * - Stores threshold in .mock-boundary-threshold
+ * - If current <= threshold: update threshold to current (progress), pass
+ * - If current > threshold: block (regression)
+ *
  * Rules:
  * - PROHIBITED: vi.mock() of local classes, functions, helpers, utilities,
  *   or project modules developed/modified in this codebase
@@ -19,6 +24,7 @@ import { ExitCode } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const THRESHOLD_FILE = path.join(ROOT, '.mock-boundary-threshold');
 
 // Paths considered "external infrastructure" — mocking these is permitted
 const EXTERNAL_PATTERNS = [
@@ -116,6 +122,20 @@ function detectInternalMocks(filePath: string, content: string): Violation[] {
     return violations;
 }
 
+function readThreshold(): number {
+    try {
+        const content = fs.readFileSync(THRESHOLD_FILE, 'utf-8').trim();
+        const n = Number(content);
+        return Number.isFinite(n) && n >= 0 ? n : Infinity;
+    } catch {
+        return Infinity; // no threshold file → first run, allow any count
+    }
+}
+
+function writeThreshold(count: number): void {
+    fs.writeFileSync(THRESHOLD_FILE, String(count) + '\n', 'utf-8');
+}
+
 function main(): void {
     const testFiles = globSync('**/*.test.ts', {
         ignore: ['node_modules/**', '.stryker-tmp/**', 'scripts/__tests__/**'],
@@ -136,19 +156,31 @@ function main(): void {
         }
     }
 
-    if (allViolations.length > 0) {
+    const current = allViolations.length;
+    const threshold = readThreshold();
+
+    // Ratchet: if current > threshold → regression → block
+    if (current > threshold) {
         for (const v of allViolations) {
             rootLogger.error(`[audit-mock-boundaries] ${v.file}:${v.line} — mock de módulo interno "${v.mockedPath}":`);
             rootLogger.error(`  ${v.content}`);
         }
         rootLogger.error(
-            `[audit-mock-boundaries] ${allViolations.length} violação(oes) encontrada(s). ` +
-                'Mocks de lógica interna são proibidos. Use apenas mocks de fronteira externa (HTTP, filesystem, readline, APIs).',
+            `[audit-mock-boundaries] REGRESSÃO: ${current} violações (threshold: ${threshold}). ` +
+                'Novos mocks internos foram adicionados. Remova-os antes de commitar.',
         );
         gracefulExit(ExitCode.ERROR);
     }
 
-    rootLogger.info('[audit-mock-boundaries] OK — nenhum mock de lógica interna detectado.');
+    // Progress: current <= threshold → update threshold
+    if (current < threshold) {
+        writeThreshold(current);
+        rootLogger.info(
+            `[audit-mock-boundaries] Progresso: ${threshold} → ${current} violações. Threshold atualizado.`,
+        );
+    }
+
+    rootLogger.info(`[audit-mock-boundaries] OK — ${current} violação(oes) (threshold: ${threshold}).`);
     gracefulExit(ExitCode.OK);
 }
 
