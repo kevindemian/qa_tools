@@ -170,6 +170,39 @@ export class XrayCloudClient {
         await this.graphqlMutation(mutation, { testIssueId, preconditionIssueIds }, clientId, clientSecret);
     }
 
+    /** Read current test steps associated with a Test via Xray Cloud GraphQL. */
+    async getTestSteps(
+        testIssueId: string,
+        clientId: string,
+        clientSecret: string,
+    ): Promise<Array<{ id: string; action: string; data: string; result: string }>> {
+        if (!testIssueId) throw new Error('getTestSteps requires a test issue id');
+        const query = `
+            query GetTestSteps($issueId: String!) {
+                getTest(issueId: $issueId) {
+                    steps(limit: 100) {
+                        results {
+                            id
+                            action
+                            data
+                            result
+                        }
+                    }
+                }
+            }
+        `;
+        const data = await this.graphql(query, { issueId: testIssueId }, clientId, clientSecret);
+        if (!data) return [];
+        const getTest = data['getTest'] as Record<string, unknown> | undefined;
+        if (!getTest) return [];
+        const steps = getTest['steps'] as Record<string, unknown> | undefined;
+        if (!steps) return [];
+        const results = steps['results'] as
+            | Array<{ id: string; action: string; data: string; result: string }>
+            | undefined;
+        return results ?? [];
+    }
+
     /** Read precondition issue ids associated with a Test via Xray Cloud GraphQL. */
     async getTestPreconditions(testIssueId: string, clientId: string, clientSecret: string): Promise<string[]> {
         if (!testIssueId) throw new Error('getTestPreconditions requires a test issue id');

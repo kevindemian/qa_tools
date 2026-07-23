@@ -3,8 +3,10 @@ import { success, warn, info, onError, isQuiet, ProgressBar, confirm, prompt } f
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
 import type { JsonObject, LogContext, TestCase } from '../shared/types.js';
+import type { TestStep } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
+import { cleanSlateUpdate, type SnapshotContext, type LinkSnapshot } from './issue-snapshot.js';
 
 interface CreateIssueResult {
     key?: string | null;
@@ -12,6 +14,7 @@ interface CreateIssueResult {
     skipped?: boolean;
     updated?: boolean;
     ambiguous?: boolean;
+    cleanSlateUsed?: boolean;
 }
 
 interface StepsResult {
@@ -33,15 +36,71 @@ interface CreateIssueParams {
 class TestCaseFactory {
     jiraResource: JiraResourceLike;
     stepImporter: XrayStepImporter;
+    private _snapshotCtx: SnapshotContext | null = null;
 
     constructor(jiraResource: JiraResourceLike, stepImporter: XrayStepImporter) {
         this.jiraResource = jiraResource;
         this.stepImporter = stepImporter;
     }
 
+    /** Set the snapshot context for clean-slate updates.
+     *  When set, _attemptUpdateByKey uses snapshot+rollback instead of plain PUT. */
+    setSnapshotContext(ctx: SnapshotContext): void {
+        this._snapshotCtx = ctx;
+    }
+
     private _getTargetKeys(): string[] {
         const raw = Config.get<string>('targetKeys');
         return raw ? raw.split(',').filter(Boolean) : [];
+    }
+
+    /** Internal: perform a clean-slate or plain PUT update on a resolved key. */
+    private async _doUpdate(
+        key: string,
+        testData: JsonObject,
+        testTitle: string,
+        opLog: { info: (msg: string, meta?: LogContext) => void },
+        label: string,
+    ): Promise<CreateIssueResult> {
+        if (this._snapshotCtx) {
+            const fields = (testData as Record<string, unknown>)['fields'] as Record<string, unknown>;
+            const linkTypeNames = (testData as Record<string, unknown>)['linkedIssueTypes'] as string[] | undefined;
+            const result = await cleanSlateUpdate(
+                this._snapshotCtx,
+                key,
+                fields,
+                {
+                    description: (fields['description'] as string) ?? null,
+                    steps: ((testData as Record<string, unknown>)['steps'] as TestStep[]) ?? [],
+                    preconditions: ((testData as Record<string, unknown>)['preconditions'] as string[]) ?? [],
+                    linkedIssues: ((testData as Record<string, unknown>)['linkedIssues'] as LinkSnapshot[]) ?? [],
+                },
+                {
+                    linkTypeNames: linkTypeNames ?? ['Relates', 'Blocks', 'is blocked by'],
+                },
+            );
+            if (result.success) {
+                if (!isQuiet()) success('Issue atualizada (' + label + '): ' + key);
+                opLog.info('Issue atualizada (' + label + ')', { key, title: testTitle });
+                return { key, updated: true, cleanSlateUsed: true };
+            }
+            if (result.restored) {
+                warn('Issue ' + key + ' — rollback concluido, dados preservados');
+                opLog.info('Rollback concluido', { key, title: testTitle });
+                return { key, skipped: true };
+            }
+            warn('Issue ' + key + ' — rollback falhou, dados podem estar inconsistentes');
+            opLog.info('Rollback falhou', { key, title: testTitle });
+            return { key, skipped: true };
+        }
+
+        // Fallback: plain PUT
+        await this.jiraResource.putJiraResource('issue/' + key, {
+            fields: (testData as Record<string, unknown>)['fields'],
+        });
+        if (!isQuiet()) success('Issue atualizada (' + label + '): ' + key);
+        opLog.info('Issue atualizada (' + label + ')', { key, title: testTitle });
+        return { key, updated: true };
     }
 
     async _attemptUpdate(params: CreateIssueParams): Promise<CreateIssueResult | null> {
@@ -79,12 +138,7 @@ class TestCaseFactory {
                     if (!choice) return null;
                 }
 
-                await this.jiraResource.putJiraResource('issue/' + key, {
-                    fields: (testData as Record<string, unknown>)['fields'],
-                });
-                if (!isQuiet()) success('Issue atualizada: ' + key);
-                opLog.info('Issue atualizada', { key, title: testTitle });
-                return { key, updated: true };
+                return this._doUpdate(key, testData, testTitle, opLog, 'auto');
             }
 
             if (!isQuiet()) {
@@ -105,12 +159,7 @@ class TestCaseFactory {
                 const idx = parseInt(answer, 10);
                 if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
                     const chosenKey = matches[idx - 1]!.key;
-                    await this.jiraResource.putJiraResource('issue/' + chosenKey, {
-                        fields: (testData as Record<string, unknown>)['fields'],
-                    });
-                    if (!isQuiet()) success('Issue atualizada: ' + chosenKey);
-                    opLog.info('Issue atualizada', { key: chosenKey, title: testTitle });
-                    return { key: chosenKey, updated: true };
+                    return this._doUpdate(chosenKey, testData, testTitle, opLog, 'prompt');
                 }
             }
             if (!isQuiet()) warn('Nenhuma atualizada.');
@@ -135,12 +184,7 @@ class TestCaseFactory {
                 opLog.info('Target key nao encontrada', { key: targetKey, title: testTitle });
                 return { key: targetKey, skipped: true };
             }
-            await this.jiraResource.putJiraResource('issue/' + issue.key, {
-                fields: (testData as Record<string, unknown>)['fields'],
-            });
-            if (!isQuiet()) success('Issue atualizada (ordenado): ' + issue.key);
-            opLog.info('Issue atualizada (ordenado)', { key: issue.key, title: testTitle });
-            return { key: issue.key, updated: true };
+            return this._doUpdate(issue.key, testData, testTitle, opLog, 'ordenado');
         } catch (err) {
             const msg =
                 'target key ' +

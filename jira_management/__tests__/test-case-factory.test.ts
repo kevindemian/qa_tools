@@ -133,7 +133,7 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-42', {
                 fields: { summary: 'Login Test' },
             });
-            expect(opLog.info).toHaveBeenCalledWith('Issue atualizada', {
+            expect(opLog.info).toHaveBeenCalledWith('Issue atualizada (auto)', {
                 key: 'TEST-42',
                 title: 'Login Test',
             });
@@ -216,7 +216,7 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada: TEST-42');
+            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada (auto): TEST-42');
         });
 
         it('skips when multiple matches with auto policy', async () => {
@@ -300,7 +300,7 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledWith('issue/TEST-42', {
                 fields: { summary: 'Login Test' },
             });
-            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada: TEST-42');
+            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada (prompt): TEST-42');
         });
 
         it('skips on Enter when multiple matches with prompt policy', async () => {

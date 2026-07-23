@@ -54,7 +54,9 @@ interface CreateIssueOptions {
 
 async function createIssueForTest(
     opts: CreateIssueOptions,
-): Promise<{ key: string | null; skipped: boolean; updated?: boolean } | 'abort' | 'continue' | null> {
+): Promise<
+    { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean } | 'abort' | 'continue' | null
+> {
     const { factory, test, testTitle, projectName, jiraLabels, t, total, opLog, results, checkOnly } = opts;
     const testData = buildTestData(test, projectName, jiraLabels);
     const issueResult = await factory.createIssue({
@@ -68,7 +70,12 @@ async function createIssueForTest(
     });
 
     if (issueResult.updated) {
-        return { key: issueResult.key ?? null, skipped: false, updated: true };
+        return {
+            key: issueResult.key ?? null,
+            skipped: false,
+            updated: true,
+            ...(issueResult.cleanSlateUsed ? { cleanSlateUsed: true } : {}),
+        };
     }
 
     if (issueResult.skipped) {
@@ -307,7 +314,7 @@ function recordSkippedTest(results: TestResult[], testTitle: string): void {
 async function _finalizeAfterIssueCreation(
     opts: ProcessOneTestOptions & {
         createdTestIssue: { key: string };
-        issueResult: { key: string | null; skipped: boolean; updated?: boolean };
+        issueResult: { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean };
     },
 ): Promise<'abort' | 'continue'> {
     const {
@@ -341,6 +348,21 @@ async function _finalizeAfterIssueCreation(
     if (!issueResult.skipped && !opts.isCheckpoint) {
         saveCheckpoint({ sourcePath, sourceType, projectName, tests, inMemoryTasksId, inMemoryTasksText });
     }
+
+    // When clean-slate was used, all fields (steps, preconditions, links) were already
+    // cleared and rebuilt atomically — skip linkTestRelations to avoid duplication.
+    if (issueResult.cleanSlateUsed) {
+        rootLogger.info(
+            'clean-slate: pulando linkTestRelations para ' + createdTestIssue.key + ' (campos ja reescritos)',
+        );
+        if (!isQuiet()) reportPrint('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
+        results.push({ status: 'ok', label: testTitle, message: 'clean-slate update' });
+        if ((t - resumeFrom + 1) % BATCH_SIZE === 0 && t < tests.length - 1) {
+            await notifyBatch(t, resumeFrom, tests.length, isQuiet, reportInfo);
+        }
+        return 'continue';
+    }
+
     const linkState = await linkTestRelations({
         linker,
         test,
@@ -393,10 +415,11 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         return 'continue';
     }
     if (issueResult === 'abort') return 'abort';
-    const { updated, ...rest } = issueResult;
-    const issueResultTyped: { key: string | null; skipped: boolean; updated?: boolean } = {
+    const { updated, cleanSlateUsed, ...rest } = issueResult;
+    const issueResultTyped: { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean } = {
         ...rest,
         ...(updated !== undefined ? { updated } : {}),
+        ...(cleanSlateUsed !== undefined ? { cleanSlateUsed } : {}),
     };
     if (isCheckpoint && !issueResult.updated) return 'continue';
     return _finalizeAfterIssueCreation({
