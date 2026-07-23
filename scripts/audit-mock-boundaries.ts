@@ -24,7 +24,8 @@ import { ExitCode } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const THRESHOLD_FILE = path.join(ROOT, '.mock-boundary-threshold');
+const RATCHET_FILE = path.join(ROOT, '.quality_ratchet.json');
+const CHECK_KEY = 'mock-boundaries';
 
 // Paths considered "external infrastructure" — mocking these is permitted
 const EXTERNAL_PATTERNS = [
@@ -122,18 +123,36 @@ function detectInternalMocks(filePath: string, content: string): Violation[] {
     return violations;
 }
 
+interface RatchetData {
+    version?: number;
+    checks?: Record<string, { threshold: number; description: string }>;
+}
+
 function readThreshold(): number {
     try {
-        const content = fs.readFileSync(THRESHOLD_FILE, 'utf-8').trim();
-        const n = Number(content);
-        return Number.isFinite(n) && n >= 0 ? n : Infinity;
+        const raw = fs.readFileSync(RATCHET_FILE, 'utf-8');
+        const content = JSON.parse(raw) as RatchetData;
+        const n = content.checks?.[CHECK_KEY]?.threshold;
+        return typeof n === 'number' && n >= 0 ? n : Infinity;
     } catch {
-        return Infinity; // no threshold file → first run, allow any count
+        return Infinity;
     }
 }
 
 function writeThreshold(count: number): void {
-    fs.writeFileSync(THRESHOLD_FILE, String(count) + '\n', 'utf-8');
+    let data: RatchetData = { version: 1, checks: {} };
+    try {
+        const raw = fs.readFileSync(RATCHET_FILE, 'utf-8');
+        data = JSON.parse(raw) as RatchetData;
+    } catch {
+        rootLogger.warn('audit-mock-boundaries: ratchet file not found, creating new one');
+    }
+    if (!data.checks) data.checks = {};
+    data.checks[CHECK_KEY] = {
+        threshold: count,
+        description: 'vi.mock() de módulos internos (proibidos por anti-mock-theater)',
+    };
+    fs.writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
 function main(): void {

@@ -12,7 +12,7 @@
 
 import path from 'path';
 import { createHash } from 'crypto';
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'node:child_process';
 import { isBuiltin } from 'module';
 import { globSync } from '../shared/deps.js';
@@ -150,7 +150,25 @@ function parseLintResults(out: string): LintResult[] {
     return results;
 }
 
-function collectErrorsFromDir(dir: string, violations: Violation[]): void {
+function processLintMessages(results: LintResult[], violations: Violation[]): number {
+    let warningCount = 0;
+    for (const result of results) {
+        for (const msg of result.messages) {
+            if (msg.severity === 2) {
+                violations.push({
+                    file: result.filePath,
+                    line: msg.line,
+                    content: `${msg.message} (${msg.ruleId})`,
+                });
+            } else if (msg.severity === 1) {
+                warningCount++;
+            }
+        }
+    }
+    return warningCount;
+}
+
+function collectErrorsFromDir(dir: string, violations: Violation[]): number {
     const eslintBin = path.resolve('node_modules/eslint/bin/eslint.js');
     let out: string;
     try {
@@ -167,29 +185,21 @@ function collectErrorsFromDir(dir: string, violations: Violation[]): void {
         } else {
             const msg = err instanceof Error ? err.message : String(err);
             violations.push({ file: dir, line: 1, content: `ESLint: ${msg}` });
-            return;
+            return 0;
         }
     }
     try {
         const results = parseLintResults(out);
-        for (const result of results) {
-            for (const msg of result.messages) {
-                if (msg.severity === 2) {
-                    violations.push({
-                        file: result.filePath,
-                        line: msg.line,
-                        content: `${msg.message} (${msg.ruleId})`,
-                    });
-                }
-            }
-        }
+        return processLintMessages(results, violations);
     } catch (parseErr) {
         violations.push({ file: dir, line: 1, content: `ESLint: invalid JSON: ${String(parseErr)}` });
+        return 0;
     }
 }
 
-export function checkEslintBaseline(): CheckResult {
+export function checkEslintBaseline(): { result: CheckResult; warningCount: number } {
     const violations: Violation[] = [];
+    let warningCount = 0;
     const sourceDirs = [
         'scripts/',
         'shared/validation/',
@@ -211,9 +221,12 @@ export function checkEslintBaseline(): CheckResult {
         'e2e/',
     ];
     for (const dir of sourceDirs) {
-        collectErrorsFromDir(dir, violations);
+        warningCount += collectErrorsFromDir(dir, violations);
     }
-    return { name: 'eslint (zero violations)', passed: violations.length === 0, violations };
+    return {
+        result: { name: 'eslint (zero violations)', passed: violations.length === 0, violations },
+        warningCount,
+    };
 }
 
 function parseRegisteredHandlers(indexSource: string): Set<string> {
@@ -578,7 +591,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:65e5b4c529848edfb5986ed99fab1e845001985aeb8d20906582969b906568ab */
+        /* HASH:24c33fbe51db5f3eff3bfeaa64321c31c48fe33639d6cd61c80dcb21c0f4cbbb */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -600,13 +613,75 @@ export function checkIntegrity(): CheckResult {
 }
 
 // ---------------------------------------------------------------------------
+// Lint warning ratchet
+// ---------------------------------------------------------------------------
+
+const RATCHET_FILE = path.resolve('.quality_ratchet.json');
+
+interface RatchetData {
+    version?: number;
+    checks?: Record<string, { threshold: number; description: string }>;
+}
+
+function readRatchetThreshold(checkKey: string): number {
+    try {
+        const raw = readFileSync(RATCHET_FILE, 'utf-8');
+        const parsed: unknown = JSON.parse(raw);
+        const data = parsed as RatchetData;
+        const n = data.checks?.[checkKey]?.threshold;
+        return typeof n === 'number' && n >= 0 ? n : Infinity;
+    } catch {
+        return Infinity;
+    }
+}
+
+function writeRatchetThreshold(checkKey: string, count: number, description: string): void {
+    let data: RatchetData = { version: 1, checks: {} };
+    try {
+        data = JSON.parse(readFileSync(RATCHET_FILE, 'utf-8')) as RatchetData;
+    } catch {
+        rootLogger.warn('quality-check: ratchet file not found, creating new one');
+    }
+    if (!data.checks) data.checks = {};
+    data.checks[checkKey] = { threshold: count, description };
+    writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+}
+
+export function checkLintWarningRatchet(warningCount: number): CheckResult {
+    const violations: Violation[] = [];
+    const current = warningCount;
+    const threshold = readRatchetThreshold('lint-warnings');
+
+    if (current > threshold) {
+        violations.push({
+            file: '.quality_ratchet.json',
+            line: 1,
+            content: `REGRESSÃO: ${current} warnings ESLint (threshold: ${threshold}). Reduza warnings antes de commitar.`,
+        });
+    } else if (current < threshold) {
+        writeRatchetThreshold(
+            'lint-warnings',
+            current,
+            'warnings ESLint (security/detect-*, vitest/*, sonarjs/*, etc.)',
+        );
+    }
+
+    return {
+        name: `lint-warnings ratchet (${current} <= ${threshold})`,
+        passed: violations.length === 0,
+        violations,
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 export function main(): void {
     const checks: CheckResult[] = [];
 
-    checks.push(checkEslintBaseline());
+    const { result: eslintResult, warningCount } = checkEslintBaseline();
+    checks.push(eslintResult);
     checks.push(checkHandlerConsistency());
 
     /* enforce-quality checks */
@@ -622,6 +697,7 @@ export function main(): void {
     checks.push(checkDepWall());
     checks.push(checkIfTrueFalse());
     checks.push(checkIntegrity());
+    checks.push(checkLintWarningRatchet(warningCount));
 
     /* Guard: check count */
     const minChecks = 13;

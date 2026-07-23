@@ -209,8 +209,9 @@ describe('Quality check integrated', () => {
 
             const r = checkEslintBaseline();
 
-            expect(typeof r.passed).toBe('boolean');
-            expect(Array.isArray(r.violations)).toBeTruthy();
+            expect(typeof r.result.passed).toBe('boolean');
+            expect(Array.isArray(r.result.violations)).toBeTruthy();
+            expect(typeof r.warningCount).toBe('number');
             // Full-repo ESLint pass: under a loaded CI runner this can exceed the default
             // wall without any assertion failure. The budget is operational headroom only;
             // the eslint contract (real lint + structured result) is unchanged.

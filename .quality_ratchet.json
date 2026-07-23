@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "checks": {
+    "mock-boundaries": {
+      "threshold": 800,
+      "description": "vi.mock() de módulos internos (proibidos por anti-mock-theater)"
+    },
+    "mock-chains": {
+      "threshold": 0,
+      "description": "cadeias mockResolvedValueOnce > 2 sem comentário de paginação"
+    },
+    "no-swallow": {
+      "threshold": 0,
+      "description": "catch blocks que silenciam erros (AGENTS §25)"
+    },
+    "lint-warnings": {
+      "threshold": 301,
+      "description": "warnings ESLint (security/detect-*, vitest/*, sonarjs/*, etc.)"
+    },
+    "lint-errors": {
+      "threshold": 0,
+      "description": "errors ESLint (violations que bloqueiam CI)"
+    }
+  }
+}
