@@ -54,6 +54,8 @@ Target de snapshot-restore: **ECSPOL-1633** (duplicata descartável)
 - **Health score**: 6/10 runs necessários — estado esperado sem pipeline completo.
 - **DataHub**: Sem dados de métricas/cobertura — features 25/26/27 mostram vazio (correto).
 
+---
+
 ## Resultados — Fase 3 Snapshot-Restore (2026-07-23)
 
 **Target**: ECSPOL-1633 (duplicata descartável)
@@ -70,6 +72,8 @@ Target de snapshot-restore: **ECSPOL-1633** (duplicata descartável)
 - **ECSPOL-1633 é tipo Test**: workflow diferente de Story/Task/Bug — transitions disponíveis: Reject, Approve
 - **Case07 auto-close**: projetado para Story/Task/Bug (não Test type) — correto
 - **Snapshot-restore**: mecanismo PUT funciona perfeitamente para summary, description, labels, fixVersions
+
+---
 
 ## Resultados — Bug Report (EEX-1070) (2026-07-23)
 
