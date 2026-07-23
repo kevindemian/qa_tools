@@ -50,7 +50,7 @@ export function extractReportersAst(configPath: string, source: string): string[
 
         return dedupe(candidates);
     } catch (err) {
-        rootLogger.debug(`extractReportersAst: failed for ${configPath}: ${getErrorMessage(err)}`);
+        rootLogger.warn(`extractReportersAst: failed for ${configPath}: ${getErrorMessage(err)}`);
         return [];
     }
 }

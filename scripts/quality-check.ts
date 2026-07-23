@@ -471,6 +471,31 @@ export function checkQualityGateFiles(): CheckResult {
 // xray-history.ts/xray-client.ts/xray-cloud-client.ts: GraphQL types have known non-null fields
 // case02.ts: structured test assertions
 // pipeline-handler.test.ts: test assertions
+function buildTemplateLineSet(lines: string[]): Set<number> {
+    const templateLines = new Set<number>();
+    let inTemplate = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line === undefined) continue;
+        for (const ch of line) {
+            if (ch === '`') inTemplate = !inTemplate;
+        }
+        if (inTemplate) templateLines.add(i + 1);
+    }
+    return templateLines;
+}
+
+function isExcludedNonNullLine(c: string): boolean {
+    if (typeof c !== 'string' || c.length === 0) return true;
+    const commentIdx = c.indexOf('//');
+    if (commentIdx >= 0 && c.indexOf('!', commentIdx) >= 0) return true;
+    for (const quote of ['"', "'"] as const) {
+        const open = c.indexOf(quote);
+        if (open >= 0 && c.indexOf('!', open) >= 0 && c.indexOf(quote, open + 1) > open) return true;
+    }
+    return false;
+}
+
 export function checkNonNullAssertion(): CheckResult {
     const files = allTsFiles()
         .filter((f) => !f.startsWith('scripts/'))
@@ -480,26 +505,20 @@ export function checkNonNullAssertion(): CheckResult {
                     f,
                 ),
         );
-    // Exclude lines where `!` is inside a string literal or a `//` comment.
-    // A `!` in a string (e.g. domain output '(ATRASADA!)') or comment is not a
-    // non-null assertion; the core detection pattern is left intact.
-    // Implemented as a linear TS predicate (no regex backtracking / super-linear risk).
-    const isExcludedLine = (line: string): boolean => {
-        if (typeof line !== 'string' || line.length === 0) return false;
-        const commentIdx = line.indexOf('//');
-        if (commentIdx >= 0 && line.indexOf('!', commentIdx) >= 0) return true;
-        for (const quote of ['"', "'", '`'] as const) {
-            const open = line.indexOf(quote);
-            if (open >= 0 && line.indexOf('!', open) >= 0 && line.indexOf(quote, open + 1) > open) return true;
+    const pattern = /[\w)\]]!(?:[.,)\];[]|\s+as\b|\s*$)/;
+    const violations: Violation[] = [];
+    for (const file of files) {
+        const matches = grepLines(file, pattern);
+        if (matches.length === 0) continue;
+        const content = readFileSync(file, 'utf-8').split('\n');
+        const templateLines = buildTemplateLineSet(content);
+        for (const m of matches) {
+            if (templateLines.has(m.line)) continue;
+            if (isExcludedNonNullLine(m.content)) continue;
+            violations.push({ file, ...m });
         }
-        return false;
-    };
-    return checkNoPattern(
-        'non-null assertion (!) in .ts files',
-        /[\w)\]]!(?:[.,)\];[]|\s+as\b|\s*$)/,
-        files,
-        isExcludedLine,
-    );
+    }
+    return { name: 'non-null assertion (!) in .ts files', passed: violations.length === 0, violations };
 }
 
 function collectDepWallViolations(file: string, pattern: RegExp): Violation[] {
@@ -559,7 +578,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:d2d9cdaa30b4198f7e29466379967c47b2096e939057dff52cfbdbb9b84a5710 */
+        /* HASH:65e5b4c529848edfb5986ed99fab1e845001985aeb8d20906582969b906568ab */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

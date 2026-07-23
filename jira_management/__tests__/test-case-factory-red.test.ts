@@ -4,10 +4,17 @@
  * These tests verify that when skipExisting finds a match, the issue is updated (not skipped).
  */
 import { describe, it, expect, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import TestCaseFactory from '../test-case-factory.js';
 import type { JiraResourceLike } from '../../shared/types.js';
 
-describe('BUG 9: CSV import doesn\'t update existing issues', () => {
+interface MockJiraResourceLike {
+    searchJiraIssues: Mock;
+    putJiraResource: Mock;
+    postJiraResource: Mock;
+}
+
+describe("BUG 9: CSV import doesn't update existing issues", () => {
     it('red: when skipexisting finds match, issue should be updated (not skipped)', async () => {
         expect.hasAssertions();
 
@@ -17,7 +24,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
             }),
             putJiraResource: vi.fn().mockResolvedValue({}),
             postJiraResource: vi.fn(),
-        } as unknown as JiraResourceLike;
+        } as unknown as MockJiraResourceLike & JiraResourceLike;
 
         const mockStepImporter = {
             importStep: vi.fn(),
@@ -42,7 +49,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         expect(result.updated).toBeTruthy();
 
         // Should have called putJiraResource
-        expect(mockResource.putJiraResource).toHaveBeenCalledWith(); // eslint-disable-line @typescript-eslint/unbound-method
+        expect(mockResource.putJiraResource).toHaveBeenCalledTimes(1);
     });
 
     it('green: when no match found, issue is created', async () => {
@@ -52,7 +59,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
             searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
             putJiraResource: vi.fn(),
             postJiraResource: vi.fn().mockResolvedValue({ key: 'TEST-NEW' }),
-        } as unknown as JiraResourceLike;
+        } as unknown as MockJiraResourceLike & JiraResourceLike;
 
         const mockStepImporter = {
             importStep: vi.fn(),
@@ -71,9 +78,12 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
         });
 
         expect(result.key).toBe('TEST-NEW');
+
         expect(result.skipped).toBeUndefined();
+
         expect(result.updated).toBeUndefined();
-        expect(mockResource.postJiraResource).toHaveBeenCalledWith(); // eslint-disable-line @typescript-eslint/unbound-method
+
+        expect(mockResource.postJiraResource).toHaveBeenCalledTimes(1);
     });
 
     it('green: when search fails, gracefully continues to create', async () => {
@@ -83,7 +93,7 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
             searchJiraIssues: vi.fn().mockRejectedValue(new Error('Search failed')),
             putJiraResource: vi.fn(),
             postJiraResource: vi.fn().mockResolvedValue({ key: 'TEST-NEW' }),
-        } as unknown as JiraResourceLike;
+        } as unknown as MockJiraResourceLike & JiraResourceLike;
 
         const mockStepImporter = {
             importStep: vi.fn(),
@@ -103,7 +113,9 @@ describe('BUG 9: CSV import doesn\'t update existing issues', () => {
 
         // Should create new issue when search fails
         expect(result.key).toBe('TEST-NEW');
+
         expect(result.skipped).toBeUndefined();
+
         expect(result.updated).toBeUndefined();
     });
 });

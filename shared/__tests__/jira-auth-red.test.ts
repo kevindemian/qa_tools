@@ -3,24 +3,21 @@
  *
  * These tests verify the bug exists and that the fix uses jiraMode.
  */
+import fs from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { isAtlassianCloudGateway } from '../jira/jira-auth.js';
 
 describe('BUG 1: isAtlassianCloudGateway misses *.atlassian.net', () => {
-    it('RED: isAtlassianCloudGateway returns false for *.atlassian.net (the bug)', () => {
-        // This test documents the bug - isAtlassianCloudGateway should NOT detect *.atlassian.net
-        // because it's specifically for the gateway pattern
-        expect(isAtlassianCloudGateway('https://example.atlassian.net/rest/api/2')).toBe(false);
+    it('red: isAtlassianCloudGateway returns false for *.atlassian.net (the bug)', () => {
+        expect(isAtlassianCloudGateway('https://example.atlassian.net/rest/api/2')).toBeFalsy();
     });
 
-    it('GREEN: Cloud detection uses jiraMode property', () => {
-        // The fix uses resource.jiraMode === 'cloud' instead of a new function
-        // This is verified by checking that jira-resource-version.ts uses jiraMode
-        const fs = require('fs');
+    it('green: cloud detection uses jiraMode property', () => {
         const content = fs.readFileSync(
-            '/home/kdemian/PROJETOS/qa_tools/qa_tools/jira_management/jira-resource-version.ts',
+            new URL('../../jira_management/jira-resource-version.ts', import.meta.url),
             'utf-8',
         );
+
         expect(content).toContain("resource.jiraMode === 'cloud'");
     });
 });

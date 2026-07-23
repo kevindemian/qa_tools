@@ -645,7 +645,9 @@ describe('Handlers Happy Paths', () => {
             // 3. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
             xray.post('/test/TEST-1/steps').reply(201);
             // Then TE creation (confirm=true):
-            // findExistingTe → GET /search
+            // findExistingTe in TestExecutionCreator.create() → GET /search
+            api.get('/search').query(true).reply(200, { issues: [], total: 0 });
+            // 2nd GET /search: findExistingTe inside create()
             api.get('/search').query(true).reply(200, { issues: [], total: 0 });
             api.get('/issuetype').reply(200, [
                 { id: '11200', name: 'Epic' },

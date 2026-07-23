@@ -18,8 +18,6 @@ interface StepsResult {
     action?: string;
 }
 
-
-
 interface CreateIssueParams {
     testData: JsonObject;
     testTitle: string;
@@ -39,7 +37,71 @@ class TestCaseFactory {
         this.stepImporter = stepImporter;
     }
 
-    // eslint-disable-next-line sonarjs/cognitive-complexity
+    private async _handleSingleMatch(
+        key: string,
+        policy: string,
+        testData: JsonObject,
+        testTitle: string,
+        opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+    ): Promise<CreateIssueResult | null> {
+        if (policy === 'skip') {
+            if (!isQuiet()) info('Issue já existe, pulando: ' + key);
+            opLog.info('Issue pulada (já existe)', { key, title: testTitle });
+            return { key, skipped: true };
+        }
+
+        if (policy === 'prompt' && !isQuiet()) {
+            info('Issue ja existe no Jira: ' + key);
+            const choice = confirm('[A]tualizar / Criar [n]ovo? (s/N)', false);
+            if (!choice) return null;
+        }
+
+        await this.jiraResource.putJiraResource('issue/' + key, {
+            fields: (testData as Record<string, unknown>)['fields'],
+        });
+        if (!isQuiet()) success('Issue atualizada: ' + key);
+        opLog.info('Issue atualizada', { key, title: testTitle });
+        return { key, updated: true };
+    }
+
+    private async _handleMultipleMatches(
+        matches: Array<{ key: string }>,
+        policy: string,
+        testData: JsonObject,
+        testTitle: string,
+        opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+    ): Promise<CreateIssueResult | null> {
+        if (!isQuiet()) {
+            warn(matches.length + ' issues com título "' + testTitle + '":');
+            for (const m of matches) {
+                info('  ' + m.key);
+            }
+        }
+
+        if (policy === 'auto' || policy === 'skip') {
+            if (!isQuiet()) warn('Nenhuma atualizada — múltiplos matches.');
+            opLog.info('Múltiplos matches para "' + testTitle + '": ' + matches.map((m) => m.key).join(', '));
+            return { skipped: true, ambiguous: true };
+        }
+
+        if (!isQuiet()) {
+            const answer = prompt('Selecione a issue para atualizar (1-' + matches.length + ', Enter = pular): ');
+            const idx = parseInt(answer, 10);
+            if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
+                const chosenKey = matches[idx - 1]?.key ?? '';
+                await this.jiraResource.putJiraResource('issue/' + chosenKey, {
+                    fields: (testData as Record<string, unknown>)['fields'],
+                });
+                if (!isQuiet()) success('Issue atualizada: ' + chosenKey);
+                opLog.info('Issue atualizada', { key: chosenKey, title: testTitle });
+                return { key: chosenKey, updated: true };
+            }
+        }
+        if (!isQuiet()) warn('Nenhuma atualizada.');
+        opLog.info('Usuário pulou: "' + testTitle + '"', { keys: matches.map((m) => m.key) });
+        return { skipped: true, ambiguous: true };
+    }
+
     async _attemptUpdate(params: CreateIssueParams): Promise<CreateIssueResult | null> {
         const { testData, testTitle, opLog } = params;
         if (!testTitle) return null;
@@ -62,56 +124,10 @@ class TestCaseFactory {
             const policy = Config.get('updatePolicy');
 
             if (matches.length === 1) {
-                const key = matches[0]?.key ?? '';
-                if (policy === 'skip') {
-                    if (!isQuiet()) warn('Issue existente pulada: ' + key);
-                    opLog.info('Issue existente pulada', { key, title: testTitle });
-                    return { key, skipped: true };
-                }
-
-                if (policy === 'prompt' && !isQuiet()) {
-                    info('Issue ja existe no Jira: ' + key);
-                    const choice = confirm('[A]tualizar / Criar [n]ovo? (s/N)', false);
-                    if (!choice) return null;
-                }
-
-                await this.jiraResource.putJiraResource('issue/' + key, {
-                    fields: (testData as Record<string, unknown>)['fields'],
-                });
-                if (!isQuiet()) success('Issue atualizada: ' + key);
-                opLog.info('Issue atualizada', { key, title: testTitle });
-                return { key, updated: true };
+                return await this._handleSingleMatch(matches[0]?.key ?? '', policy, testData, testTitle, opLog);
             }
 
-            if (!isQuiet()) {
-                warn(matches.length + ' issues com título "' + testTitle + '":');
-                for (const m of matches) {
-                    info('  ' + m.key);
-                }
-            }
-
-            if (policy === 'auto' || policy === 'skip') {
-                if (!isQuiet()) warn('Nenhuma atualizada — múltiplos matches.');
-                opLog.info('Múltiplos matches para "' + testTitle + '": ' + matches.map((m) => m.key).join(', '));
-                return { skipped: true, ambiguous: true };
-            }
-
-            if (!isQuiet()) {
-                const answer = prompt('Selecione a issue para atualizar (1-' + matches.length + ', Enter = pular): ');
-                const idx = parseInt(answer, 10);
-                if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
-                    const chosenKey = matches[idx - 1]?.key ?? '';
-                    await this.jiraResource.putJiraResource('issue/' + chosenKey, {
-                        fields: (testData as Record<string, unknown>)['fields'],
-                    });
-                    if (!isQuiet()) success('Issue atualizada: ' + chosenKey);
-                    opLog.info('Issue atualizada', { key: chosenKey, title: testTitle });
-                    return { key: chosenKey, updated: true };
-                }
-            }
-            if (!isQuiet()) warn('Nenhuma atualizada.');
-            opLog.info('Usuário pulou: "' + testTitle + '"', { keys: matches.map((m) => m.key) });
-            return { skipped: true, ambiguous: true };
+            return await this._handleMultipleMatches(matches, policy, testData, testTitle, opLog);
         } catch (err) {
             const msg =
                 'busca de issue existente falhou (criação prosseguirá): ' +
@@ -149,37 +165,49 @@ class TestCaseFactory {
         }
     }
 
-    // eslint-disable-next-line sonarjs/cognitive-complexity
+    private _handleTargetKeyBlocked(
+        targetKeys: string[],
+        testIdx: number,
+        testTitle: string,
+        opLog: { info: (msg: string, meta?: Record<string, unknown>) => void },
+        reason: string,
+    ): CreateIssueResult {
+        warn('Target key ' + targetKeys[testIdx] + ' ' + reason + ' — issue NAO pode ser criada');
+        opLog.info('Target key ' + reason + ', criacao bloqueada', {
+            key: targetKeys[testIdx],
+            title: testTitle,
+        });
+        return { key: targetKeys[testIdx] as string, skipped: true };
+    }
+
+    private async _handleSkipExisting(
+        params: CreateIssueParams,
+        targetKeys: string[],
+        hasTargetKey: boolean,
+    ): Promise<CreateIssueResult | null> {
+        const { testTitle, testIdx, opLog, checkOnly } = params;
+
+        const result = await this._attemptUpdate(params);
+        if (result !== null) {
+            if (result.updated) return result;
+            if (result.ambiguous || checkOnly) return { skipped: true };
+            if (hasTargetKey) return this._handleTargetKeyBlocked(targetKeys, testIdx, testTitle, opLog, 'falhou');
+            return result;
+        }
+        if (checkOnly) return { skipped: true };
+        if (hasTargetKey) return this._handleTargetKeyBlocked(targetKeys, testIdx, testTitle, opLog, 'nao encontrada');
+        return null;
+    }
+
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
-        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting, checkOnly } = params;
+        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
 
         const targetKeys = Config.get<string[]>('targetKeys');
         const hasTargetKey = targetKeys[testIdx];
 
         if (skipExisting && testTitle) {
-            const result = await this._attemptUpdate(params);
-            if (result !== null) {
-                if (result.updated) return result;
-                if (result.ambiguous || checkOnly) return { skipped: true };
-                if (hasTargetKey) {
-                    warn('Target key ' + targetKeys[testIdx] + ' falhou — issue NAO pode ser criada');
-                    opLog.info('Target key update falhou, criacao bloqueada', {
-                        key: targetKeys[testIdx],
-                        title: testTitle,
-                    });
-                    return { key: targetKeys[testIdx] as string, skipped: true };
-                }
-                return result;
-            }
-            if (checkOnly) return { skipped: true };
-            if (hasTargetKey) {
-                warn('Target key ' + targetKeys[testIdx] + ' nao encontrada — issue NAO pode ser criada');
-                opLog.info('Target key nao encontrada, criacao bloqueada', {
-                    key: targetKeys[testIdx],
-                    title: testTitle,
-                });
-                return { key: targetKeys[testIdx] as string, skipped: true };
-            }
+            const skipResult = await this._handleSkipExisting(params, targetKeys, hasTargetKey !== undefined);
+            if (skipResult !== null) return skipResult;
         }
 
         try {
@@ -196,24 +224,19 @@ class TestCaseFactory {
         }
     }
 
-    // eslint-disable-next-line sonarjs/cognitive-complexity
-    async postSteps(
-        issueKey: string,
-        test: TestCase,
-        _opLog: { info: (msg: string, meta?: LogContext) => void },
-        replaceSteps = false,
-    ): Promise<StepsResult | null> {
-        if (replaceSteps && test.steps.length > 0) {
-            try {
-                await this.stepImporter.setSteps(issueKey, test.steps);
-                return null;
-            } catch (err) {
-                const action = onError('  Steps de "' + test.title + '"', err, { details: true });
-                return action === 'abort' ? { action: 'abort' } : null;
-            }
+    private async _replaceSteps(issueKey: string, test: TestCase): Promise<StepsResult | null> {
+        try {
+            await this.stepImporter.setSteps(issueKey, test.steps);
+            return null;
+        } catch (err) {
+            const action = onError('  Steps de "' + test.title + '"', err, { details: true });
+            return action === 'abort' ? { action: 'abort' } : null;
         }
-        let abortSteps = false;
+    }
+
+    private async _importStepsIndividually(issueKey: string, test: TestCase): Promise<StepsResult | null> {
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
+        let abortSteps = false;
         for (let i = 0; i < test.steps.length; i++) {
             try {
                 await this.stepImporter.importStep(issueKey, i + 1, Reflect.get(test.steps, i));
@@ -230,6 +253,18 @@ class TestCaseFactory {
         }
         if (stepBar) stepBar.stop();
         return abortSteps ? { action: 'abort' } : null;
+    }
+
+    async postSteps(
+        issueKey: string,
+        test: TestCase,
+        _opLog: { info: (msg: string, meta?: LogContext) => void },
+        replaceSteps = false,
+    ): Promise<StepsResult | null> {
+        if (replaceSteps && test.steps.length > 0) {
+            return this._replaceSteps(issueKey, test);
+        }
+        return this._importStepsIndividually(issueKey, test);
     }
 }
 

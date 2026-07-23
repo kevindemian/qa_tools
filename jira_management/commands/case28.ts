@@ -4,19 +4,9 @@ import type { CommandContext } from './context.js';
 import TestExecutionCreator from '../test-execution-creator.js';
 import { formatErr } from '../../shared/errors.js';
 import { rootLogger } from '../../shared/logger.js';
+import type { JiraResourceLike } from '../../shared/types.js';
 
-// eslint-disable-next-line sonarjs/cognitive-complexity
-async function handler(c: CommandContext): Promise<boolean | void> {
-    title('Associar testes a Test Execution existente');
-
-    // ── Prompt TE key ────────────────────────────────────────────────────
-    const teKey = (await ask('Key da Test Execution', { hint: 'ex: ECSPOL-1624' })).trim().toUpperCase();
-    if (!teKey) {
-        warn('Nenhuma key informada.');
-        return;
-    }
-
-    // ── Prompt test keys ─────────────────────────────────────────────────
+async function resolveTestKeys(c: CommandContext): Promise<string[]> {
     let keys: string[] = [];
     if (c.ctx.inMemoryTasksId.length > 0) {
         info('Testes da sessão atual: ' + c.ctx.inMemoryTasksId.join(', '));
@@ -36,41 +26,38 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             .map((k) => k.trim().toUpperCase())
             .filter(Boolean);
     }
-    if (keys.length === 0) {
-        warn('Nenhuma key informada.');
-        return;
-    }
+    return keys;
+}
 
-    divider();
-    info('TE: ' + teKey);
-    info('Testes (' + keys.length + '): ' + keys.join(', '));
-    divider();
+interface TeIssue {
+    key: string;
+    fields: { summary?: string; issuetype?: { name: string } };
+}
 
-    // ── Validate TE ──────────────────────────────────────────────────────
-    let teIssue: { key: string; fields: { summary?: string; issuetype?: { name: string } } };
+async function validateTeIssue(jiraResource: JiraResourceLike, teKey: string): Promise<TeIssue | null> {
+    let teIssue: TeIssue;
     try {
-        teIssue = await c.jiraResource.getJiraResource<{
-            key: string;
-            fields: { summary?: string; issuetype?: { name: string } };
-        }>('issue/' + teKey);
+        teIssue = await jiraResource.getJiraResource<TeIssue>('issue/' + teKey);
     } catch (err: unknown) {
         rootLogger.error('Test Execution não encontrada: ' + teKey + ' — ' + formatErr(err));
         warn('Issue ' + teKey + ' não encontrada no Jira.');
-        return;
+        return null;
     }
     if (teIssue.fields.issuetype?.name !== 'Test Execution') {
         const actualType = teIssue.fields.issuetype?.name || 'desconhecido';
         rootLogger.error('"' + teKey + '" não é uma Test Execution (tipo: ' + actualType + ')');
         warn('"' + teKey + '" não é Test Execution (tipo: ' + actualType + ')');
-        return;
+        return null;
     }
+    return teIssue;
+}
 
-    // ── Validate test keys ───────────────────────────────────────────────
+async function validateTestKeys(jiraResource: JiraResourceLike, keys: string[]): Promise<string[] | null> {
     const validKeys: string[] = [];
     const invalidKeys: string[] = [];
     for (const key of keys) {
         try {
-            await c.jiraResource.getJiraResource<{ key: string }>('issue/' + key);
+            await jiraResource.getJiraResource<{ key: string }>('issue/' + key);
             validKeys.push(key);
         } catch (err: unknown) {
             rootLogger.error('Issue não encontrada: ' + key + ' — ' + formatErr(err));
@@ -82,12 +69,40 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         warn(invalidKeys.length + ' issue(s) não encontrada(s): ' + invalidKeys.join(', '));
         if (validKeys.length === 0) {
             warn('Nenhum teste válido. Operação cancelada.');
-            return;
+            return null;
         }
         info('Continuando com ' + validKeys.length + ' teste(s) válido(s)...');
     }
 
-    // ── Associate ────────────────────────────────────────────────────────
+    return validKeys;
+}
+
+async function handler(c: CommandContext): Promise<boolean | void> {
+    title('Associar testes a Test Execution existente');
+
+    const teKey = (await ask('Key da Test Execution', { hint: 'ex: ECSPOL-1624' })).trim().toUpperCase();
+    if (!teKey) {
+        warn('Nenhuma key informada.');
+        return;
+    }
+
+    const keys = await resolveTestKeys(c);
+    if (keys.length === 0) {
+        warn('Nenhuma key informada.');
+        return;
+    }
+
+    divider();
+    info('TE: ' + teKey);
+    info('Testes (' + keys.length + '): ' + keys.join(', '));
+    divider();
+
+    const teIssue = await validateTeIssue(c.jiraResource, teKey);
+    if (!teIssue) return;
+
+    const validKeys = await validateTestKeys(c.jiraResource, keys);
+    if (!validKeys) return;
+
     try {
         const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const result = await executor.addTestsToExistingExecution(teKey, validKeys);

@@ -11,6 +11,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { rootLogger } from '../../logger.js';
 
 const MOCK_STATE_HOME = path.join(os.tmpdir(), 'qa-tools-quarantine-integration');
 
@@ -47,26 +48,34 @@ describe('Quarantine.Integration', () => {
     beforeEach(() => {
         try {
             fs.rmSync(MOCK_STATE_HOME, { recursive: true, force: true });
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${MOCK_STATE_HOME}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
         try {
             fs.unlinkSync(path.resolve(pipelineFilePath()));
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${pipelineFilePath()}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 
     afterEach(() => {
         try {
             fs.rmSync(MOCK_STATE_HOME, { recursive: true, force: true });
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${MOCK_STATE_HOME}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
         try {
             fs.unlinkSync(path.resolve(pipelineFilePath()));
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${pipelineFilePath()}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 

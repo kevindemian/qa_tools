@@ -4,7 +4,7 @@ import { nock } from '../../shared/deps.js';
 const XRAY_CLOUD = 'http://localhost:1999';
 const XRAY_CLOUD_PATH = '/xray';
 
-let lastGraphqlBody: { variables?: { testExecIssueId?: string; testIssueIds?: string[] } } | undefined;
+let lastGraphqlBody: { variables?: { issueId?: string; testIssueIds?: string[] } } | undefined;
 
 import { importExecutionResults, linkTestsToTe } from '../result_reporter.js';
 import type { JiraResourceLike } from '../../shared/types.js';
@@ -110,7 +110,7 @@ describe('LinkTestsToTe (Xray Cloud association)', () => {
         const xray = nock(XRAY_CLOUD + XRAY_CLOUD_PATH).defaultReplyHeaders({ 'Content-Type': 'application/json' });
         xray.post('/api/v2/authenticate').reply(200, 'mock-token');
         return xray.post('/api/v2/graphql').reply(200, (_uri: string, reqBody: unknown) => {
-            lastGraphqlBody = reqBody as { variables?: { testExecIssueId?: string; testIssueIds?: string[] } };
+            lastGraphqlBody = reqBody as { variables?: { issueId?: string; testIssueIds?: string[] } };
             return { data: { addTestsToTestExecution: { addedTests: 2, warning: null } } };
         });
     }
@@ -147,7 +147,7 @@ describe('LinkTestsToTe (Xray Cloud association)', () => {
         await linkTestsToTe(matchedTests, { key: 'EXEC-1' }, linkManager, resource);
 
         expect(lastGraphqlBody).toBeDefined();
-        expect(lastGraphqlBody?.variables?.testExecIssueId).toBe('100');
+        expect(lastGraphqlBody?.variables?.issueId).toBe('100');
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200', '201']);
         expect(
             (linkManager as unknown as { createIssueLink: (...a: unknown[]) => Promise<unknown> }).createIssueLink,

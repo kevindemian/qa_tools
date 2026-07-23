@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { rootLogger } from '../../logger.js';
 import { FsStoreBackend } from '../../infra/store-backend.js';
 import { createDataHubPersistence } from '../../data-hub/persistence.js';
 import type { ReportMeta } from '../../types/data-hub.js';
@@ -55,8 +56,10 @@ describe('Integration: DataHub test-result cache', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* cleanup best-effort */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${TEST_DIR}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 

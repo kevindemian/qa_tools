@@ -10,6 +10,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { rootLogger } from '../../logger.js';
 import type { TestImpactResult } from '../../types/coverage.js';
 import { generateTestSelectionJson } from '../../quality/test-impact.js';
 
@@ -34,8 +35,8 @@ function setupVitestRepo(): void {
 function teardownRepo(): void {
     try {
         fs.rmSync(TEST_DIR, { recursive: true, force: true });
-    } catch {
-        /* best effort */
+    } catch (err) {
+        rootLogger.warn(`cleanup: failed to remove ${TEST_DIR}: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
 

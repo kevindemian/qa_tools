@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { rootLogger } from '../../logger.js';
 import { migrateLegacyProjects, parseLegacyEntry, legacyProjectsPath } from '../../migration/migrate-projects.js';
 import { listProjects, removeProject } from '../../project-registry.js';
 
@@ -24,8 +25,10 @@ describe('Migrate-projects (Fase 8)', () => {
         for (const p of listProjects()) {
             try {
                 removeProject(p.name);
-            } catch {
-                /* ignore */
+            } catch (err) {
+                rootLogger.warn(
+                    `cleanup: failed to remove project ${p.name}: ${err instanceof Error ? err.message : String(err)}`,
+                );
             }
         }
     });

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as prompt from '../../ui/prompt.js';
 import { main, parseCliDir } from '../../../setup/main.js';
 import { listProjects, removeProject } from '../../project-registry.js';
+import { rootLogger } from '../../logger.js';
 import { projectEnvPath } from '../../project-paths.js';
 
 /**
@@ -92,8 +93,10 @@ describe('Setup-wizard integration (Fase 9.094)', () => {
         for (const p of listProjects()) {
             try {
                 removeProject(p.name);
-            } catch {
-                /* ignore */
+            } catch (err) {
+                rootLogger.warn(
+                    `cleanup: failed to remove project ${p.name}: ${err instanceof Error ? err.message : String(err)}`,
+                );
             }
         }
     });

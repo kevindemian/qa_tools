@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Config from '../../config-accessor.js';
-import { Logger, maskDeep } from '../../logger.js';
+import { Logger, maskDeep, rootLogger } from '../../logger.js';
 
 let TEST_DIR: string;
 
@@ -34,8 +34,10 @@ describe('Integration: Logger', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${TEST_DIR}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 

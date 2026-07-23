@@ -11,6 +11,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, expect, it, afterEach } from 'vitest';
+import { rootLogger } from '../logger.js';
 import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../validation/quarantine.js';
 import type { QuarantineEntry, QuarantineStore } from '../validation/quarantine.js';
 
@@ -28,13 +29,17 @@ describe('Quarantine.Property', () => {
     afterEach(() => {
         try {
             fs.rmSync(path.join(os.tmpdir(), 'qa-tools-quarantine-pbt'), { recursive: true, force: true });
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove quarantine-pbt dir: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
         try {
             fs.unlinkSync(path.join(process.cwd(), 'qa-quarantine.json'));
-        } catch {
-            /* ok */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove qa-quarantine.json: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 

@@ -5,7 +5,7 @@ import { nock } from '../../shared/deps.js';
 const XRAY_CLOUD = 'http://localhost:1999';
 const XRAY_CLOUD_PATH = '/xray';
 
-let lastGraphqlBody: { variables?: { testExecIssueId?: string; testIssueIds?: string[] } } | undefined;
+let lastGraphqlBody: { variables?: { issueId?: string; testIssueIds?: string[] } } | undefined;
 
 describe('TestExecutionCreator (cloud mode)', () => {
     let resource: JiraResourceLike;
@@ -44,7 +44,7 @@ describe('TestExecutionCreator (cloud mode)', () => {
         const xray = nock(XRAY_CLOUD + XRAY_CLOUD_PATH).defaultReplyHeaders({ 'Content-Type': 'application/json' });
         xray.post('/api/v2/authenticate').reply(200, 'mock-token');
         return xray.post('/api/v2/graphql').reply(200, (_uri: string, reqBody: unknown) => {
-            lastGraphqlBody = reqBody as { variables?: { testExecIssueId?: string; testIssueIds?: string[] } };
+            lastGraphqlBody = reqBody as { variables?: { issueId?: string; testIssueIds?: string[] } };
             return { data: { addTestsToTestExecution: { addedTests: 2, warning: null } } };
         });
     }
@@ -67,7 +67,7 @@ describe('TestExecutionCreator (cloud mode)', () => {
 
         // Native Cloud association must be used (real XrayCloudClient hit the mocked external API).
         expect(lastGraphqlBody).toBeDefined();
-        expect(lastGraphqlBody?.variables?.testExecIssueId).toBe('100');
+        expect(lastGraphqlBody?.variables?.issueId).toBe('100');
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200', '201']);
 
         // Plain Jira "Tests" issue link must NOT be used in Cloud mode
@@ -97,7 +97,7 @@ describe('TestExecutionCreator (cloud mode)', () => {
 
         expect(rawResource.putJiraResource).not.toHaveBeenCalled();
         expect(lastGraphqlBody).toBeDefined();
-        expect(lastGraphqlBody?.variables?.testExecIssueId).toBe('100');
+        expect(lastGraphqlBody?.variables?.issueId).toBe('100');
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200']);
         expect(rawLinkManager.createIssueLink).not.toHaveBeenCalledWith('TEST-1', 'EXEC-1', 'Tests');
     });

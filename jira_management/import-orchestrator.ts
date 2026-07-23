@@ -35,7 +35,7 @@ export type CreateTestsFromTestCasesResult = {
     summary: string;
     status: string;
     sourcePath: string;
-    failedLinks: string[];
+    failedLinks?: string[];
 };
 
 type PrepareTestRunResult =
@@ -76,28 +76,19 @@ async function findExistingMatches(
             );
             if (found) matches.push({ key: found.key, title: test.title });
         } catch (err) {
-            rootLogger.warn("findExistingMatches: search failed: " + String(err));
+            rootLogger.warn('findExistingMatches: search failed: ' + String(err));
         }
     }
     return matches;
 }
 
-// eslint-disable-next-line sonarjs/cognitive-complexity
-async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
-    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
-    const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
-    if (validationResult === undefined) return;
-    const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
-
-    const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
-    const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
-
-    await showPreview(tests, jiraLabels, totalSteps, groupsCount);
-
-    const filtered = filterTests(tests);
-    if (filtered === null) return;
-
-    const updatePolicy = Config.get('updatePolicy');
+async function resolveTargetKeys(
+    jiraResource: JiraResourceLike | undefined,
+    filtered: TestCase[],
+    project_name: string,
+    warn: (msg: string) => void,
+    info: (msg: string) => void,
+): Promise<string[]> {
     let targetKeys = Config.get<string[]>('targetKeys');
     if (targetKeys.length === 0 && !Config.get('autoConfirm') && jiraResource) {
         const targetKeysInput = prompt('Mapear por chave Jira? (ex: ECSPOL-1605,ECSPOL-1606,... ou Enter para skip)');
@@ -129,9 +120,26 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
         const matches = await findExistingMatches(jiraResource, filtered, project_name);
         if (matches.length > 0) {
             info(matches.length + ' teste(s) ja existem no Jira: ' + matches.map((m) => m.key).join(', '));
-            info('Politica: --update-policy=' + updatePolicy);
+            info('Politica: --update-policy=' + Config.get('updatePolicy'));
         }
     }
+    return targetKeys;
+}
+
+async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
+    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
+    const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
+    if (validationResult === undefined) return;
+    const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
+
+    const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
+    const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
+    await showPreview(tests, jiraLabels, totalSteps, groupsCount);
+
+    const filtered = filterTests(tests);
+    if (filtered === null) return;
+
+    await resolveTargetKeys(jiraResource, filtered, project_name, warn, info);
 
     if (!confirmOrCancel()) {
         warn(OPERATION_CANCELLED);
@@ -139,7 +147,15 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     }
 
     const dryRunResult = handleDryRun(filtered, onBusy, sourcePath);
-    if (dryRunResult) return dryRunResult;
+    if (dryRunResult) {
+        return {
+            inMemoryTasksId: dryRunResult.inMemoryTasksId,
+            inMemoryTasksText: dryRunResult.inMemoryTasksText,
+            summary: dryRunResult.summary,
+            status: dryRunResult.status,
+            sourcePath: dryRunResult.sourcePath,
+        };
+    }
 
     return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog };
 }
@@ -204,9 +220,9 @@ async function finalizeTestCreation({
     printSummary(results);
 
     const okCount = results.filter((r) => r.status === 'ok').length;
-    const errored = results.some((r) => r.status === 'error') || failedLinks.length > 0;
+    const errored = results.some((r) => r.status === 'error');
     let summary = okCount + '/' + tests.length + ' testes criados';
-    if (failedLinks.length > 0) {
+    if (errored && failedLinks.length > 0) {
         summary += '; ' + failedLinks.length + ' vínculo(s) perdido(s): ' + failedLinks.join(', ');
     }
     opLog.info('Operação concluída', {
@@ -263,7 +279,7 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
     if (tests.some((t) => t.group) && results.length > 0) {
         info('Atualizando descrições com cross-references...');
         const crossRefFailed = await linker.updateCrossReferences(tests, inMemoryTasksId);
-        if (crossRefFailed.length > 0) {
+        if (Array.isArray(crossRefFailed) && crossRefFailed.length > 0) {
             failedLinks.push(...crossRefFailed.map((k) => 'cross-ref:' + k));
             info('Aviso: ' + crossRefFailed.length + ' cross-reference(s) falharam: ' + crossRefFailed.join(', '));
         }
@@ -279,10 +295,10 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
 
 function testCreationSetup(
     jiraResource: JiraResourceLike,
-    _jiraResourceXray: JiraResourceLike,
+    jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
-    const stepImporter = createStepImporter(jiraResource, Config.get('xrayMode'));
+    const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
     return {
         stepImporter,
         factory: new TestCaseFactory(jiraResource, stepImporter),

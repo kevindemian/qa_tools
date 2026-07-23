@@ -108,7 +108,7 @@ describe('TestCaseFactory', () => {
         const testData = { project: 'TEST', fields: { summary: 'Login Test' } };
         const opLog = { info: vi.fn() };
 
-        it('skips creation when existing issue found by title', async () => {
+        it('updates existing issue when skipExisting finds match by title', async () => {
             expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
@@ -125,9 +125,9 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(result).toStrictEqual({ key: 'TEST-42', skipped: true });
+            expect(result).toStrictEqual({ key: 'TEST-42', updated: true });
             expect(mockJiraResource['postJiraResource']).not.toHaveBeenCalledWith();
-            expect(opLog.info).toHaveBeenCalledWith('Issue pulada (já existe)', {
+            expect(opLog.info).toHaveBeenCalledWith('Issue atualizada', {
                 key: 'TEST-42',
                 title: 'Login Test',
             });
@@ -192,7 +192,7 @@ describe('TestCaseFactory', () => {
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
         });
 
-        it('shows prompt info when quiet is false and issue skipped', async () => {
+        it('shows prompt info when quiet is false and issue is updated', async () => {
             expect.hasAssertions();
 
             mockJiraResource.searchJiraIssues.mockResolvedValue({
@@ -210,7 +210,7 @@ describe('TestCaseFactory', () => {
                 skipExisting: true,
             });
 
-            expect(mockPrompt.info).toHaveBeenCalledWith('Issue já existe, pulando: TEST-42');
+            expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada: TEST-42');
         });
     });
 

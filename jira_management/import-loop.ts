@@ -363,19 +363,7 @@ async function _finalizeAfterIssueCreation(
 }
 
 async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
-    const {
-        test,
-        testTitle,
-        factory,
-        projectName,
-        jiraLabels,
-        t,
-        total,
-        opLog,
-        results,
-        isCheckpoint,
-        inMemoryTasksId,
-    } = opts;
+    const { test, testTitle, factory, projectName, jiraLabels, t, total, opLog, results, isCheckpoint } = opts;
     const issueResult = await createIssueForTest({
         factory,
         test,
@@ -389,7 +377,6 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         ...(isCheckpoint !== undefined ? { checkOnly: isCheckpoint } : {}),
     });
     if (!issueResult || issueResult === 'continue') {
-        if (!isCheckpoint) inMemoryTasksId.push('');
         return 'continue';
     }
     if (issueResult === 'abort') return 'abort';

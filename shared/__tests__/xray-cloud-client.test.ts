@@ -198,10 +198,9 @@ describe('Shared/xray-cloud-client', () => {
             expect((call?.[1] as { query?: string } | undefined)?.query).toContain('addTestsToTestExecution');
 
             expect(
-                (call?.[1] as { variables?: { testExecIssueId?: string; testIssueIds?: string[] } } | undefined)
-                    ?.variables,
+                (call?.[1] as { variables?: { issueId?: string; testIssueIds?: string[] } } | undefined)?.variables,
             ).toStrictEqual({
-                testExecIssueId: '100',
+                issueId: '100',
                 testIssueIds: ['10', '11'],
             });
 

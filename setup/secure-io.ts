@@ -41,7 +41,7 @@ export async function readConfigFileSafe(projectRoot: string, relativeName: stri
     try {
         stat = await fs.promises.stat(resolvedFile);
     } catch (err) {
-        rootLogger.debug(`readConfigFileSafe: stat failed for ${filePath}: ${getErrorMessage(err)}`);
+        rootLogger.warn(`readConfigFileSafe: stat failed for ${filePath}: ${getErrorMessage(err)}`);
         return null;
     }
     if (!stat.isFile()) return null;
@@ -56,7 +56,7 @@ export async function readConfigFileSafe(projectRoot: string, relativeName: stri
     try {
         return await fs.promises.readFile(resolvedFile, 'utf8');
     } catch (err) {
-        rootLogger.debug(`readConfigFileSafe: cannot read ${filePath}: ${getErrorMessage(err)}`);
+        rootLogger.warn(`readConfigFileSafe: cannot read ${filePath}: ${getErrorMessage(err)}`);
         return null;
     }
 }
@@ -64,7 +64,8 @@ export async function readConfigFileSafe(projectRoot: string, relativeName: stri
 async function safeRealpath(p: string): Promise<string | null> {
     try {
         return await fs.promises.realpath(p);
-    } catch {
+    } catch (err) {
+        rootLogger.warn(`safeRealpath: failed for ${p}: ${getErrorMessage(err)}`);
         return null;
     }
 }
