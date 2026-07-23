@@ -82,14 +82,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Bug in login') // summary
+                .mockResolvedValueOnce('Bug in login') // summary // pagination
                 .mockResolvedValueOnce('production') // env
                 .mockResolvedValueOnce('critical') // severity
                 .mockResolvedValueOnce('Auth') // component
                 .mockResolvedValueOnce('BUG-1, BUG-2'); // linked issues
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('Cannot log in with valid credentials') // description
+                .mockResolvedValueOnce('Cannot log in with valid credentials') // description // pagination
                 .mockResolvedValueOnce('step 1\nstep 2') // steps
                 .mockResolvedValueOnce('Dashboard displayed') // expected
                 .mockResolvedValueOnce('Error 500 displayed'); // actual
@@ -120,14 +120,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Bug in login') // summary
+                .mockResolvedValueOnce('Bug in login') // summary // pagination
                 .mockResolvedValueOnce('') // env
                 .mockResolvedValueOnce('minor') // severity
                 .mockResolvedValueOnce('') // component
                 .mockResolvedValueOnce(''); // linked issues (empty)
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('Cannot log in') // description
+                .mockResolvedValueOnce('Cannot log in') // description // pagination
                 .mockResolvedValueOnce('') // steps
                 .mockResolvedValueOnce('') // expected
                 .mockResolvedValueOnce(''); // actual
@@ -146,14 +146,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('Bug title') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('Description') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
@@ -170,14 +170,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('Bug title') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('unknown-severity')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
@@ -193,14 +193,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Bug title')
+                .mockResolvedValueOnce('Bug title') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('Description')
+                .mockResolvedValueOnce('Description') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
@@ -597,14 +597,14 @@ describe('BugReport Service', () => {
             expect.hasAssertions();
 
             mockPrompt.ask
-                .mockResolvedValueOnce('Auto summary')
+                .mockResolvedValueOnce('Auto summary') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('minor')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');
 
             mockPrompt.askMultiline
-                .mockResolvedValueOnce('')
+                .mockResolvedValueOnce('') // pagination
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('')
                 .mockResolvedValueOnce('');

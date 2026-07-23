@@ -78,7 +78,14 @@ export function parseFileTestMappings(raw: string): FileTestMapping[] {
 /** Result for a single dimension within the health score. */
 export interface HealthScoreDimensionResult {
     score: number;
-    status: 'pass' | 'fail';
+    status: 'pass' | 'fail' | 'unknown';
+    /**
+     * Whether the underlying metric was actually available. When `false` the
+     * metric could not be computed (data outage / missing source) — `score` is a
+     * placeholder (0) and `status` is `'unknown'`. Renderers MUST show "N/A",
+     * never the placeholder (AGENTS.md §24/§25 — no fabricated value).
+     */
+    available: boolean;
 }
 
 /** All five dimensions of the health score. */
@@ -110,7 +117,7 @@ export type HealthScoreProvenance = HealthScoreProvenanceEntry[];
 export interface HealthScoreResult {
     overall: number;
     grade: HealthScoreGrade;
-    qualityGate: 'pass' | 'fail';
+    qualityGate: 'pass' | 'fail' | 'unknown';
     dimensions: HealthScoreDimensions;
     /** Provenance metadata for each dimension, when enabled. */
     provenance?: HealthScoreProvenance;

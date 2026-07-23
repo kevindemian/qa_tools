@@ -13,6 +13,7 @@
 import path from 'path';
 import { createHash } from 'crypto';
 import { readFileSync, existsSync, readdirSync } from 'fs';
+import { execFileSync } from 'node:child_process';
 import { isBuiltin } from 'module';
 import { globSync } from '../shared/deps.js';
 import { gracefulExit } from '../shared/ui/cli_base.js';
@@ -92,46 +93,127 @@ export function checkNoPattern(
 // Checks
 // ---------------------------------------------------------------------------
 
-export async function checkEslintBaseline(): Promise<CheckResult> {
-    const violations: Violation[] = [];
+interface LintMessage {
+    line: number;
+    severity: number;
+    message: string;
+    ruleId: string | null;
+}
+
+interface LintResult {
+    filePath: string;
+    messages: LintMessage[];
+}
+
+function hasStdout(err: unknown): err is { stdout: string; stderr?: string } {
+    return typeof err === 'object' && err !== null && 'stdout' in err;
+}
+
+function parseLintMessage(raw: unknown): LintMessage | null {
+    if (typeof raw !== 'object' || raw === null) return null;
+    const m = raw as Record<string, unknown>;
+    const line = m['line'];
+    const severity = m['severity'];
+    const message = m['message'];
+    if (typeof line !== 'number' || typeof severity !== 'number' || typeof message !== 'string') return null;
+    const ruleId = m['ruleId'];
+    return {
+        line,
+        severity,
+        message,
+        ruleId: typeof ruleId === 'string' ? ruleId : null,
+    };
+}
+
+function parseLintResult(raw: unknown): LintResult | null {
+    if (typeof raw !== 'object' || raw === null) return null;
+    const r = raw as Record<string, unknown>;
+    const filePath = r['filePath'];
+    const messagesRaw = r['messages'];
+    if (typeof filePath !== 'string' || !Array.isArray(messagesRaw)) return null;
+    const messages: LintMessage[] = [];
+    for (const msg of messagesRaw) {
+        const parsed = parseLintMessage(msg);
+        if (parsed) messages.push(parsed);
+    }
+    return { filePath, messages };
+}
+
+function parseLintResults(out: string): LintResult[] {
+    const parsed: unknown = JSON.parse(out);
+    if (!Array.isArray(parsed)) return [];
+    const results: LintResult[] = [];
+    for (const item of parsed) {
+        const result = parseLintResult(item);
+        if (result) results.push(result);
+    }
+    return results;
+}
+
+function collectErrorsFromDir(dir: string, violations: Violation[]): void {
+    const eslintBin = path.resolve('node_modules/eslint/bin/eslint.js');
+    let out: string;
     try {
-        const { ESLint } = await import('eslint');
-
-        const eslint = new ESLint({
-            overrideConfigFile: 'eslint.config.mjs',
-            fix: false,
-            cache: true,
-            cacheLocation: '.eslintcache',
+        out = execFileSync(process.execPath, [eslintBin, '--no-cache', '--format', 'json', dir], {
+            encoding: 'utf-8',
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 60_000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            cwd: process.cwd(),
         });
-
-        const results = await eslint.lintFiles(['.']);
-
+    } catch (err: unknown) {
+        if (hasStdout(err) && err.stdout) {
+            out = err.stdout;
+        } else {
+            const msg = err instanceof Error ? err.message : String(err);
+            violations.push({ file: dir, line: 1, content: `ESLint: ${msg}` });
+            return;
+        }
+    }
+    try {
+        const results = parseLintResults(out);
         for (const result of results) {
-            const file = result.filePath;
             for (const msg of result.messages) {
                 if (msg.severity === 2) {
                     violations.push({
-                        file,
+                        file: result.filePath,
                         line: msg.line,
                         content: `${msg.message} (${msg.ruleId})`,
                     });
                 }
             }
         }
-
-        if (violations.length > 0) {
-            return { name: 'eslint (zero violations)', passed: false, violations };
-        }
-
-        return { name: 'eslint (zero violations)', passed: true, violations };
-    } catch (err) {
-        violations.push({
-            file: 'scripts/quality-check.ts',
-            line: 1,
-            content: `ESLint check failed: ${String(err)}`,
-        });
-        return { name: 'eslint (zero violations)', passed: false, violations };
+    } catch (parseErr) {
+        violations.push({ file: dir, line: 1, content: `ESLint: invalid JSON: ${String(parseErr)}` });
     }
+}
+
+export function checkEslintBaseline(): CheckResult {
+    const violations: Violation[] = [];
+    const sourceDirs = [
+        'scripts/',
+        'shared/validation/',
+        'shared/ui/',
+        'shared/types/',
+        'shared/quality/',
+        'shared/report/',
+        'shared/data-hub/',
+        'shared/ci/',
+        'shared/infra/',
+        'shared/invariants/',
+        'shared/jira/',
+        'shared/llm/',
+        'shared/primitives/',
+        'shared/prompts/',
+        'shared/test-utils/',
+        'git_triggers/',
+        'jira_management/',
+        'e2e/',
+    ];
+    for (const dir of sourceDirs) {
+        collectErrorsFromDir(dir, violations);
+    }
+    return { name: 'eslint (zero violations)', passed: violations.length === 0, violations };
 }
 
 function parseRegisteredHandlers(indexSource: string): Set<string> {
@@ -477,7 +559,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:0378fec6054da7b236dd61a398e062afe570e0e55c98909fbc0deee2ec3df8b1 */
+        /* HASH:d2d9cdaa30b4198f7e29466379967c47b2096e939057dff52cfbdbb9b84a5710 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -502,10 +584,10 @@ export function checkIntegrity(): CheckResult {
 // Main
 // ---------------------------------------------------------------------------
 
-export async function main(): Promise<void> {
+export function main(): void {
     const checks: CheckResult[] = [];
 
-    checks.push(await checkEslintBaseline());
+    checks.push(checkEslintBaseline());
     checks.push(checkHandlerConsistency());
 
     /* enforce-quality checks */
@@ -567,8 +649,10 @@ export async function main(): Promise<void> {
 
 const isMainImport = process.argv[1]?.replace(/\\/g, '/').endsWith('/quality-check.ts');
 if (isMainImport) {
-    main().catch((err: unknown) => {
+    try {
+        main();
+    } catch (err) {
         process.stderr.write(String(err));
         gracefulExit(ExitCode.ERROR);
-    });
+    }
 }

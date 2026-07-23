@@ -36,10 +36,18 @@ if (Math.abs(_weightSum - 1.0) > 0.001) {
     throw new Error(`release-score: provenance weights must sum to 1.0, got ${_weightSum}`);
 }
 
+export interface ReleaseScoreBreakdownEntry {
+    label: string;
+    score: number;
+    status: 'pass' | 'fail';
+    /** true quando a dimensão não possui fonte de dado real (não fabricada). */
+    noData?: boolean;
+}
+
 export interface ReleaseScoreResult {
     score: number;
     grade: string;
-    breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail' }>;
+    breakdown: ReleaseScoreBreakdownEntry[];
     recommendation: string;
     timestamp: string;
 }
@@ -64,51 +72,68 @@ function invertFlakiness(flakyRate: number): number {
 }
 
 function buildBreakdown(
-    tasksPct: number,
+    tasksPct: number | undefined,
     healthScore: number,
     healthGate: 'pass' | 'fail',
-    coveragePct: number,
+    coveragePct: number | undefined,
     flakyRate: number,
-): Array<{ label: string; score: number; status: 'pass' | 'fail' }> {
+): ReleaseScoreBreakdownEntry[] {
     const flkScore = invertFlakiness(flakyRate);
-    const tasksRounded = Number.isFinite(tasksPct) ? Math.round(tasksPct) : 0;
-    const healthRounded = Number.isFinite(healthScore) ? Math.round(healthScore) : 0;
-    const coverageRounded = Number.isFinite(coveragePct) ? Math.round(coveragePct) : 0;
-    const flkRounded = Number.isFinite(flkScore) ? Math.round(flkScore) : 0;
+    const mk = (label: string, value: number | undefined): ReleaseScoreBreakdownEntry => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return { label, score: 0, status: 'fail', noData: true };
+        }
+        const rounded = Math.round(value);
+        return {
+            label,
+            score: rounded,
+            status: rounded >= THRESHOLD ? 'pass' : 'fail',
+        };
+    };
     return [
-        { label: 'Tasks', score: tasksRounded, status: tasksRounded >= THRESHOLD ? 'pass' : 'fail' },
-        { label: 'Health', score: healthRounded, status: healthGate },
-        { label: 'Coverage', score: coverageRounded, status: coverageRounded >= THRESHOLD ? 'pass' : 'fail' },
-        { label: 'Flakiness', score: flkRounded, status: flkRounded >= THRESHOLD ? 'pass' : 'fail' },
+        mk('Tasks', tasksPct),
+        { label: 'Health', score: Math.round(healthScore), status: healthGate },
+        mk('Coverage', coveragePct),
+        mk('Flakiness', flkScore),
     ];
 }
 
 function buildRecommendation(
-    tasksPct: number,
+    tasksPct: number | undefined,
     healthScore: number,
     healthGate: 'pass' | 'fail',
-    coveragePct: number,
+    coveragePct: number | undefined,
     flakyRate: number,
 ): string {
     const failures: string[] = [];
-    if (tasksPct < THRESHOLD) failures.push('tasks');
+    if (typeof tasksPct !== 'number' || !Number.isFinite(tasksPct)) failures.push('tasks (no data source)');
+    else if (tasksPct < THRESHOLD) failures.push('tasks');
     if (healthGate === 'fail' || healthScore < THRESHOLD) failures.push('health');
-    if (coveragePct < THRESHOLD) failures.push('coverage');
+    if (typeof coveragePct !== 'number' || !Number.isFinite(coveragePct)) failures.push('coverage (no data source)');
+    else if (coveragePct < THRESHOLD) failures.push('coverage');
     if (invertFlakiness(flakyRate) < THRESHOLD) failures.push('flakiness');
     if (failures.length === 0) return 'All dimensions meet the release threshold. Ready for release.';
     return `Improve ${failures.join(', ')} before release.`;
 }
 
 export function calculateReleaseScore(
-    tasksPct: number,
+    tasksPct: number | undefined,
     healthScore: number,
     healthGate: 'pass' | 'fail',
-    coveragePct: number,
+    coveragePct: number | undefined,
     flakyRate: number,
 ): ReleaseScoreResult {
     const flkScore = invertFlakiness(flakyRate);
-    const raw = tasksPct * TASKS_W + healthScore * HEALTH_W + coveragePct * COVERAGE_W + flkScore * FLAKINESS_W;
-    const score = Number.isFinite(raw) ? Math.round(raw) : 0;
+    const dims: Array<{ value: number | undefined; weight: number }> = [
+        { value: tasksPct, weight: TASKS_W },
+        { value: healthScore, weight: HEALTH_W },
+        { value: coveragePct, weight: COVERAGE_W },
+        { value: flkScore, weight: FLAKINESS_W },
+    ];
+    const available = dims.filter((d) => Number.isFinite(d.value));
+    const weightSum = available.reduce((s, d) => s + d.weight, 0);
+    const raw = available.reduce((s, d) => s + (d.value as number) * d.weight, 0);
+    const score = weightSum > 0 && Number.isFinite(raw) ? Math.round(raw / weightSum) : 0;
     const grade = computeGrade(score);
     const breakdown = buildBreakdown(tasksPct, healthScore, healthGate, coveragePct, flakyRate);
     const recommendation = buildRecommendation(tasksPct, healthScore, healthGate, coveragePct, flakyRate);

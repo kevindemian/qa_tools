@@ -37,6 +37,7 @@ export function createMockJiraResource(overrides?: Partial<MockProxy<JiraResourc
         getJiraResource: vi.fn(),
         postJiraResource: vi.fn(),
         putJiraResource: vi.fn(),
+        deleteJiraResource: vi.fn(),
         getFromOriginPath: vi.fn(),
         searchJiraIssues: vi.fn(),
         getTransitionsForIssue: vi.fn(),

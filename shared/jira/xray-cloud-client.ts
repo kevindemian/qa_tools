@@ -170,6 +170,48 @@ export class XrayCloudClient {
         await this.graphqlMutation(mutation, { testIssueId, preconditionIssueIds }, clientId, clientSecret);
     }
 
+    /** Read precondition issue ids associated with a Test via Xray Cloud GraphQL. */
+    async getTestPreconditions(testIssueId: string, clientId: string, clientSecret: string): Promise<string[]> {
+        if (!testIssueId) throw new Error('getTestPreconditions requires a test issue id');
+        const query = `
+            query GetTestPreconditions($issueId: String!, $limit: Int!) {
+                getTest(issueId: $issueId) {
+                    preconditions(limit: $limit) {
+                        total
+                        results { issueId }
+                    }
+                }
+            }
+        `;
+        const data = await this.graphql(query, { issueId: testIssueId, limit: 100 }, clientId, clientSecret);
+        if (!data) return [];
+        const getTest = data['getTest'] as Record<string, unknown> | undefined;
+        if (!getTest) return [];
+        const preconditions = getTest['preconditions'] as Record<string, unknown> | undefined;
+        if (!preconditions) return [];
+        const results = preconditions['results'] as Array<{ issueId: string }> | undefined;
+        return results?.map((r) => r.issueId) ?? [];
+    }
+
+    /** Remove specific Preconditions from a Test via Xray Cloud GraphQL.
+     *  Uses the native `removePreconditionsFromTest` mutation (numeric issue ids).
+     *  Throws on failure (GraphQL errors are surfaced by graphqlMutation). */
+    async removePreconditionsFromTest(
+        testIssueId: string,
+        preconditionIssueIds: string[],
+        clientId: string,
+        clientSecret: string,
+    ): Promise<void> {
+        if (!testIssueId) throw new Error('removePreconditionsFromTest requires a test issue id');
+        if (!Array.isArray(preconditionIssueIds) || preconditionIssueIds.length === 0) return;
+        const mutation = `
+            mutation RemovePreconditionsFromTest($issueId: String!, $preconditionIssueIds: [String!]!) {
+                removePreconditionsFromTest(issueId: $issueId, preconditionIssueIds: $preconditionIssueIds)
+            }
+        `;
+        await this.graphqlMutation(mutation, { issueId: testIssueId, preconditionIssueIds }, clientId, clientSecret);
+    }
+
     /** Associate one or more Test issues to a Test Execution in Xray Cloud.
      *  Uses the native GraphQL `addTestsToTestExecution` mutation (numeric issue ids),
      *  which creates the native Xray Test Execution relationship — NOT a Jira issue link.

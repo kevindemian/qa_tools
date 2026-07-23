@@ -56,7 +56,9 @@ const makeFactory = (): Mocked<TestCaseFactory> => {
         _attemptUpdate: vi.fn(),
         jiraResource: mockJiraResource,
         stepImporter,
-    };
+        _tryUpdateExisting: vi.fn(),
+        _createNewIssue: vi.fn(),
+    } as unknown as Mocked<TestCaseFactory>;
 };
 
 const opLog = vi.mocked({

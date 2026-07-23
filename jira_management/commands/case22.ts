@@ -2,6 +2,7 @@
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { ask, info, warn, title, divider, tableView, printError } from '../../shared/ui/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
 import { analyzeTestImpact } from '../../shared/quality/test-impact.js';
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
@@ -13,6 +14,7 @@ function _getGitDiff(range: string): string | null {
     try {
         return execFileSync(GIT_BIN, ['diff', '--name-only', range], { encoding: 'utf8' }).toString().trim();
     } catch (err: unknown) {
+        rootLogger.warn('case22: Não foi possível obter o git diff: ' + (err instanceof Error ? err.message : String(err)));
         printError(
             'Não foi possível obter o git diff. Verifique se o repositório tem commits suficientes no branch atual ou forneça um range manual diferente.',
             err,

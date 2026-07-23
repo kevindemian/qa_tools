@@ -48,6 +48,17 @@ class JiraLinkManager {
     }
     async associatePrecondition(testKey: string, preconditionKey: string) {
         if (this.preconditionHandler.isCloud && !this.preconditionHandler.hasXrayCreds) {
+            rootLogger.info(
+                'JiraLinkManager: limpando issue links Pre-Condition existentes em ' +
+                    testKey +
+                    ' antes de associar...',
+            );
+            const removed = await this.linkOperations.clearIssueLinksByType(testKey, 'Pre-Condition');
+            if (removed > 0) {
+                rootLogger.info(
+                    'JiraLinkManager: ' + removed + ' issue link(s) Pre-Condition removido(s) de ' + testKey,
+                );
+            }
             await this.createIssueLink(testKey, preconditionKey, 'Pre-Condition');
             return null;
         }

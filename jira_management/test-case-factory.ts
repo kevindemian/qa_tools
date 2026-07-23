@@ -7,7 +7,7 @@ import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
 
 interface CreateIssueResult {
-    key?: string;
+    key?: string | null;
     action?: string;
     skipped?: boolean;
     updated?: boolean;
@@ -39,11 +39,16 @@ class TestCaseFactory {
         this.stepImporter = stepImporter;
     }
 
+    private _getTargetKeys(): string[] {
+        const raw = Config.get<string>('targetKeys');
+        return raw ? raw.split(',').filter(Boolean) : [];
+    }
+
     async _attemptUpdate(params: CreateIssueParams): Promise<CreateIssueResult | null> {
         const { testData, testTitle, opLog } = params;
         if (!testTitle) return null;
 
-        const targetKeys = Config.get<string[]>('targetKeys');
+        const targetKeys = this._getTargetKeys();
         const targetKey = targetKeys?.[params.testIdx];
         if (targetKey) {
             return this._attemptUpdateByKey(params, targetKey);
@@ -151,7 +156,7 @@ class TestCaseFactory {
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
         const { testData, testTitle, testIdx, totalTests, opLog, skipExisting, checkOnly } = params;
 
-        const targetKeys = Config.get<string[]>('targetKeys');
+        const targetKeys = this._getTargetKeys();
         const hasTargetKey = targetKeys && testIdx < targetKeys.length && targetKeys[testIdx];
 
         if (skipExisting && testTitle) {
@@ -165,7 +170,7 @@ class TestCaseFactory {
                         key: targetKeys![testIdx],
                         title: testTitle,
                     });
-                    return { key: targetKeys![testIdx], skipped: true };
+                    return { key: targetKeys![testIdx] ?? null, skipped: true };
                 }
                 return result;
             }
@@ -176,7 +181,7 @@ class TestCaseFactory {
                     key: targetKeys![testIdx],
                     title: testTitle,
                 });
-                return { key: targetKeys![testIdx], skipped: true };
+                return { key: targetKeys![testIdx] ?? null, skipped: true };
             }
         }
 

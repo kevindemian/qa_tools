@@ -12,6 +12,7 @@ vi.mock('../../shared/infra/temp-dir.js', () => ({
 
 import * as prompt from '../../shared/ui/prompt.js';
 import { nonNull } from '../../shared/test-utils.js';
+import { rootLogger } from '../../shared/logger.js';
 import MappingFileGenerator from '../mapping-file-generator.js';
 
 interface MappingJson {
@@ -161,7 +162,8 @@ describe('MappingFileGenerator', () => {
         expect(mockInfo).toHaveBeenCalledTimes(2);
     });
 
-    it('extra tasksId beyond tests produce empty-key entries', () => {
+    it('extra tasksId beyond tests are marked explicitly (no silent empty), and mismatch is warned', () => {
+        const warnSpy = vi.spyOn(rootLogger, 'warn');
         generator.generate('/f.csv', 'P', ['KA', 'KB', 'KC'], [{ title: 'only', steps: [] }]);
         const json = JSON.parse(
             fs.readFileSync(path.resolve(path.join(tmpDir, 'f-jira-mapping.json')), 'utf8'),
@@ -169,12 +171,15 @@ describe('MappingFileGenerator', () => {
 
         expect(json.tests).toHaveLength(3);
         expect(nonNull(json.tests[0]).title).toBe('only');
-        expect(nonNull(json.tests[1]).title).toBe('');
-        expect(nonNull(json.tests[2]).title).toBe('');
+        // Entradas sem teste associado são marcadas explicitamente, não vazias/(untitled).
+        expect(nonNull(json.tests[1]).title).toBe('(no test associated)');
+        expect(nonNull(json.tests[2]).title).toBe('(no test associated)');
 
         const txt = fs.readFileSync(path.resolve(path.join(tmpDir, 'f-summary.txt')), 'utf8');
 
-        expect(txt).toContain('KB: (untitled)');
+        expect(txt).toContain('KB: (no test associated)');
+        // Divergência de contagem é superficie (§25 — zero silenciamento), não ignorada.
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('tasksId.length'));
     });
 
     it('steps with empty fields default to empty string', () => {

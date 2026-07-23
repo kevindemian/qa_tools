@@ -517,6 +517,7 @@ async function main(): Promise<void> {
         rootLogger.info('                 prompt: pergunta o que fazer');
         rootLogger.info('  --target-keys <KEY1,KEY2,...>');
         rootLogger.info('                 atualiza issues por chave, na ordem do CSV');
+        rootLogger.info('  --dry-run      Simula a importacao sem criar ou atualizar issues');
         rootLogger.info('  --create-te    Cria Test Execution e associa todos os testes ao final');
         rootLogger.info('  --associate-te <TE_KEY>');
         rootLogger.info('                 associa testes a uma Test Execution existente');
@@ -537,6 +538,9 @@ async function main(): Promise<void> {
     }
     if (process.argv.includes('--auto')) {
         Config.setAutoConfirm(true);
+    }
+    if (process.argv.includes('--dry-run')) {
+        Config.set('dryRun', true);
     }
     const upIdx = process.argv.indexOf('--update-policy');
     if (upIdx !== -1 && upIdx + 1 < process.argv.length) {
@@ -563,7 +567,7 @@ async function main(): Promise<void> {
             rootLogger.error('--target-keys requer pelo menos uma chave separada por vírgula');
             process.exit(ExitCode.ERROR);
         }
-        Config.set('targetKeys', keys);
+        Config.set('targetKeys', keys.join(','));
     }
     const atIdx = process.argv.indexOf('--associate-te');
     if (atIdx !== -1 && atIdx + 1 < process.argv.length) {
@@ -602,8 +606,8 @@ async function main(): Promise<void> {
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        console.error('[startup] Health score failed:', err);
-        rootLogger.error('Health score failed: ' + String(err));
+        // DataHub may not be initialized in headless mode — this is expected.
+        rootLogger.debug('[startup] Health score unavailable: ' + String(err));
     }
     console.error('[startup] Calling showSplash...');
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);

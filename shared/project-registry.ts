@@ -36,7 +36,8 @@ function toRegistry(data: unknown): ProjectRegistry | null {
     if (typeof data === 'string') {
         try {
             data = JSON.parse(data);
-        } catch {
+        } catch (err) {
+            rootLogger.warn('project-registry: Failed to parse JSON: ' + (err instanceof Error ? err.message : String(err)));
             return null;
         }
     }

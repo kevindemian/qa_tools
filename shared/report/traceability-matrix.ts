@@ -1,5 +1,6 @@
 import type { MetricsRun, DataHub } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
+import type { CoverageGapResult, CoverageGapItem } from '../types/coverage.js';
 import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
@@ -7,19 +8,6 @@ import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid } from '../primitives/index.js';
 
 type TestStatus = 'passed' | 'failed' | 'skipped';
-
-interface CoverageGapItem {
-    epic: string;
-    hasTest: boolean;
-    linkedTestKeys?: string[];
-    issueKey?: string;
-}
-
-interface CoverageGapResult {
-    items?: CoverageGapItem[];
-    totals?: { total: number; covered: number };
-    byEpic?: Record<string, { total: number; covered: number; rawPct: number }>;
-}
 
 export interface TraceabilityNode {
     epic: string;
@@ -44,6 +32,7 @@ export interface TraceabilityResult {
     nodes: TraceabilityNode[];
     totalEpics: number;
     totalTests: number;
+    /** Pass rate of linked tests across all epics (NOT requirements coverage — see HTML label). */
     overallCoverage: number;
     timestamp: string;
     /** EIXO C awareness: cross-referenced unified-model categories with provenance confidence + quality. */
@@ -87,10 +76,11 @@ function groupItemsByEpic(items?: CoverageGapItem[]): Map<string, CoverageGapIte
     const itemsByEpic = new Map<string, CoverageGapItem[]>();
     if (items) {
         for (const item of items) {
-            if (!itemsByEpic.has(item.epic)) {
-                itemsByEpic.set(item.epic, []);
+            const epicKey = item.epicKey ?? '';
+            if (!itemsByEpic.has(epicKey)) {
+                itemsByEpic.set(epicKey, []);
             }
-            const group = itemsByEpic.get(item.epic);
+            const group = itemsByEpic.get(epicKey);
             if (group) group.push(item);
         }
     }
@@ -148,7 +138,7 @@ function buildStoryNode(
     durationByTitle: Map<string, number>,
     flakinessByTitle: Map<string, number>,
 ): { node: TraceabilityNode['stories'][0]; storyPassed: number } | null {
-    const testTitles = item.linkedTestKeys || [];
+    const testTitles = item.linkedTestKeys;
     const storyTests: TraceabilityNode['stories'][0]['tests'] = [];
     let storyPassed = 0;
 
@@ -172,7 +162,7 @@ function buildStoryNode(
 
     return {
         node: {
-            key: item.issueKey || epicKey,
+            key: item.issueKey ?? epicKey,
             coverage: item.hasTest ? 100 : 0,
             health: storyHealth,
             flakiness: storyFlakiness,
@@ -403,7 +393,7 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                 MetricCard({ label: 'Total Epics', value: String(result.totalEpics) }) +
                 MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
                 MetricCard({
-                    label: 'Overall Coverage',
+                    label: 'Overall Test Pass Rate',
                     value: result.overallCoverage + '%',
                     severity: (() => {
                         if (result.overallCoverage >= 80) return 'success';

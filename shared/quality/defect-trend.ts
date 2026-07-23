@@ -48,7 +48,11 @@ export function sanitizeTrendResult(r: DefectTrendResult): DefectTrendResult {
 }
 
 function extractDate(ts: string): string {
-    return ts.slice(0, 10);
+    if (!ts || typeof ts !== 'string' || ts.length < 10) return 'Unknown';
+    const datePart = ts.slice(0, 10);
+    // Validate YYYY-MM-DD format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return 'Unknown';
+    return datePart;
 }
 
 function buildSummaryCards(top: Array<{ category: string; count: number }>): string {

@@ -128,7 +128,7 @@ describe('Case12', () => {
             ]);
 
             mockJiraResource.axiosInstance.get
-                .mockResolvedValueOnce({ status: 200 })
+                .mockResolvedValueOnce({ status: 200 }) // pagination
                 .mockResolvedValueOnce({ status: 200 })
                 .mockResolvedValueOnce({ status: 200 });
 

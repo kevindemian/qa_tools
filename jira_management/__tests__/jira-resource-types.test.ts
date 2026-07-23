@@ -32,6 +32,7 @@ describe('Jira-resource-types', () => {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             baseUrl: 'http://localhost:1999/jira/rest/api/2',
             log: createMockJiraResource().log,
             getProjectId: vi.fn(),

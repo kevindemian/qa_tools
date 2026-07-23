@@ -12,7 +12,7 @@
         "test": "NODE_OPTIONS=--max-old-space-size=2048 vitest run",
         "test:coverage": "NODE_OPTIONS=--max-old-space-size=2048 vitest run --coverage",
         "typecheck": "tsc --noEmit",
-        "lint": "npx tsx scripts/quality-check.ts",
+        "lint": "node --import tsx/esm scripts/quality-check.ts",
         "unused-exports": "ts-prune -p tsconfig.json -i \"__mocks__|/index.ts|shared/validation/.*schema.ts|mock-types.ts|providers/types.ts|compute/types.ts\" | grep -v \"(used in module)\" | grep -q . && exit 1 || exit 0",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
         "build": "node scripts/build.mjs",
@@ -53,8 +53,8 @@
         "fast-xml-parser": "^5.9.3",
         "figlet": "^1.11.0",
         "glob": "^13.0.6",
-        "minimatch": "^10.2.5",
         "gradient-string": "^3.0.0",
+        "minimatch": "^10.2.5",
         "neverthrow": "^8.2.0",
         "ora": "^9.4.1",
         "readline-sync": "^1.4.10",
@@ -72,6 +72,9 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@stryker-mutator/core": "^9.6.1",
+        "@stryker-mutator/typescript-checker": "^9.6.1",
+        "@stryker-mutator/vitest-runner": "^9.6.1",
         "@types/adm-zip": "^0.5.8",
         "@types/cli-progress": "^3.11.6",
         "@types/node": "^25.9.2",
@@ -90,15 +93,14 @@
         "nock": "^14.0.16",
         "prettier": "^3.8.4",
         "quickjs-emscripten": "^0.32.0",
-        "@stryker-mutator/core": "^9.0.0",
-        "@stryker-mutator/vitest-runner": "^9.0.0",
-        "@stryker-mutator/typescript-checker": "^9.0.0",
+        "tautest": "^1.10.1",
         "ts-morph": "^28.0.0",
         "ts-prune": "^0.10.3",
         "tsx": "^4.22.3",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.62.0",
-        "vitest": "^4.1.9"
+        "vitest": "^4.1.9",
+        "vitest-affected": "^0.9.0"
     },
     "overrides": {
         "qs": "^6.15.2"

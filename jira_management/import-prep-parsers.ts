@@ -7,8 +7,9 @@ import { rootLogger } from '../shared/logger.js';
 import { load as loadState } from '../shared/state.js';
 import { isPreconditionKey } from '../shared/quoted-string.js';
 import { ImportJsonSchema, ImportJsonItemSchema } from './csv-import-schema.js';
-import { warn, prompt, printSummary, askFilePath } from '../shared/ui/prompt.js';
+import { warn, prompt, info, printSummary, askFilePath } from '../shared/ui/prompt.js';
 import type { TestCase } from '../shared/types.js';
+import type { JiraResourceLike } from '../shared/types.js';
 import { z } from '../shared/validation/validation.js';
 
 type JsonTestItem = z.infer<typeof ImportJsonItemSchema>;
@@ -40,27 +41,87 @@ function jsonPreconditionsToItems(value: string | string[]): PreconditionItem[] 
 
 const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, 'test_steps.csv');
 
-export function handleDryRun(
+export async function handleDryRun(
     tests: TestCase[],
     onBusy: (busy: boolean) => void,
     sourcePath: string,
-): {
+    jiraResource?: JiraResourceLike,
+    targetKeys?: string[],
+    project?: string,
+): Promise<{
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
     summary: string;
     status: string;
     sourcePath: string;
     failedLinks: string[];
-} | null {
+} | null> {
     if (!Config.get('dryRun')) return null;
 
     warn('MODO DRY-RUN: Nenhuma operação sera executada.');
+
+    const mappedCount = Math.min(targetKeys?.length ?? 0, tests.length);
+    const createCount = tests.length - mappedCount;
+
+    if (jiraResource && project) {
+        info('Validando dependências...');
+
+        try {
+            await jiraResource.getJiraResource('project/' + project);
+            info('  Projeto ' + project + ' ✓');
+        } catch {
+            warn('  Projeto ' + project + ' ✗ (não encontrado ou sem acesso)');
+        }
+
+        const linkedKeys = new Set<string>();
+        for (const t of tests) {
+            if (t.linkedIssues) {
+                for (const li of t.linkedIssues) {
+                    if (li.key) linkedKeys.add(li.key);
+                }
+            }
+        }
+        for (const key of linkedKeys) {
+            try {
+                await jiraResource.getJiraResource('issue/' + key);
+                info('  ' + key + ' ✓ (linked issue)');
+            } catch {
+                warn('  ' + key + ' ✗ (linked issue não encontrado)');
+            }
+        }
+    }
+
+    if (jiraResource && targetKeys && targetKeys.length > 0) {
+        info('Validando target-keys...');
+        for (let i = 0; i < mappedCount; i++) {
+            const key = targetKeys[i];
+            if (!key) continue;
+            try {
+                await jiraResource.getJiraResource('issue/' + key);
+                info('  CSV[' + (i + 1) + '] → ' + key + ' ✓ (UPDATE)');
+            } catch {
+                warn('  CSV[' + (i + 1) + '] → ' + key + ' ✗ (NOT FOUND)');
+            }
+        }
+        for (let i = mappedCount; i < tests.length; i++) {
+            info('  CSV[' + (i + 1) + '] → (CREATE)');
+        }
+    } else {
+        for (let i = 0; i < tests.length; i++) {
+            info('  CSV[' + (i + 1) + '] → (CREATE)');
+        }
+    }
+
+    const summaryParts = [tests.length + ' testes simulados'];
+    if (mappedCount > 0) summaryParts.push(mappedCount + ' updates');
+    if (createCount > 0) summaryParts.push(createCount + ' creates');
+
     printSummary(tests.map((t) => ({ status: 'ok' as const, label: t.title, message: 'simulado' })));
     onBusy(false);
     return {
         inMemoryTasksId: [],
         inMemoryTasksText: [],
-        summary: 'DRY-RUN: ' + tests.length + ' testes simulados',
+        summary: 'DRY-RUN: ' + summaryParts.join(', '),
         status: 'ok',
         sourcePath,
         failedLinks: [],
@@ -138,35 +199,37 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
         return [];
     }
     let aliasWarned = false;
-    return validated.map((item: JsonTestItem): TestCase => ({
-        title: item.title,
-        description: item.description || '',
-        steps: item.steps.map((s) => {
-            const expectedResult = s['Expected Result'] ?? s.ExpectedResult ?? '';
-            if (!aliasWarned && s.ExpectedResult && !s['Expected Result']) {
-                aliasWarned = true;
-                rootLogger.warn(
-                    'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
-                        'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
-                        'Solução: renomeie a chave para "Expected Result" nos seus arquivos JSON. ' +
-                        'Este aviso aparece apenas uma vez por arquivo.',
-                );
-            }
-            return {
-                fields: {
-                    Action: s.Action ?? '',
-                    Data: s.Data ?? '',
-                    'Expected Result': expectedResult,
-                },
-            };
+    return validated.map(
+        (item: JsonTestItem): TestCase => ({
+            title: item.title,
+            description: item.description || '',
+            steps: item.steps.map((s) => {
+                const expectedResult = s['Expected Result'] ?? s.ExpectedResult ?? '';
+                if (!aliasWarned && s.ExpectedResult && !s['Expected Result']) {
+                    aliasWarned = true;
+                    rootLogger.warn(
+                        'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
+                            'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
+                            'Solução: renomeie a chave para "Expected Result" nos seus arquivos JSON. ' +
+                            'Este aviso aparece apenas uma vez por arquivo.',
+                    );
+                }
+                return {
+                    fields: {
+                        Action: s.Action ?? '',
+                        Data: s.Data ?? '',
+                        'Expected Result': expectedResult,
+                    },
+                };
+            }),
+            ...(item.precondition ? { precondition: jsonPreconditionsToItems(item.precondition) } : {}),
+            group: item.group || '',
+            linkedIssues: Array.isArray(item.linkedIssues)
+                ? item.linkedIssues.map((li) => {
+                      if (typeof li === 'string') return { key: li, linkType: 'Tests' };
+                      return { key: li.key, linkType: li.linkType || 'Tests' };
+                  })
+                : [],
         }),
-        ...(item.precondition ? { precondition: jsonPreconditionsToItems(item.precondition) } : {}),
-        group: item.group || '',
-        linkedIssues: Array.isArray(item.linkedIssues)
-            ? item.linkedIssues.map((li) => {
-                  if (typeof li === 'string') return { key: li, linkType: 'Tests' };
-                  return { key: li.key, linkType: li.linkType || 'Tests' };
-              })
-            : [],
-    }));
+    );
 }

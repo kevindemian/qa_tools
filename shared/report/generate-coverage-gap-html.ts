@@ -146,7 +146,7 @@ function buildGapsTable(result: CoverageGapResult): string {
         '<div style="overflow-x:auto;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';
     for (const item of gaps) {
         html += '<tr class="gap-row" style="border-bottom:1px solid var(--color-border-subtle)">';
-        html += '<td><strong>' + sanitizeHtml(item.issueKey) + '</strong></td>';
+        html += '<td><strong>' + sanitizeHtml(item.issueKey ?? '—') + '</strong></td>';
         html += '<td>' + sanitizeHtml(item.summary.slice(0, 80)) + '</td>';
         html += '<td>' + sanitizeHtml(item.type) + '</td>';
         html += '<td>' + sanitizeHtml(item.priority) + '</td>';

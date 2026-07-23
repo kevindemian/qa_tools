@@ -174,6 +174,7 @@ export function parseJUnitXml(xmlContent: string): JUnitParseResult | null {
 
         return null;
     } catch (err) {
+        rootLogger.warn(`parseJUnitXml: ${extractErrorMessage(err)}`);
         rootLogger.debug(`parseJUnitXml: ${extractErrorMessage(err)}`);
         return null;
     }

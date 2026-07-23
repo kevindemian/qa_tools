@@ -74,6 +74,7 @@ export interface JiraResourceLike {
     getJiraResource<T = unknown>(url: string): Promise<T>;
     postJiraResource<T = unknown>(url: string, data?: unknown): Promise<T>;
     putJiraResource<T = unknown>(url: string, data?: unknown): Promise<T | null>;
+    deleteJiraResource<T = unknown>(url: string): Promise<T>;
     searchJiraIssues(jql: string, maxResults?: number): Promise<SearchIssuesResponse>;
     getTransitionsForIssue(issueKey: string): Promise<Record<string, string>>;
     transitionIssue(issueId: string, transitionId: string): Promise<void>;

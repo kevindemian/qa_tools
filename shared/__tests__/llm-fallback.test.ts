@@ -294,7 +294,7 @@ describe('Llm Fallback', () => {
             Config.set('llmBatchBaseUrl', 'https://models.inference.ai.azure.com');
 
             mockFetch
-                .mockResolvedValueOnce(mockErrorResponse(500))
+                .mockResolvedValueOnce(mockErrorResponse(500)) // pagination
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))
                 .mockResolvedValueOnce(mockErrorResponse(500))

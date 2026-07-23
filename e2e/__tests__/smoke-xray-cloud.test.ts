@@ -90,6 +90,7 @@ describe('Smoke-xray-cloud', () => {
             getJiraResource: vi.fn().mockResolvedValue({}),
             postJiraResource: vi.fn().mockResolvedValue({}),
             putJiraResource: vi.fn().mockResolvedValue(null),
+            deleteJiraResource: vi.fn().mockResolvedValue({}),
             searchJiraIssues: vi.fn().mockResolvedValue({ issues: [] }),
             getTransitionsForIssue: vi.fn().mockResolvedValue({}),
             transitionIssue: vi.fn().mockResolvedValue(undefined),

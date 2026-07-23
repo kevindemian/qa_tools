@@ -137,7 +137,7 @@ describe('Case21', () => {
             const case18 = vi.mocked(case18Module);
 
             prompt.askConfirm
-                .mockResolvedValueOnce(false) // skip create tests
+                .mockResolvedValueOnce(false) // skip create tests // pagination
                 .mockResolvedValueOnce(true) // AI gen
                 .mockResolvedValueOnce(false); // skip HTML
 
@@ -158,7 +158,7 @@ describe('Case21', () => {
             const case18 = vi.mocked(case18Module);
 
             prompt.askConfirm
-                .mockResolvedValueOnce(false) // skip create tests
+                .mockResolvedValueOnce(false) // skip create tests // pagination
                 .mockResolvedValueOnce(false) // skip AI gen
                 .mockResolvedValueOnce(true); // export HTML
 
@@ -186,7 +186,7 @@ describe('Case21', () => {
             const coverageGap = vi.mocked(coverageGapModule);
 
             prompt.askConfirm
-                .mockResolvedValueOnce(false) // skip create tests
+                .mockResolvedValueOnce(false) // skip create tests // pagination
                 .mockResolvedValueOnce(false) // skip AI gen
                 .mockResolvedValueOnce(true); // export HTML
 
@@ -208,7 +208,7 @@ describe('Case21', () => {
             const coverageGap = vi.mocked(coverageGapModule);
 
             prompt.askConfirm
-                .mockResolvedValueOnce(true) // create tests
+                .mockResolvedValueOnce(true) // create tests // pagination
                 .mockResolvedValueOnce(false) // skip AI gen
                 .mockResolvedValueOnce(false); // skip HTML
 
@@ -245,7 +245,7 @@ describe('Case21', () => {
             };
 
             prompt.askConfirm
-                .mockResolvedValueOnce(false) // skip create tests
+                .mockResolvedValueOnce(false) // skip create tests // pagination
                 .mockResolvedValueOnce(true) // AI gen
                 .mockResolvedValueOnce(false); // skip HTML
 

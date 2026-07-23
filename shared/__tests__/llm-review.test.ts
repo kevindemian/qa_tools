@@ -95,7 +95,7 @@ describe('ReviewWithLlm', () => {
         expect.hasAssertions();
 
         mockLlmPrompt
-            .mockResolvedValueOnce(validParsedReport)
+            .mockResolvedValueOnce(validParsedReport) // pagination
             .mockResolvedValueOnce('PARTIAL - ok')
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce(validParsedReport)
@@ -112,7 +112,7 @@ describe('ReviewWithLlm', () => {
         expect.hasAssertions();
 
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport) // pagination
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - Good.');
 
@@ -142,7 +142,7 @@ describe('ReviewWithLlm', () => {
         expect.hasAssertions();
 
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport) // pagination
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)
@@ -160,7 +160,7 @@ describe('ReviewWithLlm', () => {
         expect.hasAssertions();
 
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport) // pagination
             .mockResolvedValueOnce(validParsedReport)
             .mockResolvedValueOnce('AGREE - Good.');
 
@@ -187,7 +187,7 @@ describe('ReviewWithLlm', () => {
         expect.hasAssertions();
 
         mockLlmPrompt
-            .mockResolvedValueOnce(invalidParsedReport)
+            .mockResolvedValueOnce(invalidParsedReport) // pagination
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)
             .mockResolvedValueOnce(invalidParsedReport)

@@ -37,6 +37,7 @@ export interface JiraResourceLike {
     getJiraResource: <T = JsonObject>(resourceUrl: string) => Promise<T>;
     postJiraResource: (resourceUrl: string, data: unknown) => Promise<JsonObject>;
     putJiraResource: (resourceUrl: string, data: unknown) => Promise<JsonObject | null>;
+    deleteJiraResource: (resourceUrl: string) => Promise<JsonObject>;
     /** Optional: POST to a Cloud-specific API root (e.g. /rest/agile/1.0). Present on real JiraResource. */
     postToApiRoot?: (relativePath: string, data: unknown) => Promise<JsonObject | null>;
     baseUrl: string;

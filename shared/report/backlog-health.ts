@@ -6,6 +6,7 @@
 
 import { sanitizeHtml } from '../escape.js';
 import { Card, MetricCard, MetricGrid, Badge } from '../primitives/index.js';
+import type { RawJiraIssue } from '../types/data-hub.js';
 
 /**
  * Dimension 5 Provenance — documents the source and justification for each weight and threshold.
@@ -30,6 +31,8 @@ export interface BacklogHealthIssue {
     type: string;
     priority: string;
     linkedTestCount: number;
+    /** Epic real (quando disponível na fonte). Fallback: prefixo do key. */
+    epic?: string;
 }
 
 export interface BacklogHealthResult {
@@ -39,12 +42,34 @@ export interface BacklogHealthResult {
     densityByEpic: Array<{ epic: string; bugCount: number; testCount: number }>;
     totalIssues: number;
     score: number;
+    /** true quando nenhum issue real foi analisado (sem fabricação de 100%). */
+    noData?: boolean;
+    /** Limite de EXIBIÇÃO das listas (não trunca a análise). Ausente = sem limite. */
+    displayLimit?: number;
     timestamp: string;
 }
 
 export interface BacklogHealthOptions {
     staleDays: number;
     maxIssues: number;
+}
+
+/**
+ * Maps RawJiraIssue[] (from DataHub) to BacklogHealthIssue[] for analysis.
+ * Epic field uses real `parentKey` when available; falls back to key prefix.
+ * linkedTestCount defaults to 0 (caller can enrich from traceability if needed).
+ */
+export function mapJiraIssuesToBacklogHealth(issues: RawJiraIssue[]): BacklogHealthIssue[] {
+    return issues.map((issue) => ({
+        key: issue.key,
+        summary: issue.summary,
+        assignee: issue.assignee ?? null,
+        updated: issue.updated,
+        type: issue.type,
+        priority: issue.priority ?? 'Medium',
+        linkedTestCount: 0,
+        epic: issue.parentKey ?? issue.key.split('-')[0] ?? 'UNKNOWN',
+    }));
 }
 
 const DEFAULTS: BacklogHealthOptions = {
@@ -93,7 +118,9 @@ export function calculateBacklogScore(result: BacklogHealthResult): number {
     ]).size;
 
     const totalIssues = Number.isFinite(result.totalIssues) ? result.totalIssues : 0;
-    const effective = Math.max(totalIssues, totalFlagged, 1);
+    if (totalIssues === 0) return 0;
+
+    const effective = Math.max(totalIssues, totalFlagged);
 
     const unassignScore = Math.max(0, 100 - (result.unassignedIssues.length / effective) * 100);
     const staleScore = Math.max(0, 100 - (result.staleIssues.length / effective) * 100);
@@ -111,15 +138,15 @@ export function analyzeBacklogHealth(
     options?: Partial<BacklogHealthOptions>,
 ): BacklogHealthResult {
     const opts = { ...DEFAULTS, ...options };
-    const limited = issues.slice(0, opts.maxIssues);
 
-    const unassigned = analyzeUnassignedIssues(limited);
-    const stale = analyzeStaleIssues(limited, opts);
-    const bugs = analyzeBugsWithoutTests(limited);
+    // Analisa TODOS os issues (sem truncagem silenciosa). maxIssues limita apenas a exibição.
+    const unassigned = analyzeUnassignedIssues(issues);
+    const stale = analyzeStaleIssues(issues, opts);
+    const bugs = analyzeBugsWithoutTests(issues);
 
     const epicMap = new Map<string, { bugCount: number; testCount: number }>();
-    for (const issue of limited) {
-        const epic = issue.key.split('-')[0] || 'UNKNOWN';
+    for (const issue of issues) {
+        const epic = (issue.epic ?? issue.key.split('-')[0]) || 'UNKNOWN';
         const entry = epicMap.get(epic) || { bugCount: 0, testCount: 0 };
         if (issue.type === 'Bug') entry.bugCount++;
         entry.testCount += issue.linkedTestCount;
@@ -134,8 +161,10 @@ export function analyzeBacklogHealth(
         staleIssues: stale,
         bugsWithoutTests: bugs,
         densityByEpic,
-        totalIssues: limited.length,
+        totalIssues: issues.length,
         score: 0,
+        noData: issues.length === 0,
+        displayLimit: opts.maxIssues,
         timestamp: new Date().toISOString(),
     };
 
@@ -148,8 +177,9 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
         children:
             MetricCard({
                 label: 'Backlog Score',
-                value: String(result.score) + '%',
+                value: result.noData ? 'N/A' : String(result.score) + '%',
                 severity: (() => {
+                    if (result.noData) return 'warn';
                     if (result.score >= SCORE_THRESHOLD_SUCCESS) return 'success';
                     if (result.score >= SCORE_THRESHOLD_WARN) return 'warn';
                     return 'error';
@@ -179,7 +209,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Unassigned Issues (' + result.unassignedIssues.length + ')',
             variant: 'bordered',
             severity: 'warn',
-            children: buildIssueList(result.unassignedIssues),
+            children: buildIssueListCapped(result.unassignedIssues, result.displayLimit),
         });
     }
 
@@ -188,7 +218,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Stale Issues (' + result.staleIssues.length + ')',
             variant: 'bordered',
             severity: 'warn',
-            children: buildIssueList(result.staleIssues),
+            children: buildIssueListCapped(result.staleIssues, result.displayLimit),
         });
     }
 
@@ -197,7 +227,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
             title: 'Bugs Without Tests (' + result.bugsWithoutTests.length + ')',
             variant: 'bordered',
             severity: 'error',
-            children: buildIssueList(result.bugsWithoutTests),
+            children: buildIssueListCapped(result.bugsWithoutTests, result.displayLimit),
         });
     }
 
@@ -211,9 +241,11 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult): string {
     return '<div id="backlog-health">' + summaryCards + sectionsHtml + '</div>';
 }
 
-function buildIssueList(issues: BacklogHealthIssue[]): string {
+function buildIssueListCapped(issues: BacklogHealthIssue[], limit?: number): string {
+    const hasLimit = typeof limit === 'number' && limit >= 0;
+    const visible = hasLimit ? issues.slice(0, limit) : issues;
     let html = '<div style="max-height:300px;overflow-y:auto">';
-    for (const issue of issues) {
+    for (const issue of visible) {
         html += '<div style="padding:6px 0;border-bottom:1px solid var(--color-border-subtle);font-size:0.85rem">';
         html += '<span style="font-weight:600">' + sanitizeHtml(issue.key) + '</span>';
         html +=
@@ -222,6 +254,15 @@ function buildIssueList(issues: BacklogHealthIssue[]): string {
             '</span>';
         html += ' ' + Badge({ variant: issue.type === 'Bug' ? 'fail' : 'warn', children: issue.type });
         html += '</div>';
+    }
+    if (hasLimit && issues.length > limit) {
+        html +=
+            '<div style="padding:6px 0;color:var(--color-text-secondary);font-size:0.8rem">' +
+            'Showing first ' +
+            String(limit) +
+            ' of ' +
+            String(issues.length) +
+            ' issues.</div>';
     }
     html += '</div>';
     return html;

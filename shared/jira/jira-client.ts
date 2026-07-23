@@ -163,6 +163,27 @@ class JiraClient implements JiraResourceLike {
         }
     }
 
+    async deleteJiraResource<T = JsonObject>(resourceUrl: string): Promise<T> {
+        checkCircuitBreaker('jira-client');
+        const t0 = performance.now();
+        try {
+            const response = await this.axiosInstance.delete<T>(`/${resourceUrl}`);
+            const elapsed = performance.now() - t0;
+            if (elapsed > 1000) rootLogger.warn(`[timing] DELETE /${resourceUrl} ${Math.round(elapsed)}ms`);
+            else rootLogger.debug(`[timing] DELETE /${resourceUrl} ${Math.round(elapsed)}ms`);
+            recordCircuitSuccess('jira-client');
+            return response.data;
+        } catch (err: unknown) {
+            const elapsed = performance.now() - t0;
+            const axiosErr = err as { response?: { status?: number }; code?: string };
+            if (!axiosErr.response) recordCircuitFailure('jira-client');
+            rootLogger.error(
+                `[timing] DELETE /${resourceUrl} FAILED after ${Math.round(elapsed)}ms: ${formatErr(err)}`,
+            );
+            throw err;
+        }
+    }
+
     async getFromOriginPath<T = JsonObject>(path: string): Promise<T> {
         checkCircuitBreaker('jira-client');
         const url = `${this.originUrl}/${path.startsWith('/') ? path.slice(1) : path}`;

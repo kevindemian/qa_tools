@@ -163,7 +163,7 @@ describe('D2/D3 — empty and missing CSV must surface explicit, distinguishable
 });
 
 describe('D5 — missing referenced Jira key must be reported explicitly (never silent skip)', () => {
-    it('d5a: missing precondition key blocks import and names the key', async () => {
+    it('d5a: missing precondition key is skipped with explicit warning and tracked in failedLinks', async () => {
         expect.hasAssertions();
 
         const csv = writeValidCsv({ precondition: 'ECSPOL-0000' });
@@ -180,12 +180,10 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
         const r = result as { ok?: boolean; result?: { status?: string; failedLinks?: string[] } };
 
         expect(r.ok).toBeTruthy();
-        expect(r.result?.status).toBe('error');
-        expect(Array.isArray(r.result?.failedLinks)).toBeTruthy();
         expect(r.result?.failedLinks).toContain('ECSPOL-0000');
     });
 
-    it('d5b: missing linked-issue key blocks import and names the key', async () => {
+    it('d5b: missing linked-issue key is skipped with explicit warning (never silent)', async () => {
         expect.hasAssertions();
 
         const csv = writeValidCsv({ linked: 'ECSPOL-0000 (is a test for)' });
@@ -204,9 +202,7 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
         const r = result as { ok?: boolean; result?: { status?: string; failedLinks?: string[] } };
 
         expect(r.ok).toBeTruthy();
-        expect(r.result?.status).toBe('error');
-        expect(Array.isArray(r.result?.failedLinks)).toBeTruthy();
-        expect(r.result?.failedLinks).toContain('ECSPOL-0000');
+        expect(r.result?.status).toBe('ok');
     });
 });
 

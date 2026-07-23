@@ -281,7 +281,7 @@ describe('Handlers Happy Paths', () => {
             api.put('/issue/IMT-1').reply(204);
             api.put('/issue/IMT-2').reply(204);
 
-            getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory
+            getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory // pagination
             getPrompt().ask.mockResolvedValueOnce('v2.0.0'); // version
             getPrompt().askConfirm.mockResolvedValueOnce(true); // confirm fixVersion
             getPrompt().askConfirm.mockResolvedValueOnce(false); // no sprint
@@ -594,7 +594,7 @@ describe('Handlers Happy Paths', () => {
                 .query(true)
                 .reply(200, { key: 'IMT-2', fields: { summary: 'Memory Test 2' } });
 
-            getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory
+            getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory // pagination
             getPrompt().ask.mockResolvedValueOnce('1'); // option 1 — create new TE
             getPrompt().ask.mockResolvedValueOnce(''); // name (default '')
             getPrompt().ask.mockResolvedValueOnce(''); // title
@@ -672,7 +672,7 @@ describe('Handlers Happy Paths', () => {
                 .query(true)
                 .reply(200, { key: 'TEST-1', fields: { summary: 'TC E2E' } });
 
-            getPrompt().ask.mockResolvedValueOnce(jsonFixture); // json path
+            getPrompt().ask.mockResolvedValueOnce(jsonFixture); // json path // pagination
             getPrompt().ask.mockResolvedValueOnce('1'); // option 1 — create new TE
             getPrompt().ask.mockResolvedValueOnce(''); // name (default '')
             getPrompt().ask.mockResolvedValueOnce(''); // title

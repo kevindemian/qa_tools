@@ -84,6 +84,9 @@ export const ALIASES: Record<string, string> = {
     'associar-te': '28',
     'associar-testes': '28',
     associate: '28',
+    'dry-run': '29',
+    simular: '29',
+    preview: '29',
 
     w: '24',
     setup: '24',
@@ -138,6 +141,7 @@ export const SUB_MENUS: Record<string, MenuItem[]> = {
         { id: '15', label: 'Importar testes de JSON' },
         { id: '18', label: 'Gerar testes via User Story (IA)' },
         { id: '11', label: 'Gerar template (CSV/JSON)' },
+        { id: '29', label: 'Dry-run: simular importação CSV' },
         { id: '0', label: 'Voltar' },
     ],
     bugreport: [

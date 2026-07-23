@@ -6,7 +6,7 @@ vi.mock('../../shared/ui/prompt.js', async () => {
         .mockResolvedValueOnce(''); // ID da sprint (empty → skip)
     const askConfirmMock = vi
         .fn()
-        .mockResolvedValueOnce(true) // Usar tarefas criadas anteriormente
+        .mockResolvedValueOnce(true) // Usar tarefas criadas anteriormente // pagination
         .mockResolvedValueOnce(true) // Confirmar atribuicao de fixVersion
         .mockResolvedValueOnce(false); // Adicionar tarefas a uma sprint (no)
     return {

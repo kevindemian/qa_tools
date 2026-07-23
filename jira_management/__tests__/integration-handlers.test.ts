@@ -85,6 +85,7 @@ describe('Case01 — Import CSV', () => {
         const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('label1,label2');
+        vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
@@ -105,6 +106,7 @@ describe('Case01 — Import CSV', () => {
         const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
         vi.mocked(ask).mockResolvedValueOnce('');
+        vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');
         await case01.handler(ctx);
@@ -117,6 +119,7 @@ describe('Case01 — Import CSV', () => {
 
         const { askFilePath, ask } = await import('../../shared/ui/prompt.js');
         vi.mocked(askFilePath).mockResolvedValueOnce(path.join(os.tmpdir(), 'qa-test.csv'));
+        vi.mocked(ask).mockResolvedValueOnce('');
         vi.mocked(ask).mockResolvedValueOnce('');
         const ctx = createMockContext();
         const { default: case01 } = await import('../commands/case01.js');

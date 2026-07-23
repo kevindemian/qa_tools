@@ -31,6 +31,7 @@ import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality/quality-gate.js';
+import type { QualityGateStatus } from './quality/quality-gate.js';
 import { createCheckRun } from './ci/github-check-run.js';
 import { postPrComment } from './ci/github-pr-comment.js';
 import { generateHtmlReport } from './report/report-html.js';
@@ -233,7 +234,61 @@ function buildFlakySection(dataHub: DataHub): string {
     }
 }
 
-function buildAiAnalysisSection(): string {
+function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageForReport> | undefined): string {
+    if (!coverageResult) return '';
+    const { coveragePct, source, detail } = coverageResult;
+    let icon: string;
+    if (coveragePct >= 70) icon = '✅';
+    else if (coveragePct >= 50) icon = '⚠️';
+    else icon = '❌';
+    return [
+        '',
+        `## ${icon} Code Coverage`,
+        '',
+        `| Metric | Value |`,
+        `|---|---|`,
+        `| Coverage | ${coveragePct.toFixed(1)}% |`,
+        `| Source | ${source} |`,
+        ...(detail ? [`| Detail | ${detail} |`] : []),
+        '',
+    ].join('\n');
+}
+
+function buildDiffSection(diff: DiffComparison | undefined): string {
+    if (!diff) return '';
+    const { newFailures, newPasses, flaky } = diff;
+    if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
+
+    const lines: string[] = ['', '## 🔄 Diff Comparison', ''];
+    if (newFailures.length > 0) {
+        lines.push('### 🆕 New Failures', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of newFailures) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    if (newPasses.length > 0) {
+        lines.push('### ✅ Fixed (Previously Failing)', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of newPasses) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    if (flaky.length > 0) {
+        lines.push('### 🔄 Flaky (State Changed)', '');
+        lines.push('| Test | Duration |', '|---|---|');
+        for (const t of flaky) {
+            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
+        }
+        lines.push('');
+    }
+    return lines.join('\n');
+}
+
+function buildAiAnalysisSection(llmAvailable: boolean): string {
+    if (!llmAvailable) return '';
     return [
         '',
         '### 🤖 AI Failure Analysis',
@@ -369,7 +424,7 @@ async function handleQualityGate(
         await createCheckRun({
             name: 'Quality Gate',
             status: 'completed',
-            conclusion: qgResult.overall === 'pass' ? 'success' : 'failure',
+            conclusion: gateConclusion(qgResult.overall),
             output: {
                 title: `Quality Gate: ${qgResult.overall.toUpperCase()} (Score: ${qgResult.score}/100) | Grade: ${gradeStr}`,
                 summary: checkSummary,
@@ -518,16 +573,30 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     });
 
     const { workflowUrl, artifactUrl } = resolveCiUrls();
+    const llmAvailable = !!(
+        process.env['LLM_API_KEY'] ||
+        process.env['OPENAI_API_KEY'] ||
+        process.env['ANTHROPIC_API_KEY'] ||
+        process.env['GEMINI_API_KEY']
+    );
 
     const sections: string[] = [];
     sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv(), stats));
     sections.push(buildSummaryTable(stats));
 
+    // Code Coverage section (from DataHub)
+    const coverageSection = buildCoverageSection(coverageResult);
+    if (coverageSection) sections.push(coverageSection);
+
     const failSection = buildFailureTable(tests);
     if (failSection) sections.push(failSection);
 
+    // Diff Comparison section
+    const diffSection = buildDiffSection(options.diffComparison);
+    if (diffSection) sections.push(diffSection);
+
     if (!options.skipAi) {
-        sections.push(buildAiAnalysisSection());
+        sections.push(buildAiAnalysisSection(llmAvailable));
     }
 
     if (!options.skipQuality) {
@@ -564,27 +633,39 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 }
 
 // Markdown builders for PR comment sections
-function buildQGCHeckSummary(
-    result: {
-        overall: 'pass' | 'fail';
-        score: number;
-        checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
-    },
-    grade?: string,
-    artifactUrl?: string,
-): string {
-    const lines: string[] = [
-        `**Quality Gate: ${result.overall === 'pass' ? '✅ PASSED' : '❌ FAILED'}**`,
-        '',
-        `**Score:** ${result.score}/100`,
-    ];
+type QualityGateSummary = {
+    overall: QualityGateStatus;
+    score: number;
+    checks: Array<{ name: string; status: QualityGateStatus; score: number; threshold: number }>;
+};
+
+function gateStatusIcon(status: QualityGateStatus): string {
+    if (status === 'pass') return '✅';
+    if (status === 'unknown') return '❓';
+    return '❌';
+}
+
+function gateOverallLabel(overall: QualityGateStatus): { icon: string; word: string } {
+    if (overall === 'pass') return { icon: '✅', word: 'PASSED' };
+    if (overall === 'unknown') return { icon: '❓', word: 'UNKNOWN' };
+    return { icon: '❌', word: 'FAILED' };
+}
+
+function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'failure' {
+    if (overall === 'pass') return 'success';
+    if (overall === 'unknown') return 'neutral';
+    return 'failure';
+}
+
+function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifactUrl?: string): string {
+    const { icon, word } = gateOverallLabel(result.overall);
+    const lines: string[] = [`**Quality Gate: ${icon} ${word}**`, '', `**Score:** ${result.score}/100`];
     if (grade) {
         lines.push(`**Grade:** ${grade}`);
     }
     lines.push('', '| Check | Score | Threshold | Status |', '|---|---|---|---|');
     for (const check of result.checks) {
-        const icon = check.status === 'pass' ? '✅' : '❌';
-        lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${icon} |`);
+        lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${gateStatusIcon(check.status)} |`);
     }
     if (artifactUrl) {
         lines.push('', `📄 [Download HTML report](${artifactUrl})`);
@@ -592,19 +673,15 @@ function buildQGCHeckSummary(
     return lines.join('\n');
 }
 
-function buildQualityGateSection(result: {
-    overall: 'pass' | 'fail';
-    score: number;
-    checks: Array<{ name: string; status: 'pass' | 'fail'; score: number; threshold: number }>;
-}): string {
-    const statusIcon = result.overall === 'pass' ? '✅' : '❌';
+function buildQualityGateSection(result: QualityGateSummary): string {
+    const { icon, word } = gateOverallLabel(result.overall);
     const checkRows = result.checks.map(
-        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${c.status === 'pass' ? '✅' : '❌'} |`,
+        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${gateStatusIcon(c.status)} |`,
     );
 
     return [
         '',
-        `## 🛡️ Quality Gate: ${statusIcon} ${result.overall.toUpperCase()} (Score: ${result.score}/100)`,
+        `## 🛡️ Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
         '| Check | Actual | Threshold | Status |',
         '|---|---|---|---|',

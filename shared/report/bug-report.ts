@@ -17,6 +17,84 @@ const LLM_DESC_TRUNCATION_LIMIT = 1000;
 const LLM_CONFIDENCE = 0.5;
 const PROMPT_DIR = path.resolve(import.meta.dirname, '..', 'prompts');
 
+/** Keywords that indicate critical severity failures. */
+const CRITICAL_KEYWORDS = [
+    'oom',
+    'out of memory',
+    'memory limit',
+    'heap',
+    'stack overflow',
+    'timeout',
+    'timed out',
+    'execution timeout',
+    'fatal',
+    'segfault',
+    'segmentation fault',
+    'core dumped',
+    'killed',
+    'signal',
+    'sigkill',
+    'sigterm',
+    'deadlock',
+    'corruption',
+    'security',
+    'vulnerability',
+];
+
+/** Keywords that indicate high severity failures. */
+const HIGH_KEYWORDS = ['error', 'exception', 'failed', 'failure', 'assert', 'expect', 'mismatch', 'not equal'];
+
+/** Check if error contains critical keyword. */
+function hasCriticalKeyword(err: string): boolean {
+    for (const kw of CRITICAL_KEYWORDS) {
+        if (err.includes(kw)) return true;
+    }
+    return false;
+}
+
+/** Check if error contains high severity keyword. */
+function hasHighKeyword(err: string): boolean {
+    for (const kw of HIGH_KEYWORDS) {
+        if (err.includes(kw)) return true;
+    }
+    return false;
+}
+
+/** Check if any failed test has critical keyword in error. */
+function anyCriticalKeyword(failedTests: ParseResult['tests']): boolean {
+    for (const test of failedTests) {
+        if (test.error && hasCriticalKeyword(test.error.toLowerCase())) return true;
+    }
+    return false;
+}
+
+/** Check if any failed test has high severity keyword in error. */
+function anyHighKeyword(failedTests: ParseResult['tests']): boolean {
+    for (const test of failedTests) {
+        if (test.error && hasHighKeyword(test.error.toLowerCase())) return true;
+    }
+    return false;
+}
+
+/** Infer bug severity from failure data in ParseResult. */
+function inferSeverityFromFailures(result: ParseResult): BugReport['severity'] {
+    const failedTests = result.tests.filter((t) => t.state === 'failed');
+    if (failedTests.length === 0) return 'trivial';
+
+    // Check for critical keywords in error messages
+    if (anyCriticalKeyword(failedTests)) return 'critical';
+
+    // Check failure rate - if >50% of tests failed, likely critical
+    const failureRate = failedTests.length / result.stats.total;
+    if (failureRate > 0.5) return 'critical';
+
+    // Check for high severity keywords
+    if (anyHighKeyword(failedTests)) return 'major';
+
+    // Default to minor for isolated failures without clear severity indicators
+    return 'minor';
+}
+
 function readPrompt(file: string): string {
     try {
         return fs.readFileSync(sanitizePath(PROMPT_DIR, file), 'utf8');
@@ -193,11 +271,12 @@ export function collectAutomated(
         metadata.dataQualityConfidence = confidences.length ? Math.min(...confidences) : null;
         metadata.priorFailureCount = cross.filter((c) => c.found).length;
     }
+    const inferredSeverity = inferSeverityFromFailures(result);
     return {
         summary: buildSummaryFromFailures(result),
         description: buildDescriptionFromFailures(result),
         source: 'automated',
-        severity: 'major',
+        severity: inferredSeverity,
         llmEnrichment: {
             enrichedAt: new Date().toISOString(),
             model: 'analysis',

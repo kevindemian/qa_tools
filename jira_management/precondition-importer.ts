@@ -98,6 +98,14 @@ export class PreconditionHandler {
             }
             const testId = await this._resolveNumericId(testKey);
             const precIds = await Promise.all(keys.map((k) => this._resolveNumericId(k)));
+
+            info(`Limpando pre-conditions existentes do teste ${testKey} (id ${testId}) via Xray Cloud GraphQL...`);
+            const existingIds = await this._getXrayClient().getTestPreconditions(testId, clientId, clientSecret);
+            if (existingIds.length > 0) {
+                info(`Removendo ${existingIds.length} pre-condition(s) existente(s): ${existingIds.join(', ')}`);
+                await this._getXrayClient().removePreconditionsFromTest(testId, existingIds, clientId, clientSecret);
+            }
+
             info(
                 `Associando pre-conditions ${keys.join(', ')} (ids ${precIds.join(', ')}) ao teste ${testKey} ` +
                     `(id ${testId}) via Xray Cloud GraphQL addPreconditionsToTest...`,
@@ -106,16 +114,9 @@ export class PreconditionHandler {
             return null;
         }
         const fieldId = await this._getPreconditionFieldId();
-        info(`Associando pre-conditions ${keys.join(', ')} ao teste ${testKey}...`);
-        const testIssue = await this.jiraResource.getJiraResource<{ fields?: JsonObject }>(`issue/${testKey}`);
-        const current = (Reflect.get(testIssue.fields ?? {}, fieldId) ?? []) as string[];
-        for (const k of keys) {
-            if (!current.includes(k)) {
-                current.push(k);
-            }
-        }
+        info(`Associando pre-conditions ${keys.join(', ')} ao teste ${testKey} (atomic replace)...`);
         const payload: JsonObject = {};
-        Reflect.set(payload, fieldId, current);
+        Reflect.set(payload, fieldId, keys);
         return this.jiraResource.putJiraResource<JsonObject>(`issue/${testKey}`, { fields: payload });
     }
 

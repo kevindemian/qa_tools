@@ -7,6 +7,9 @@ const mockPrompt = vi.hoisted(() => ({
 
 const mockLogger = vi.hoisted(() => ({
     rootLogger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
         child: vi.fn().mockReturnValue({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
     },
 }));

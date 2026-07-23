@@ -4,15 +4,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writePrePushHook, writeDotEnvExample } from '../config-writer.js';
 
-describe('Config-writer — integração real (fs verdadeiro)', () => {
+const isStryker = process.env['STRYKER_ACTIVE'] === 'true';
+const runSuite = isStryker ? describe.skip : describe;
+
+runSuite('Config-writer — integração real (fs verdadeiro)', () => {
     let base: string;
 
+    // runSuite resolve para describe (describe.skip se Stryker ativo)
+    // eslint-disable-next-line vitest/require-top-level-describe
     beforeEach(() => {
         base = mkdtempSync(join(tmpdir(), 'config-writer-int-'));
     });
 
+    // eslint-disable-next-line vitest/require-top-level-describe
     afterEach(() => {
-        rmSync(base, { recursive: true, force: true });
+        if (base) {
+            rmSync(base, { recursive: true, force: true });
+        }
     });
 
     describe('WritePrePushHook', () => {

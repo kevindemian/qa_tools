@@ -66,6 +66,7 @@ function linkerMock(
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             searchJiraIssues: vi.fn(),
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),
@@ -130,7 +131,7 @@ describe('Import Orchestrator', () => {
         it('dry-run returns early', async () => {
             expect.hasAssertions();
 
-            vi.mocked(handleDryRun).mockReturnValue({
+            vi.mocked(handleDryRun).mockResolvedValue({
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
                 summary: 'DRY-RUN simulado',
@@ -176,6 +177,7 @@ describe('Import Orchestrator', () => {
                 results,
                 tests: makeTestCases(2),
                 linker,
+                failedLinks: [],
                 inMemoryTasksId: ['T-1'],
                 inMemoryTasksText: ['Test 1'],
                 sourcePath: '/p.csv',
@@ -186,7 +188,6 @@ describe('Import Orchestrator', () => {
                 onBusy,
                 info: vi.fn(),
                 printSummary: vi.fn(),
-                failedLinks: [],
             });
 
             expect(result?.status).toBe('error');
@@ -209,10 +210,10 @@ describe('Import Orchestrator', () => {
                 inMemoryTasksId: ['T-1'],
                 jiraLabels: [],
                 sourcePath: '/p.csv',
+                failedLinks: [],
                 sourceType: 'csv',
                 linker,
                 info: vi.fn(),
-                failedLinks: [],
             });
 
             expect(STATE.update).toHaveBeenCalledWith(expect.any(Function));

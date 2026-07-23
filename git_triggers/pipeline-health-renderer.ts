@@ -107,11 +107,16 @@ function _renderBranchSection(data: PipelineHealthData): string {
 
 const SECONDS_PER_HOUR = 3600;
 
+function sanitizeNumber(v: number): number {
+    return Number.isFinite(v) ? v : 0;
+}
+
 /** Format seconds into a human-readable duration string. */
 export function formatDuration(sec: number): string {
-    if (sec < 60) return sec + 's';
-    if (sec < SECONDS_PER_HOUR) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
-    return Math.floor(sec / SECONDS_PER_HOUR) + 'h ' + Math.floor((sec % SECONDS_PER_HOUR) / 60) + 'm';
+    const s = sanitizeNumber(sec);
+    if (s < 60) return s + 's';
+    if (s < SECONDS_PER_HOUR) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    return Math.floor(s / SECONDS_PER_HOUR) + 'h ' + Math.floor((s % SECONDS_PER_HOUR) / 60) + 'm';
 }
 
 /* ------------------------------------------------------------------ */
@@ -122,9 +127,11 @@ export function formatDuration(sec: number): string {
  *  Pure function — no I/O, no side effects. */
 export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipeline Health Report'): string {
     const ts = new Date().toISOString();
-    const passRateColor = data.passRate >= 80 ? 'var(--color-success)' : 'var(--color-error)';
+    const safePassRate = sanitizeNumber(data.passRate);
+    const safeAvgDuration = sanitizeNumber(data.avgDurationSec);
+    const passRateColor = safePassRate >= 80 ? 'var(--color-success)' : 'var(--color-error)';
     const periodLabel = data.period ? `${data.period.from} to ${data.period.to}` : 'N/A';
-    const passedCount = data.totalRuns > 0 ? Math.round((data.totalRuns * data.passRate) / 100) : 0;
+    const passedCount = data.totalRuns > 0 ? Math.round((data.totalRuns * safePassRate) / 100) : 0;
     const failedCount = data.totalRuns - passedCount;
     const bodyContent = `<h1>${sanitizeHtml(title)}</h1>
 <div class="ts">${ts} &mdash; ${periodLabel}</div>
@@ -132,8 +139,8 @@ export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipe
   <div class="card"><div class="num" style="color:var(--color-info)">${data.totalRuns}</div><div class="lbl">Total Runs</div></div>
   <div class="card"><div class="num" style="color:var(--color-success)">${passedCount}</div><div class="lbl">Passed</div></div>
   <div class="card"><div class="num" style="color:var(--color-error)">${failedCount}</div><div class="lbl">Failed</div></div>
-  <div class="card"><div class="num" style="color:${passRateColor}">${data.passRate}%</div><div class="lbl">Pass Rate</div></div>
-  <div class="card"><div class="num">${formatDuration(data.avgDurationSec)}</div><div class="lbl">Avg Duration</div></div>
+  <div class="card"><div class="num" style="color:${passRateColor}">${safePassRate}%</div><div class="lbl">Pass Rate</div></div>
+  <div class="card"><div class="num">${formatDuration(safeAvgDuration)}</div><div class="lbl">Avg Duration</div></div>
 </div>
 <h2>\uD83D\uDD25 Top Failing Jobs</h2>
 ${_renderJobsSection(data)}

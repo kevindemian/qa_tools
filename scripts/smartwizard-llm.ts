@@ -42,7 +42,7 @@ function readEnvLocal(): string[] {
     try {
         return fs.readFileSync(ENV_LOCAL, 'utf8').split('\n');
     } catch (err) {
-        rootLogger.debug('smartwizard-llm: failed to read .env.local: ' + String(err));
+        rootLogger.warn('smartwizard-llm: failed to read .env.local: ' + String(err));
         return [];
     }
 }

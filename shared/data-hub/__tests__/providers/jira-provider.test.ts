@@ -16,6 +16,7 @@ function createMockJira(): { mock: JiraResourceLike; searchMock: ReturnType<type
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             searchJiraIssues: searchMock,
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),

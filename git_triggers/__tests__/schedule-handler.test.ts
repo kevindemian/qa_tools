@@ -90,6 +90,7 @@ vi.mock('../../shared/report/ai-effectiveness.js', () => ({
         timestamp: new Date().toISOString(),
     })),
     generateAiEffectivenessHtml: vi.fn(() => '<section>ai</section>'),
+    convertGenerationRecordsToFeedback: vi.fn(() => ({ records: [] })),
 }));
 vi.mock('../../shared/report/traceability-matrix.js', () => ({
     buildTraceabilityMatrix: vi.fn(() => ({
@@ -120,6 +121,7 @@ vi.mock('../../shared/report/backlog-health.js', () => ({
         timestamp: new Date().toISOString(),
     })),
     generateBacklogHealthHtml: vi.fn(() => '<section>backlog</section>'),
+    mapJiraIssuesToBacklogHealth: vi.fn((issues: unknown[]) => issues),
 }));
 vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     aggregateDefectSeasonality: vi.fn(() => ({ peakDay: 'Monday', byDay: { Monday: 3 } })),
@@ -239,9 +241,26 @@ vi.mock('../../shared/quality/quality-gate.js', () => ({
     formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
-    writeReport: vi.fn((name: string) => sanitizePath(os.tmpdir(), name)),
+    writeReport: vi.fn((name: string, content: string) => {
+        (globalThis as { __lastWriteReportContent?: string }).__lastWriteReportContent = content;
+        return sanitizePath(os.tmpdir(), name);
+    }),
 }));
 vi.mock('../../shared/jira/jira-client.js', () => ({ default: vi.fn() }));
+vi.mock('../../shared/report/coverage-gap.js', () => ({
+    analyzeCoverageGaps: vi.fn(() => ({
+        totals: { totalIssues: 10, covered: 7, gap: 3, rawCoveragePct: 70, weightedCoveragePct: 70 },
+        gateConfig: { failingEpics: ['EPIC-1'], passingEpics: ['EPIC-2'] },
+        items: [],
+        byEpic: {
+            'EPIC-1': { total: 5, covered: 3, gatePass: false, items: [] },
+            'EPIC-2': { total: 5, covered: 4, gatePass: true, items: [] },
+        },
+        hierarchy: [],
+        trends: [],
+        timestamp: new Date().toISOString(),
+    })),
+}));
 
 vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
@@ -276,6 +295,17 @@ import {
 } from '../schedule-handler.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
+import { writeReport } from '../../shared/infra/temp-dir.js';
+import { calculateReleaseScore } from '../../shared/quality/release-score.js';
+import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
+import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
+import { runQualityGate } from '../../shared/quality/quality-gate.js';
+import { buildIncidentReport } from '../../shared/report/incident-report.js';
+const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
+
+const mockManager = createMockGitProvider();
+
 const mockPrompt = vi.mocked(prompt);
 const mockPushHistory = vi.mocked(pushHistory);
 const mockPrintError = vi.mocked(printError);
@@ -290,16 +320,6 @@ const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
 const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
-import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
-import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
-import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
-import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
-import { runQualityGate } from '../../shared/quality/quality-gate.js';
-import { buildIncidentReport } from '../../shared/report/incident-report.js';
-const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
-
-const mockManager = createMockGitProvider();
 
 describe('Schedule Handler', () => {
     beforeAll(async () => {
@@ -561,15 +581,21 @@ describe('Schedule Handler', () => {
     });
 
     describe('GenerateWeeklyQualityReport', () => {
-        it('warns when no project selected', () => {
+        it('warns when no project selected', async () => {
+            expect.hasAssertions();
+
             vi.mocked(getCurrentProject).mockReturnValue('');
-            generateWeeklyQualityReport();
+
+            await generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('warns when less than 2 runs and git fallback fails', () => {
+        it('warns when less than 2 runs and git fallback fails', async () => {
+            expect.hasAssertions();
+
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
+
             mockGetDataHub.mockReturnValue({
                 computed: {
                     metricsRuns: [
@@ -587,7 +613,7 @@ describe('Schedule Handler', () => {
                 },
                 raw: { failureClassifications: [] },
             } as never);
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
         });
@@ -618,24 +644,27 @@ describe('Schedule Handler', () => {
                             tests: [{ title: 't2', duration: 55, flakiness: 0.4 }],
                         },
                     ],
+                    coverage: 65,
                 },
                 raw: {
                     failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
+                    jiraIssues: [],
+                    aiRecords: [],
                 },
             } as never);
         }
 
-        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', () => {
+        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
             expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                expect.any(Number),
+                undefined,
                 expect.any(Number),
                 expect.any(String),
-                expect.any(Number),
+                65,
                 expect.any(Number),
             );
 
@@ -657,6 +686,7 @@ describe('Schedule Handler', () => {
                 expect.any(Array),
                 expect.any(Number),
                 expect.any(Array),
+                expect.anything(),
             );
             expect(mockCalculatePipelineCost).toHaveBeenCalledWith(undefined, expect.anything());
             expect(mockRunQualityGate).toHaveBeenCalledWith(expect.objectContaining({ project: 'proj1' }));
@@ -666,15 +696,17 @@ describe('Schedule Handler', () => {
                 expect.any(String),
                 expect.any(Array),
                 expect.any(Number),
+                expect.anything(),
             );
         });
 
-        it('writes exactly one report file with the project-specific path', () => {
+        it('writes exactly one report file with the project-specific path', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
+            expect(mockPrintError).not.toHaveBeenCalled();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenPath = mockWriteReport.mock.calls[0]?.[0] as string;
@@ -682,13 +714,14 @@ describe('Schedule Handler', () => {
             expect(writtenPath).toContain('weekly-quality-proj1.html');
         });
 
-        it('renders every dashboard section in the generated HTML', () => {
+        it('renders every dashboard section in the generated HTML', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            generateWeeklyQualityReport();
+            await generateWeeklyQualityReport();
 
-            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+            const calls = mockWriteReport.mock.calls;
+            const writtenHtml = calls[calls.length - 1]?.[1] as string;
 
             expect(writtenHtml).toContain('<h1>Weekly Quality Report — proj1</h1>');
             expect(writtenHtml).toContain('<h2>Quality Gate</h2>');

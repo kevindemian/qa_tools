@@ -15,6 +15,8 @@ vi.mock('../../shared/config-accessor.js', () => ({
 
 const hoistedXray = vi.hoisted(() => ({
     addPreconditionsToTest: vi.fn().mockResolvedValue(undefined),
+    getTestPreconditions: vi.fn().mockResolvedValue([]),
+    removePreconditionsFromTest: vi.fn().mockResolvedValue(undefined),
     graphql: vi.fn().mockResolvedValue(null),
     graphqlMutation: vi.fn().mockResolvedValue(undefined),
     authenticate: vi.fn().mockResolvedValue('tok'),
@@ -23,6 +25,12 @@ vi.mock('../../shared/jira/xray-cloud-client.js', () => {
     class XrayCloudClientMock {
         addPreconditionsToTest(...args: unknown[]) {
             return (hoistedXray.addPreconditionsToTest as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+        getTestPreconditions(...args: unknown[]) {
+            return (hoistedXray.getTestPreconditions as unknown as (...a: unknown[]) => unknown)(...args);
+        }
+        removePreconditionsFromTest(...args: unknown[]) {
+            return (hoistedXray.removePreconditionsFromTest as unknown as (...a: unknown[]) => unknown)(...args);
         }
         graphql(...args: unknown[]) {
             return (hoistedXray.graphql as unknown as (...a: unknown[]) => unknown)(...args);
@@ -45,6 +53,7 @@ describe('PreconditionHandler', () => {
         getJiraResource: Mock;
         postJiraResource: Mock;
         putJiraResource: Mock;
+        deleteJiraResource: Mock;
         searchJiraIssues: Mock;
         getTransitionsForIssue: Mock;
         transitionIssue: Mock;
@@ -58,6 +67,7 @@ describe('PreconditionHandler', () => {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             searchJiraIssues: vi.fn(),
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),
@@ -101,37 +111,33 @@ describe('PreconditionHandler', () => {
     });
 
     describe('AssociatePrecondition', () => {
-        it('adds precondition to test issue fields', async () => {
+        it('adds precondition to test issue fields (atomic replace)', async () => {
             expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
             ];
-            mockJiraResource.getJiraResource
-                .mockResolvedValueOnce(fields)
-                .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1'] } });
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(fields);
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await handler.associatePrecondition('TEST-1', 'PRE-2');
 
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] },
+                fields: { custom_99: ['PRE-2'] },
             });
         });
 
-        it('does not duplicate existing precondition', async () => {
+        it('replaces all preconditions atomically (no accumulation)', async () => {
             expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
             ];
-            mockJiraResource.getJiraResource
-                .mockResolvedValueOnce(fields)
-                .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1', 'PRE-2'] } });
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(fields);
             mockJiraResource.putJiraResource.mockResolvedValue({});
-            await handler.associatePrecondition('TEST-1', 'PRE-2');
+            await handler.associatePrecondition('TEST-1', 'PRE-NEW');
 
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] },
+                fields: { custom_99: ['PRE-NEW'] },
             });
         });
     });

@@ -66,6 +66,8 @@ jobs:
             - name: Snyk test
               if: env.SNYK_TOKEN != ''
               run: npm run snyk-test
+            - name: Check mock chains
+              run: npx tsx scripts/check-mock-chains.ts
             - name: Validation hook (committed copy exists)
               run: test -f .config/validation_hook.ts && echo "validation_hook.ts committed copy present"
             - name: Validation hook (if installed)
@@ -146,3 +148,47 @@ jobs:
         uses: ./.github/workflows/qa-post-process.yml
         with:
             project-name: qa_tools
+
+    mutation:
+        name: Mutation Testing (diff-scoped)
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
+        runs-on: ubuntu-latest
+        needs: quality
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            pull-requests: write
+            checks: write
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 2
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - name: Initialize tautest
+              run: npx tautest init --yes --runner vitest --no-install
+            - name: Run diff-scoped mutation testing
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  EXIT_CODE=0
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                    npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                  else
+                    npx tautest run --base HEAD~1 --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                  fi
+                  # Exit code 2 = no production files to mutate (expected for test-only changes)
+                  if [ "${EXIT_CODE}" = "2" ]; then
+                    echo "No production files changed — skipping mutation testing"
+                    exit 0
+                  fi
+                  exit ${EXIT_CODE}
+            - name: Upload mutation report
+              uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: mutation-report
+                  path: .tautest/

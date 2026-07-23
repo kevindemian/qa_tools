@@ -405,3 +405,22 @@ describe('ParseTestResultsFile', () => {
         expect(result.error).toContain('Arquivo não encontrado');
     });
 });
+
+describe('Characterization — estados de erro nao devem virar skipped (C9, verificacao 2026-07-20)', () => {
+    it('status "error" de execucao e contado como falha, nao skipped', () => {
+        expect.hasAssertions();
+
+        const input = {
+            results: {
+                tests: [{ name: 'TC erro de execucao', status: 'error', duration: 10 }],
+            },
+        };
+        const result = parseCtrfResults(input as never);
+
+        expect(result.tests).toHaveLength(1);
+        // Falha dura (erro de execucao) NUNCA pode ser contada como pulada (AGENTS.md §25):
+        // isso mascara falhas no relatorio entregue ao cliente (undercount de falhas).
+        expect(result.tests[0]?.state).not.toBe('skipped');
+        expect(result.stats.failed).toBe(1);
+    });
+});

@@ -30,7 +30,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
@@ -49,7 +49,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
@@ -68,7 +68,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest
@@ -86,11 +86,11 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('inexistente')
             .mockResolvedValueOnce('dev');
         mockGitlab.getBranch
-            .mockResolvedValueOnce({ name: 'main' })
+            .mockResolvedValueOnce({ name: 'main' }) // pagination
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce({ name: 'dev' });
 
@@ -104,7 +104,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('main')
             .mockResolvedValueOnce('dev');
 
@@ -118,7 +118,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('')
+            .mockResolvedValueOnce('') // pagination
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
 
@@ -132,7 +132,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('main')
+            .mockResolvedValueOnce('main') // pagination
             .mockResolvedValueOnce('rel_cand')
             .mockResolvedValueOnce('dev');
         mockGitlab.getBranch.mockResolvedValue(null);
@@ -147,7 +147,7 @@ describe('NivelarBranches', () => {
         expect.hasAssertions();
 
         vi.spyOn(prompt, 'ask')
-            .mockResolvedValueOnce('feature-x')
+            .mockResolvedValueOnce('feature-x') // pagination
             .mockResolvedValueOnce('staging')
             .mockResolvedValueOnce('dev');
         mockGitlab.createMergeRequest.mockResolvedValue({ web_url: 'https://mr' });

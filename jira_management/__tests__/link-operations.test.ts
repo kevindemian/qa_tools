@@ -12,6 +12,7 @@ describe('LinkOperations', () => {
         getJiraResource: Mock;
         postJiraResource: Mock;
         putJiraResource: Mock;
+        deleteJiraResource: Mock;
         searchJiraIssues: Mock;
         getTransitionsForIssue: Mock;
         transitionIssue: Mock;
@@ -25,6 +26,7 @@ describe('LinkOperations', () => {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             searchJiraIssues: vi.fn(),
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),

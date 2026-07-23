@@ -13,6 +13,7 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Card } from '../primitives/index.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
+import type { CoverageGapResult } from '../types/coverage.js';
 
 export interface IncidentEvent {
     date: string;
@@ -49,6 +50,15 @@ const TYPE_ORDER: Record<string, number> = {
 const FAIL_RATE_THRESHOLD = 30;
 const REGRESSION_COUNT_THRESHOLD = 2;
 
+function getEpicsFromInputs(uncoveredEpics: string[], coverageGap?: CoverageGapResult): string[] {
+    if (uncoveredEpics.length > 0) return uncoveredEpics;
+    if (!coverageGap) return [];
+    return Object.keys(coverageGap.byEpic).filter((epic) => {
+        const epicData = coverageGap.byEpic[epic];
+        return epicData != null && !epicData.gatePass;
+    });
+}
+
 function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default' {
     if (s === 'high') return 'error';
     if (s === 'medium') return 'warn';
@@ -62,8 +72,11 @@ export function buildIncidentReport(
     seasonalityPeak: string,
     uncoveredEpics: string[],
     passRate: number | null | undefined,
+    coverageGap?: CoverageGapResult,
 ): IncidentReport {
     const timestamp = new Date().toISOString();
+
+    const epics = getEpicsFromInputs(uncoveredEpics, coverageGap);
 
     if (failRate == null || passRate == null) {
         rootLogger.warn(
@@ -103,7 +116,7 @@ export function buildIncidentReport(
         });
     }
 
-    for (const epic of uncoveredEpics) {
+    for (const epic of epics) {
         events.push({
             date: timestamp,
             type: 'coverage_gap',

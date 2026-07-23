@@ -39,6 +39,7 @@ describe('JiraLinkManager', () => {
         getJiraResource: Mock;
         postJiraResource: Mock;
         putJiraResource: Mock;
+        deleteJiraResource: Mock;
         searchJiraIssues: Mock;
         getTransitionsForIssue: Mock;
         transitionIssue: Mock;
@@ -51,6 +52,7 @@ describe('JiraLinkManager', () => {
             getJiraResource: vi.fn(),
             postJiraResource: vi.fn(),
             putJiraResource: vi.fn(),
+            deleteJiraResource: vi.fn(),
             searchJiraIssues: vi.fn(),
             getTransitionsForIssue: vi.fn(),
             transitionIssue: vi.fn(),
@@ -243,37 +245,33 @@ describe('JiraLinkManager', () => {
     });
 
     describe('AssociatePrecondition', () => {
-        it('adds precondition to test issue fields', async () => {
+        it('adds precondition to test issue fields (atomic replace)', async () => {
             expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
             ];
-            mockJiraResource.getJiraResource
-                .mockResolvedValueOnce(fields)
-                .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1'] } });
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(fields);
             mockJiraResource.putJiraResource.mockResolvedValue({});
             await manager.associatePrecondition('TEST-1', 'PRE-2');
 
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] },
+                fields: { custom_99: ['PRE-2'] },
             });
         });
 
-        it('does not duplicate existing precondition', async () => {
+        it('replaces all preconditions atomically (no accumulation)', async () => {
             expect.hasAssertions();
 
             const fields = [
                 { id: 'custom_99', schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' } },
             ];
-            mockJiraResource.getJiraResource
-                .mockResolvedValueOnce(fields)
-                .mockResolvedValueOnce({ key: 'TEST-1', fields: { custom_99: ['PRE-1', 'PRE-2'] } });
+            mockJiraResource.getJiraResource.mockResolvedValueOnce(fields);
             mockJiraResource.putJiraResource.mockResolvedValue({});
-            await manager.associatePrecondition('TEST-1', 'PRE-2');
+            await manager.associatePrecondition('TEST-1', 'PRE-NEW');
 
             expect(mockJiraResource.putJiraResource).toHaveBeenCalledWith('issue/TEST-1', {
-                fields: { custom_99: ['PRE-1', 'PRE-2'] },
+                fields: { custom_99: ['PRE-NEW'] },
             });
         });
     });
@@ -304,7 +302,7 @@ describe('JiraLinkManager', () => {
 
             await cloudManager.associatePrecondition('TEST-1', 'PRE-1');
 
-            expect(mockJiraResource.getJiraResource).not.toHaveBeenCalled();
+            expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
         });
     });
 

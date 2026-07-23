@@ -1,6 +1,15 @@
 import { info } from '../shared/ui/prompt.js';
+import { formatErr } from '../shared/errors.js';
+import { rootLogger } from '../shared/logger.js';
 import type { JsonObject, JiraResourceLike } from '../shared/types.js';
 import type { LinkTypeManager } from './link-types.js';
+
+interface IssueLinkEntry {
+    id: string;
+    type?: { name?: string };
+    outwardIssue?: { key: string };
+    inwardIssue?: { key: string };
+}
 
 export class LinkOperations {
     private readonly jiraResource: JiraResourceLike;
@@ -32,5 +41,58 @@ export class LinkOperations {
             outwardIssue: { key: sourceKey },
         };
         return this.jiraResource.postJiraResource('issueLink', payload);
+    }
+
+    async getIssueLinksByType(
+        sourceKey: string,
+        linkTypeName: string,
+    ): Promise<Array<{ id: string; targetKey: string }>> {
+        const issue = await this.jiraResource.getJiraResource<{
+            fields?: { issuelinks?: IssueLinkEntry[] };
+        }>('issue/' + sourceKey + '?fields=issuelinks');
+        return (issue.fields?.issuelinks ?? [])
+            .filter((link) => link.type?.name === linkTypeName && link.id)
+            .map((link) => ({
+                id: link.id!,
+                targetKey: link.outwardIssue?.key ?? link.inwardIssue?.key ?? '',
+            }));
+    }
+
+    async removeIssueLink(linkId: string): Promise<void> {
+        await this.jiraResource.deleteJiraResource('issueLink/' + linkId);
+    }
+
+    async clearIssueLinksByType(sourceKey: string, linkTypeName: string): Promise<number> {
+        let links: Array<{ id: string; targetKey: string }>;
+        try {
+            links = await this.getIssueLinksByType(sourceKey, linkTypeName);
+        } catch (err) {
+            rootLogger.warn(
+                'LinkOperations: falha ao listar issue links de "' +
+                    linkTypeName +
+                    '" em ' +
+                    sourceKey +
+                    ': ' +
+                    formatErr(err),
+            );
+            return 0;
+        }
+        let removed = 0;
+        for (const link of links) {
+            try {
+                await this.removeIssueLink(link.id);
+                removed++;
+            } catch (err) {
+                rootLogger.warn(
+                    'LinkOperations: falha ao remover issue link ' +
+                        link.id +
+                        ' (' +
+                        link.targetKey +
+                        '): ' +
+                        formatErr(err),
+                );
+            }
+        }
+        return removed;
     }
 }

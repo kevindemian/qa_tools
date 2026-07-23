@@ -164,6 +164,25 @@ describe('AnalyzeBacklogHealth — property-based', () => {
             { numRuns: 50 },
         );
     });
+
+    it('maxIssues never truncates analysis (all issues counted, display capped only)', () => {
+        expect.hasAssertions();
+
+        fc.assert(
+            fc.property(
+                fc.array(issueArb, { minLength: 1, maxLength: 50 }),
+                fc.integer({ min: 1, max: 5 }),
+                (issues, maxIssues) => {
+                    const result = analyzeBacklogHealth(issues, { maxIssues });
+
+                    expect(result.totalIssues).toBe(issues.length);
+                    expect(result.unassignedIssues).toHaveLength(countUnassigned(issues));
+                    expect(result.bugsWithoutTests).toHaveLength(countBugsWithoutTests(issues));
+                },
+            ),
+            { numRuns: 50 },
+        );
+    });
 });
 
 describe('GenerateBacklogHealthHtml — property-based', () => {
@@ -190,7 +209,10 @@ describe('GenerateBacklogHealthHtml — property-based', () => {
                 const html = generateBacklogHealthHtml(result);
 
                 expect(html).toContain('Backlog Score');
-                expect(html).toContain(String(result.score) + '%');
+
+                const expected = result.noData ? 'N/A' : String(result.score) + '%';
+
+                expect(html).toContain(expected);
             }),
             { numRuns: 50 },
         );

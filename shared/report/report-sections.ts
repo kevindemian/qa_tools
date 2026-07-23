@@ -262,7 +262,7 @@ export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): strin
 export function buildReleaseSection(
     score: number,
     grade: string,
-    breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail' }>,
+    breakdown: Array<{ label: string; score: number; status: 'pass' | 'fail'; noData?: boolean }>,
     recommendation: string,
 ): string {
     let scoreColor: string;
@@ -278,6 +278,8 @@ export function buildReleaseSection(
     for (const item of breakdown) {
         const statusColor = item.status === 'pass' ? 'var(--color-success)' : 'var(--color-error)';
         const statusIcon = item.status === 'pass' ? '\u2713' : '\u2717';
+        const statusText = item.noData ? 'no data' : item.status;
+        const scoreText = item.noData ? 'N/A' : String(item.score);
         breakdownHtml +=
             '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-subtle)">' +
             '<span style="color:var(--color-text-primary)">' +
@@ -290,11 +292,11 @@ export function buildReleaseSection(
             statusIcon +
             '</span> ' +
             '<span style="color:var(--color-text-secondary);margin:0 4px">' +
-            item.score +
+            scoreText +
             '</span>' +
             Badge({
                 variant: item.status === 'pass' ? 'pass' : 'fail',
-                children: item.status,
+                children: statusText,
             }) +
             '</span></div>';
     }
@@ -343,36 +345,62 @@ function healthBg(score: number): string {
     return 'var(--color-bg-critical)';
 }
 
+function qualityGateBadge(gate: HealthScoreResult['qualityGate']): {
+    icon: string;
+    text: string;
+    color: string;
+    bg: string;
+} {
+    if (gate === 'unknown') {
+        return { icon: '❓', text: 'Unknown', color: 'var(--color-text-muted)', bg: 'var(--color-bg-warning)' };
+    }
+    if (gate === 'pass') {
+        return { icon: '✅', text: 'Pass', color: 'var(--color-badge-pass-text)', bg: 'var(--color-badge-pass-bg)' };
+    }
+    return { icon: '❌', text: 'Fail', color: 'var(--color-badge-fail-text)', bg: 'var(--color-badge-fail-bg)' };
+}
+
+function healthDimCard(label: string, score: number, status: string, available: boolean): string {
+    const displayScore = available ? String(score) : 'N/A';
+    const barWidth = available ? score : 0;
+    const barColor = available ? healthColor(score) : 'var(--color-border-subtle)';
+    const bg = available ? healthBg(score) : 'var(--color-bg-warning)';
+    let icon = '❓';
+    if (available) {
+        icon = status === 'pass' ? '✅' : '❌';
+    }
+    return `<div style="background:${bg};border-radius:6px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:0.75rem;color:var(--color-text-secondary)">${label}</span>
+            <span style="font-size:0.8rem;font-weight:700;color:${barColor}">${displayScore} ${icon}</span>
+        </div>
+        <div style="height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${barWidth}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
+        </div>
+    </div>`;
+}
+
 export function buildHealthSection(health: HealthScoreResult): string {
-    const qcIcon = health.qualityGate === 'pass' ? '✅' : '❌';
-    const qcText = health.qualityGate === 'pass' ? 'Pass' : 'Fail';
-    const qcColor = health.qualityGate === 'pass' ? 'var(--color-badge-pass-text)' : 'var(--color-badge-fail-text)';
-    const qcBg = health.qualityGate === 'pass' ? 'var(--color-badge-pass-bg)' : 'var(--color-badge-fail-bg)';
+    const qc = qualityGateBadge(health.qualityGate);
     const overallColor = healthColor(health.overall);
     const dims = health.dimensions;
-    const dimEntries: Array<{ label: string; score: number; status: string }> = [
-        { label: 'Pass Rate', score: dims.passRate.score, status: dims.passRate.status },
-        { label: 'Flaky Rate', score: dims.flakyRate.score, status: dims.flakyRate.status },
-        { label: 'Coverage', score: dims.coverage.score, status: dims.coverage.status },
-        { label: 'Suite Speed', score: dims.suiteSpeed.score, status: dims.suiteSpeed.status },
-        { label: 'Execution Rate', score: dims.executionRate.score, status: dims.executionRate.status },
-    ];
-
-    let dimCards = '';
-    for (const d of dimEntries) {
-        const barColor = healthColor(d.score);
-        const bg = healthBg(d.score);
-        const icon = d.status === 'pass' ? '✅' : '❌';
-        dimCards += `<div style="background:${bg};border-radius:6px;padding:10px 12px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                <span style="font-size:0.75rem;color:var(--color-text-secondary)">${d.label}</span>
-                <span style="font-size:0.8rem;font-weight:700;color:${barColor}">${d.score} ${icon}</span>
-            </div>
-            <div style="height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:${d.score}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
-            </div>
-        </div>`;
-    }
+    const dimCards = [
+        healthDimCard('Pass Rate', dims.passRate.score, dims.passRate.status, dims.passRate.available),
+        healthDimCard('Flaky Rate', dims.flakyRate.score, dims.flakyRate.status, dims.flakyRate.available),
+        healthDimCard(
+            'Cobertura de testes Jira (steps)',
+            dims.coverage.score,
+            dims.coverage.status,
+            dims.coverage.available,
+        ),
+        healthDimCard('Suite Speed', dims.suiteSpeed.score, dims.suiteSpeed.status, dims.suiteSpeed.available),
+        healthDimCard(
+            'Execution Rate',
+            dims.executionRate.score,
+            dims.executionRate.status,
+            dims.executionRate.available,
+        ),
+    ].join('');
 
     let provenanceHtml = '';
     if (health.provenance && health.provenance.length > 0) {
@@ -386,7 +414,7 @@ export function buildHealthSection(health: HealthScoreResult): string {
             `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">` +
             `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
             `<div style="font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qcBg};color:${qcColor}">${qcIcon} Quality Gate: ${qcText}</span>` +
+            `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qc.bg};color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
             `<span style="font-size:0.75rem;color:var(--color-text-muted)">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
             `</div>` +
             `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>` +

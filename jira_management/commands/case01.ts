@@ -41,6 +41,15 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             .map((l) => l.trim())
             .filter((l) => l.length > 0);
 
+        const dryRunInput = await ask('Dry-run? (visualizar plano sem executar)', {
+            hint: 's = simular | Enter = executar',
+            default: '',
+        });
+        const isDryRun = dryRunInput.toLowerCase() === 's' || dryRunInput.toLowerCase() === 'sim';
+        if (isDryRun) {
+            Config.set('dryRun', true);
+        }
+
         const result = await createTests.createTestsFromCsv({
             jiraResource: c.jiraResource,
             jiraResourceXray: c.jiraResourceXray,
@@ -61,12 +70,14 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             warn(detail);
             c.pushHistory('csv-import', detail, 'error');
             c.ctx.lastOperation = detail;
+            if (isDryRun) Config.set('dryRun', false);
             return;
         }
         c.ctx.inMemoryTasksId = result.result.inMemoryTasksId;
         c.ctx.inMemoryTasksText = result.result.inMemoryTasksText;
         c.pushHistory('csv-import', result.result.summary, result.result.status);
         c.ctx.lastOperation = result.result.summary;
+        if (isDryRun) Config.set('dryRun', false);
         if (c.ctx.inMemoryTasksId.length > 0) {
             const csvName = state.lastCsvPath ? path.basename(state.lastCsvPath, '.csv') : 'Automated Execution';
             const teResult = await offerTestExecutionAssociation(c, c.ctx.inMemoryTasksId, csvName);

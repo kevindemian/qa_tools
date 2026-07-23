@@ -12,7 +12,9 @@ export class JiraLinkManager {
     constructor(jiraResource: Record<string, unknown>) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = {};
-        this.linkOperations = {};
+        this.linkOperations = {
+            clearIssueLinksByType: vi.fn(),
+        };
         this.preconditionHandler = {};
     }
 

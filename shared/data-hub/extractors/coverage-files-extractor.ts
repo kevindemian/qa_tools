@@ -17,6 +17,7 @@
  */
 import AdmZip from 'adm-zip';
 import { XMLParser } from 'fast-xml-parser';
+import { rootLogger } from '../../logger.js';
 import type { CoverageFile } from '../../types/data-hub.js';
 import { extractErrorMessage } from '../../ui/prompt-errors.js';
 
@@ -156,6 +157,7 @@ function parseIstanbul(artifact: string, text: string, out: CoverageFilesResult)
     try {
         json = JSON.parse(text);
     } catch (err: unknown) {
+        rootLogger.warn(`[coverage-extractor] invalid JSON in ${artifact}: ${extractErrorMessage(err)}`);
         out.errors.push({ artifact, reason: `invalid JSON: ${extractErrorMessage(err)}` });
         return;
     }
@@ -237,6 +239,7 @@ function parseCobertura(artifact: string, text: string, out: CoverageFilesResult
     try {
         doc = xmlParser.parse(text);
     } catch (err: unknown) {
+        rootLogger.warn(`[coverage-extractor] invalid XML in ${artifact}: ${extractErrorMessage(err)}`);
         out.errors.push({ artifact, reason: `invalid XML: ${extractErrorMessage(err)}` });
         return;
     }
@@ -314,6 +317,7 @@ function parseJacoco(artifact: string, text: string, out: CoverageFilesResult): 
     try {
         doc = xmlParser.parse(text);
     } catch (err: unknown) {
+        rootLogger.warn(`[coverage-extractor] invalid XML in ${artifact}: ${extractErrorMessage(err)}`);
         out.errors.push({ artifact, reason: `invalid XML: ${extractErrorMessage(err)}` });
         return;
     }

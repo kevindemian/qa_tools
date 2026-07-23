@@ -1,5 +1,6 @@
 /** Pipeline handler — monitor CI/CD status, parse results, and offer failure analysis. */
 import { print, success, warn, info, title, prompt, confirm, printError, withSpinner } from '../shared/ui/prompt.js';
+import { rootLogger } from '../shared/logger.js';
 import { load as loadState, update as updateState } from '../shared/state.js';
 import { sleep } from '../shared/infra/http-client.js';
 import type { ParseResult } from '../shared/result_parser.js';
@@ -287,6 +288,7 @@ async function triggerAndPollPipeline(
             pushHistory('pipeline', branch, 'ok');
         }
     } catch (err) {
+        rootLogger.warn(`[pipeline-handler] Falha ao disparar pipeline: ${String(err)}`);
         printError('Falha ao disparar pipeline', err);
         pushHistory('pipeline', branch, 'error');
         return;

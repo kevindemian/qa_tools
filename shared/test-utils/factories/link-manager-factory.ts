@@ -10,7 +10,13 @@ export function createMockLinkManager(overrides?: Partial<MockProxy<JiraLinkMana
     const base = {
         jiraResource: {} as never,
         linkTypeManager: {} as never,
-        linkOperations: {} as never,
+        linkOperations: {
+            clearIssueLinksByType: vi.fn().mockResolvedValue(0),
+            linkIssues: vi.fn(),
+            createIssueLink: vi.fn(),
+            getIssueLinksByType: vi.fn().mockResolvedValue([]),
+            removeIssueLink: vi.fn(),
+        } as never,
         preconditionHandler: {} as never,
         linkTypesCache: null,
         cacheFilePath: null,

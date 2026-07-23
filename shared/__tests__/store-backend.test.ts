@@ -305,6 +305,9 @@ describe('Store Backend', () => {
         });
 
         it('returns null when no .git found from cwd', () => {
+            if (process.env['STRYKER_ACTIVE']) {
+                return; // Skip in Stryker mutation testing - process.chdir not supported in workers
+            }
             const noGitDir = path.join(tmpDir, 'no-git-cwd');
             fs.mkdirSync(path.resolve(noGitDir), { recursive: true });
             const origCwd = process.cwd();

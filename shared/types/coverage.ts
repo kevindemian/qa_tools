@@ -1,6 +1,6 @@
 /** A single item in a coverage gap analysis. */
 export interface CoverageGapItem {
-    issueKey: string;
+    issueKey?: string;
     summary: string;
     type: 'Story' | 'Task' | 'Bug' | 'Epic';
     status: string;

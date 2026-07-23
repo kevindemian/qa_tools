@@ -22,11 +22,11 @@ const {
         grade: 'good',
         qualityGate: 'pass',
         dimensions: {
-            passRate: { score: 90, status: 'pass' },
-            flakyRate: { score: 80, status: 'pass' },
-            coverage: { score: 70, status: 'pass' },
-            suiteSpeed: { score: 85, status: 'pass' },
-            executionRate: { score: 75, status: 'pass' },
+            passRate: { score: 90, status: 'pass', available: true },
+            flakyRate: { score: 80, status: 'pass', available: true },
+            coverage: { score: 70, status: 'pass', available: true },
+            suiteSpeed: { score: 85, status: 'pass', available: true },
+            executionRate: { score: 75, status: 'pass', available: true },
         },
         runCount: 5,
         timestamp: new Date().toISOString(),
@@ -125,11 +125,11 @@ describe('Case26', () => {
             grade: 'good',
             qualityGate: 'pass',
             dimensions: {
-                passRate: { score: 90, status: 'pass' },
-                flakyRate: { score: 80, status: 'pass' },
-                coverage: { score: 70, status: 'pass' },
-                suiteSpeed: { score: 85, status: 'pass' },
-                executionRate: { score: 75, status: 'pass' },
+                passRate: { score: 90, status: 'pass', available: true },
+                flakyRate: { score: 80, status: 'pass', available: true },
+                coverage: { score: 70, status: 'pass', available: true },
+                suiteSpeed: { score: 85, status: 'pass', available: true },
+                executionRate: { score: 75, status: 'pass', available: true },
             },
             runCount: 5,
             timestamp: new Date().toISOString(),
@@ -180,10 +180,10 @@ describe('Case26', () => {
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith(runs, 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                80,
+                undefined,
                 expect.any(Number),
                 expect.stringMatching(/^(pass|fail)$/),
-                70,
+                undefined,
                 expect.any(Number),
             );
             expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
@@ -201,10 +201,10 @@ describe('Case26', () => {
 
             expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
             expect(mockCalcRelease).toHaveBeenCalledWith(
-                80,
+                undefined,
                 expect.any(Number),
                 expect.stringMatching(/^(pass|fail)$/),
-                70,
+                undefined,
                 expect.any(Number),
             );
         });

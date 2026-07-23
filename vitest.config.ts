@@ -1,7 +1,18 @@
 import { defineConfig } from 'vitest/config';
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
+import { vitestAffected } from 'vitest-affected';
+const isPR = process.env['GITHUB_EVENT_NAME'] === 'pull_request';
+const vitestAffectedPlugin = isPR
+    ? vitestAffected({
+          fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
+          staleCacheDays: 14,
+          maxSelectiveRuns: 50,
+          shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
+      })
+    : undefined;
 
 export default defineConfig({
+    plugins: [...(vitestAffectedPlugin ? [vitestAffectedPlugin] : [])],
     test: {
         globals: true,
         environment: 'node',
@@ -14,19 +25,21 @@ export default defineConfig({
         // continua existindo e é executado fora do CI. Correção de raiz
         // (hermetizar com nock/mock de LLM) está em aberto como tech-debt —
         // ver dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
-        exclude: process.env['CI']
-            ? [
-                  '**/node_modules/**',
-                  '**/e2e/**',
-                  '**/__tests__/integration/**',
-                  // `**/*cloud*.test.ts` is retained ONLY for the subset that performs real
-                  // external-network calls (Xray/Jira cloud) without mocking the fetch boundary.
-                  // Tests that mock `global.fetch` (result_reporter-cloud, test-execution-creator-cloud)
-                  // remain excluded by this pattern as tech-debt — they should be hermitized and
-                  // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
-                  '**/*cloud*.test.ts',
-              ]
-            : ['**/node_modules/**'],
+        exclude:
+            process.env['CI'] || process.env['STRYKER_ACTIVE']
+                ? [
+                      '**/node_modules/**',
+                      '**/e2e/**',
+                      '**/__tests__/integration/**',
+                      // `**/*cloud*.test.ts` is retained ONLY for the subset that performs real
+                      // external-network calls (Xray/Jira cloud) without mocking the fetch boundary.
+                      // Tests that mock `global.fetch` (result_reporter-cloud, test-execution-creator-cloud)
+                      // remain excluded by this pattern as tech-debt — they should be hermitized and
+                      // re-included. See dev/docs/audit/test-quality-audit-2026-07-18.md §2/§3.
+                      '**/*cloud*.test.ts',
+                      '**/.stryker-tmp/**',
+                  ]
+                : ['**/node_modules/**', '**/.stryker-tmp/**'],
         testTimeout: 15000,
         hookTimeout: 30000,
         teardownTimeout: 5000,
@@ -62,6 +75,15 @@ export default defineConfig({
                 // above): standalone processes with dedicated test files under scripts/__tests__/.
                 // The coverage gate measures library/business-logic; entry glue is out of scope.
                 'scripts/validation-hook.ts',
+                'scripts/check-mock-chains.ts',
+                // Jira cloud client — integration code that requires live Jira credentials;
+                // the mock-based tests in __tests__/ cover the logic via the base client.
+                'shared/jira/jira-cloud-client.ts',
+                // Entry-menu and splash are UI-only rendering, tested via snapshot integration tests.
+                'shared/ui/entry-menu.ts',
+                'shared/ui/splash.ts',
+                // Jira main entry — CLI dispatch, not unit-testable as standalone module.
+                'jira_management/main.ts',
             ],
             thresholds: {
                 lines: 90,

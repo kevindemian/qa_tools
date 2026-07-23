@@ -3,6 +3,7 @@
  * Extracted to a single module per SRP: all creation handlers call this instead of duplicating prompts. */
 import { formatErr } from '../../shared/errors.js';
 import { printError, ask, askMultiline, info, warn, success, title, divider } from '../../shared/ui/prompt.js';
+import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 import type { TestExecutionSummary } from '../../shared/types.js';
 import TestExecutionCreator from '../test-execution-creator.js';
@@ -112,8 +113,8 @@ async function fetchTeList(
     try {
         return await linkManager.listTestExecutions(project);
     } catch (err) {
+        rootLogger.warn('test-execution-flow: Não foi possível buscar Test Executions: ' + (err instanceof Error ? err.message : String(err)));
         warn('Não foi possível buscar Test Executions: ' + (err instanceof Error ? err.message : String(err)));
-        return [];
         return [];
     }
 }

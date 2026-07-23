@@ -3,6 +3,7 @@ import { formatDateISO } from '../shared/date-utils.js';
 import { success, info, extractErrorMessage, ProgressBar } from '../shared/ui/prompt.js';
 import type { Logger } from '../shared/logger.js';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
+import { rootLogger } from "../shared/logger.js";
 import {
     noIssuesFoundForVersion,
     noVersionFoundForProject,
@@ -166,6 +167,7 @@ export async function getProjectVersions(resource: JiraResourceLike, projectId: 
     try {
         return await resource.getJiraResource<VersionData[]>(`project/${projectId}/versions`);
     } catch (err: unknown) {
+        rootLogger.warn(`jira-resource-version: Erro ao buscar versoes: ${extractErrorMessage(err)}`);
         resource.log.error(`Erro ao buscar versões do projeto '${projectId}': ${extractErrorMessage(err)}`);
         return [];
     }
@@ -272,6 +274,7 @@ export async function getReleaseTasks(
 
         return issuesData.issues.map((issue) => `[${issue.key}] - ${issue.fields.summary}`);
     } catch (err: unknown) {
+        rootLogger.warn(`jira-resource-version: Erro getReleaseTasks: ${extractErrorMessage(err)}`);
         resource.log.error(`Erro getReleaseTasks: ${extractErrorMessage(err)}`);
         return [];
     }

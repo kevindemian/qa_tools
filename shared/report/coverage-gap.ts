@@ -20,42 +20,14 @@ import {
     loadEpicSummaries,
 } from './coverage-gap-utils.js';
 
-async function fetchTotalCount(jiraResource: JiraResourceLike, jql: string): Promise<number> {
-    try {
-        const response = await jiraResource.searchJiraIssues(jql, 1);
-        return response.total;
-    } catch (err) {
-        const msg = String(err);
-        rootLogger.error('Failed to count issues: ' + msg);
-        return 0;
-    }
-}
-
-async function collectAllPages(
+/** C1: searchJiraIssues já faz paginação interna; chamada única retorna todas as páginas. */
+async function fetchAllIssues(
     jiraResource: JiraResourceLike,
     jql: string,
     pageSize: number,
 ): Promise<Array<{ key: string; fields: Record<string, unknown> }>> {
-    try {
-        const allIssues: Array<{ key: string; fields: Record<string, unknown> }> = [];
-        let startAt = 0;
-
-        for (;;) {
-            const response = await jiraResource.searchJiraIssues(jql, pageSize);
-            if (response.issues.length === 0) break;
-            for (const issue of response.issues) {
-                allIssues.push({ key: issue.key, fields: issue.fields });
-            }
-            startAt += pageSize;
-            if (startAt >= response.total) break;
-        }
-
-        return allIssues;
-    } catch (err) {
-        const msg = String(err);
-        rootLogger.error('Failed to fetch issues: ' + msg);
-        return [];
-    }
+    const response = await jiraResource.searchJiraIssues(jql, pageSize);
+    return response.issues.map((issue) => ({ key: issue.key, fields: issue.fields }));
 }
 
 function resolveLinkedIssueKey(link: JiraIssueLink, testKey: string): string | undefined {
@@ -80,18 +52,20 @@ function collectTestLinksForIssue(
     }
 }
 
+/** C4: processa todos os issueKeys em lotes de 50 (não só os primeiros 50). */
 async function fetchLinkedTestsBatch(
     jiraResource: JiraResourceLike,
     issueKeys: string[],
 ): Promise<Map<string, string[]>> {
     const linkMap = new Map<string, string[]>();
     try {
-        const chunk = issueKeys.slice(0, 50);
-        if (chunk.length === 0) return linkMap;
-        const jql = `issueType = Test AND issue in linkedIssuesOf("${chunk.join('","')}")`;
-        const response = await jiraResource.searchJiraIssues(jql, 500);
-        for (const test of response.issues) {
-            collectTestLinksForIssue(test, issueKeys, linkMap);
+        for (let i = 0; i < issueKeys.length; i += 50) {
+            const chunk = issueKeys.slice(i, i + 50);
+            const jql = `issueType = Test AND issue in linkedIssuesOf("${chunk.join('","')}")`;
+            const response = await jiraResource.searchJiraIssues(jql, 500);
+            for (const test of response.issues) {
+                collectTestLinksForIssue(test, issueKeys, linkMap);
+            }
         }
     } catch (err) {
         const msg = String(err);
@@ -107,9 +81,10 @@ function loadCoverageTrends(project: string): CoverageSnapshot[] {
 }
 
 function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHierarchyNode>): CoverageHierarchyNode {
-    if (!epicNodes.has(item.issueKey)) {
-        epicNodes.set(item.issueKey, {
-            key: item.issueKey,
+    const epicKey = item.issueKey ?? item.epicKey ?? item.summary;
+    if (!epicNodes.has(epicKey)) {
+        epicNodes.set(epicKey, {
+            key: epicKey,
             summary: item.summary,
             type: 'Epic',
             children: [],
@@ -119,8 +94,8 @@ function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHi
         });
     }
     return (
-        epicNodes.get(item.issueKey) ?? {
-            key: item.issueKey,
+        epicNodes.get(epicKey) ?? {
+            key: epicKey,
             summary: item.summary,
             type: 'Epic',
             children: [],
@@ -133,7 +108,7 @@ function createEpicNode(item: CoverageGapItem, epicNodes: Map<string, CoverageHi
 
 function createChildNode(item: CoverageGapItem): CoverageHierarchyNode {
     return {
-        key: item.issueKey,
+        key: item.issueKey ?? item.epicKey ?? '',
         summary: item.summary,
         type: item.type,
         children: [],
@@ -187,18 +162,12 @@ export async function analyzeCoverageGaps(
     options?: CoverageGapOptions,
 ): Promise<CoverageGapResult> {
     const minCoveragePct = options?.minCoveragePct ?? 50;
-    const maxIssues = options?.maxIssues ?? 5000;
     const baseJql = `project = ${project} AND issuetype in (Story, Task, Bug, Epic)`;
 
-    const totalCount = await fetchTotalCount(jiraResource, baseJql);
-
-    let issues: Array<{ key: string; fields: Record<string, unknown> }>;
-    if (totalCount <= maxIssues) {
-        issues = await collectAllPages(jiraResource, baseJql, 200);
-    } else {
-        const recentJql = `${baseJql} AND (statusCategory != Done OR updated >= -30d)`;
-        issues = await collectAllPages(jiraResource, recentJql, 200);
-    }
+    // C2: sem troca recentJql (workaround de paginação removido). searchJiraIssues
+    // já coleta todas as páginas automaticamente (jira-resource-version.ts).
+    // C3: se a busca falhar a exceção propaga — caller (case21) mostra erro explícito.
+    const issues = await fetchAllIssues(jiraResource, baseJql, 200);
 
     const epicsMap = loadEpicSummaries(issues);
     const issueKeys = issues.map((i) => i.key);

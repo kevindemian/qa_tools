@@ -337,11 +337,11 @@ describe('TestCaseFactory', () => {
         const opLog = { info: vi.fn() };
 
         beforeEach(() => {
-            Config.set('targetKeys', ['ECSPOL-1605', 'ECSPOL-1606', 'ECSPOL-1607']);
+            Config.set('targetKeys', 'ECSPOL-1605,ECSPOL-1606,ECSPOL-1607');
         });
 
         afterEach(() => {
-            Config.set('targetKeys', undefined);
+            Config.set('targetKeys', '');
         });
 
         it('updates by target key when targetKeys is set', async () => {
@@ -385,7 +385,7 @@ describe('TestCaseFactory', () => {
         it('skips target key when testIdx exceeds targetKeys length', async () => {
             expect.hasAssertions();
 
-            Config.set('targetKeys', ['ECSPOL-1605']);
+            Config.set('targetKeys', 'ECSPOL-1605');
             mockJiraResource.searchJiraIssues.mockResolvedValue({
                 issues: [{ key: 'TEST-99', fields: { summary: 'Some Title' } }],
                 total: 1,

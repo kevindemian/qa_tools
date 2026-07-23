@@ -188,6 +188,11 @@ describe('Quality check integrated', () => {
         it('checkIntegrity passes with the current regenerated hash', async () => {
             expect.hasAssertions();
 
+            // Skip during mutation testing - integrity check intentionally fails on mutated code
+            if (process.env['STRYKER_ACTIVE'] === 'true') {
+                return;
+            }
+
             const { checkIntegrity } = await load();
 
             const r = checkIntegrity();
@@ -202,7 +207,7 @@ describe('Quality check integrated', () => {
 
             const { checkEslintBaseline } = await load();
 
-            const r = await checkEslintBaseline();
+            const r = checkEslintBaseline();
 
             expect(typeof r.passed).toBe('boolean');
             expect(Array.isArray(r.violations)).toBeTruthy();
@@ -218,7 +223,7 @@ describe('Quality check integrated', () => {
 
             const { main } = await load();
 
-            await expect(main()).resolves.toBeUndefined();
+            expect(() => main()).not.toThrow();
         }, 240000);
     });
 });

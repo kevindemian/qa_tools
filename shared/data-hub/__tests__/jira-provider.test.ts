@@ -37,6 +37,7 @@ function createMockJira(): JiraResourceLike {
         getJiraResource: vi.fn(),
         postJiraResource: vi.fn(),
         putJiraResource: vi.fn(),
+        deleteJiraResource: vi.fn(),
         searchJiraIssues: vi
             .fn((_jql: string, _maxResults?: number) => Promise.resolve(response))
             .mockResolvedValue(response),

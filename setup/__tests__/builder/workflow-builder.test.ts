@@ -51,6 +51,13 @@ describe('WorkflowBuilder', () => {
         expect(yaml).toContain('npm ci');
         expect(yaml).toContain('npm test');
         expect(yaml).toContain('paths:');
+
+        // GitLab CI has no `jobs:` key — jobs live at the document root.
+        // Regression: a nested `jobs:` map makes GitLab reject the pipeline
+        // ("jobs config should contain at least one visible job").
+        const hasJobsKey = yaml.split('\n').some((line) => line.trim() === 'jobs:');
+
+        expect(hasJobsKey).toBeFalsy();
     });
 
     it('parses existing YAML and adds a job', () => {

@@ -1,0 +1,30 @@
+{
+    "testRunner": "vitest",
+    "baseRef": "origin/main",
+    "outputDir": ".tautest",
+    "score": {
+        "strong": 80,
+        "mixed": 60
+    },
+    "stryker": {
+        "incremental": true,
+        "timeoutMS": 300000,
+        "concurrency": 1,
+        "vitestConfigFile": "vitest.config.ts",
+        "userConfig": {
+            "ignorePatterns": [
+                "scripts/quality-check.ts",
+                "scripts/validation-hook.ts",
+                "scripts/__tests__/quality-check.test.ts",
+                "scripts/__tests__/validation-hook*.test.ts"
+            ],
+            "env": {
+                "STRYKER_ACTIVE": "true",
+                "CI": "true"
+            }
+        }
+    },
+    "prompt": {
+        "style": "opencode"
+    }
+}

@@ -25,6 +25,8 @@ import { calcExecutionRate } from '../data-hub/compute/execution-rate.js';
 import { calcSuiteSpeedP95 } from '../data-hub/compute/suite-speed.js';
 import type { PipelineRun } from '../types/ci-cd.js';
 
+export type GateStatus = 'pass' | 'fail' | 'unknown';
+
 export interface HealthScoreConfig {
     weights: { passRate: number; flakyRate: number; coverage: number; executionRate: number; suiteSpeed: number };
     passRateTarget: number;
@@ -53,6 +55,23 @@ interface ActualMetrics {
     coverage: number;
     executionRate: number;
     suiteSpeed: number;
+    /** Per-metric availability — false when the underlying metric is missing/non-finite. */
+    available: {
+        passRate: boolean;
+        flaky: boolean;
+        coverage: boolean;
+        executionRate: boolean;
+        suiteSpeed: boolean;
+    };
+}
+
+/** Per-dimension availability contract for {@link evaluateQualityGate}. */
+export interface GateAvailability {
+    passRate: boolean;
+    flaky: boolean;
+    coverage: boolean;
+    executionRate: boolean;
+    suiteSpeed: boolean;
 }
 
 const DEFAULTS: HealthScoreConfig = {
@@ -114,13 +133,38 @@ export function evaluateQualityGate(
     executionRate: number,
     suiteSpeed: number,
     config?: Partial<HealthScoreConfig>,
-): 'pass' | 'fail' {
+    availability?: GateAvailability,
+): GateStatus {
     const cfg = pickConfig(config);
-    if (!Number.isFinite(passRate) || passRate < cfg.minPassRateGate) return 'fail';
-    if (!Number.isFinite(flakyPct) || flakyPct > cfg.maxFlakyGate) return 'fail';
-    if (!Number.isFinite(coverage) || coverage < cfg.minCoverageGate) return 'fail';
-    if (!Number.isFinite(executionRate) || executionRate < cfg.minExecutionRateGate) return 'fail';
-    if (!Number.isFinite(suiteSpeed) || suiteSpeed > cfg.maxSuiteSpeedGate) return 'fail';
+    const av = availability ?? {
+        passRate: true,
+        flaky: true,
+        coverage: true,
+        executionRate: true,
+        suiteSpeed: true,
+    };
+
+    // Priority: a present-but-failing dimension is a hard 'fail'; a MISSING
+    // dimension (data outage) is 'unknown' — never silently forced to 'fail'
+    // (user decision + AGENTS.md §24/§25).
+    // A present-but-failing dimension is a hard 'fail'; a MISSING dimension
+    // (non-finite value OR explicitly unavailable) is 'unknown' — never silently
+    // forced to 'fail' (user decision + AGENTS.md §24/§25).
+    const check = (isAvailable: boolean, value: number, ok: boolean): GateStatus => {
+        if (!isAvailable || !Number.isFinite(value)) return 'unknown';
+        return ok ? 'pass' : 'fail';
+    };
+
+    const results: Array<GateStatus> = [
+        check(av.passRate, passRate, passRate >= cfg.minPassRateGate),
+        check(av.flaky, flakyPct, flakyPct <= cfg.maxFlakyGate),
+        check(av.coverage, coverage, coverage >= cfg.minCoverageGate),
+        check(av.executionRate, executionRate, executionRate >= cfg.minExecutionRateGate),
+        check(av.suiteSpeed, suiteSpeed, suiteSpeed <= cfg.maxSuiteSpeedGate),
+    ];
+
+    if (results.some((r) => r === 'fail')) return 'fail';
+    if (results.some((r) => r === 'unknown')) return 'unknown';
     return 'pass';
 }
 
@@ -136,15 +180,28 @@ function computeActualMetrics(dataHub: DataHub, branch?: string): ActualMetrics 
 
     const c = dataHub.computed;
 
-    const passRate = Number.isFinite(c.passRate) ? c.passRate : 0;
+    const passRate = c.passRate;
     // flakyPercentage is always a number from calcFlakyPercentage (0 when no flaky jobs).
     // Treat 0 as "no flaky data" → passing condition, not failing.
     const flakyPct = _normalizeFlakyPct(c.flakyPercentage ?? 0);
-    const coverage = Number.isFinite(c.coverage) ? c.coverage : 0;
-    const executionRate = Number.isFinite(c.executionRate ?? 0) ? (c.executionRate ?? 0) : 0;
-    const suiteSpeed = Number.isFinite(c.suiteSpeedP95) ? c.suiteSpeedP95 : 0;
+    const coverage = c.coverage;
+    const executionRate = c.executionRate ?? 0;
+    const suiteSpeed = c.suiteSpeedP95;
 
-    return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
+    return {
+        passRate,
+        flakyPct,
+        coverage,
+        executionRate,
+        suiteSpeed,
+        available: {
+            passRate: Number.isFinite(passRate),
+            flaky: flakyPct !== null && Number.isFinite(flakyPct),
+            coverage: Number.isFinite(coverage),
+            executionRate: Number.isFinite(c.executionRate ?? NaN),
+            suiteSpeed: Number.isFinite(suiteSpeed),
+        },
+    };
 }
 
 /**
@@ -160,11 +217,24 @@ function computeBranchMetrics(dataHub: DataHub, branch: string): ActualMetrics {
     const passRate = calcPipelinePassRate(scopedRuns, branch);
     const flakyResults = calcFlakyFromPipelineRuns(scopedRuns, jobsMap, branch);
     const flakyPct = _normalizeFlakyPct(calcFlakyPercentage(flakyResults, scopedRuns, jobsMap));
-    const coverage = Number.isFinite(dataHub.computed.coverage) ? dataHub.computed.coverage : 0;
+    const coverage = dataHub.computed.coverage;
     const executionRate = calcExecutionRate(scopedRuns);
     const suiteSpeed = calcSuiteSpeedP95(jobsMap, dataHub.raw.timing);
 
-    return { passRate, flakyPct, coverage, executionRate, suiteSpeed };
+    return {
+        passRate,
+        flakyPct,
+        coverage,
+        executionRate,
+        suiteSpeed,
+        available: {
+            passRate: Number.isFinite(passRate),
+            flaky: flakyPct !== null && Number.isFinite(flakyPct),
+            coverage: Number.isFinite(coverage),
+            executionRate: Number.isFinite(executionRate),
+            suiteSpeed: Number.isFinite(suiteSpeed),
+        },
+    };
 }
 
 function _normalizeFlakyPct(actualFlakyPct: number | null): number | null {
@@ -250,7 +320,7 @@ const PROVENANCE_DIMENSIONS: Array<{
     },
     {
         key: 'coverage',
-        label: 'Coverage',
+        label: 'Cobertura de testes Jira (steps)',
         source: 'ISO/IEC 25023:2016',
         standard: 'ISO/IEC 25023:2016',
         formula: 'mappedIssues/totalIssues×100',
@@ -325,55 +395,7 @@ function _computeHealthScore(
     const actual = computeActualMetrics(dataHub, options.branch);
     const dataQuality = summarizeDataQuality(dataHub);
 
-    const scPassRate = scorePassRate(actual.passRate, config);
-    const scFlakyRate = actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config);
-    const scCoverage = scoreCoverage(actual.coverage, config);
-    const scExecutionRate = scoreExecutionRate(actual.executionRate, config);
-    const scSuiteSpeed = scoreSuiteSpeed(actual.suiteSpeed, config);
-
-    let overallWeight = 0;
-    let overallNum = 0;
-
-    const addDim = (score: number, weight: number) => {
-        overallNum += score * weight;
-        overallWeight += weight;
-    };
-
-    addDim(scPassRate, config.weights.passRate);
-    if (actual.flakyPct !== null) addDim(scFlakyRate, config.weights.flakyRate);
-    addDim(scCoverage, config.weights.coverage);
-    addDim(scExecutionRate, config.weights.executionRate);
-    addDim(scSuiteSpeed, config.weights.suiteSpeed);
-
-    let overall = overallWeight > 0 ? overallNum / overallWeight : 0;
-    if (!Number.isFinite(overall)) overall = 0;
-
-    const dimCheck = [scPassRate, scCoverage, scExecutionRate, scSuiteSpeed];
-    if (actual.flakyPct !== null) dimCheck.push(scFlakyRate);
-    if (dimCheck.some((d) => d < PENALTY_THRESHOLD)) {
-        overall = Math.min(overall, PENALTY_CAP);
-    }
-
-    function gate(value: number, threshold: number, op: 'gte' | 'lte'): 'pass' | 'fail' {
-        const pass = op === 'gte' ? value >= threshold : value <= threshold;
-        return pass ? 'pass' : 'fail';
-    }
-
-    const statusPassRate = gate(actual.passRate, config.minPassRateGate, 'gte');
-    const statusFlaky =
-        actual.flakyPct === null || actual.flakyPct <= config.maxFlakyGate ? ('pass' as const) : ('fail' as const);
-    const statusCoverage = gate(actual.coverage, config.minCoverageGate, 'gte');
-    const statusSpeed = gate(actual.suiteSpeed, config.maxSuiteSpeedGate, 'lte');
-    const statusExecRate = gate(actual.executionRate, config.minExecutionRateGate, 'gte');
-
-    const dims: HealthScoreDimensions = {
-        passRate: { score: Math.round(scPassRate), status: statusPassRate },
-        flakyRate: { score: Math.round(scFlakyRate), status: statusFlaky },
-        coverage: { score: Math.round(scCoverage), status: statusCoverage },
-        suiteSpeed: { score: Math.round(scSuiteSpeed), status: statusSpeed },
-        executionRate: { score: Math.round(scExecutionRate), status: statusExecRate },
-    };
-
+    const { overall, dimensions } = _buildHealthDimensions(actual, config);
     return {
         overall: Math.round(overall),
         grade: computeGrade(Math.round(overall), config.gradeBoundaries),
@@ -384,11 +406,115 @@ function _computeHealthScore(
             actual.executionRate,
             actual.suiteSpeed,
             config,
+            actual.available,
         ),
-        dimensions: dims,
+        dimensions,
         provenance: _buildProvenance(options),
         runCount: dataHub.getRuns().length,
         timestamp: new Date().toISOString(),
         dataQuality,
     };
+}
+
+function gate(value: number, threshold: number, op: 'gte' | 'lte'): 'pass' | 'fail' {
+    const pass = op === 'gte' ? value >= threshold : value <= threshold;
+    return pass ? 'pass' : 'fail';
+}
+
+function dimGateStatus(available: boolean, value: number, threshold: number, op: 'gte' | 'lte'): GateStatus {
+    if (!available) return 'unknown';
+    return gate(value, threshold, op);
+}
+
+function flakyStatus(flakyPct: number | null, maxFlaky: number): GateStatus {
+    if (flakyPct === null) return 'unknown';
+    return flakyPct <= maxFlaky ? 'pass' : 'fail';
+}
+
+interface DimensionScores {
+    passRate: number;
+    flakyRate: number;
+    coverage: number;
+    executionRate: number;
+    suiteSpeed: number;
+}
+
+function _computeCompositeScore(actual: ActualMetrics, config: HealthScoreConfig, scores: DimensionScores): number {
+    let overallWeight = 0;
+    let overallNum = 0;
+
+    const addDim = (score: number, weight: number) => {
+        overallNum += score * weight;
+        overallWeight += weight;
+    };
+
+    // Renormalize over AVAILABLE dimensions only — a missing metric must never be
+    // silently scored 0 and dragged into the composite (AGENTS.md §25).
+    if (actual.available.passRate) addDim(scores.passRate, config.weights.passRate);
+    if (actual.flakyPct !== null) addDim(scores.flakyRate, config.weights.flakyRate);
+    if (actual.available.coverage) addDim(scores.coverage, config.weights.coverage);
+    if (actual.available.executionRate) addDim(scores.executionRate, config.weights.executionRate);
+    if (actual.available.suiteSpeed) addDim(scores.suiteSpeed, config.weights.suiteSpeed);
+
+    let overall = overallWeight > 0 ? overallNum / overallWeight : 0;
+    if (!Number.isFinite(overall)) overall = 0;
+
+    const dimCheck: number[] = [];
+    if (actual.available.passRate) dimCheck.push(scores.passRate);
+    if (actual.available.coverage) dimCheck.push(scores.coverage);
+    if (actual.available.executionRate) dimCheck.push(scores.executionRate);
+    if (actual.available.suiteSpeed) dimCheck.push(scores.suiteSpeed);
+    if (actual.flakyPct !== null) dimCheck.push(scores.flakyRate);
+    if (dimCheck.some((d) => d < PENALTY_THRESHOLD)) {
+        overall = Math.min(overall, PENALTY_CAP);
+    }
+    return overall;
+}
+
+function _buildDimensions(
+    actual: ActualMetrics,
+    config: HealthScoreConfig,
+    scores: DimensionScores,
+): HealthScoreDimensions {
+    const statusPassRate = dimGateStatus(actual.available.passRate, actual.passRate, config.minPassRateGate, 'gte');
+    const statusFlaky = flakyStatus(actual.flakyPct, config.maxFlakyGate);
+    const statusCoverage = dimGateStatus(actual.available.coverage, actual.coverage, config.minCoverageGate, 'gte');
+    const statusSpeed = dimGateStatus(actual.available.suiteSpeed, actual.suiteSpeed, config.maxSuiteSpeedGate, 'lte');
+    const statusExecRate = dimGateStatus(
+        actual.available.executionRate,
+        actual.executionRate,
+        config.minExecutionRateGate,
+        'gte',
+    );
+    return {
+        passRate: { score: Math.round(scores.passRate), status: statusPassRate, available: actual.available.passRate },
+        flakyRate: { score: Math.round(scores.flakyRate), status: statusFlaky, available: actual.flakyPct !== null },
+        coverage: { score: Math.round(scores.coverage), status: statusCoverage, available: actual.available.coverage },
+        suiteSpeed: {
+            score: Math.round(scores.suiteSpeed),
+            status: statusSpeed,
+            available: actual.available.suiteSpeed,
+        },
+        executionRate: {
+            score: Math.round(scores.executionRate),
+            status: statusExecRate,
+            available: actual.available.executionRate,
+        },
+    };
+}
+
+function _buildHealthDimensions(
+    actual: ActualMetrics,
+    config: HealthScoreConfig,
+): { overall: number; dimensions: HealthScoreDimensions } {
+    const scores: DimensionScores = {
+        passRate: actual.available.passRate ? scorePassRate(actual.passRate, config) : 0,
+        flakyRate: actual.flakyPct === null ? 0 : scoreFlakyRate(actual.flakyPct, config),
+        coverage: actual.available.coverage ? scoreCoverage(actual.coverage, config) : 0,
+        executionRate: actual.available.executionRate ? scoreExecutionRate(actual.executionRate, config) : 0,
+        suiteSpeed: actual.available.suiteSpeed ? scoreSuiteSpeed(actual.suiteSpeed, config) : 0,
+    };
+    const overall = _computeCompositeScore(actual, config, scores);
+    const dimensions = _buildDimensions(actual, config, scores);
+    return { overall, dimensions };
 }

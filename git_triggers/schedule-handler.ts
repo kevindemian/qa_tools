@@ -7,18 +7,30 @@ import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
-import { computeAiEffectiveness, generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
+import {
+    computeAiEffectiveness,
+    generateAiEffectivenessHtml,
+    convertGenerationRecordsToFeedback,
+} from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
+import JiraClient from '../shared/jira/jira-client.js';
+import Config from '../shared/config-accessor.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
-import { analyzeBacklogHealth, generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
+import {
+    mapJiraIssuesToBacklogHealth,
+    analyzeBacklogHealth,
+    generateBacklogHealthHtml,
+} from '../shared/report/backlog-health.js';
+import type { RawJiraIssue } from '../shared/types/data-hub.js';
 import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
 import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
 import { compareAiVsManual, generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
 import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
 import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
 import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
+import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
@@ -148,7 +160,7 @@ function extractTrendCategories(trends: { categories: Record<string, number> }[]
     return [...categories];
 }
 
-export function generateWeeklyQualityReport(): void {
+export async function generateWeeklyQualityReport(): Promise<void> {
     try {
         if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
@@ -170,21 +182,36 @@ export function generateWeeklyQualityReport(): void {
         const dataHub = getDataHub();
         const health = calculateHealthScore({ dataHub });
         const flaky = calcFlakinessEntries(projectRuns, 2);
+        const coveragePct = dataHub.computed.coverage;
         const releaseScore = calculateReleaseScore(
-            80,
+            undefined,
             health.overall,
             health.overall >= 70 ? 'pass' : 'fail',
-            70,
+            coveragePct,
             flaky.filter((f) => f.rate > 0.3).length > 0
                 ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
                 : 0,
         );
         const defects = aggregateDefectTrends(failureClassifications);
         const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, dataHub);
-        const aiResult = computeAiEffectiveness({ records: [] });
-        const backlog = analyzeBacklogHealth([]);
 
-        /* Fase 2 dashboards */
+        const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
+        const backlogIssues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
+        const backlog = analyzeBacklogHealth(backlogIssues);
+
+        const aiRecords = hub.raw.aiRecords ?? null;
+        const aiStore = convertGenerationRecordsToFeedback(aiRecords ?? undefined);
+        const aiResult = computeAiEffectiveness(aiStore);
+        const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
+
+        // Fase 9: Compute real coverage gap analysis for incident/impact reports
+        const jiraResource = new JiraClient(
+            Config.get('jiraPersonalToken'),
+            Config.get('jiraBaseUrl') + '/rest/api/2',
+            Config.get('jiraMode'),
+        );
+        const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+
         const seasonality = aggregateDefectSeasonality(failureClassifications);
         const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
         const devProfile = buildDeveloperProfile(
@@ -200,7 +227,6 @@ export function generateWeeklyQualityReport(): void {
         );
         const optimization = analyzeSuiteOptimization(flatTests);
 
-        /* Cross-squad benchmark: aggregate health across all projects */
         const projectNames = [...new Set(effectiveRuns.map((r) => r.project))];
         const benchmark = computeCrossSquadBenchmark(
             projectNames.map((name) => {
@@ -219,13 +245,16 @@ export function generateWeeklyQualityReport(): void {
             }),
         );
 
-        /* Fase 3 dashboards */
         const failRate = calcRunFailureRate(projectRuns);
 
-        const uncoveredEpics: string[] = matrix.nodes.reduce((acc: string[], n) => {
-            if (n.coverage < 100) acc.push(n.epic);
-            return acc;
-        }, []);
+        // Use real coverage gap analysis for uncovered epics
+        const uncoveredEpics: string[] = coverageGapResult.gateConfig.failingEpics;
+        // Fallback to traceability matrix if no coverage gap data
+        if (uncoveredEpics.length === 0) {
+            matrix.nodes.forEach((n) => {
+                if (n.coverage < 100) uncoveredEpics.push(n.epic);
+            });
+        }
 
         const incidentReport = buildIncidentReport(
             failRate,
@@ -233,6 +262,7 @@ export function generateWeeklyQualityReport(): void {
             seasonality.peakDay,
             uncoveredEpics,
             health.overall,
+            coverageGapResult,
         );
 
         const trendCategories = extractTrendCategories(defects.trends);
@@ -243,10 +273,10 @@ export function generateWeeklyQualityReport(): void {
             trendCategories.slice(0, 5),
             health.dimensions.coverage.score,
             uncoveredEpics,
+            coverageGapResult,
         );
 
         const pipelineCost = calculatePipelineCost(undefined, getDataHub());
-        const requirementScores = calculateRequirementScores([]);
 
         const sections: string[] = [];
         const qgDataHub = getDataHub();

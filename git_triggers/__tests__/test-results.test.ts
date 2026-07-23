@@ -7,8 +7,6 @@ import {
 } from '../../shared/test-utils/factories/index.js';
 import type { ParseResult } from '../../shared/result_parser.js';
 import type { ArtifactInfo } from '../../shared/types.js';
-import JiraClient from '../../shared/jira/jira-client.js';
-import JiraLinkManager from '../../jira_management/jira_link_manager.js';
 
 // ── Shared mock functions ───────────────────────────────────────────────────
 // These are referenced by vi.mock factories below. Must be declared before
@@ -496,8 +494,8 @@ describe('Test Results', () => {
             });
             const pushHistory = vi.fn();
 
-            const mockJiraRes = {} as JiraClient;
-            const mockLinkMgr = {} as JiraLinkManager;
+            const mockJiraRes = createMockJiraResource();
+            const mockLinkMgr = createMockLinkManager();
 
             await mod.collectTestResults({
                 m: mockProvider,
@@ -528,8 +526,8 @@ describe('Test Results', () => {
             mockListPipelineArtifacts.mockResolvedValue([]);
             const pushHistory = vi.fn();
 
-            const mockJiraRes = {} as JiraClient;
-            const mockLinkMgr = {} as JiraLinkManager;
+            const mockJiraRes = createMockJiraResource();
+            const mockLinkMgr = createMockLinkManager();
 
             await mod.collectTestResults({
                 m: mockProvider,
@@ -567,8 +565,8 @@ describe('Test Results', () => {
             // mockPrompt default (empty string) makes parseTestResults return null
             const pushHistory = vi.fn();
 
-            const mockJiraRes = {} as JiraClient;
-            const mockLinkMgr = {} as JiraLinkManager;
+            const mockJiraRes = createMockJiraResource();
+            const mockLinkMgr = createMockLinkManager();
 
             await mod.collectTestResults({
                 m: mockProvider,

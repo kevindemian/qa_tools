@@ -23,7 +23,7 @@ export function importMetricsJson(json: string): ComputedMetrics | null {
         if (!validateMetricsShape(parsed)) return null;
         return parsed;
     } catch (err) {
-        rootLogger.debug(`importMetricsJson: ${extractErrorMessage(err)}`);
+        rootLogger.warn(`importMetricsJson: ${extractErrorMessage(err)}`);
         return null;
     }
 }

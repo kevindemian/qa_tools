@@ -73,7 +73,6 @@ import {
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
 import { tryBatchMode, handlePipelineHealth } from './batch-mode.js';
-import { generatePrDescription } from './ai-pr-desc.js';
 import { interactiveBugReportFlow } from '../shared/report/bug-report.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
@@ -103,7 +102,6 @@ import { compareAiVsManual } from '../shared/report/ai-comparison.js';
 import { computeCrossSquadBenchmark } from '../shared/quality/cross-squad-benchmark.js';
 import { buildDeveloperProfile } from '../shared/quality/developer-profile.js';
 import { analyzeSuiteOptimization } from '../shared/quality/suite-optimization.js';
-import { analyzeBacklogHealth } from '../shared/report/backlog-health.js';
 import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
 import { calculatePipelineCost } from '../shared/quality/pipeline-cost.js';
@@ -113,6 +111,8 @@ import { runQualityGate, formatQualityGateText } from '../shared/quality/quality
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
 import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
+import { mapJiraIssuesToBacklogHealth, analyzeBacklogHealth } from '../shared/report/backlog-health.js';
+import type { RawJiraIssue } from '../shared/types/data-hub.js';
 import {
     generateGitMetricsRuns,
     generateGitFailureClassifications,
@@ -125,6 +125,7 @@ import { showDocs } from '../shared/report/show-docs.js';
 import { showDashboardMenu } from '../shared/ui/dashboard-menu.js';
 import type { DashboardDef } from '../shared/ui/dashboard-menu.js';
 import type { CliArgs } from './cli-args.js';
+import { generatePrDescription } from './ai-pr-desc.js';
 
 const validateEnv = createValidateEnv([
     { key: 'GIT_TOKEN', label: 'GIT_TOKEN (token de autenticação GitLab)', example: 'GIT_TOKEN=seu-token-aqui' },
@@ -382,11 +383,12 @@ async function _dashboardReleaseScore(): Promise<void> {
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
     const flaky = calcFlakinessEntries(data.projectRuns, 2);
+    const coveragePct = dataHub.computed.coverage;
     const releaseScore = calculateReleaseScore(
-        80,
+        undefined,
         health.overall,
         health.overall >= 70 ? 'pass' : 'fail',
-        70,
+        coveragePct,
         flaky.length > 0
             ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
             : 0,
@@ -480,7 +482,10 @@ async function _dashboardSuiteOptimization(): Promise<void> {
 }
 
 async function _dashboardBacklogHealth(): Promise<void> {
-    const backlog = analyzeBacklogHealth([]);
+    const hub = getDataHub();
+    const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
+    const issues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
+    const backlog = analyzeBacklogHealth(issues);
     await _generateAndOpenDashboard(generateBacklogHealthHtml(backlog), 'backlog-health', 'Backlog Health');
 }
 
@@ -489,21 +494,27 @@ async function _dashboardIncidentReport(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
     const testDurationMap = calcTestDurationMap(data.projectRuns);
     const regression = detectSilentRegression(testDurationMap);
     const seasonality = aggregateDefectSeasonality(data.failureClassifications);
     const failRate = calcRunFailureRate(data.projectRuns);
-    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
-        if (n.coverage < 100) acc.push(n.epic);
-        return acc;
-    }, []);
+
+    // Fase 9: Use real coverage gap analysis
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+
     const incidentReport = buildIncidentReport(
         failRate,
         regression.regressions.length,
         seasonality.peakDay,
         uncoveredEpics,
         health.overall,
+        coverageGapResult,
     );
     await _generateAndOpenDashboard(generateIncidentReportHtml(incidentReport), 'incident-report', 'Incident Report');
 }
@@ -522,11 +533,16 @@ async function _dashboardImpactAlert(): Promise<void> {
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
     const defects = aggregateDefectTrends(data.failureClassifications);
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
-    const uncoveredEpics = matrix.nodes.reduce((acc: string[], n) => {
-        if (n.coverage < 100) acc.push(n.epic);
-        return acc;
-    }, []);
+
+    // Fase 9: Use real coverage gap analysis
+    const jiraResource = new JiraClient(
+        Config.get('jiraPersonalToken'),
+        Config.get('jiraBaseUrl') + '/rest/api/2',
+        Config.get('jiraMode'),
+    );
+    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+
     const trendCategories = new Set<string>();
     for (const t of defects.trends) {
         for (const cat of Object.keys(t.categories)) {
@@ -539,6 +555,7 @@ async function _dashboardImpactAlert(): Promise<void> {
         [...trendCategories].slice(0, 5),
         health.dimensions.coverage.score,
         uncoveredEpics,
+        coverageGapResult,
     );
     await _generateAndOpenDashboard(generateImpactAlertHtml(impactAlert), 'impact-alert', 'Pipeline Impact Alert');
 }
@@ -776,7 +793,7 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         return Promise.resolve(false);
     },
     r: () => {
-        generateWeeklyQualityReport();
+        void generateWeeklyQualityReport();
         return Promise.resolve(false);
     },
 };
@@ -862,20 +879,6 @@ async function _initEnvironment(): Promise<void> {
     } catch (err) {
         rootLogger.debug('Env setup failed: ' + formatErr(err));
     }
-    let healthScore: { score: number; grade: string } | undefined;
-    try {
-        const hub = getDataHub();
-        const health = calculateHealthScore({ dataHub: hub });
-        healthScore = { score: health.overall, grade: health.grade };
-    } catch (err) {
-        rootLogger.debug('Health score failed: ' + formatErr(err));
-    }
-    try {
-        await showSplash(undefined, undefined, undefined, undefined, healthScore);
-    } catch (err) {
-        rootLogger.debug('Splash failed: ' + formatErr(err));
-        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
-    }
     sessionLog.info('Sessão iniciada');
 }
 
@@ -899,7 +902,8 @@ async function _handleMissingToken(projectName: string): Promise<GitProvider | n
         await _handleSetupWizard();
         return createManagerForProject(projectName, projectId);
     } catch (err) {
-        rootLogger.debug('Create manager for project failed: ' + formatErr(err));
+        rootLogger.error('Create manager for project failed after setup: ' + formatErr(err));
+        // Contract sentinel: setup wizard failed -> no manager available (caller handles null).
         return null;
     }
 }
@@ -950,6 +954,32 @@ async function _initDataHubBackground(): Promise<void> {
 }
 
 /**
+ * Compute health score from DataHub (must be called after DataHub init).
+ */
+function _computeHealthScore(): { score: number; grade: string } | undefined {
+    try {
+        const hub = getDataHub();
+        const health = calculateHealthScore({ dataHub: hub });
+        return { score: health.overall, grade: health.grade };
+    } catch (err) {
+        rootLogger.debug('Health score failed: ' + formatErr(err));
+        return undefined;
+    }
+}
+
+/**
+ * Show splash screen with health score.
+ */
+async function _showSplashWithHealth(healthScore: { score: number; grade: string } | undefined): Promise<void> {
+    try {
+        await showSplash(undefined, undefined, undefined, undefined, healthScore);
+    } catch (err) {
+        rootLogger.debug('Splash failed: ' + formatErr(err));
+        defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');
+    }
+}
+
+/**
  * Runs the interactive mode — validates environment, shows splash, and enters menu loop.
  * @param args Parsed CLI arguments
  */
@@ -966,6 +996,12 @@ export async function runInteractiveMode(args: CliArgs): Promise<void> {
     const { projectName, names, manager: m } = result;
 
     await _initDataHubBackground();
+
+    // Compute health score AFTER DataHub is initialized
+    const healthScore = _computeHealthScore();
+
+    // Show splash AFTER health score is computed
+    await _showSplashWithHealth(healthScore);
 
     clearBreadcrumbs();
     pushBreadcrumb('GIT');

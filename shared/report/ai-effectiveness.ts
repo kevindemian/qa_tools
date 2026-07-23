@@ -192,3 +192,48 @@ function buildTrendTable(trend: Array<{ date: string; acceptanceRate: number; ge
     html += '</tbody></table></div>';
     return html;
 }
+
+import type { AiGenerationRecord } from '../types/llm.js';
+
+/** Converts AiGenerationRecord[] (from DataHub) to AiFeedbackRecord[] for computeAiEffectiveness. */
+export function convertGenerationRecordsToFeedback(records: AiGenerationRecord[] | null | undefined): {
+    records: Array<{
+        timestamp: string;
+        promptVersion: string;
+        testTitle: string;
+        accepted: boolean;
+        modificationReason?: string;
+    }>;
+} {
+    if (!records || records.length === 0) {
+        return { records: [] };
+    }
+    const feedbackRecords: Array<{
+        timestamp: string;
+        promptVersion: string;
+        testTitle: string;
+        accepted: boolean;
+        modificationReason?: string;
+    }> = [];
+    for (const record of records) {
+        if (!record.feedback) continue;
+        for (const fb of record.feedback) {
+            const accepted = fb.action === 'kept' || fb.action === 'modified';
+            const entry: {
+                timestamp: string;
+                promptVersion: string;
+                testTitle: string;
+                accepted: boolean;
+                modificationReason?: string;
+            } = {
+                timestamp: fb.recordedAt,
+                promptVersion: record.promptVersion,
+                testTitle: fb.testKey,
+                accepted,
+            };
+            if (fb.reason) entry.modificationReason = fb.reason;
+            feedbackRecords.push(entry);
+        }
+    }
+    return { records: feedbackRecords };
+}

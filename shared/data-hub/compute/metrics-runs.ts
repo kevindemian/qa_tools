@@ -34,8 +34,8 @@ export function convertToMetricsRuns(
             allTests.push(...artifact.data.tests);
         }
 
-        const runIndex = Number(runId);
-        const run = Array.isArray(runs) ? runs[runIndex] : undefined;
+        const runsById = new Map((runs ?? []).map((r) => [String(r.id), r]));
+        const run = runsById.get(String(runId));
         const timestamp = run?.created_at ?? new Date().toISOString();
 
         result.push({

@@ -75,8 +75,8 @@ async function findExistingMatches(
                 (i) => (i.fields['summary'] as string).trim().toLowerCase() === test.title.trim().toLowerCase(),
             );
             if (found) matches.push({ key: found.key, title: test.title });
-        } catch {
-            // search failed — skip match display, continue
+        } catch (err) {
+            rootLogger.warn('findExistingMatches: search failed: ' + String(err));
         }
     }
     return matches;
@@ -97,18 +97,22 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     if (filtered === null) return;
 
     const updatePolicy = (Config.get('updatePolicy') ?? 'auto') as string;
-    let targetKeys = Config.get<string[]>('targetKeys');
-    if (!targetKeys && !Config.get<boolean>('autoConfirm') && jiraResource) {
+    let targetKeys: string[] = [];
+    const rawKeys = Config.get<string>('targetKeys');
+    if (rawKeys) {
+        targetKeys = rawKeys.split(',').filter(Boolean);
+    }
+    if (targetKeys.length === 0 && !Config.get<boolean>('autoConfirm') && jiraResource) {
         const targetKeysInput = prompt('Mapear por chave Jira? (ex: ECSPOL-1605,ECSPOL-1606,... ou Enter para skip)');
         if (targetKeysInput.trim()) {
             targetKeys = targetKeysInput
                 .split(',')
                 .map((k) => k.trim())
                 .filter(Boolean);
-            Config.set('targetKeys', targetKeys);
+            Config.set('targetKeys', targetKeys.join(','));
         }
     }
-    if (targetKeys && targetKeys.length > 0) {
+    if (targetKeys.length > 0) {
         if (targetKeys.length !== filtered.length) {
             warn(
                 'Aviso: ' +
@@ -132,13 +136,13 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
         }
     }
 
+    const dryRunResult = await handleDryRun(filtered, onBusy, sourcePath, jiraResource, targetKeys, project_name);
+    if (dryRunResult) return dryRunResult;
+
     if (!confirmOrCancel()) {
         warn(OPERATION_CANCELLED);
         return;
     }
-
-    const dryRunResult = handleDryRun(filtered, onBusy, sourcePath);
-    if (dryRunResult) return dryRunResult;
 
     return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog };
 }

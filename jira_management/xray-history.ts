@@ -115,6 +115,7 @@ class ServerHistoryProvider implements TestHistoryProvider {
                 };
             });
         } catch (err) {
+            rootLogger.warn('xray-history: Server history failed for ' + testKey + ': ' + formatErr(err));
             this.log.warn('Server history failed for ' + testKey + ': ' + formatErr(err));
             return [];
         }
@@ -213,6 +214,7 @@ class CloudHistoryProvider implements TestHistoryProvider {
 
             return await this._parseGraphqlHistoryResponse(data);
         } catch (err) {
+            rootLogger.warn('xray-history: Cloud history failed for ' + testKey + ': ' + formatErr(err));
             this.log.warn('Cloud history failed for ' + testKey + ': ' + formatErr(err));
             return [];
         }

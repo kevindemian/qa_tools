@@ -80,10 +80,10 @@ describe('ReviewWithLlm — rejection branches (LLM is the only mocked boundary)
         Config.set('llmReviewStrategy', 'always');
 
         mockLlmPrompt
-            .mockResolvedValueOnce(VALID_ANALYSIS) // primary: passes all 3 layers
+            .mockResolvedValueOnce(VALID_ANALYSIS) // primary: passes all 3 layers // pagination
             .mockResolvedValueOnce('PARTIAL — minor issues remain in the analysis') // self-review → medium
             // adversarialRetryParallel: ADVERSARIAL_TIERS (report, fast, fallback) — all valid
-            .mockResolvedValueOnce(VALID_ANALYSIS)
+            .mockResolvedValueOnce(VALID_ANALYSIS) // pagination
             .mockResolvedValueOnce(VALID_ANALYSIS)
             .mockResolvedValueOnce(VALID_ANALYSIS)
             // reReviewParallel: re-review verdict PARTIAL → medium (non-high)

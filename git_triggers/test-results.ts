@@ -6,6 +6,7 @@ import JiraClient from '../shared/jira/jira-client.js';
 import type { JiraMode } from '../shared/jira/jira-auth.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { warn, info, success, printError, withSpinner, ask } from '../shared/ui/prompt.js';
+import { rootLogger } from '../shared/logger.js';
 import { reportsDir } from '../shared/infra/temp-dir.js';
 import { parseTestResults as detectAndParseTestResults } from '../shared/result_parser.js';
 import type { ParseResult } from '../shared/result_parser.js';
@@ -28,7 +29,7 @@ function _resolveGlob(pattern: string): string | null {
         const m = matches[0];
         return m ? path.resolve(m) : null;
     } catch (err) {
-        warn('test-results: glob resolution failed: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn('test-results: glob resolution failed: ' + (err instanceof Error ? err.message : String(err)));
         return null;
     }
 }
@@ -40,6 +41,7 @@ async function _downloadArtifactBuffer(m: GitProvider, art: { id: number | strin
             return dl.buffer;
         });
     } catch (err) {
+        rootLogger.warn('test-results: Falha ao baixar artifact: ' + (err instanceof Error ? err.message : String(err)));
         printError('Falha ao baixar artifact', err);
         return null;
     }
@@ -63,6 +65,7 @@ function _extractTestResultsFromZip(buffer: Buffer): unknown {
         const raw = resultEntry.getData().toString('utf8');
         return JSON.parse(raw);
     } catch (err) {
+        rootLogger.warn('test-results: Falha ao ler arquivo de resultados: ' + (err instanceof Error ? err.message : String(err)));
         printError('Falha ao ler arquivo de resultados', err);
         return null;
     }

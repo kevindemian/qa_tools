@@ -63,6 +63,9 @@ gemini-code-*
 # === Container build context (local only, not part of the project) ===
 .container/
 
+# === Config duplicates (tautest TS vs JSON; only JSON is canonical) ===
+tautest.config.ts
+
 # === Windows artifacts ===
 nul
 .llm-cache/
@@ -78,3 +81,22 @@ qa-quarantine.json
 # === Session artifacts (ephemeral, not part of the project) ===
 archive/
 .stryker-tmp/
+research/
+.tautest/
+
+# === vitest-affected cache (generated) ===
+.vitest-affected/
+
+# === Security scan output (generated) ===
+osv-report.json
+
+# === Internal audit/plan docs (maintained locally, not part of distribution) ===
+audit/
+dev/docs/audit/
+dev/docs/compose/
+dev/docs/internal/plans/
+dev/docs/internal/ARCHITECTURE-CONTRACT.md
+dev/docs/internal/MUTATION-TESTING-PLAN.md
+dev/docs/internal/reorg-dev-main-plan.md
+dev/docs/internal/validation-hook-code-only.md
+release_notes/
