@@ -207,7 +207,7 @@ describe('Quality check integrated', () => {
 
             const { checkEslintBaseline } = await load();
 
-            const r = checkEslintBaseline();
+            const r = await checkEslintBaseline();
 
             expect(typeof r.result.passed).toBe('boolean');
             expect(Array.isArray(r.result.violations)).toBeTruthy();
