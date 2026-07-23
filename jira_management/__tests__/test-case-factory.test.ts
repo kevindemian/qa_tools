@@ -2,6 +2,8 @@ const mockPrompt = vi.hoisted(() => ({
     success: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
+    prompt: vi.fn().mockReturnValue(''),
+    confirm: vi.fn().mockReturnValue(true),
     onError: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
     ProgressBar: vi.fn<(...args: [total: number, options?: { width?: number }]) => { update: Mock; stop: Mock }>(
@@ -16,6 +18,7 @@ vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 import { createMockJiraResource } from '../../shared/test-utils/factories/jira-resource-factory.js';
 import type { Mock } from 'vitest';
 import TestCaseFactory from '../test-case-factory.js';
+import Config from '../../shared/config-accessor.js';
 
 function createMockImporter() {
     return { importStep: vi.fn(), setSteps: vi.fn() };
@@ -38,6 +41,7 @@ describe('TestCaseFactory', () => {
 
     afterEach(() => {
         vi.resetAllMocks();
+        Config.reset();
     });
 
     describe('CreateIssue', () => {
@@ -190,6 +194,33 @@ describe('TestCaseFactory', () => {
 
             expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalledWith();
             expect(mockJiraResource['postJiraResource']).toHaveBeenCalledWith('issue', testData);
+        });
+
+        it('with prompt policy and multiple matches, user selects an issue to update', async () => {
+            expect.hasAssertions();
+
+            Config.set('updatePolicy', 'prompt');
+            mockJiraResource.searchJiraIssues.mockResolvedValue({
+                issues: [
+                    { key: 'TEST-10', fields: { summary: 'Login Test' } },
+                    { key: 'TEST-11', fields: { summary: 'Login Test' } },
+                ],
+                total: 2,
+            });
+            mockPrompt.isQuiet.mockReturnValue(false);
+            mockPrompt.prompt.mockReturnValue('1');
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Login Test',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'TEST-10', updated: true });
+            expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(1);
         });
 
         it('shows prompt info when quiet is false and issue is updated', async () => {

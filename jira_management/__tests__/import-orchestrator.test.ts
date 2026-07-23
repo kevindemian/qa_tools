@@ -191,6 +191,35 @@ describe('Import Orchestrator', () => {
             expect(result?.status).toBe('error');
             expect(result?.summary).toContain('1/2');
         });
+
+        it('failedLinks only appear in summary when errored is true', async () => {
+            expect.hasAssertions();
+
+            const results = [
+                { status: 'ok' as const, label: 'Test 1', message: '' },
+                { status: 'ok' as const, label: 'Test 2', message: '' },
+            ];
+            const linker = linkerMock();
+            const result = await finalizeTestCreation({
+                results,
+                tests: makeTestCases(2),
+                linker,
+                failedLinks: ['cross-ref:TEST-1'],
+                inMemoryTasksId: ['T-1'],
+                inMemoryTasksText: ['Test 1'],
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                opLog: createMockLogger(),
+                onBusy,
+                info: vi.fn(),
+                printSummary: vi.fn(),
+            });
+
+            expect(result?.status).toBe('ok');
+            expect(result?.summary).toBe('2/2 testes criados');
+        });
     });
 
     describe('PostProcessCheckpoint', () => {
