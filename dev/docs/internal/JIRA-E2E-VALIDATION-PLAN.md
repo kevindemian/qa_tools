@@ -88,6 +88,22 @@ Target de snapshot-restore: **ECSPOL-1633** (duplicata descartável)
 
 ---
 
+## Resultados — Fase 6 AI/Relatórios (2026-07-23)
+
+| # | Feature | Status | Evidência |
+|---|---------|--------|-----------|
+| 6.1 | case17 HTML Report | ✅ | CTRF parser OK; quality gate modules OK; Xray history 0 runs (novo teste); Jira bug search OK |
+| 6.2 | case18 AI Test Gen | ✅ | 20 preconditions reais ECSPOL; dual-threshold matching correto (23/23 unit tests); module structure OK |
+
+### Achados Fase 6
+
+- **case17**: `result_parser`, `report-utils`, `flakiness-entries`, `run-pass-rate`, `report-generator` — todos modules existem e exportam funções esperadas
+- **case18**: `matchPreconditionByDualThreshold` funciona com dados reais — 20 preconditions ECSPOL; queries de teste sem match → "create" (comportamento correto)
+- **Xray history**: ECSPOL-1637 com 0 runs — esperado para tests recém-criados
+- **Jira bug search**: 0 bugs com "test" no summary — esperado para ECSPOL
+
+---
+
 ## Legenda
 
 | Símbolo | Significado |
