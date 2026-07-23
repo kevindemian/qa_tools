@@ -14,7 +14,7 @@
       "description": "catch blocks que silenciam erros (AGENTS §25)"
     },
     "lint-warnings": {
-      "threshold": 301,
+      "threshold": 300,
       "description": "warnings ESLint (security/detect-*, vitest/*, sonarjs/*, etc.)"
     },
     "lint-errors": {
