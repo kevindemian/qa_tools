@@ -11,12 +11,12 @@ import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Section, EmptyState } from '../primitives/index.js';
 import type { TraceabilityResult, TraceabilityNode, TraceabilityAwareness } from './traceability-matrix.js';
 
 function buildStatusBadge(status: 'passed' | 'failed' | 'skipped'): string {
     const label = status.charAt(0).toUpperCase() + status.slice(1);
-    return `<span class="status-badge status-${status}" data-status="${status}">${label}</span>`;
+    return `<span class="status-badge status-${status}" data-component="badge" data-severity="${status}">${label}</span>`;
 }
 
 function buildHealthBar(value: number): string {
@@ -29,7 +29,7 @@ function buildHealthBar(value: number): string {
     } else {
         color = 'var(--color-error)';
     }
-    return `<div class="health-bar"><div class="health-fill" style="width:${pct}%;background:${color}"></div></div>`;
+    return `<div class="health-bar" data-component="health-bar"><div class="health-fill" style="width:${pct}%;background:${color}"></div></div>`;
 }
 
 function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string {
@@ -44,7 +44,7 @@ function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string
         testIcon = '\u23F8';
     }
 
-    return `<div class="test-row test-${test.status}" data-status="${test.status}">
+    return `<div class="test-row test-${test.status}" data-component="test-row" data-status="${test.status}">
         <span class="test-icon">${testIcon}</span>
         <span class="test-title">${sanitizeHtml(test.title)}</span>
         <span class="test-meta">${test.duration}ms</span>
@@ -55,7 +55,7 @@ function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string
 
 function buildStoryHtml(story: TraceabilityNode['stories'][0]): string {
     const testsHtml = story.tests.map((t) => buildTestHtml(t)).join('');
-    return `<div class="story-node">
+    return `<div class="story-node" data-component="story">
         <div class="story-header" onclick="this.parentElement.classList.toggle('collapsed')">
             <span class="toggle-icon">&#9660;</span>
             <span class="story-key">${sanitizeHtml(story.key)}</span>
@@ -70,8 +70,15 @@ function buildStoryHtml(story: TraceabilityNode['stories'][0]): string {
 
 function buildEpicNodeHtml(node: TraceabilityNode): string {
     const storiesHtml = node.stories.map((s) => buildStoryHtml(s)).join('');
-    const emptyMsg = node.stories.length === 0 ? '<div class="empty-note">No tests linked to this epic</div>' : '';
-    return `<div class="epic-node">
+    const emptyMsg =
+        node.stories.length === 0
+            ? EmptyState({
+                  title: 'No tests linked',
+                  description: `This epic (${sanitizeHtml(node.epic)}) has no linked stories or tests.`,
+                  action: 'Link test cases to this epic in your test management tool to enable traceability.',
+              })
+            : '';
+    return `<div class="epic-node" data-component="epic">
         <div class="epic-header" onclick="this.parentElement.classList.toggle('collapsed')">
             <span class="toggle-icon">&#9660;</span>
             <span class="epic-key">${sanitizeHtml(node.epic)}</span>
@@ -94,17 +101,17 @@ function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
                 .map((e) => {
                     const conf = e.confidence == null ? 'n/a' : Math.round(e.confidence * 100) + '%';
                     const flag = !e.valid ? ' ⚠ invalid' : '';
-                    return `<li class="aware-entity">${sanitizeHtml(e.id)} <span class="aware-conf">${conf}</span>${flag}</li>`;
+                    return `<li class="aware-entity" data-component="entity">${sanitizeHtml(e.id)} <span class="aware-conf">${conf}</span>${flag}</li>`;
                 })
                 .join('');
-            return `<div class="aware-cat"><span class="aware-cat-name">${sanitizeHtml(c.category)}</span> (${c.entities.length})<ul>${entities}</ul></div>`;
+            return `<div class="aware-cat" data-section="${sanitizeHtml(c.category)}"><span class="aware-cat-name">${sanitizeHtml(c.category)}</span> (${c.entities.length})<ul>${entities}</ul></div>`;
         })
         .join('');
     const minLine =
         awareness.minConfidence == null
             ? ''
             : `<div class="aware-min">min confidence: ${Math.round(awareness.minConfidence * 100)}%</div>`;
-    return `<section class="awareness-panel"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
+    return `<section class="awareness-panel" data-section="awareness"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
 }
 
 const TRACEABILITY_CSS = `
@@ -151,36 +158,50 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
         }
         const pageTitle = title || 'Traceability Matrix';
 
-        const summaryCards = MetricGrid({
-            children:
-                MetricCard({ label: 'Total Epics', value: String(result.totalEpics) }) +
-                MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
-                MetricCard({
-                    label: 'Overall Test Pass Rate',
-                    value: result.overallCoverage + '%',
-                    severity: (() => {
-                        if (result.overallCoverage >= 80) return 'success';
-                        if (result.overallCoverage >= 50) return 'warn';
-                        return 'error';
-                    })(),
-                }),
+        let coverageSeverity: 'success' | 'warn' | 'error';
+        if (result.overallCoverage >= 80) {
+            coverageSeverity = 'success';
+        } else if (result.overallCoverage >= 50) {
+            coverageSeverity = 'warn';
+        } else {
+            coverageSeverity = 'error';
+        }
+
+        const summaryCards = Section({
+            dataSection: 'summary',
+            children: MetricGrid({
+                children:
+                    MetricCard({ label: 'Total Epics', value: String(result.totalEpics) }) +
+                    MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
+                    MetricCard({
+                        label: 'Overall Test Pass Rate',
+                        value: result.overallCoverage + '%',
+                        severity: coverageSeverity,
+                    }),
+            }),
         });
 
         const treeHtml =
             result.nodes.length > 0
-                ? '<div class="tree">' + result.nodes.map((n) => buildEpicNodeHtml(n)).join('') + '</div>'
-                : '<p style="color:var(--color-text-muted);text-align:center;margin-top:40px">No traceability data available.</p>';
+                ? Section({
+                      dataSection: 'tree',
+                      children:
+                          '<div class="tree">' + result.nodes.map((n) => buildEpicNodeHtml(n)).join('') + '</div>',
+                  })
+                : EmptyState({
+                      title: 'No traceability data available',
+                      description:
+                          'The traceability matrix requires epic-to-test mappings. No nodes were found to display.',
+                      action: 'Configure test-to-requirement links in your test management tool and re-run the traceability analysis.',
+                  });
 
-        const bodyContent =
-            '<h1>' +
-            sanitizeHtml(pageTitle) +
-            '</h1>' +
-            '<div class="timestamp">' +
-            sanitizeHtml(result.timestamp) +
-            '</div>' +
-            summaryCards +
-            treeHtml +
-            buildAwarenessHtml(result.awareness);
+        const bodyContent = wrapContainer(
+            pageTitle,
+            `<div data-part="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
+                summaryCards +
+                treeHtml +
+                buildAwarenessHtml(result.awareness),
+        );
 
         return buildHtmlPage({
             title: pageTitle,
@@ -194,4 +215,11 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
         rootLogger.error('Failed to generate traceability HTML: ' + msg);
         return buildErrorPage('Error generating traceability matrix', 'Error generating traceability matrix');
     }
+}
+
+function wrapContainer(pageTitle: string, children: string): string {
+    return `<div data-component="container" data-dashboard="traceability">
+        <h1>${sanitizeHtml(pageTitle)}</h1>
+        ${children}
+    </div>`;
 }
