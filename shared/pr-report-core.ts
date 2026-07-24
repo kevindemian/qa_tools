@@ -152,19 +152,19 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
     const durationSec = (stats.duration / 1000).toFixed(1);
 
     // Build summary with temporal context
-    const lines: string[] = ['## 📊 Test Results', ''];
+    const lines: string[] = ['## [stats] Test Results', ''];
 
     // Pass rate with status indicator
     let statusIcon: string;
-    if (stats.failed === 0) statusIcon = '✅';
-    else if (stats.failed <= 3) statusIcon = '⚠️';
-    else statusIcon = '❌';
+    if (stats.failed === 0) statusIcon = '✓';
+    else if (stats.failed <= 3) statusIcon = '△';
+    else statusIcon = '✗';
 
     lines.push(`**${statusIcon} ${passRate}% pass rate** (${stats.passed}/${stats.total})`);
     lines.push('');
 
     // Stats table
-    lines.push('| ✅ Passed | ❌ Failed | ⏭ Skipped | ⏱ Duration |');
+    lines.push('| ✓ Passed | ✗ Failed | ⏭ Skipped | ◷ Duration |');
     lines.push('|---|---|---|---|');
     lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
     lines.push('');
@@ -172,13 +172,13 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
     // Temporal context from diff
     if (diff) {
         if (diff.newFailures.length > 0) {
-            lines.push(`> ❌ **${diff.newFailures.length} new failure(s)** introduced in this PR`);
+            lines.push(`> ✗ **${diff.newFailures.length} new failure(s)** introduced in this PR`);
         }
         if (diff.newPasses.length > 0) {
-            lines.push(`> ✅ **${diff.newPasses.length} test(s) fixed** by this PR`);
+            lines.push(`> ✓ **${diff.newPasses.length} test(s) fixed** by this PR`);
         }
         if (diff.flaky.length > 0) {
-            lines.push(`> 🔄 **${diff.flaky.length} test(s) changed state** (potential flaky)`);
+            lines.push(`> ↻ **${diff.flaky.length} test(s) changed state** (potential flaky)`);
         }
     }
 
@@ -201,7 +201,7 @@ function buildFailureTable(tests: FlatTest[]): string {
 
     return [
         '',
-        '### ❌ Failed Tests',
+        '### ✗ Failed Tests',
         '',
         '| Test | Duration | Error |',
         '|---|---|---|',
@@ -228,7 +228,7 @@ function buildFlakySection(dataHub: DataHub): string {
 
         const rows = highFlaky.map((t) => {
             const quarantined = dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title);
-            const status = quarantined ? '🔒 Quarantined' : '⚠️ New';
+            const status = quarantined ? '⊕ Quarantined' : '△ New';
             return [
                 `| ${t.title.replace(/\|/g, '\\|')}`,
                 `${(t.rate * 100).toFixed(0)}%`,
@@ -240,12 +240,12 @@ function buildFlakySection(dataHub: DataHub): string {
         const newFlaky = highFlaky.filter((t) => !dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title));
         const suggestion =
             newFlaky.length > 0
-                ? `\n> 💡 ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
+                ? `\n> ► ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
                 : '';
 
         return [
             '',
-            '## ⚠️ Flaky Tests (rate ≥ 30%)',
+            '## △ Flaky Tests (rate ≥ 30%)',
             '',
             '| Test | Flaky Rate | Passed/Total | Quarantine |',
             '|---|---|---|---|',
@@ -263,9 +263,9 @@ function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageF
     if (!coverageResult) return '';
     const { coveragePct, source, detail } = coverageResult;
     let icon: string;
-    if (coveragePct >= 70) icon = '✅';
-    else if (coveragePct >= 50) icon = '⚠️';
-    else icon = '❌';
+    if (coveragePct >= 70) icon = '✓';
+    else if (coveragePct >= 50) icon = '△';
+    else icon = '✗';
     return [
         '',
         `## ${icon} Code Coverage`,
@@ -304,11 +304,11 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
     const { newFailures, newPasses, flaky } = diff;
     if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
 
-    const lines: string[] = ['', '## 🔄 Changes in This PR'];
+    const lines: string[] = ['', '## ↻ Changes in This PR'];
 
     const failureTable = buildTestTable(
         'New Failures (Introduced by this PR)',
-        '❌',
+        '✗',
         newFailures,
         '| Test | Duration | Error |',
         10,
@@ -321,7 +321,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const passTable = buildTestTable(
         'Fixed (Previously Failing)',
-        '✅',
+        '✓',
         newPasses,
         '| Test | Duration |',
         10,
@@ -331,7 +331,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const flakyTable = buildTestTable(
         'Flaky (State Changed)',
-        '🔄',
+        '↻',
         flaky,
         '| Test | Duration |',
         10,
@@ -346,7 +346,7 @@ function buildAiAnalysisSection(llmAvailable: boolean): string {
     if (!llmAvailable) return '';
     return [
         '',
-        '### 🤖 AI Failure Analysis',
+        '### AI AI Failure Analysis',
         '',
         'AI-powered failure analysis with classification, self-consistency, and attribution ',
         'is available when LLM is configured (`LLM_API_KEY`).',
@@ -376,7 +376,7 @@ function buildCiContextSection(
             ? `${ciEnv.serverUrl}/${ciEnv.repo}/actions/runs/${ciEnv.runId}`
             : undefined;
 
-    const lines: string[] = ['', '### 🔧 CI Context', ''];
+    const lines: string[] = ['', '### [cfg] CI Context', ''];
 
     if (workflowUrl) {
         lines.push(`- **Workflow:** [Run #${ciEnv.runId}](${workflowUrl})`);
@@ -390,7 +390,7 @@ function buildCiContextSection(
 
     lines.push(
         '',
-        '> ℹ️ This report reflects **test execution results** only.',
+        '> [i] This report reflects **test execution results** only.',
         '> CI pipeline status may differ if post-test steps (upload, quality gate, etc.) failed.',
         '',
     );
@@ -421,15 +421,15 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
         const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
         const durationSec = (stats.duration / 1000).toFixed(1);
         const lines: string[] = [
-            '## 📊 QA Tools — PR Report',
+            '## [stats] QA Tools — PR Report',
             '',
-            '| ✅ Passed | ❌ Failed | ⏭ Skipped | 📦 Total | ⏱ Duration | 📈 Pass Rate |',
+            '| ✓ Passed | ✗ Failed | ⏭ Skipped | Σ Total | ◷ Duration | ▶ Pass Rate |',
             '|---|---|---|---|---|---|',
             `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
         ];
 
         if (htmlArtifactUrl) {
-            lines.push('', `📄 [Download full HTML report](${htmlArtifactUrl})`);
+            lines.push('', `[link] [Download full HTML report](${htmlArtifactUrl})`);
         }
         lines.push('', `_${new Date().toISOString()}_`, '');
 
@@ -695,15 +695,15 @@ type QualityGateSummary = {
 };
 
 function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return '✅';
-    if (status === 'unknown') return '❓';
-    return '❌';
+    if (status === 'pass') return '✓';
+    if (status === 'unknown') return '?';
+    return '✗';
 }
 
 function gateOverallLabel(overall: QualityGateStatus): { icon: string; word: string } {
-    if (overall === 'pass') return { icon: '✅', word: 'PASSED' };
-    if (overall === 'unknown') return { icon: '❓', word: 'UNKNOWN' };
-    return { icon: '❌', word: 'FAILED' };
+    if (overall === 'pass') return { icon: '✓', word: 'PASSED' };
+    if (overall === 'unknown') return { icon: '?', word: 'UNKNOWN' };
+    return { icon: '✗', word: 'FAILED' };
 }
 
 function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'failure' {
@@ -723,7 +723,7 @@ function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifac
         lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${gateStatusIcon(check.status)} |`);
     }
     if (artifactUrl) {
-        lines.push('', `📄 [Download HTML report](${artifactUrl})`);
+        lines.push('', `[link] [Download HTML report](${artifactUrl})`);
     }
     return lines.join('\n');
 }
@@ -736,7 +736,7 @@ function buildQualityGateSection(result: QualityGateSummary): string {
 
     return [
         '',
-        `## 🛡️ Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
+        `## ◎ Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
         '| Check | Actual | Threshold | Status |',
         '|---|---|---|---|',
@@ -750,11 +750,11 @@ function _buildProvenanceMd(healthScore: ReturnType<typeof calculateHealthScore>
 
     const rows = healthScore.provenance.map(
         (p) =>
-            `| ${p.dimension} | ${p.formula} | ${p.source} | ${p.standard} | ${p.overridden ? '✏️ overridden' : 'default'} |`,
+            `| ${p.dimension} | ${p.formula} | ${p.source} | ${p.standard} | ${p.overridden ? '>> overridden' : 'default'} |`,
     );
 
     return [
-        '📖 **Methodology & References**',
+        '◈ **Methodology & References**',
         '',
         '| Dimension | Formula | Source | Standard | Config |',
         '|---|---|---|---|---|',
@@ -775,9 +775,9 @@ function buildDataQualitySection(dataQuality: DataQualitySummary): string | unde
     if (status === 'missing' && notes.length === 0) return undefined;
 
     let icon: string;
-    if (status === 'ok') icon = '✅';
-    else if (status === 'degraded') icon = '⚠️';
-    else icon = 'ℹ️';
+    if (status === 'ok') icon = '✓';
+    else if (status === 'degraded') icon = '△';
+    else icon = '[i]';
 
     const confidenceLabel = minConfidence == null ? '_n/a_' : `${(minConfidence * 100).toFixed(0)}%`;
     const parts: string[] = [
@@ -803,9 +803,9 @@ function buildFooter(
 ): string {
     const parts: string[] = ['---', ''];
     if (workflowUrl) {
-        parts.push(`🔍 [View workflow run](${workflowUrl})`);
+        parts.push(`[view] [View workflow run](${workflowUrl})`);
         if (artifactUrl) {
-            parts.push(`📄 [Download HTML report](${artifactUrl})`);
+            parts.push(`[link] [Download HTML report](${artifactUrl})`);
         }
     }
     const provenanceMd = healthScore ? _buildProvenanceMd(healthScore) : '';

@@ -595,7 +595,7 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
 
         expect(html).toContain('Cross-References');
         expect(html).toContain('PROJ-1');
-        expect(html).toContain('⚠ invalid');
+        expect(html).toContain('invalid');
     });
 
     it('omits the awareness panel when no ST-1 category is present', () => {

@@ -249,7 +249,7 @@ describe('TryCreateDataHub wiring', () => {
 
             const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
 
-            expect(body).toContain('### ✅ Data Quality');
+            expect(body).toContain('### ✓ Data Quality');
             expect(body).toContain('**Min. confidence:** 90%');
         });
 
@@ -283,7 +283,7 @@ describe('TryCreateDataHub wiring', () => {
 
             const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
 
-            expect(body).toContain('### ⚠️ Data Quality');
+            expect(body).toContain('### △ Data Quality');
         });
     });
 });

@@ -54,6 +54,7 @@
         "figlet": "^1.11.0",
         "glob": "^13.0.6",
         "gradient-string": "^3.0.0",
+        "lucide": "^1.26.0",
         "minimatch": "^10.2.5",
         "neverthrow": "^8.2.0",
         "ora": "^9.4.1",

@@ -11,6 +11,7 @@ import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import {
     MetricCard,
     MetricGrid,
@@ -77,7 +78,7 @@ function buildAdvantageSection(result: AiComparisonResult): string {
     // Add sample size context
     const sampleSizeWarning =
         result.aiTotal < 30 || result.manualTotal < 30
-            ? ' ⚠️ Small sample size — results may not be statistically significant.'
+            ? ` ${icon('alert-triangle', 14)} Small sample size — results may not be statistically significant.`
             : '';
 
     return Section({

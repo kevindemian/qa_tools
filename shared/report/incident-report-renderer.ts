@@ -13,6 +13,7 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
+import { icon } from '../icons.js';
 import type { IncidentReport } from './incident-report.js';
 
 function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default' {
@@ -24,12 +25,19 @@ function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default
 
 function eventTypeToLabel(type: string): string {
     const labels: Record<string, string> = {
-        failure: '❌ Failure',
-        regression: '📈 Regression',
-        coverage_gap: '📊 Coverage Gap',
-        seasonality: '📅 Seasonality',
+        failure: 'Failure',
+        regression: 'Regression',
+        coverage_gap: 'Coverage Gap',
+        seasonality: 'Seasonality',
     };
-    return labels[type] || type;
+    const icons: Record<string, string> = {
+        failure: 'x-circle',
+        regression: 'trending-up',
+        coverage_gap: 'bar-chart',
+        seasonality: 'calendar',
+    };
+    const iconSvg = icons[type] ? icon(icons[type], 14) : '';
+    return `${iconSvg} ${labels[type] || type}`;
 }
 
 export function generateIncidentReportHtml(report: IncidentReport | null | undefined, title?: string): string {
@@ -77,14 +85,15 @@ function wrapContainer(pageTitle: string, children: string): string {
 }
 
 function SeverityBanner(severity: string): string {
-    let icon: string;
-    if (severity === 'high') icon = '🔴';
-    else if (severity === 'medium') icon = '🟡';
-    else if (severity === 'low') icon = '🟢';
-    else icon = '⚪';
+    const severityIcons: Record<string, string> = {
+        high: 'x-circle',
+        medium: 'alert-triangle',
+        low: 'check-circle',
+    };
+    const iconSvg = icon(severityIcons[severity] ?? 'info', 14);
 
     return `<div data-component="severity-banner">
-        ${icon} Overall Severity: ${sanitizeHtml(severity.toUpperCase())}
+        ${iconSvg} Overall Severity: ${sanitizeHtml(severity.toUpperCase())}
     </div>`;
 }
 

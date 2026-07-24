@@ -12,6 +12,7 @@ import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
+import { icon } from '../icons.js';
 import type { TraceabilityResult, TraceabilityNode, TraceabilityAwareness } from './traceability-matrix.js';
 
 function buildStatusBadge(status: 'passed' | 'failed' | 'skipped'): string {
@@ -119,7 +120,7 @@ function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
             const entities = c.entities
                 .map((e) => {
                     const conf = e.confidence == null ? 'n/a' : Math.round(e.confidence * 100) + '%';
-                    const flag = !e.valid ? ' ⚠ invalid' : '';
+                    const flag = !e.valid ? ` ${icon('alert-triangle', 12)} invalid` : '';
                     return `<li data-component="entity">${sanitizeHtml(e.id)} <span data-part="confidence">${conf}</span>${flag}</li>`;
                 })
                 .join('');

@@ -12,6 +12,7 @@ import { buildCss } from '../report/report-styles.js';
 import { sanitizeHtml } from '../escape.js';
 import { Badge, MetricCard, MetricGrid, Section, RecommendedActions } from '../primitives/index.js';
 import type { ReleaseScoreResult } from './release-score.js';
+import { icon } from '../icons.js';
 
 export function generateReleaseScoreHtml(result: ReleaseScoreResult): string {
     const bodyContent = wrapContainer(
@@ -50,7 +51,7 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
 
     // Calculate deployment gate status
     const deploymentReady = result.score >= 80;
-    const gateStatus = deploymentReady ? '✅ READY' : '❌ NOT READY';
+    const gateStatus = deploymentReady ? `${icon('check-circle', 14)} READY` : `${icon('x-circle', 14)} NOT READY`;
     const gateSeverity = deploymentReady ? 'success' : 'error';
 
     // Count passed/failed checks
