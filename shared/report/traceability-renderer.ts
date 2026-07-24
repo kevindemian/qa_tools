@@ -11,67 +11,48 @@ import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
+import {
+    MetricCard,
+    MetricGrid,
+    Section,
+    EmptyState,
+    RecommendedActions,
+    Badge,
+    ProgressBar,
+} from '../primitives/index.js';
 import { icon } from '../icons.js';
 import type { TraceabilityResult, TraceabilityNode, TraceabilityAwareness } from './traceability-matrix.js';
 
-function buildStatusBadge(status: 'passed' | 'failed' | 'skipped'): string {
-    const label = status.charAt(0).toUpperCase() + status.slice(1);
-    let variant: string;
-    if (status === 'passed') {
-        variant = 'pass';
-    } else if (status === 'failed') {
-        variant = 'fail';
-    } else {
-        variant = 'skip';
-    }
-    return `<span data-component="badge" data-variant="${variant}" class="status-${status}">${label}</span>`;
-}
-
-function buildHealthBar(value: number): string {
-    const pct = Math.min(100, Math.max(0, value));
-    let color: string;
-    if (pct >= 80) {
-        color = 'var(--color-success)';
-    } else if (pct >= 50) {
-        color = 'var(--color-warn)';
-    } else {
-        color = 'var(--color-error)';
-    }
-    return `<div data-component="health-bar"><div data-part="fill" style="width:${pct}%;background:${color}"></div></div>`;
-}
-
 function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string {
     const flakinessPct = Math.round(test.flakiness * 100);
+    const iconMap: Record<string, string> = { passed: 'check-circle', failed: 'x-circle', skipped: 'skip-forward' };
+    const testIcon = icon(iconMap[test.status] ?? 'skip-forward', 14);
+    const variantMap: Record<'passed' | 'failed' | 'skipped', 'pass' | 'fail' | 'skip'> = {
+        passed: 'pass',
+        failed: 'fail',
+        skipped: 'skip',
+    };
+    const variant = variantMap[test.status];
 
-    let testIcon: string;
-    if (test.status === 'passed') {
-        testIcon = '\u2705';
-    } else if (test.status === 'failed') {
-        testIcon = '\u274C';
-    } else {
-        testIcon = '\u23F8';
-    }
-
-    return `<div class="test-row test-${test.status}" data-component="test-row" data-status="${test.status}">
+    return `<div class="test-row test-${test.status} status-${test.status}" data-component="test-row" data-status="${test.status}">
         <span class="test-icon" data-part="icon">${testIcon}</span>
         <span class="test-title" data-part="title">${sanitizeHtml(test.title)}</span>
         <span class="test-meta" data-part="meta">${test.duration}ms</span>
         <span class="test-flakiness" data-part="flakiness">flak: ${flakinessPct}%</span>
-        ${buildStatusBadge(test.status)}
+        ${Badge({ variant, children: test.status })}
     </div>`;
 }
 
 function buildStoryHtml(story: TraceabilityNode['stories'][0]): string {
     const testsHtml = story.tests.map((t) => buildTestHtml(t)).join('');
     return `<div class="story-node" data-component="story">
-        <div class="story-header" data-part="header" onclick="this.parentElement.classList.toggle('collapsed')">
-            <span class="toggle-icon" data-part="toggle-icon">&#9660;</span>
-            <span class="story-key" data-part="key">${sanitizeHtml(story.key)}</span>
-            <span class="stat" data-part="stat">cov: ${story.coverage}%</span>
-            <span class="stat" data-part="stat">health: ${story.health}%</span>
-            <span class="stat" data-part="stat">flak: ${Math.round(story.flakiness * 100)}%</span>
-            ${buildHealthBar(story.health)}
+        <div class="story-header" data-part="header" data-action="toggle-collapse">
+            <span data-part="toggle-icon">&#9660;</span>
+            <span data-part="key">${sanitizeHtml(story.key)}</span>
+            <span data-part="stat">cov: ${story.coverage}%</span>
+            <span data-part="stat">health: ${story.health}%</span>
+            <span data-part="stat">flak: ${Math.round(story.flakiness * 100)}%</span>
+            ${ProgressBar({ value: story.health, max: 100 })}
         </div>
         <div class="story-tests" data-part="tests">${testsHtml}</div>
     </div>`;
@@ -88,26 +69,25 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
               })
             : '';
 
-    // Highlight uncovered epics with visual indicator
     let coverageIndicator: string;
     if (node.coverage < 50) {
-        coverageIndicator = ' \u{1F534}';
+        coverageIndicator = ` ${icon('x-circle', 12)}`;
     } else if (node.coverage < 80) {
-        coverageIndicator = ' \u{1F7E1}';
+        coverageIndicator = ` ${icon('alert-triangle', 12)}`;
     } else {
-        coverageIndicator = '';
+        coverageIndicator = ` ${icon('check-circle', 12)}`;
     }
 
     return `<div class="epic-node" data-component="epic">
-        <div class="epic-header" data-part="header" onclick="this.parentElement.classList.toggle('collapsed')">
-            <span class="toggle-icon" data-part="toggle-icon">&#9660;</span>
-            <span class="epic-key" data-part="key">${sanitizeHtml(node.epic)}${coverageIndicator}</span>
-            <span class="stat" data-part="stat">cov: ${node.coverage}%</span>
-            <span class="stat" data-part="stat">health: ${node.health}%</span>
-            <span class="stat" data-part="stat">flak: ${Math.round(node.flakiness * 100)}%</span>
-            ${buildHealthBar(node.health)}
+        <div class="epic-header" data-part="header" data-action="toggle-collapse">
+            <span data-part="toggle-icon">&#9660;</span>
+            <span data-part="key">${sanitizeHtml(node.epic)}${coverageIndicator}</span>
+            <span data-part="stat">cov: ${node.coverage}%</span>
+            <span data-part="stat">health: ${node.health}%</span>
+            <span data-part="stat">flak: ${Math.round(node.flakiness * 100)}%</span>
+            ${ProgressBar({ value: node.health, max: 100 })}
         </div>
-        <div class="epic-stories" data-part="stories">${storiesHtml}${emptyMsg}</div>
+        <div data-part="stories">${storiesHtml}${emptyMsg}</div>
     </div>`;
 }
 
@@ -151,13 +131,11 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             coverageSeverity = 'error';
         }
 
-        // Calculate total flakiness across all epics
         const totalFlakiness =
             result.nodes.length > 0
                 ? Math.round((result.nodes.reduce((sum, n) => sum + n.flakiness, 0) / result.nodes.length) * 100)
                 : 0;
 
-        // Count uncovered epics
         const uncoveredEpics = result.nodes.filter((n) => n.stories.length === 0);
         const coveredEpics = result.totalEpics - uncoveredEpics.length;
 
@@ -194,13 +172,24 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                       action: 'Configure test-to-requirement links in your test management tool and re-run the traceability analysis.',
                   });
 
+        const collapseScript = `<script>
+(function() {
+    document.querySelectorAll('[data-action="toggle-collapse"]').forEach(function(el) {
+        el.addEventListener('click', function() {
+            el.parentElement.classList.toggle('collapsed');
+        });
+    });
+})();
+</script>`;
+
         const bodyContent = wrapContainer(
             pageTitle,
             `<div data-part="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
                 summaryCards +
                 treeHtml +
                 buildAwarenessHtml(result.awareness) +
-                buildRecommendedActions(result),
+                buildRecommendedActions(result) +
+                collapseScript,
         );
 
         return buildHtmlPage({
@@ -227,7 +216,6 @@ function wrapContainer(pageTitle: string, children: string): string {
 function buildRecommendedActions(result: TraceabilityResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
-    // Action 1: Low coverage
     if (result.overallCoverage < 50) {
         actions.push({
             severity: 'error',
@@ -235,7 +223,6 @@ function buildRecommendedActions(result: TraceabilityResult): string {
         });
     }
 
-    // Action 2: Medium coverage
     if (result.overallCoverage < 80 && result.overallCoverage >= 50) {
         actions.push({
             severity: 'warn',
@@ -243,7 +230,6 @@ function buildRecommendedActions(result: TraceabilityResult): string {
         });
     }
 
-    // Action 3: Uncovered epics with names
     const uncoveredEpics = result.nodes.filter((n) => n.stories.length === 0);
     if (uncoveredEpics.length > 0) {
         const epicNames = uncoveredEpics
@@ -257,7 +243,6 @@ function buildRecommendedActions(result: TraceabilityResult): string {
         });
     }
 
-    // Default action if no issues found
     if (actions.length === 0) {
         actions.push({
             severity: 'info',
