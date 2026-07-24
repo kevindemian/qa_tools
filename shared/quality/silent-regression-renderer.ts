@@ -10,7 +10,15 @@
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
-import { MetricCard, MetricGrid, DataTable, Badge } from '../primitives/index.js';
+import {
+    MetricCard,
+    MetricGrid,
+    DataTable,
+    Badge,
+    Section,
+    EmptyState,
+    RecommendedActions,
+} from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { RegressionResult, RegressionEntry } from './silent-regression.js';
@@ -37,50 +45,10 @@ export function generateSilentRegressionHtml(result: RegressionResult | null | u
         }
         const pageTitle = title || 'Silent Regression Detector';
 
-        const summaryCards = MetricGrid({
-            children:
-                MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
-                MetricCard({
-                    label: 'Regressions Found',
-                    value: String(result.regressions.length),
-                    severity: result.regressions.length > 0 ? 'error' : 'success',
-                }) +
-                MetricCard({ label: 'Threshold (z)', value: '>' + String(result.threshold) }),
-        });
-
-        let tableHtml: string;
-        if (result.regressions.length === 0) {
-            tableHtml =
-                '<p style="color:var(--color-success);font-weight:600">No silent regressions detected. All tests are within the normal duration range.</p>';
-        } else {
-            const columns: TableColumn[] = [
-                { key: 'title', label: 'Test', width: '30%' },
-                { key: 'current', label: 'Current (s)', align: 'right' },
-                { key: 'mean', label: 'Mean (s)', align: 'right' },
-                { key: 'stddev', label: 'Std Dev', align: 'right' },
-                { key: 'zscore', label: 'Z-Score', align: 'right' },
-                { key: 'severity', label: 'Severity' },
-            ];
-
-            const rows: TableRow[] = result.regressions.map((r, i) => ({
-                key: String(i),
-                cells: {
-                    title: sanitizeHtml(r.title),
-                    current: r.currentDuration.toFixed(3),
-                    mean: r.meanDuration.toFixed(3),
-                    stddev: r.stdDev.toFixed(3),
-                    zscore: r.zScore.toFixed(2),
-                    severity: Badge({
-                        variant: severityBadgeVariant(r.severity),
-                        children: r.severity,
-                    }),
-                },
-            }));
-
-            tableHtml = DataTable({ columns, rows });
-        }
-
-        const bodyContent = '<h1>' + sanitizeHtml(pageTitle) + '</h1>' + summaryCards + tableHtml;
+        const bodyContent = wrapContainer(
+            pageTitle,
+            buildMetricSummary(result) + buildRegressions(result) + buildRecommendedActions(result),
+        );
 
         return buildHtmlPage({
             title: pageTitle,
@@ -96,4 +64,100 @@ export function generateSilentRegressionHtml(result: RegressionResult | null | u
         );
         return buildErrorPage('Error generating report', 'Error generating silent regression report');
     }
+}
+
+function wrapContainer(pageTitle: string, children: string): string {
+    return `<div data-component="container" data-dashboard="silent-regression">
+        <h1>${sanitizeHtml(pageTitle)}</h1>
+        ${children}
+    </div>`;
+}
+
+function buildMetricSummary(result: RegressionResult): string {
+    return Section({
+        dataSection: 'summary',
+        children: MetricGrid({
+            children:
+                MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
+                MetricCard({
+                    label: 'Regressions Found',
+                    value: String(result.regressions.length),
+                    severity: result.regressions.length > 0 ? 'error' : 'success',
+                }) +
+                MetricCard({ label: 'Threshold (z)', value: '>' + String(result.threshold) }),
+        }),
+    });
+}
+
+function buildRegressions(result: RegressionResult): string {
+    if (result.regressions.length === 0) {
+        return EmptyState({
+            title: 'No silent regressions detected',
+            description: 'All tests are within the normal duration range. No performance regressions were found.',
+            action: 'Monitor test duration trends over time to detect regressions early.',
+        });
+    }
+
+    const columns: TableColumn[] = [
+        { key: 'title', label: 'Test', width: '30%' },
+        { key: 'current', label: 'Current (s)', align: 'right' },
+        { key: 'mean', label: 'Mean (s)', align: 'right' },
+        { key: 'stddev', label: 'Std Dev', align: 'right' },
+        { key: 'zscore', label: 'Z-Score', align: 'right' },
+        { key: 'severity', label: 'Severity' },
+    ];
+
+    const rows: TableRow[] = result.regressions.map((r, i) => ({
+        key: String(i),
+        cells: {
+            title: sanitizeHtml(r.title),
+            current: r.currentDuration.toFixed(3),
+            mean: r.meanDuration.toFixed(3),
+            stddev: r.stdDev.toFixed(3),
+            zscore: r.zScore.toFixed(2),
+            severity: Badge({
+                variant: severityBadgeVariant(r.severity),
+                children: r.severity,
+            }),
+        },
+    }));
+
+    return Section({
+        dataSection: 'regressions',
+        title: 'Regressions',
+        children: DataTable({ columns, rows }),
+    });
+}
+
+function buildRecommendedActions(result: RegressionResult): string {
+    if (result.regressions.length === 0) return '';
+
+    const criticalCount = result.regressions.filter((r) => r.severity === 'critical' || r.severity === 'high').length;
+    const actions: Array<{ text: string; severity: 'error' | 'warn' | 'info' }> = [];
+
+    if (criticalCount > 0) {
+        actions.push({
+            text: `${criticalCount} critical/high severity regression(s) detected. Investigate immediately — these tests show significant duration increases that may indicate real performance issues.`,
+            severity: 'error',
+        });
+    }
+
+    const mediumCount = result.regressions.filter((r) => r.severity === 'medium').length;
+    if (mediumCount > 0) {
+        actions.push({
+            text: `${mediumCount} medium severity regression(s) detected. Review test infrastructure and consider optimizing test execution.`,
+            severity: 'warn',
+        });
+    }
+
+    actions.push({
+        text: 'Investigate root cause: check for test data growth, external service latency, or resource contention.',
+        severity: 'info',
+    });
+
+    return Section({
+        dataSection: 'actions',
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
+    });
 }
