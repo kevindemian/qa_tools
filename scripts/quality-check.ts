@@ -597,7 +597,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:2f921bcb893e77830f2c6bf63ada0390954897019062290b914958b729f00466 */
+        /* HASH:ccbfc253c4b75e098497d2b5d54ccc1a8db859c4542fd7760914db211cb09930 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -616,6 +616,32 @@ export function checkIntegrity(): CheckResult {
         });
     }
     return { name: 'quality-check auto-integrity', passed: violations.length === 0, violations };
+}
+
+export function checkPlanDrivenExecution(): CheckResult {
+    const agentsPath = path.resolve('AGENTS.md');
+    const violations: Violation[] = [];
+    try {
+        if (!existsSync(agentsPath)) {
+            violations.push({ file: 'AGENTS.md', line: 0, content: 'AGENTS.md file not found' });
+            return { name: 'plan-driven-execution', passed: false, violations };
+        }
+        const content = readFileSync(agentsPath, 'utf-8');
+        if (!content.includes('PLAN-DRIVEN EXECUTION')) {
+            violations.push({
+                file: 'AGENTS.md',
+                line: 1,
+                content: 'AGENTS.md must contain PLAN-DRIVEN EXECUTION rule (section 27)',
+            });
+        }
+    } catch (err) {
+        violations.push({
+            file: 'scripts/quality-check.ts',
+            line: 1,
+            content: `Plan-driven execution check failed: ${String(err)}`,
+        });
+    }
+    return { name: 'plan-driven-execution', passed: violations.length === 0, violations };
 }
 
 // ---------------------------------------------------------------------------
@@ -706,10 +732,11 @@ export async function main(): Promise<void> {
     checks.push(checkNonNullAssertion());
     checks.push(checkDepWall());
     checks.push(checkIfTrueFalse());
+    checks.push(checkPlanDrivenExecution());
     checks.push(checkIntegrity());
 
     /* Guard: check count */
-    const minChecks = 13;
+    const minChecks = 14;
     if (checks.length < minChecks) {
         checks.push({
             name: `quality-check has at least ${minChecks} checks`,
