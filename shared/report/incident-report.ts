@@ -2,18 +2,16 @@
  * Incident Investigation Report — combines failure, regression, coverage gap,
  * and seasonality signals into a unified incident timeline.
  *
- * Uses primitives and design tokens for consistent HTML report output.
+ * Compute layer: produces IncidentReport from input signals.
+ * Render layer: see incident-report-renderer.ts.
  *
  * @module incident-report
  */
 
 import { rootLogger } from '../logger.js';
-import { sanitizeHtml } from '../escape.js';
-import { buildHtmlPage, buildErrorPage } from './html-factory.js';
-import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Card } from '../primitives/index.js';
-import { extractErrorMessage } from '../ui/prompt-errors.js';
 import type { CoverageGapResult } from '../types/coverage.js';
+
+export { generateIncidentReportHtml } from './incident-report-renderer.js';
 
 export interface IncidentEvent {
     date: string;
@@ -57,13 +55,6 @@ function getEpicsFromInputs(uncoveredEpics: string[], coverageGap?: CoverageGapR
         const epicData = coverageGap.byEpic[epic];
         return epicData != null && !epicData.gatePass;
     });
-}
-
-function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default' {
-    if (s === 'high') return 'error';
-    if (s === 'medium') return 'warn';
-    if (s === 'low') return 'info';
-    return 'default';
 }
 
 export function buildIncidentReport(
@@ -186,93 +177,4 @@ export function buildIncidentReport(
         overallSeverity,
         timestamp,
     };
-}
-
-export function generateIncidentReportHtml(report: IncidentReport | null | undefined, title?: string): string {
-    try {
-        if (!report) {
-            rootLogger.error(
-                'Incident report is null or undefined. Ensure a valid IncidentReport object is passed to generateIncidentReportHtml.',
-            );
-            return buildErrorPage('Error generating report', 'Error generating incident investigation report');
-        }
-
-        const pageTitle = title || 'Incident Investigation Report';
-
-        const severityColors: Record<string, string> = {
-            high: 'var(--color-error)',
-            medium: 'var(--color-warn)',
-            low: 'var(--color-info)',
-            none: 'var(--color-text-muted)',
-        };
-
-        const baseColor = severityColors[report.overallSeverity] || 'var(--color-text-muted)';
-
-        const severityBadge =
-            `<div style="text-align:center;margin-bottom:24px">` +
-            `<span style="display:inline-block;padding:8px 16px;border-radius:9999px;` +
-            `font-size:14px;font-weight:700;` +
-            `background:${baseColor}20;` +
-            `color:${baseColor};` +
-            `border:1px solid ${baseColor}">` +
-            `Overall Severity: ${report.overallSeverity.toUpperCase()}</span></div>`;
-
-        const summaryCards = MetricGrid({
-            children:
-                MetricCard({ label: 'Total Events', value: String(report.eventCount) }) +
-                MetricCard({
-                    label: 'High',
-                    value: String(report.highCount),
-                    severity: report.highCount > 0 ? 'error' : 'default',
-                }) +
-                MetricCard({
-                    label: 'Medium',
-                    value: String(report.mediumCount),
-                    severity: report.mediumCount > 0 ? 'warn' : 'default',
-                }) +
-                MetricCard({
-                    label: 'Low',
-                    value: String(report.lowCount),
-                    severity: report.lowCount > 0 ? 'info' : 'default',
-                }),
-        });
-
-        const summaryHtml = `<p style="margin-bottom:24px;color:var(--color-text-secondary)">${sanitizeHtml(report.summary)}</p>`;
-
-        let eventsHtml = '';
-        if (report.events.length === 0) {
-            eventsHtml = '<p style="color:var(--color-text-muted)">No incidents to display.</p>';
-        } else {
-            for (const event of report.events) {
-                const cardSeverity = severityToCardSeverity(event.severity);
-                eventsHtml += Card({
-                    severity: cardSeverity,
-                    children:
-                        `<div style="margin-bottom:8px">` +
-                        `<span style="font-size:12px;color:var(--color-text-muted)">${sanitizeHtml(event.date)}</span>` +
-                        `</div>` +
-                        `<div style="font-weight:700;margin-bottom:4px">${sanitizeHtml(event.title)}</div>` +
-                        `<div style="font-size:14px;color:var(--color-text-secondary)">${sanitizeHtml(event.description)}</div>`,
-                });
-            }
-        }
-
-        const bodyContent =
-            `<h1>${sanitizeHtml(pageTitle)}</h1>` + severityBadge + summaryCards + summaryHtml + eventsHtml;
-
-        return buildHtmlPage({
-            title: pageTitle,
-            styles: buildCss(),
-            theme: 'system',
-            bodyContent,
-            footer: 'Generated by QA Tools — Incident Investigation Report',
-        });
-    } catch (err: unknown) {
-        rootLogger.error(
-            'Failed to generate incident report HTML: ' +
-                extractErrorMessage(err) +
-                '. Verify that input data (failRate, passRate, regressionCount) is valid and the html-factory module is working correctly.',
-        );
-        return buildErrorPage('Error generating report', 'Error generating incident investigation report');
-    }
 }
