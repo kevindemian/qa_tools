@@ -79,6 +79,11 @@ import {
     calcTestDurationMap,
     calcRetryFlaky,
     calcComputeCost,
+    aggregateDefectTrends,
+    aggregateDefectSeasonality,
+    detectSilentRegressions,
+    computeAiMetrics,
+    computeOptimizationActions,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -820,6 +825,15 @@ export class DataHubImpl implements DataHub {
             testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
         const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
         const framework = raw.framework ?? 'unknown';
+        // ─── Content specification computed metrics ────────────────────────────
+        const defectAggregation = aggregateDefectTrends(raw.failureClassifications ?? []);
+        const seasonalityAggregation = aggregateDefectSeasonality(raw.failureClassifications ?? []);
+        const regressionDetection = detectSilentRegressions(testDurationMap);
+        const aiMetrics = raw.aiRecords != null ? computeAiMetrics(raw.aiRecords) : undefined;
+        const optimizationActions = computeOptimizationActions(
+            testDurationMap,
+            Object.fromEntries(flakinessEntries.map((e) => [e.title, e.rate])),
+        );
 
         return {
             passRate,
@@ -850,6 +864,11 @@ export class DataHubImpl implements DataHub {
             runPassRate,
             retryFlaky,
             computeCost,
+            defectAggregation,
+            seasonalityAggregation,
+            regressionDetection,
+            aiMetrics,
+            optimizationActions,
         };
     }
 

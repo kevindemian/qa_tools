@@ -162,6 +162,8 @@ export interface RawJiraIssue {
     resolution?: string | undefined;
     /** Data de resolução (resolutiondate) quando resolvido. */
     resolutionDate?: string | undefined;
+    /** Number of linked test executions — enriched from Xray/Jira linkage. */
+    linkedTestCount?: number | undefined;
 }
 
 /** A single Xray Cloud test run (within a test execution). */
@@ -267,6 +269,8 @@ export interface FailureRecord {
     confidence: number;
     /** Provenance source (e.g., 'check-run-annotation', 'junit', 'log'). */
     source: string;
+    /** Commit author name — enriched from PipelineRun.head_commit.author.name. */
+    author?: string | undefined;
 }
 
 /** Severity of a security finding. */
@@ -677,6 +681,17 @@ export interface ComputedMetrics {
     retryFlaky?: RetryFlakyResult;
     /** LA-2 — real compute cost aggregated from run timing + GitHub billable. */
     computeCost?: ComputeCostResult;
+    // ─── Content specification computed metrics ──────────────────────────────
+    /** AI metrics: acceptance rate, version breakdown, trend, requirement scores. */
+    aiMetrics?: import('./data-hub-extensions.js').AiMetricsResult | undefined;
+    /** Defect aggregation by daily trend and top categories. */
+    defectAggregation?: import('./data-hub-extensions.js').DefectAggregationResult | undefined;
+    /** Defect seasonality by day-of-week and hour-of-day. */
+    seasonalityAggregation?: import('./data-hub-extensions.js').SeasonalityAggregationResult | undefined;
+    /** Regression detection results (z-score based). */
+    regressionDetection?: import('./data-hub-extensions.js').RegressionDetectionResult | undefined;
+    /** Suite optimization action recommendations. */
+    optimizationActions?: import('./data-hub-extensions.js').OptimizationResult | undefined;
 }
 
 /**
