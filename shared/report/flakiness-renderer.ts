@@ -20,12 +20,9 @@ import {
     Section,
     EmptyState,
     RecommendedActions,
-    THead,
-    TBody,
-    Tr,
-    Td,
-    Th,
+    DataTable,
 } from '../primitives/index.js';
+import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { FlakinessThresholds, FlakinessOptions } from './flakiness-dashboard.js';
 import { filterHighFlakiness, validateThresholds } from './flakiness-dashboard.js';
 
@@ -36,12 +33,15 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
         const pageTitle = title || 'Flakiness Dashboard';
         const sourceBanner = buildSourceQualityBanner(options?.dataHub);
 
+        // Total test count not available from dataHub directly
+        const totalTests = 0;
+
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>
             ${sourceBanner}
-            ${buildFlakinessSummary(high, flaky, thresholds)}
+            ${buildFlakinessSummary(high, flaky, thresholds, totalTests)}
             ${buildFlakinessTable(high, thresholds)}
-            ${buildActions(high, thresholds)}
+            ${buildActions(high, thresholds, totalTests)}
         </div>`;
 
         return buildHtmlPage({
@@ -65,18 +65,32 @@ function buildFlakinessSummary(
     high: FlakinessEntry[],
     flaky: FlakinessEntry[],
     thresholds: FlakinessThresholds,
+    totalTests: number,
 ): string {
+    // Calculate flaky rate as percentage of total tests
+    const flakyRate = totalTests > 0 ? Math.round((high.length / totalTests) * 100) : 0;
+
     return Section({
         dataSection: 'summary',
+        title: 'Summary',
         children: MetricGrid({
             children:
                 MetricCard({
-                    label: 'Total Flaky Tests',
+                    label: 'Flaky Tests',
                     value: String(high.length),
                     severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
+                    trend: totalTests > 0 ? `${flakyRate}% of ${totalTests} total` : '',
                 }) +
-                MetricCard({ label: 'Threshold', value: '>' + thresholds.thresholdPct + '%' }) +
-                MetricCard({ label: 'All Candidates', value: String(flaky.length) }),
+                MetricCard({
+                    label: 'Threshold',
+                    value: `>${thresholds.thresholdPct}%`,
+                    severity: 'default',
+                }) +
+                MetricCard({
+                    label: 'All Candidates',
+                    value: String(flaky.length),
+                    severity: flaky.length > high.length * 2 ? 'warn' : 'default',
+                }),
         }),
     });
 }
@@ -96,55 +110,59 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
         });
     }
 
-    const header = THead({
-        children:
-            Th({ children: 'Test', scope: 'col' }) +
-            Th({ children: 'Pass', scope: 'col', align: 'center' }) +
-            Th({ children: 'Fail', scope: 'col', align: 'center' }) +
-            Th({ children: 'Skip', scope: 'col', align: 'center' }) +
-            Th({ children: 'Rate', scope: 'col', align: 'center' }) +
-            Th({ children: 'Trend', scope: 'col' }),
-    });
+    // Sort by flakiness rate (highest first) for better prioritization
+    const sorted = [...high].sort((a, b) => b.rate - a.rate);
 
-    const body = TBody({
-        children: high
-            .map((f) => {
-                const pct = Math.round(f.rate * 100);
-                const severity = pct >= thresholds.highFlakinessPct ? 'high' : 'medium';
-                return Tr({
-                    key: f.title,
-                    children:
-                        Td({ children: sanitizeHtml(f.title.slice(0, 80)) }) +
-                        Td({ children: String(f.passCount), align: 'center' }) +
-                        Td({ children: String(f.failCount), align: 'center' }) +
-                        Td({ children: String(f.skipCount), align: 'center' }) +
-                        Td({
-                            children: Badge({
-                                variant: severity === 'high' ? 'fail' : 'warn',
-                                children: pct + '%',
-                            }),
-                        }) +
-                        Td({
-                            children: Sparkline({
-                                value: pct,
-                                maxValue: 100,
-                                width: 100,
-                                height: 8,
-                            }),
-                        }),
-                });
-            })
-            .join(''),
+    const columns: TableColumn[] = [
+        { key: 'test', label: 'Test', width: '30%' },
+        { key: 'runs', label: 'Runs', align: 'center' },
+        { key: 'pass', label: 'Pass', align: 'center' },
+        { key: 'fail', label: 'Fail', align: 'center' },
+        { key: 'skip', label: 'Skip', align: 'center' },
+        { key: 'rate', label: 'Rate', align: 'center' },
+        { key: 'severity', label: 'Severity' },
+        { key: 'sparkline', label: 'Trend' },
+    ];
+
+    const rows: TableRow[] = sorted.map((f) => {
+        const pct = Math.round(f.rate * 100);
+        const severity = pct >= thresholds.highFlakinessPct ? 'high' : 'medium';
+        const severityVariant = severity === 'high' ? 'fail' : 'warn';
+
+        return {
+            key: f.title,
+            cells: {
+                test: sanitizeHtml(f.title.slice(0, 80)),
+                runs: String(f.totalRuns),
+                pass: String(f.passCount),
+                fail: String(f.failCount),
+                skip: String(f.skipCount),
+                rate: Badge({
+                    variant: severityVariant,
+                    children: pct + '%',
+                }),
+                severity: Badge({
+                    variant: severityVariant,
+                    children: severity === 'high' ? 'High' : 'Medium',
+                }),
+                sparkline: Sparkline({
+                    value: pct,
+                    maxValue: 100,
+                    width: 100,
+                    height: 8,
+                }),
+            },
+        };
     });
 
     return Section({
         dataSection: 'flakiness-table',
         title: 'Flaky Tests',
-        children: `<table data-component="data-table" role="table"
-            aria-label="Tests exceeding ${thresholds.thresholdPct}% flakiness threshold">
-            <caption>Tests with flakiness rate above ${thresholds.thresholdPct}%</caption>
-            ${header}${body}
-        </table>`,
+        children: DataTable({
+            columns,
+            rows,
+            caption: `Tests with flakiness rate above ${thresholds.thresholdPct}% — sorted by severity`,
+        }),
     });
 }
 
@@ -170,28 +188,52 @@ function buildSourceQualityBanner(dataHub?: DataHub): string {
     });
 }
 
-function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds): string {
+function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, totalTests: number): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
     if (high.length > 0) {
-        actions.push({
-            severity: 'warn',
-            text: 'Review test isolation for flaky tests — check for shared state, timing dependencies, and external service mocking.',
-        });
-        if (high.some((f) => Math.round(f.rate * 100) >= thresholds.highFlakinessPct)) {
+        // Count extreme flakiness
+        const extreme = high.filter((f) => Math.round(f.rate * 100) >= thresholds.highFlakinessPct);
+        const moderate = high.filter((f) => Math.round(f.rate * 100) < thresholds.highFlakinessPct);
+
+        if (extreme.length > 0) {
             actions.push({
                 severity: 'error',
-                text: 'Consider quarantining tests with extreme flakiness until root cause is identified and fixed.',
+                text: `${extreme.length} test(s) have extreme flakiness (>=${thresholds.highFlakinessPct}%). Consider quarantining until root cause is identified: ${extreme
+                    .slice(0, 3)
+                    .map((f) => sanitizeHtml(f.title))
+                    .join(', ')}.`,
             });
         }
+
+        if (moderate.length > 0) {
+            actions.push({
+                severity: 'warn',
+                text: `${moderate.length} test(s) have moderate flakiness. Review test isolation — check for shared state, timing dependencies, and external service mocking.`,
+            });
+        }
+
+        // Add flaky rate context if total tests known
+        if (totalTests > 0) {
+            const flakyRate = Math.round((high.length / totalTests) * 100);
+            if (flakyRate > 5) {
+                actions.push({
+                    severity: 'warn',
+                    text: `Flaky rate is ${flakyRate}% of total test suite (${high.length}/${totalTests}). This indicates systemic stability issues.`,
+                });
+            }
+        }
     }
+
+    // Always add threshold context
     actions.push({
         severity: 'info',
-        text:
-            'Flakiness threshold: >' + thresholds.thresholdPct + '%. Tests below this threshold are considered stable.',
+        text: `Flakiness threshold: >${thresholds.thresholdPct}%. Tests below this threshold are considered stable.`,
     });
 
     return Section({
         dataSection: 'actions',
+        title: 'Recommended Actions',
         children: RecommendedActions({ actions }),
     });
 }

@@ -11,12 +11,20 @@ import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Section, EmptyState } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import type { TraceabilityResult, TraceabilityNode, TraceabilityAwareness } from './traceability-matrix.js';
 
 function buildStatusBadge(status: 'passed' | 'failed' | 'skipped'): string {
     const label = status.charAt(0).toUpperCase() + status.slice(1);
-    return `<span class="status-badge status-${status}" data-component="badge" data-severity="${status}">${label}</span>`;
+    let variant: string;
+    if (status === 'passed') {
+        variant = 'pass';
+    } else if (status === 'failed') {
+        variant = 'fail';
+    } else {
+        variant = 'skip';
+    }
+    return `<span data-component="badge" data-variant="${variant}" class="status-${status}">${label}</span>`;
 }
 
 function buildHealthBar(value: number): string {
@@ -29,7 +37,7 @@ function buildHealthBar(value: number): string {
     } else {
         color = 'var(--color-error)';
     }
-    return `<div class="health-bar" data-component="health-bar"><div class="health-fill" style="width:${pct}%;background:${color}"></div></div>`;
+    return `<div data-component="health-bar"><div data-part="fill" style="width:${pct}%;background:${color}"></div></div>`;
 }
 
 function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string {
@@ -45,10 +53,10 @@ function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string
     }
 
     return `<div class="test-row test-${test.status}" data-component="test-row" data-status="${test.status}">
-        <span class="test-icon">${testIcon}</span>
-        <span class="test-title">${sanitizeHtml(test.title)}</span>
-        <span class="test-meta">${test.duration}ms</span>
-        <span class="test-flakiness">flak: ${flakinessPct}%</span>
+        <span class="test-icon" data-part="icon">${testIcon}</span>
+        <span class="test-title" data-part="title">${sanitizeHtml(test.title)}</span>
+        <span class="test-meta" data-part="meta">${test.duration}ms</span>
+        <span class="test-flakiness" data-part="flakiness">flak: ${flakinessPct}%</span>
         ${buildStatusBadge(test.status)}
     </div>`;
 }
@@ -56,15 +64,15 @@ function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string
 function buildStoryHtml(story: TraceabilityNode['stories'][0]): string {
     const testsHtml = story.tests.map((t) => buildTestHtml(t)).join('');
     return `<div class="story-node" data-component="story">
-        <div class="story-header" onclick="this.parentElement.classList.toggle('collapsed')">
-            <span class="toggle-icon">&#9660;</span>
-            <span class="story-key">${sanitizeHtml(story.key)}</span>
-            <span class="stat">cov: ${story.coverage}%</span>
-            <span class="stat">health: ${story.health}%</span>
-            <span class="stat">flak: ${Math.round(story.flakiness * 100)}%</span>
+        <div class="story-header" data-part="header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span class="toggle-icon" data-part="toggle-icon">&#9660;</span>
+            <span class="story-key" data-part="key">${sanitizeHtml(story.key)}</span>
+            <span class="stat" data-part="stat">cov: ${story.coverage}%</span>
+            <span class="stat" data-part="stat">health: ${story.health}%</span>
+            <span class="stat" data-part="stat">flak: ${Math.round(story.flakiness * 100)}%</span>
             ${buildHealthBar(story.health)}
         </div>
-        <div class="story-tests">${testsHtml}</div>
+        <div class="story-tests" data-part="tests">${testsHtml}</div>
     </div>`;
 }
 
@@ -78,16 +86,27 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
                   action: 'Link test cases to this epic in your test management tool to enable traceability.',
               })
             : '';
+
+    // Highlight uncovered epics with visual indicator
+    let coverageIndicator: string;
+    if (node.coverage < 50) {
+        coverageIndicator = ' \u{1F534}';
+    } else if (node.coverage < 80) {
+        coverageIndicator = ' \u{1F7E1}';
+    } else {
+        coverageIndicator = '';
+    }
+
     return `<div class="epic-node" data-component="epic">
-        <div class="epic-header" onclick="this.parentElement.classList.toggle('collapsed')">
-            <span class="toggle-icon">&#9660;</span>
-            <span class="epic-key">${sanitizeHtml(node.epic)}</span>
-            <span class="stat">cov: ${node.coverage}%</span>
-            <span class="stat">health: ${node.health}%</span>
-            <span class="stat">flak: ${Math.round(node.flakiness * 100)}%</span>
+        <div class="epic-header" data-part="header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span class="toggle-icon" data-part="toggle-icon">&#9660;</span>
+            <span class="epic-key" data-part="key">${sanitizeHtml(node.epic)}${coverageIndicator}</span>
+            <span class="stat" data-part="stat">cov: ${node.coverage}%</span>
+            <span class="stat" data-part="stat">health: ${node.health}%</span>
+            <span class="stat" data-part="stat">flak: ${Math.round(node.flakiness * 100)}%</span>
             ${buildHealthBar(node.health)}
         </div>
-        <div class="epic-stories">${storiesHtml}${emptyMsg}</div>
+        <div class="epic-stories" data-part="stories">${storiesHtml}${emptyMsg}</div>
     </div>`;
 }
 
@@ -101,54 +120,18 @@ function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
                 .map((e) => {
                     const conf = e.confidence == null ? 'n/a' : Math.round(e.confidence * 100) + '%';
                     const flag = !e.valid ? ' ⚠ invalid' : '';
-                    return `<li class="aware-entity" data-component="entity">${sanitizeHtml(e.id)} <span class="aware-conf">${conf}</span>${flag}</li>`;
+                    return `<li data-component="entity">${sanitizeHtml(e.id)} <span data-part="confidence">${conf}</span>${flag}</li>`;
                 })
                 .join('');
-            return `<div class="aware-cat" data-section="${sanitizeHtml(c.category)}"><span class="aware-cat-name">${sanitizeHtml(c.category)}</span> (${c.entities.length})<ul>${entities}</ul></div>`;
+            return `<div data-component="awareness-category" data-section="${sanitizeHtml(c.category)}"><span data-part="category-name">${sanitizeHtml(c.category)}</span> (${c.entities.length})<ul>${entities}</ul></div>`;
         })
         .join('');
     const minLine =
         awareness.minConfidence == null
             ? ''
-            : `<div class="aware-min">min confidence: ${Math.round(awareness.minConfidence * 100)}%</div>`;
-    return `<section class="awareness-panel" data-section="awareness"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
+            : `<div data-part="min-confidence">min confidence: ${Math.round(awareness.minConfidence * 100)}%</div>`;
+    return `<section data-section="awareness"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
 }
-
-const TRACEABILITY_CSS = `
-.awareness-panel{margin-top:20px;background:var(--color-surface-card);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
-.aware-cat{margin:8px 0}
-.aware-cat-name{font-weight:600;text-transform:capitalize}
-.aware-entity{font-size:0.8rem;color:var(--color-text-secondary);margin:2px 0}
-.aware-conf{color:var(--color-text-muted);font-size:0.72rem;margin-left:6px}
-.aware-min{margin-top:8px;font-size:0.78rem;color:var(--color-text-muted)}
-.tree{margin-top:16px}
-.epic-node{margin-bottom:12px;background:var(--color-surface-card);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden}
-.epic-header,.story-header{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;transition:background 0.15s;flex-wrap:wrap}
-.epic-header{background:var(--color-surface-elevated);font-weight:600;font-size:0.95rem}
-.epic-header:hover,.story-header:hover{background:var(--color-surface-input)}
-.toggle-icon{font-size:0.6rem;transition:transform 0.2s;color:var(--color-text-muted)}
-.collapsed>.epic-header>.toggle-icon,.collapsed>.story-header>.toggle-icon{transform:rotate(-90deg)}
-.collapsed>.epic-stories,.collapsed>.story-tests{display:none}
-.epic-key{color:var(--color-text-primary)}
-.story-node{border-top:1px solid var(--color-border-subtle)}
-.story-header{font-size:0.85rem;font-weight:500;padding-left:28px}
-.story-key{color:var(--color-text-primary)}
-.story-tests{padding:4px 0 8px 56px}
-.stat{font-size:0.75rem;color:var(--color-text-secondary);white-space:nowrap}
-.health-bar{flex:1;min-width:80px;max-width:120px;height:6px;background:var(--color-surface-input);border-radius:3px;overflow:hidden}
-.health-fill{height:100%;border-radius:3px;transition:width 0.3s}
-.test-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;margin:2px 0;font-size:0.825rem;transition:background 0.15s}
-.test-row:hover{background:var(--color-surface-elevated)}
-.test-icon{font-size:0.85rem;width:18px;text-align:center}
-.test-title{flex:1;color:var(--color-text-primary);word-break:break-word}
-.test-meta{font-size:0.7rem;color:var(--color-text-muted);white-space:nowrap}
-.test-flakiness{font-size:0.7rem;color:var(--color-text-muted);white-space:nowrap}
-.status-badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:0.7rem;font-weight:600;white-space:nowrap}
-.status-passed{background:var(--color-badge-pass-bg);color:var(--color-badge-pass-text)}
-.status-failed{background:var(--color-badge-fail-bg);color:var(--color-badge-fail-text)}
-.status-skipped{background:var(--color-badge-skip-bg);color:var(--color-badge-skip-text)}
-.empty-note{padding:12px 14px;color:var(--color-text-muted);font-size:0.85rem;text-align:center;font-style:italic}
-`;
 
 export function generateTraceabilityHtml(result: TraceabilityResult | null | undefined, title?: string): string {
     try {
@@ -167,17 +150,30 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             coverageSeverity = 'error';
         }
 
+        // Calculate total flakiness across all epics
+        const totalFlakiness =
+            result.nodes.length > 0
+                ? Math.round((result.nodes.reduce((sum, n) => sum + n.flakiness, 0) / result.nodes.length) * 100)
+                : 0;
+
+        // Count uncovered epics
+        const uncoveredEpics = result.nodes.filter((n) => n.stories.length === 0);
+        const coveredEpics = result.totalEpics - uncoveredEpics.length;
+
         const summaryCards = Section({
             dataSection: 'summary',
+            title: 'Summary',
             children: MetricGrid({
                 children:
                     MetricCard({ label: 'Total Epics', value: String(result.totalEpics) }) +
                     MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
+                    MetricCard({ label: 'Covered Epics', value: `${coveredEpics}/${result.totalEpics}` }) +
                     MetricCard({
                         label: 'Overall Test Pass Rate',
                         value: result.overallCoverage + '%',
                         severity: coverageSeverity,
-                    }),
+                    }) +
+                    MetricCard({ label: 'Avg Flakiness', value: `${totalFlakiness}%` }),
             }),
         });
 
@@ -186,7 +182,9 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                 ? Section({
                       dataSection: 'tree',
                       children:
-                          '<div class="tree">' + result.nodes.map((n) => buildEpicNodeHtml(n)).join('') + '</div>',
+                          '<div data-component="tree">' +
+                          result.nodes.map((n) => buildEpicNodeHtml(n)).join('') +
+                          '</div>',
                   })
                 : EmptyState({
                       title: 'No traceability data available',
@@ -200,12 +198,13 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             `<div data-part="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
                 summaryCards +
                 treeHtml +
-                buildAwarenessHtml(result.awareness),
+                buildAwarenessHtml(result.awareness) +
+                buildRecommendedActions(result),
         );
 
         return buildHtmlPage({
             title: pageTitle,
-            styles: buildCss() + TRACEABILITY_CSS,
+            styles: buildCss(),
             theme: 'system',
             bodyContent,
             footer: 'Generated by QA Tools — Traceability Matrix',
@@ -222,4 +221,52 @@ function wrapContainer(pageTitle: string, children: string): string {
         <h1>${sanitizeHtml(pageTitle)}</h1>
         ${children}
     </div>`;
+}
+
+function buildRecommendedActions(result: TraceabilityResult): string {
+    const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
+    // Action 1: Low coverage
+    if (result.overallCoverage < 50) {
+        actions.push({
+            severity: 'error',
+            text: `Test coverage is ${result.overallCoverage}% — critically low. Increase test coverage for critical paths immediately.`,
+        });
+    }
+
+    // Action 2: Medium coverage
+    if (result.overallCoverage < 80 && result.overallCoverage >= 50) {
+        actions.push({
+            severity: 'warn',
+            text: `Test coverage is ${result.overallCoverage}%. Consider adding tests for uncovered epics to reach the 80% target.`,
+        });
+    }
+
+    // Action 3: Uncovered epics with names
+    const uncoveredEpics = result.nodes.filter((n) => n.stories.length === 0);
+    if (uncoveredEpics.length > 0) {
+        const epicNames = uncoveredEpics
+            .slice(0, 3)
+            .map((n) => sanitizeHtml(n.epic))
+            .join(', ');
+        const moreText = uncoveredEpics.length > 3 ? ` and ${uncoveredEpics.length - 3} more` : '';
+        actions.push({
+            severity: 'warn',
+            text: `${uncoveredEpics.length} epic(s) have no linked tests: ${epicNames}${moreText}. Add test cases to improve traceability.`,
+        });
+    }
+
+    // Default action if no issues found
+    if (actions.length === 0) {
+        actions.push({
+            severity: 'info',
+            text: 'Traceability coverage is adequate. Continue maintaining test-to-requirement links.',
+        });
+    }
+
+    return Section({
+        dataSection: 'actions',
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
+    });
 }

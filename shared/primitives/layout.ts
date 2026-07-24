@@ -1,13 +1,11 @@
 /**
  * Layout primitives — Container, Section, Grid, FlexRow, Separator.
  *
- * Each function is a pure data → HTML transformation using design tokens
- * for inline styles and data-* attributes for theme and identification.
+ * Each function is a pure data → HTML transformation using data-* attributes
+ * for theme, identification, and CSS styling.
  *
  * @module primitives/layout
  */
-
-import { tokens } from '../ui/theme-tokens.js';
 
 export interface ContainerProps {
     children: string;
@@ -19,15 +17,12 @@ export interface ContainerProps {
 }
 
 export function Container(props: ContainerProps): string {
-    const padding = props.padding ?? tokens.spacing.xl;
-    const maxWidth = props.maxWidth ?? 1200;
-    const bg = props.variant === 'card' ? 'var(--color-surface-card)' : 'var(--color-surface-page)';
-    return `<div data-component="container" data-variant="${props.variant || 'page'}"
+    const ds = props.variant || 'page';
+    const style = ds === 'card' ? 'background:var(--color-surface-card)' : '';
+    return `<div data-component="container" data-variant="${ds}"
         role="${props.role || 'region'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="background:${bg};padding:${padding}px;max-width:${maxWidth}px;margin:0 auto;
-               font-family:${tokens.fontFamily};color:var(--color-text-primary);
-               min-height:100vh">
+        ${style ? `style="${style}"` : ''}
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
 }
@@ -44,18 +39,14 @@ export interface SectionProps {
 }
 
 export function Section(props: SectionProps): string {
-    const padding = props.padding ?? tokens.spacing.lg;
-    const mb = props.marginBottom ?? tokens.spacing.lg;
-    const isCard = props.variant === 'card' || !props.variant;
-    const styles = isCard
-        ? `background:var(--color-surface-card);border-radius:${tokens.borderRadius.lg}px;padding:${padding}px;box-shadow:${tokens.shadow.card}`
-        : '';
     const ds = props.dataSection ? ` data-section="${props.dataSection}"` : '';
-    return `<div data-component="section" data-variant="${props.variant || 'card'}"${ds}
+    const variant = props.variant || 'card';
+    const style = variant === 'card' ? 'box-shadow:0 1px 3px rgba(0,0,0,0.1)' : '';
+    return `<div data-component="section" data-variant="${variant}"${ds}
         role="${props.role || 'region'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="${styles};margin-bottom:${mb}px">
-        ${props.title ? `<div data-part="section-title" style="font-size:${tokens.fontSize.lg};font-weight:${tokens.fontWeight.semibold};margin-bottom:${tokens.spacing.sm}px;color:var(--color-text-primary)">${props.title}</div>` : ''}
+        ${style ? `style="${style}"` : ''}
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
+        ${props.title ? `<div data-part="section-title">${props.title}</div>` : ''}
         ${props.children}
     </div>`;
 }
@@ -70,7 +61,7 @@ export interface GridProps {
 }
 
 export function Grid(props: GridProps): string {
-    const gap = props.gap ?? tokens.spacing.md;
+    const gap = props.gap ?? 16;
     const cols = props.columns ?? 0;
     const minWidth = props.minColumnWidth ?? 0;
     let template: string;
@@ -99,7 +90,7 @@ export interface FlexRowProps {
 }
 
 export function FlexRow(props: FlexRowProps): string {
-    const gap = props.gap ?? tokens.spacing.md;
+    const gap = props.gap ?? 16;
     const align = props.align ?? 'center';
     return `<div data-component="flex-row"
         role="${props.role || 'group'}"
@@ -116,9 +107,7 @@ export interface SeparatorProps {
 }
 
 export function Separator(props: SeparatorProps): string {
-    const margin = props.margin ?? tokens.spacing.lg;
     return `<hr data-component="separator"
         role="${props.role || 'separator'}"
-        aria-orientation="horizontal"
-        style="border:none;border-top:1px solid var(--color-border-subtle);margin:${margin}px 0">`;
+        aria-orientation="horizontal">`;
 }

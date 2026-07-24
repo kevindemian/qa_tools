@@ -10,13 +10,16 @@
 import { buildHtmlPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
 import { sanitizeHtml } from '../escape.js';
-import { Badge, MetricCard, MetricGrid, Section } from '../primitives/index.js';
+import { Badge, MetricCard, MetricGrid, Section, RecommendedActions } from '../primitives/index.js';
 import type { ReleaseScoreResult } from './release-score.js';
 
 export function generateReleaseScoreHtml(result: ReleaseScoreResult): string {
     const bodyContent = wrapContainer(
         'Release Readiness Score',
-        buildScoreSummary(result) + buildBreakdown(result) + buildRecommendation(result),
+        buildScoreSummary(result) +
+            buildBreakdown(result) +
+            buildRecommendation(result) +
+            buildRecommendedActions(result),
     );
 
     return buildHtmlPage({
@@ -45,12 +48,28 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
         scoreSeverity = 'error';
     }
 
+    // Calculate deployment gate status
+    const deploymentReady = result.score >= 80;
+    const gateStatus = deploymentReady ? '✅ READY' : '❌ NOT READY';
+    const gateSeverity = deploymentReady ? 'success' : 'error';
+
+    // Count passed/failed checks
+    const passedChecks = result.breakdown.filter((item) => item.status === 'pass').length;
+    const failedChecks = result.breakdown.filter((item) => item.status === 'fail').length;
+    const totalChecks = result.breakdown.length;
+
     return Section({
         dataSection: 'score',
         children: MetricGrid({
             children:
                 MetricCard({ label: 'Score', value: String(result.score) + '%', severity: scoreSeverity }) +
-                MetricCard({ label: 'Grade', value: result.grade, severity: scoreSeverity }),
+                MetricCard({ label: 'Grade', value: result.grade, severity: scoreSeverity }) +
+                MetricCard({
+                    label: 'Checks',
+                    value: `${passedChecks}/${totalChecks} passed`,
+                    severity: failedChecks > 0 ? 'warn' : 'success',
+                }) +
+                MetricCard({ label: 'Deployment', value: gateStatus, severity: gateSeverity }),
         }),
     });
 }
@@ -61,9 +80,18 @@ function buildBreakdown(result: ReleaseScoreResult): string {
             const statusIcon = item.status === 'pass' ? '\u2713' : '\u2717';
             const scoreText = item.noData ? 'N/A' : String(item.score);
             const statusText = item.noData ? 'no data' : item.status;
+
+            // Add threshold context
+            let thresholdHint = '';
+            if (item.status === 'fail' && !item.noData) {
+                thresholdHint = ` (score: ${item.score}, needs improvement)`;
+            } else if (item.status === 'pass' && !item.noData) {
+                thresholdHint = ` (score: ${item.score})`;
+            }
+
             return `<div data-component="breakdown-item" data-severity="${item.status}">
             <span data-part="label">${sanitizeHtml(item.label)}</span>
-            <span data-part="score">${statusIcon} ${scoreText}</span>
+            <span data-part="score">${statusIcon} ${scoreText}${thresholdHint}</span>
             ${Badge({ variant: item.status === 'pass' ? 'pass' : 'fail', children: statusText })}
         </div>`;
         })
@@ -81,5 +109,55 @@ function buildRecommendation(result: ReleaseScoreResult): string {
         dataSection: 'recommendation',
         title: 'Recommendation',
         children: `<div data-part="recommendation">${sanitizeHtml(result.recommendation)}</div>`,
+    });
+}
+
+function buildRecommendedActions(result: ReleaseScoreResult): string {
+    const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
+    // Action 1: Low score
+    if (result.score < 50) {
+        actions.push({
+            severity: 'error',
+            text: `Release score is ${result.score}% — critically low. Critical issues must be resolved before release. Do NOT deploy until score reaches 50%.`,
+        });
+    }
+
+    // Action 2: Below quality gate
+    if (result.score >= 50 && result.score < 80) {
+        actions.push({
+            severity: 'warn',
+            text: `Release score is ${result.score}% — below the 80% quality gate. Address remaining issues to reach deployment readiness.`,
+        });
+    }
+
+    // Action 3: Failed checks with specific names
+    const failedItems = result.breakdown.filter((item) => item.status === 'fail');
+    if (failedItems.length > 0) {
+        actions.push({
+            severity: 'warn',
+            text: `${failedItems.length} check(s) failed: ${failedItems.map((item) => sanitizeHtml(item.label)).join(', ')}. Review and fix before release.`,
+        });
+    }
+
+    // Action 4: Deployment gate
+    if (result.score >= 80) {
+        actions.push({
+            severity: 'info',
+            text: 'Release score meets quality thresholds. Ready for deployment.',
+        });
+    }
+
+    if (actions.length === 0) {
+        actions.push({
+            severity: 'info',
+            text: 'Release score meets quality thresholds. Ready for deployment.',
+        });
+    }
+
+    return Section({
+        dataSection: 'actions',
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
     });
 }

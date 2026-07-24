@@ -11,7 +11,7 @@ import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Card, Section, EmptyState } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import type { IncidentReport } from './incident-report.js';
 
@@ -20,6 +20,16 @@ function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default
     if (s === 'medium') return 'warn';
     if (s === 'low') return 'info';
     return 'default';
+}
+
+function eventTypeToLabel(type: string): string {
+    const labels: Record<string, string> = {
+        failure: '❌ Failure',
+        regression: '📈 Regression',
+        coverage_gap: '📊 Coverage Gap',
+        seasonality: '📅 Seasonality',
+    };
+    return labels[type] || type;
 }
 
 export function generateIncidentReportHtml(report: IncidentReport | null | undefined, title?: string): string {
@@ -38,7 +48,8 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
             SeverityBanner(report.overallSeverity) +
                 buildMetricSummary(report) +
                 buildSummary(report) +
-                buildEvents(report),
+                buildEvents(report) +
+                buildRecommendedActions(report),
         );
 
         return buildHtmlPage({
@@ -66,14 +77,21 @@ function wrapContainer(pageTitle: string, children: string): string {
 }
 
 function SeverityBanner(severity: string): string {
+    let icon: string;
+    if (severity === 'high') icon = '🔴';
+    else if (severity === 'medium') icon = '🟡';
+    else if (severity === 'low') icon = '🟢';
+    else icon = '⚪';
+
     return `<div data-component="severity-banner">
-        Overall Severity: ${sanitizeHtml(severity.toUpperCase())}
+        ${icon} Overall Severity: ${sanitizeHtml(severity.toUpperCase())}
     </div>`;
 }
 
 function buildMetricSummary(report: IncidentReport): string {
     return Section({
         dataSection: 'summary',
+        title: 'Summary',
         children: MetricGrid({
             children:
                 MetricCard({ label: 'Total Events', value: String(report.eventCount) }) +
@@ -109,19 +127,86 @@ function buildEvents(report: IncidentReport): string {
         });
     }
 
-    return Section({
-        dataSection: 'events',
-        title: 'Events',
-        children: report.events
+    // Group events by date for better temporal context
+    const eventsByDate = new Map<string, typeof report.events>();
+    for (const event of report.events) {
+        const dateKey = event.date.split('T')[0] || event.date;
+        const existing = eventsByDate.get(dateKey) || [];
+        existing.push(event);
+        eventsByDate.set(dateKey, existing);
+    }
+
+    let eventsHtml = '';
+    for (const [date, events] of eventsByDate) {
+        const eventCards = events
             .map((event) =>
                 Card({
                     severity: severityToCardSeverity(event.severity),
                     children:
-                        `<div data-part="event-date">${sanitizeHtml(event.date)}</div>` +
+                        `<div data-part="event-type">${eventTypeToLabel(event.type)}</div>` +
                         `<div data-part="event-title">${sanitizeHtml(event.title)}</div>` +
                         `<div data-part="event-description">${sanitizeHtml(event.description)}</div>`,
                 }),
             )
-            .join(''),
+            .join('');
+
+        eventsHtml += `<h3>${sanitizeHtml(date)}</h3>${eventCards}`;
+    }
+
+    return Section({
+        dataSection: 'events',
+        title: 'Events',
+        children: eventsHtml,
+    });
+}
+
+function buildRecommendedActions(report: IncidentReport): string {
+    const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
+    // Action 1: High severity incidents
+    if (report.highCount > 0) {
+        actions.push({
+            severity: 'error',
+            text: `${report.highCount} high-severity incident(s) detected. Immediate investigation required for critical failures. Notify on-call engineer and create incident ticket.`,
+        });
+    }
+
+    // Action 2: Medium severity incidents
+    if (report.mediumCount > 0) {
+        actions.push({
+            severity: 'warn',
+            text: `${report.mediumCount} medium-severity incident(s) detected. Review and prioritize remediation within next sprint.`,
+        });
+    }
+
+    // Action 3: High incident count
+    if (report.eventCount > 5) {
+        actions.push({
+            severity: 'warn',
+            text: `${report.eventCount} incidents detected. Consider implementing additional test coverage or monitoring to prevent future incidents.`,
+        });
+    }
+
+    // Action 4: Regression events
+    const regressionCount = report.events.filter((e) => e.type === 'regression').length;
+    if (regressionCount > 0) {
+        actions.push({
+            severity: 'error',
+            text: `${regressionCount} regression(s) detected. Review recent code changes and implement regression test coverage.`,
+        });
+    }
+
+    // Default action if no issues found
+    if (actions.length === 0) {
+        actions.push({
+            severity: 'info',
+            text: 'No critical incidents detected. Continue monitoring for regressions.',
+        });
+    }
+
+    return Section({
+        dataSection: 'actions',
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
     });
 }

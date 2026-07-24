@@ -10,7 +10,7 @@
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Card, Section, EmptyState } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { ImpactAlertResult, ImpactAlert, AlertSeverity } from './impact-alert.js';
 
@@ -20,15 +20,23 @@ const SEVERITY_MAP: Record<AlertSeverity, 'error' | 'warn' | 'info'> = {
     info: 'info',
 };
 
+const SEVERITY_ICON: Record<AlertSeverity, string> = {
+    critical: '\u{1F534}',
+    warning: '\u{1F7E1}',
+    info: '\u{1F535}',
+};
+
 function renderAlertCard(alert: ImpactAlert): string {
     const cardSeverity = SEVERITY_MAP[alert.severity];
+    const icon = SEVERITY_ICON[alert.severity];
+
     return Card({
         severity: cardSeverity,
         children:
-            `<div data-part="alert-title">${sanitizeHtml(alert.title)}</div>` +
+            `<div data-part="alert-header">${icon} <strong>${sanitizeHtml(alert.title)}</strong></div>` +
             `<div data-part="alert-message">${sanitizeHtml(alert.message)}</div>` +
             `<div data-part="alert-affected"><strong>Affected:</strong> ${sanitizeHtml(alert.affectedArea)}</div>` +
-            `<div data-part="alert-recommendation"><strong>Recommendation:</strong> ${sanitizeHtml(alert.recommendation)}</div>`,
+            `<div data-part="alert-recommendation"><strong>Action Required:</strong> ${sanitizeHtml(alert.recommendation)}</div>`,
     });
 }
 
@@ -43,7 +51,10 @@ export function generateImpactAlertHtml(result: ImpactAlertResult | null | undef
 
         const pageTitle = title || 'Impact-Aware Pipeline Alert';
 
-        const bodyContent = wrapContainer(pageTitle, buildMetricSummary(result) + buildAlerts(result));
+        const bodyContent = wrapContainer(
+            pageTitle,
+            buildMetricSummary(result) + buildAlerts(result) + buildRecommendedActions(result),
+        );
 
         return buildHtmlPage({
             title: pageTitle,
@@ -69,8 +80,16 @@ function wrapContainer(pageTitle: string, children: string): string {
 }
 
 function buildMetricSummary(result: ImpactAlertResult): string {
+    // Group alerts by affected area for better visibility
+    const affectedAreas = new Map<string, number>();
+    for (const alert of result.alerts) {
+        const count = affectedAreas.get(alert.affectedArea) || 0;
+        affectedAreas.set(alert.affectedArea, count + 1);
+    }
+
     return Section({
         dataSection: 'summary',
+        title: 'Summary',
         children: MetricGrid({
             children:
                 MetricCard({ label: 'Total Alerts', value: String(result.alerts.length) }) +
@@ -103,9 +122,61 @@ function buildAlerts(result: ImpactAlertResult): string {
         });
     }
 
+    // Sort by severity (critical first)
+    const sorted = [...result.alerts].sort((a, b) => {
+        const order: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+        return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
+    });
+
     return Section({
         dataSection: 'alerts',
         title: 'Alerts',
-        children: result.alerts.map(renderAlertCard).join(''),
+        children: sorted.map(renderAlertCard).join(''),
+    });
+}
+
+function buildRecommendedActions(result: ImpactAlertResult): string {
+    const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
+    // Action 1: Critical alerts
+    if (result.criticalCount > 0) {
+        const criticalAlerts = result.alerts.filter((a) => a.severity === 'critical');
+        const areas = criticalAlerts.map((a) => sanitizeHtml(a.affectedArea)).join(', ');
+        actions.push({
+            severity: 'error',
+            text: `${result.criticalCount} critical alert(s) detected in: ${areas}. Immediate action required to prevent pipeline failures.`,
+        });
+    }
+
+    // Action 2: Warning alerts
+    if (result.warningCount > 0) {
+        const warningAlerts = result.alerts.filter((a) => a.severity === 'warning');
+        const areas = warningAlerts.map((a) => sanitizeHtml(a.affectedArea)).join(', ');
+        actions.push({
+            severity: 'warn',
+            text: `${result.warningCount} warning alert(s) detected in: ${areas}. Review pipeline configuration and thresholds.`,
+        });
+    }
+
+    // Action 3: High alert count
+    if (result.alerts.length > 10) {
+        actions.push({
+            severity: 'warn',
+            text: `${result.alerts.length} alerts detected. Consider adjusting alert thresholds to reduce noise.`,
+        });
+    }
+
+    // Default action if no issues found
+    if (actions.length === 0) {
+        actions.push({
+            severity: 'info',
+            text: 'No critical alerts detected. Pipeline is operating within acceptable thresholds.',
+        });
+    }
+
+    return Section({
+        dataSection: 'actions',
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
     });
 }

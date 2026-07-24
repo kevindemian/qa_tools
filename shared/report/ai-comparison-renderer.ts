@@ -24,6 +24,12 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { AiComparisonResult } from './ai-comparison.js';
 
 function buildComparisonCards(result: AiComparisonResult): string {
+    // Calculate sample size warning
+    const aiSampleSize = result.aiTotal;
+    const manualSampleSize = result.manualTotal;
+    const aiSampleSeverity = aiSampleSize < 30 ? 'warn' : 'default';
+    const manualSampleSeverity = manualSampleSize < 30 ? 'warn' : 'default';
+
     return Section({
         dataSection: 'comparison',
         title: 'Comparison Overview',
@@ -31,6 +37,12 @@ function buildComparisonCards(result: AiComparisonResult): string {
             children:
                 MetricCard({ label: 'AI Pass Rate', value: `${result.aiPassRate}%` }) +
                 MetricCard({ label: 'Manual Pass Rate', value: `${result.manualPassRate}%` }) +
+                MetricCard({ label: 'AI Sample Size', value: String(aiSampleSize), severity: aiSampleSeverity }) +
+                MetricCard({
+                    label: 'Manual Sample Size',
+                    value: String(manualSampleSize),
+                    severity: manualSampleSeverity,
+                }) +
                 MetricCard({ label: 'AI Avg Flakiness', value: result.aiFlakinessAvg.toFixed(3) }) +
                 MetricCard({ label: 'Manual Avg Flakiness', value: result.manualFlakinessAvg.toFixed(3) }) +
                 MetricCard({ label: 'AI Acceptance', value: result.aiAcceptanceRate.toFixed(2) }) +
@@ -62,41 +74,65 @@ function buildAdvantageSection(result: AiComparisonResult): string {
         severity = 'default';
     }
 
+    // Add sample size context
+    const sampleSizeWarning =
+        result.aiTotal < 30 || result.manualTotal < 30
+            ? ' ⚠️ Small sample size — results may not be statistically significant.'
+            : '';
+
     return Section({
         dataSection: 'advantage',
         title: 'AI Advantage',
-        children: `<div data-part="advantage" data-severity="${severity}">${badgeHtml} — ${sanitizeHtml(description)}</div>`,
+        children: `<div data-part="advantage" data-severity="${severity}">${badgeHtml} — ${sanitizeHtml(description)}${sampleSizeWarning}</div>`,
     });
 }
 
 function buildVersionTable(result: AiComparisonResult): string {
     if (result.byVersion.length === 0) return '';
 
+    // Sort by pass rate (best first)
+    const sorted = [...result.byVersion].sort((a, b) => b.passRate - a.passRate);
+    const bestVersion = sorted[0]?.version;
+
     const columns: TableColumn[] = [
         { key: 'version', label: 'Prompt Version' },
         { key: 'count', label: 'Tests', align: 'right' },
         { key: 'passRate', label: 'Pass Rate', align: 'right' },
+        { key: 'quality', label: 'Quality' },
     ];
 
-    const rows: TableRow[] = result.byVersion.map((v) => ({
-        key: sanitizeHtml(v.version),
-        cells: {
-            version: sanitizeHtml(v.version),
-            count: String(v.count),
-            passRate: `${v.passRate}%`,
-        },
-    }));
+    const rows: TableRow[] = result.byVersion.map((v) => {
+        let qualityBadge: string;
+        if (v.version === bestVersion && v.passRate > 80) {
+            qualityBadge = Badge({ variant: 'pass', children: 'Best' });
+        } else if (v.passRate < 50) {
+            qualityBadge = Badge({ variant: 'fail', children: 'Needs Work' });
+        } else {
+            qualityBadge = Badge({ variant: 'default', children: '—' });
+        }
+
+        return {
+            key: sanitizeHtml(v.version),
+            cells: {
+                version: sanitizeHtml(v.version),
+                count: String(v.count),
+                passRate: `${v.passRate}%`,
+                quality: qualityBadge,
+            },
+        };
+    });
 
     return Section({
         dataSection: 'versions',
         title: 'Version Breakdown',
-        children: DataTable({ columns, rows }),
+        children: DataTable({ columns, rows, caption: 'AI test results by prompt version — sorted by pass rate' }),
     });
 }
 
 function buildRecommendedActions(result: AiComparisonResult): string {
     const actions: Array<{ text: string; severity: 'error' | 'warn' | 'info' }> = [];
 
+    // Action 1: AI advantage
     if (result.aiAdvantage === 'pass_rate' && result.aiTotal > 0 && result.manualTotal > 0) {
         actions.push({
             text: `Prioritize AI test generation — AI tests show higher pass rate (${result.aiPassRate}% vs ${result.manualPassRate}%). Consider increasing AI-generated test coverage.`,
@@ -104,6 +140,7 @@ function buildRecommendedActions(result: AiComparisonResult): string {
         });
     }
 
+    // Action 2: Flakiness advantage
     if (result.aiAdvantage === 'flakiness' && result.aiTotal > 0 && result.manualTotal > 0) {
         actions.push({
             text: `Replace flaky manual tests — AI tests are less flaky (${result.aiFlakinessAvg.toFixed(3)} vs ${result.manualFlakinessAvg.toFixed(3)}). Migrate critical manual tests to AI-generated equivalents.`,
@@ -111,11 +148,32 @@ function buildRecommendedActions(result: AiComparisonResult): string {
         });
     }
 
+    // Action 3: Low AI acceptance rate
     if (result.aiAcceptanceRate < 0.5 && result.aiTotal > 0) {
         actions.push({
             text: `Improve AI test quality — AI acceptance rate is ${(result.aiAcceptanceRate * 100).toFixed(0)}%. Review prompt templates and test generation parameters.`,
             severity: 'warn',
         });
+    }
+
+    // Action 4: Sample size warning
+    if (result.aiTotal < 30 || result.manualTotal < 30) {
+        actions.push({
+            text: `Small sample size detected — AI: ${result.aiTotal} tests, Manual: ${result.manualTotal} tests. Results may not be statistically significant. Increase sample size for reliable comparison.`,
+            severity: 'warn',
+        });
+    }
+
+    // Action 5: Best version recommendation
+    if (result.byVersion.length > 1) {
+        const sorted = [...result.byVersion].sort((a, b) => b.passRate - a.passRate);
+        const best = sorted[0];
+        if (best && best.passRate > 80) {
+            actions.push({
+                text: `Best performing version: "${sanitizeHtml(best.version)}" with ${best.passRate}% pass rate. Consider reusing for new tests.`,
+                severity: 'info',
+            });
+        }
     }
 
     if (actions.length === 0) return '';

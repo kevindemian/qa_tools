@@ -1,13 +1,11 @@
 /**
  * Table primitives — DataTable, THead, TBody, Td, Tr.
  *
- * Structured table rendering with sticky headers, sortable columns,
- * and consistent styling via design tokens.
+ * Structured table rendering using data-* attributes for CSS styling.
  *
  * @module primitives/table
  */
 
-import { tokens } from '../ui/theme-tokens.js';
 import { sanitizeHtml } from '../escape.js';
 
 export type TableAlign = 'left' | 'center' | 'right';
@@ -38,39 +36,31 @@ export interface DataTableProps {
     caption?: string;
 }
 
-function renderTableHeader(columns: TableColumn[], cellPadding: string, headStyle: string): string {
-    let html = `<thead style="background:var(--color-surface-elevated);${headStyle}"><tr>`;
+function renderTableHeader(columns: TableColumn[]): string {
+    let html = `<thead><tr>`;
     for (const col of columns) {
-        const align = col.align ? `text-align:${col.align}` : 'text-align:left';
-        const width = col.width ? `width:${col.width}` : '';
         const sortAttr = col.sortable ? ' data-sortable="true"' : '';
-        html += `<th data-column="${sanitizeHtml(col.key)}"${sortAttr}
-            scope="col"
-            style="padding:${cellPadding};${align};${width};
-                   font-size:${tokens.fontSize.sm};text-transform:uppercase;
-                   color:var(--color-text-secondary);white-space:nowrap;
-                   border-bottom:2px solid var(--color-border-subtle)">
+        const widthAttr = col.width ? ` style="width:${col.width}"` : '';
+        const alignAttr = col.align ? ` style="text-align:${col.align}"` : '';
+        html += `<th data-column="${sanitizeHtml(col.key)}"${sortAttr}${widthAttr || alignAttr}
+            scope="col">
             ${col.label}
-            ${col.sortable ? '<span data-part="sort-indicator" style="margin-left:4px;opacity:0.4">↕</span>' : ''}
+            ${col.sortable ? '<span data-part="sort-indicator">↕</span>' : ''}
         </th>`;
     }
     html += '</tr></thead>';
     return html;
 }
 
-function renderTableRows(rows: TableRow[], columns: TableColumn[], cellPadding: string): string {
+function renderTableRows(rows: TableRow[], columns: TableColumn[]): string {
     let html = '<tbody>';
     for (const row of rows) {
         const cls = row.class ? ` class="${row.class}"` : '';
-        html += `<tr data-row="${sanitizeHtml(row.key)}"${cls}${row.attrs || ''}
-            style="border-bottom:1px solid var(--color-border-subtle);
-                   transition:background 0.15s"
-            onmouseover="this.style.background='var(--color-surface-elevated)'"
-            onmouseout="this.style.background=''">`;
+        html += `<tr data-row="${sanitizeHtml(row.key)}"${cls}${row.attrs || ''}>`;
         for (const col of columns) {
             const cell = row.cells[col.key] ?? '';
-            const align = col.align ? `text-align:${col.align}` : '';
-            html += `<td style="padding:${cellPadding};${align};font-size:${tokens.fontSize.md};color:var(--color-text-primary)">${cell}</td>`;
+            const alignAttr = col.align ? ` style="text-align:${col.align}"` : '';
+            html += `<td${alignAttr}>${cell}</td>`;
         }
         html += '</tr>';
     }
@@ -79,22 +69,16 @@ function renderTableRows(rows: TableRow[], columns: TableColumn[], cellPadding: 
 }
 
 export function DataTable(props: DataTableProps): string {
-    const headStyle = props.stickyHeader ? 'position:sticky;top:0;z-index:1;' : '';
-    const cellPadding = props.compact
-        ? `${tokens.spacing.xs}px ${tokens.spacing.sm}px`
-        : `${tokens.spacing.sm}px ${tokens.spacing.md}px`;
-
-    let html = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}">`;
+    const ariaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
+    let html = `<div data-component="table-wrapper">`;
     html += `<table data-component="data-table"
         role="${props.role || 'table'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="width:100%;border-collapse:collapse;background:var(--color-surface-card);
-               font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">`;
+        ${ariaAttr}>`;
     if (props.caption) {
-        html += `<caption style="caption-side:bottom;font-size:${tokens.fontSize.xs};color:var(--color-text-muted);padding:${tokens.spacing.sm}px;text-align:left">${props.caption}</caption>`;
+        html += `<caption>${props.caption}</caption>`;
     }
-    html += renderTableHeader(props.columns, cellPadding, headStyle);
-    html += renderTableRows(props.rows, props.columns, cellPadding);
+    html += renderTableHeader(props.columns);
+    html += renderTableRows(props.rows, props.columns);
     html += '</table></div>';
     return html;
 }
@@ -104,7 +88,7 @@ export interface THeadProps {
 }
 
 export function THead(props: THeadProps): string {
-    return `<thead style="background:var(--color-surface-elevated)">${props.children}</thead>`;
+    return `<thead>${props.children}</thead>`;
 }
 
 export interface TBodyProps {
@@ -127,17 +111,13 @@ export interface TrProps {
 
 export function Tr(props: TrProps): string {
     const clickAttr = props.onClick ? ` onclick="${props.onClick}"` : '';
+    const styleAttr = props.onClick ? ` style="cursor:pointer"` : '';
     return `<tr data-row="${sanitizeHtml(props.key || '')}"
         role="${props.role || 'row'}"
         ${props.ariaExpanded !== undefined ? `aria-expanded="${props.ariaExpanded}"` : ''}
-        ${clickAttr}
+        ${clickAttr}${styleAttr}
         class="${props.class || ''}"
-        ${props.attrs || ''}
-        style="border-bottom:1px solid var(--color-border-subtle);
-               transition:background 0.15s;
-               ${props.onClick ? 'cursor:pointer' : ''}"
-        onmouseover="this.style.background='var(--color-surface-elevated)'"
-        onmouseout="this.style.background=''">
+        ${props.attrs || ''}>
         ${props.children}
     </tr>`;
 }
@@ -153,13 +133,11 @@ export interface TdProps {
 
 export function Td(props: TdProps): string {
     const colspan = props.colSpan ? ` colspan="${props.colSpan}"` : '';
-    const align = props.align ? `text-align:${props.align}` : '';
     const title = props.title ? ` title="${props.title}"` : '';
-    return `<td${colspan}${title}
+    const alignAttr = props.align ? ` style="text-align:${props.align}"` : '';
+    return `<td${colspan}${title}${alignAttr}
         role="${props.role || 'cell'}"
-        class="${props.class || ''}"
-        style="padding:${tokens.spacing.sm}px ${tokens.spacing.md}px;${align};
-               font-size:${tokens.fontSize.md};color:var(--color-text-primary)">
+        class="${props.class || ''}">
         ${props.children}
     </td>`;
 }
@@ -172,13 +150,9 @@ export interface ThProps {
 }
 
 export function Th(props: ThProps): string {
-    const align = props.align ? `text-align:${props.align}` : 'text-align:left';
     const sortAttr = props.sortable ? ' data-sortable="true"' : '';
-    return `<th scope="${props.scope || 'col'}"${sortAttr}
-        style="padding:${tokens.spacing.sm}px ${tokens.spacing.md}px;${align};
-               font-size:${tokens.fontSize.sm};text-transform:uppercase;
-               color:var(--color-text-secondary);white-space:nowrap;
-               border-bottom:2px solid var(--color-border-subtle)">
+    const alignAttr = props.align ? ` style="text-align:${props.align}"` : '';
+    return `<th scope="${props.scope || 'col'}"${sortAttr}${alignAttr}>
         ${props.children}
     </th>`;
 }

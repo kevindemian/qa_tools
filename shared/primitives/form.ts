@@ -2,11 +2,10 @@
  * Form primitives — FilterBar, SearchInput, Button, ButtonGroup.
  *
  * Interactive controls for report filtering, export, and theme toggle.
+ * Uses data-* attributes for CSS styling.
  *
  * @module primitives/form
  */
-
-import { tokens } from '../ui/theme-tokens.js';
 
 export interface FilterBarProps {
     children: string;
@@ -17,8 +16,7 @@ export interface FilterBarProps {
 export function FilterBar(props: FilterBarProps): string {
     return `<div data-component="filter-bar"
         role="${props.role || 'toolbar'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="display:flex;gap:${tokens.spacing.sm}px;align-items:center;margin-bottom:${tokens.spacing.md}px">
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
 }
@@ -39,17 +37,7 @@ export function SearchInput(props: SearchInputProps): string {
         value="${props.value || ''}"
         role="${props.role || 'searchbox'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        oninput="${props.onInput || 'filterTable()'}"
-        style="padding:${tokens.spacing.xs}px ${tokens.spacing.sm}px;
-               border:1px solid var(--color-border-default);
-               border-radius:${tokens.borderRadius.md}px;
-               font-size:${tokens.fontSize.md};
-               background:var(--color-surface-input);
-               color:var(--color-text-primary);
-               flex:1;min-width:150px;
-               outline:none;transition:border-color 0.15s"
-        onfocus="this.style.borderColor='var(--color-info)'"
-        onblur="this.style.borderColor='var(--color-border-default)'">`;
+        oninput="${props.onInput || 'filterTable()'}">`;
 }
 
 export interface ButtonProps {
@@ -63,18 +51,17 @@ export interface ButtonProps {
     disabled?: boolean;
 }
 
+const _buttonStyles: Record<string, string> = {
+    primary: 'background:var(--color-info);color:white',
+    ghost: 'border:none;background:transparent',
+    default: '',
+};
+
 export function Button(props: ButtonProps): string {
-    const bg = new Map<string, string>([
-        ['default', 'var(--color-surface-input)'],
-        ['primary', 'var(--color-info)'],
-        ['ghost', 'transparent'],
-    ]);
-    const textColor = new Map<string, string>([
-        ['default', 'var(--color-text-primary)'],
-        ['primary', '#ffffff'],
-        ['ghost', 'var(--color-text-primary)'],
-    ]);
     const v = props.variant || 'default';
+    const baseStyle = _buttonStyles[v] || '';
+    const disabledStyle = props.disabled ? 'opacity:0.5;cursor:not-allowed' : '';
+    const style = [baseStyle, disabledStyle].filter(Boolean).join(';');
     return `<button data-component="button" data-variant="${v}"
         type="button"
         ${props.id ? `id="${props.id}"` : ''}
@@ -82,17 +69,8 @@ export function Button(props: ButtonProps): string {
         ${props.title ? `title="${props.title}"` : ''}
         role="${props.role || 'button'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        ${props.disabled ? 'disabled' : ''}
-        style="padding:${tokens.spacing.xs}px ${tokens.spacing.md}px;
-               border:${v === 'ghost' ? 'none' : `1px solid var(--color-border-default)`};
-               background:${bg.get(v) ?? ''};
-               color:${textColor.get(v) ?? ''};
-               border-radius:${tokens.borderRadius.md}px;
-               cursor:${props.disabled ? 'default' : 'pointer'};
-               font-size:${tokens.fontSize.md};
-               font-family:${tokens.fontFamily};
-               transition:all 0.15s;
-               opacity:${props.disabled ? '0.5' : '1'}">
+        ${style ? `style="${style}"` : ''}
+        ${props.disabled ? 'disabled' : ''}>
         ${props.children}
     </button>`;
 }
@@ -106,8 +84,7 @@ export interface ButtonGroupProps {
 export function ButtonGroup(props: ButtonGroupProps): string {
     return `<div data-component="button-group"
         role="${props.role || 'group'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="display:flex;gap:${tokens.spacing.xs}px">
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
 }
@@ -121,8 +98,7 @@ export interface LabelProps {
 export function Label(props: LabelProps): string {
     const forAttr = props.htmlFor ? `for="${props.htmlFor}"` : '';
     return `<label data-component="label" ${forAttr}
-        role="${props.role || 'text'}"
-        style="font-size:${tokens.fontSize.xs};text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:${tokens.spacing.xs}px;display:block">
+        role="${props.role || 'text'}">
         ${props.children}
     </label>`;
 }

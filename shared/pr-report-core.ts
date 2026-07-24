@@ -147,18 +147,43 @@ export function computeDiffComparison(current: FlatTest[], previous: FlatTest[])
     return { newFailures, newPasses, flaky };
 }
 
-function buildSummaryTable(stats: PrReportStats): string {
+function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string {
     const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
     const durationSec = (stats.duration / 1000).toFixed(1);
 
-    return [
-        '## 📊 Test Results',
-        '',
-        '| ✅ Passed | ❌ Failed | ⏭ Skipped | 📦 Total | ⏱ Duration | 📈 Pass Rate |',
-        '|---|---|---|---|---|---|',
-        `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
-        '',
-    ].join('\n');
+    // Build summary with temporal context
+    const lines: string[] = ['## 📊 Test Results', ''];
+
+    // Pass rate with status indicator
+    let statusIcon: string;
+    if (stats.failed === 0) statusIcon = '✅';
+    else if (stats.failed <= 3) statusIcon = '⚠️';
+    else statusIcon = '❌';
+
+    lines.push(`**${statusIcon} ${passRate}% pass rate** (${stats.passed}/${stats.total})`);
+    lines.push('');
+
+    // Stats table
+    lines.push('| ✅ Passed | ❌ Failed | ⏭ Skipped | ⏱ Duration |');
+    lines.push('|---|---|---|---|');
+    lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
+    lines.push('');
+
+    // Temporal context from diff
+    if (diff) {
+        if (diff.newFailures.length > 0) {
+            lines.push(`> ❌ **${diff.newFailures.length} new failure(s)** introduced in this PR`);
+        }
+        if (diff.newPasses.length > 0) {
+            lines.push(`> ✅ **${diff.newPasses.length} test(s) fixed** by this PR`);
+        }
+        if (diff.flaky.length > 0) {
+            lines.push(`> 🔄 **${diff.flaky.length} test(s) changed state** (potential flaky)`);
+        }
+    }
+
+    lines.push('');
+    return lines.join('\n');
 }
 
 function buildFailureTable(tests: FlatTest[]): string {
@@ -254,36 +279,66 @@ function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageF
     ].join('\n');
 }
 
+function buildTestTable(
+    title: string,
+    emoji: string,
+    tests: Array<{ title: string; duration: number; error?: string }>,
+    columns: string,
+    maxRows: number,
+    formatter: (t: { title: string; duration: number; error?: string }) => string,
+): string[] {
+    if (tests.length === 0) return [];
+    const lines: string[] = ['', `### ${emoji} ${title}`, '', columns, '|---|---|'];
+    for (const t of tests.slice(0, maxRows)) {
+        lines.push(formatter(t));
+    }
+    if (tests.length > maxRows) {
+        lines.push(`| _... and ${tests.length - maxRows} more_ | |${columns.includes('Error') ? ' |' : ''}`);
+    }
+    lines.push('');
+    return lines;
+}
+
 function buildDiffSection(diff: DiffComparison | undefined): string {
     if (!diff) return '';
     const { newFailures, newPasses, flaky } = diff;
     if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
 
-    const lines: string[] = ['', '## 🔄 Diff Comparison', ''];
-    if (newFailures.length > 0) {
-        lines.push('### 🆕 New Failures', '');
-        lines.push('| Test | Duration |', '|---|---|');
-        for (const t of newFailures) {
-            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
-        }
-        lines.push('');
-    }
-    if (newPasses.length > 0) {
-        lines.push('### ✅ Fixed (Previously Failing)', '');
-        lines.push('| Test | Duration |', '|---|---|');
-        for (const t of newPasses) {
-            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
-        }
-        lines.push('');
-    }
-    if (flaky.length > 0) {
-        lines.push('### 🔄 Flaky (State Changed)', '');
-        lines.push('| Test | Duration |', '|---|---|');
-        for (const t of flaky) {
-            lines.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`);
-        }
-        lines.push('');
-    }
+    const lines: string[] = ['', '## 🔄 Changes in This PR'];
+
+    const failureTable = buildTestTable(
+        'New Failures (Introduced by this PR)',
+        '❌',
+        newFailures,
+        '| Test | Duration | Error |',
+        10,
+        (t) => {
+            const error = t.error ? t.error.replace(/\n/g, ' ').slice(0, 100) : '';
+            return `| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms | ${error.replace(/\|/g, '\\|')} |`;
+        },
+    );
+    lines.push(...failureTable);
+
+    const passTable = buildTestTable(
+        'Fixed (Previously Failing)',
+        '✅',
+        newPasses,
+        '| Test | Duration |',
+        10,
+        (t) => `| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`,
+    );
+    lines.push(...passTable);
+
+    const flakyTable = buildTestTable(
+        'Flaky (State Changed)',
+        '🔄',
+        flaky,
+        '| Test | Duration |',
+        10,
+        (t) => `| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms |`,
+    );
+    lines.push(...flakyTable);
+
     return lines.join('\n');
 }
 
@@ -582,7 +637,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
 
     const sections: string[] = [];
     sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv(), stats));
-    sections.push(buildSummaryTable(stats));
+    sections.push(buildSummaryTable(stats, options.diffComparison));
 
     // Code Coverage section (from DataHub)
     const coverageSection = buildCoverageSection(coverageResult);

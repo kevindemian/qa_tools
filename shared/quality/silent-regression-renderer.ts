@@ -74,8 +74,21 @@ function wrapContainer(pageTitle: string, children: string): string {
 }
 
 function buildMetricSummary(result: RegressionResult): string {
+    // Calculate average percentage increase across regressions
+    const avgIncrease =
+        result.regressions.length > 0
+            ? Math.round(
+                  result.regressions.reduce((sum, r) => {
+                      const increase =
+                          r.meanDuration > 0 ? ((r.currentDuration - r.meanDuration) / r.meanDuration) * 100 : 0;
+                      return sum + increase;
+                  }, 0) / result.regressions.length,
+              )
+            : 0;
+
     return Section({
         dataSection: 'summary',
+        title: 'Summary',
         children: MetricGrid({
             children:
                 MetricCard({ label: 'Total Tests', value: String(result.totalTests) }) +
@@ -83,6 +96,15 @@ function buildMetricSummary(result: RegressionResult): string {
                     label: 'Regressions Found',
                     value: String(result.regressions.length),
                     severity: result.regressions.length > 0 ? 'error' : 'success',
+                }) +
+                MetricCard({
+                    label: 'Avg Increase',
+                    value: avgIncrease > 0 ? `+${avgIncrease}%` : '0%',
+                    severity: (() => {
+                        if (avgIncrease > 50) return 'error';
+                        if (avgIncrease > 20) return 'warn';
+                        return 'default';
+                    })(),
                 }) +
                 MetricCard({ label: 'Threshold (z)', value: '>' + String(result.threshold) }),
         }),
@@ -98,34 +120,48 @@ function buildRegressions(result: RegressionResult): string {
         });
     }
 
+    // Sort by z-score (most severe first)
+    const sorted = [...result.regressions].sort((a, b) => b.zScore - a.zScore);
+
     const columns: TableColumn[] = [
-        { key: 'title', label: 'Test', width: '30%' },
+        { key: 'title', label: 'Test', width: '25%' },
         { key: 'current', label: 'Current (s)', align: 'right' },
         { key: 'mean', label: 'Mean (s)', align: 'right' },
-        { key: 'stddev', label: 'Std Dev', align: 'right' },
+        { key: 'increase', label: 'Increase', align: 'right' },
         { key: 'zscore', label: 'Z-Score', align: 'right' },
         { key: 'severity', label: 'Severity' },
     ];
 
-    const rows: TableRow[] = result.regressions.map((r, i) => ({
-        key: String(i),
-        cells: {
-            title: sanitizeHtml(r.title),
-            current: r.currentDuration.toFixed(3),
-            mean: r.meanDuration.toFixed(3),
-            stddev: r.stdDev.toFixed(3),
-            zscore: r.zScore.toFixed(2),
-            severity: Badge({
-                variant: severityBadgeVariant(r.severity),
-                children: r.severity,
-            }),
-        },
-    }));
+    const rows: TableRow[] = sorted.map((r, i) => {
+        // Calculate percentage increase
+        const increase =
+            r.meanDuration > 0 ? Math.round(((r.currentDuration - r.meanDuration) / r.meanDuration) * 100) : 0;
+        const increaseStr = increase > 0 ? `+${increase}%` : '0%';
+
+        return {
+            key: String(i),
+            cells: {
+                title: sanitizeHtml(r.title),
+                current: r.currentDuration.toFixed(3),
+                mean: r.meanDuration.toFixed(3),
+                increase: increaseStr,
+                zscore: r.zScore.toFixed(2),
+                severity: Badge({
+                    variant: severityBadgeVariant(r.severity),
+                    children: r.severity,
+                }),
+            },
+        };
+    });
 
     return Section({
         dataSection: 'regressions',
         title: 'Regressions',
-        children: DataTable({ columns, rows }),
+        children: DataTable({
+            columns,
+            rows,
+            caption: `Tests with duration regression (z-score > ${result.threshold}) — sorted by severity`,
+        }),
     });
 }
 
@@ -136,8 +172,14 @@ function buildRecommendedActions(result: RegressionResult): string {
     const actions: Array<{ text: string; severity: 'error' | 'warn' | 'info' }> = [];
 
     if (criticalCount > 0) {
+        const criticalTests = result.regressions
+            .filter((r) => r.severity === 'critical' || r.severity === 'high')
+            .slice(0, 3)
+            .map((r) => sanitizeHtml(r.title))
+            .join(', ');
+        const moreText = criticalCount > 3 ? ` and ${criticalCount - 3} more` : '';
         actions.push({
-            text: `${criticalCount} critical/high severity regression(s) detected. Investigate immediately — these tests show significant duration increases that may indicate real performance issues.`,
+            text: `${criticalCount} critical/high severity regression(s) detected: ${criticalTests}${moreText}. Investigate immediately — these tests show significant duration increases.`,
             severity: 'error',
         });
     }
@@ -150,10 +192,23 @@ function buildRecommendedActions(result: RegressionResult): string {
         });
     }
 
-    actions.push({
-        text: 'Investigate root cause: check for test data growth, external service latency, or resource contention.',
-        severity: 'info',
-    });
+    // Add root cause guidance based on data patterns
+    const avgStdDev =
+        result.regressions.length > 0
+            ? result.regressions.reduce((sum, r) => sum + r.stdDev, 0) / result.regressions.length
+            : 0;
+
+    if (avgStdDev > 1) {
+        actions.push({
+            text: 'High standard deviation detected — regressions may be caused by flaky tests or external service latency. Check test isolation and external dependencies.',
+            severity: 'info',
+        });
+    } else {
+        actions.push({
+            text: 'Investigate root cause: check for test data growth, resource contention, or infrastructure changes.',
+            severity: 'info',
+        });
+    }
 
     return Section({
         dataSection: 'actions',

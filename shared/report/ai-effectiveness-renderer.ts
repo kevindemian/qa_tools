@@ -11,7 +11,15 @@ import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
-import { MetricCard, MetricGrid, DataTable, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
+import {
+    MetricCard,
+    MetricGrid,
+    DataTable,
+    Section,
+    EmptyState,
+    RecommendedActions,
+    TrendChart,
+} from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { AiEffectivenessResult } from './ai-effectiveness.js';
 
@@ -45,10 +53,10 @@ export function generateAiEffectivenessHtml(result: AiEffectivenessResult | null
 
         const bodyContent = Container(
             pageTitle,
-            buildMetricSummary(result.acceptanceRate, result.totalRecords) +
-                buildVersionTable(result.byVersion) +
-                buildTrendTable(result.trend) +
-                buildActions(),
+            buildMetricSummary(result) +
+                buildVersionTable(result.byVersion, result.topPromptVersion) +
+                buildTrendChart(result.trend) +
+                buildActions(result),
         );
 
         return buildHtmlPage({
@@ -79,46 +87,88 @@ function Container(pageTitle: string, children: string): string {
     </div>`;
 }
 
-function buildMetricSummary(rate: number, total: number): string {
+function buildMetricSummary(result: AiEffectivenessResult): string {
+    const { acceptanceRate, totalRecords, totalModified, totalDeleted } = result;
+
+    // Determine severity based on acceptance rate
     let severity: 'success' | 'warn' | 'error';
-    if (rate >= 80) {
+    if (acceptanceRate >= 80) {
         severity = 'success';
-    } else if (rate >= 50) {
+    } else if (acceptanceRate >= 50) {
         severity = 'warn';
     } else {
         severity = 'error';
     }
 
+    // Calculate modification rate for context
+    const modificationRate = totalRecords > 0 ? Math.round((totalModified / totalRecords) * 100) : 0;
+
     return Section({
-        title: 'Acceptance Rate',
+        dataSection: 'summary',
+        title: 'Summary',
         children: MetricGrid({
-            children: MetricCard({
-                label: 'Acceptance Rate',
-                value: rate + '%',
-                severity,
-                trend: total + ' total records',
-            }),
+            children:
+                MetricCard({
+                    label: 'Acceptance Rate',
+                    value: `${acceptanceRate}%`,
+                    severity,
+                    trend: `${totalRecords} total records`,
+                }) +
+                MetricCard({
+                    label: 'Modified',
+                    value: `${modificationRate}%`,
+                    severity: modificationRate > 30 ? 'warn' : 'default',
+                }) +
+                MetricCard({
+                    label: 'Deleted',
+                    value: String(totalDeleted),
+                    severity: totalDeleted > 10 ? 'error' : 'default',
+                }),
         }),
     });
 }
 
-function buildVersionTable(byVersion: Array<{ version: string; count: number; acceptanceRate: number }>): string {
+function buildVersionTable(
+    byVersion: Array<{ version: string; count: number; acceptanceRate: number }>,
+    topVersion: string,
+): string {
     if (byVersion.length === 0) return '';
+
+    // Find best and worst versions for highlighting
+    const sorted = [...byVersion].sort((a, b) => b.acceptanceRate - a.acceptanceRate);
+    const bestVersion = sorted[0]?.version;
+    const worstVersion = sorted[sorted.length - 1]?.version;
 
     const columns: TableColumn[] = [
         { key: 'version', label: 'Prompt Version' },
         { key: 'count', label: 'Records', align: 'right' },
         { key: 'acceptanceRate', label: 'Acceptance Rate', align: 'right' },
+        { key: 'quality', label: 'Quality' },
     ];
 
-    const rows: TableRow[] = byVersion.map((v) => ({
-        key: v.version,
-        cells: {
-            version: sanitizeHtml(v.version),
-            count: String(v.count),
-            acceptanceRate: v.acceptanceRate + '%',
-        },
-    }));
+    const rows: TableRow[] = byVersion.map((v) => {
+        // Determine quality badge
+        let qualityBadge: string;
+        if (v.version === bestVersion && v.acceptanceRate >= 80) {
+            qualityBadge = `<span data-component="badge" data-variant="pass">Best</span>`;
+        } else if (v.version === worstVersion && v.acceptanceRate < 50) {
+            qualityBadge = `<span data-component="badge" data-variant="fail">Needs Work</span>`;
+        } else if (v.version === topVersion) {
+            qualityBadge = `<span data-component="badge" data-variant="info">Most Used</span>`;
+        } else {
+            qualityBadge = `<span data-component="badge" data-variant="default">—</span>`;
+        }
+
+        return {
+            key: v.version,
+            cells: {
+                version: sanitizeHtml(v.version),
+                count: String(v.count),
+                acceptanceRate: v.acceptanceRate + '%',
+                quality: qualityBadge,
+            },
+        };
+    });
 
     return Section({
         dataSection: 'version-breakdown',
@@ -131,9 +181,29 @@ function buildVersionTable(byVersion: Array<{ version: string; count: number; ac
     });
 }
 
-function buildTrendTable(trend: Array<{ date: string; acceptanceRate: number; generated: number }>): string {
+function buildTrendChart(trend: Array<{ date: string; acceptanceRate: number; generated: number }>): string {
     if (trend.length === 0) return '';
 
+    // Convert trend data to TrendChart points
+    const points = trend.map((t) => ({
+        passRate: t.acceptanceRate,
+        label: t.date,
+    }));
+
+    // Calculate trend summary
+    const firstRate = trend[0]?.acceptanceRate ?? 0;
+    const lastRate = trend[trend.length - 1]?.acceptanceRate ?? 0;
+    let trendDirection: string;
+    if (lastRate > firstRate) {
+        trendDirection = 'improving';
+    } else if (lastRate < firstRate) {
+        trendDirection = 'declining';
+    } else {
+        trendDirection = 'stable';
+    }
+    const trendDelta = lastRate - firstRate;
+
+    // Build trend table for detailed view
     const columns: TableColumn[] = [
         { key: 'date', label: 'Date' },
         { key: 'generated', label: 'Generated', align: 'right' },
@@ -152,25 +222,92 @@ function buildTrendTable(trend: Array<{ date: string; acceptanceRate: number; ge
     return Section({
         dataSection: 'trend',
         title: 'Daily Trend',
-        children: DataTable({
-            columns,
-            rows,
-            caption: 'Daily acceptance rate trend',
-        }),
+        children:
+            `<div data-part="trend-summary">
+            <p>Trend: <strong>${trendDirection}</strong> (${trendDelta >= 0 ? '+' : ''}${trendDelta}% over ${trend.length} days)</p>
+        </div>` +
+            TrendChart({
+                points,
+                refLine: 80,
+                refLabel: '80% target',
+                role: 'img',
+                ariaLabel: `Acceptance rate trend: ${trendDirection} from ${firstRate}% to ${lastRate}%`,
+            }) +
+            DataTable({
+                columns,
+                rows,
+                caption: 'Daily acceptance rate trend',
+            }),
     });
 }
 
-function buildActions(): string {
+function buildActions(result: AiEffectivenessResult): string {
+    const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
+
+    // Action 1: Low acceptance rate
+    if (result.acceptanceRate < 50) {
+        actions.push({
+            severity: 'error',
+            text: `Acceptance rate is ${result.acceptanceRate}% — critically low. Review prompt templates and test generation parameters immediately.`,
+        });
+    } else if (result.acceptanceRate < 80) {
+        actions.push({
+            severity: 'warn',
+            text: `Acceptance rate is ${result.acceptanceRate}% — below target. Consider adjusting prompt templates for better results.`,
+        });
+    }
+
+    // Action 2: Best version identification
+    if (result.byVersion.length > 1) {
+        const sorted = [...result.byVersion].sort((a, b) => b.acceptanceRate - a.acceptanceRate);
+        const best = sorted[0];
+        if (best && best.acceptanceRate > 80) {
+            actions.push({
+                severity: 'info',
+                text: `Prompt "${sanitizeHtml(best.version)}" has ${best.acceptanceRate}% acceptance — consider reusing for new tests.`,
+            });
+        }
+    }
+
+    // Action 3: Sample size warning
+    if (result.totalRecords < 30) {
+        actions.push({
+            severity: 'warn',
+            text: `Only ${result.totalRecords} records — results may not be statistically significant. Increase sample size for reliable insights.`,
+        });
+    }
+
+    // Action 4: High deletion rate
+    if (result.totalDeleted > 10) {
+        actions.push({
+            severity: 'warn',
+            text: `${result.totalDeleted} tests were deleted — review deletion reasons to identify systematic issues.`,
+        });
+    }
+
+    // Action 5: Stable/improving trend
+    if (result.trend.length >= 2) {
+        const firstRate = result.trend[0]?.acceptanceRate ?? 0;
+        const lastRate = result.trend[result.trend.length - 1]?.acceptanceRate ?? 0;
+        if (lastRate > firstRate + 5) {
+            actions.push({
+                severity: 'info',
+                text: `Acceptance rate improved by ${lastRate - firstRate}% over the period — current approach is working.`,
+            });
+        }
+    }
+
+    // Default action if no issues found
+    if (actions.length === 0) {
+        actions.push({
+            severity: 'info',
+            text: 'AI effectiveness is within acceptable ranges. Continue monitoring acceptance rates and prompt version performance.',
+        });
+    }
+
     return Section({
         dataSection: 'actions',
-        children: RecommendedActions({
-            actions: [
-                { severity: 'info', text: 'Review acceptance rates below 50% — consider adjusting prompt templates.' },
-                {
-                    severity: 'info',
-                    text: 'Compare version breakdown to identify the most effective prompt versions for reuse.',
-                },
-            ],
-        }),
+        title: 'Recommended Actions',
+        children: RecommendedActions({ actions }),
     });
 }
