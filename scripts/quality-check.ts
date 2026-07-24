@@ -434,15 +434,15 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/defect-trend.ts', export_: 'aggregateDefectTrends' },
         { file: 'shared/quality/defect-trend.ts', export_: 'generateDefectTrendHtml' },
         { file: 'shared/report/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
-        { file: 'shared/report/traceability-matrix.ts', export_: 'generateTraceabilityHtml' },
+        { file: 'shared/report/traceability-renderer.ts', export_: 'generateTraceabilityHtml' },
         { file: 'shared/report/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
-        { file: 'shared/report/ai-effectiveness.ts', export_: 'generateAiEffectivenessHtml' },
+        { file: 'shared/report/ai-effectiveness-renderer.ts', export_: 'generateAiEffectivenessHtml' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'aggregateDefectSeasonality' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
         { file: 'shared/quality/silent-regression.ts', export_: 'detectSilentRegression' },
-        { file: 'shared/quality/silent-regression.ts', export_: 'generateSilentRegressionHtml' },
+        { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
         { file: 'shared/report/ai-comparison.ts', export_: 'compareAiVsManual' },
-        { file: 'shared/report/ai-comparison.ts', export_: 'generateAiComparisonHtml' },
+        { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
@@ -450,11 +450,11 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/suite-optimization.ts', export_: 'analyzeSuiteOptimization' },
         { file: 'shared/quality/suite-optimization.ts', export_: 'generateOptimizationHtml' },
         { file: 'shared/report/backlog-health.ts', export_: 'analyzeBacklogHealth' },
-        { file: 'shared/report/backlog-health.ts', export_: 'generateBacklogHealthHtml' },
+        { file: 'shared/report/backlog-health-renderer.ts', export_: 'generateBacklogHealthHtml' },
         { file: 'shared/report/incident-report.ts', export_: 'buildIncidentReport' },
-        { file: 'shared/report/incident-report.ts', export_: 'generateIncidentReportHtml' },
+        { file: 'shared/report/incident-report-renderer.ts', export_: 'generateIncidentReportHtml' },
         { file: 'shared/report/impact-alert.ts', export_: 'analyzePipelineImpact' },
-        { file: 'shared/report/impact-alert.ts', export_: 'generateImpactAlertHtml' },
+        { file: 'shared/report/impact-alert-renderer.ts', export_: 'generateImpactAlertHtml' },
         { file: 'shared/data-hub/compute/pipeline-cost.ts', export_: 'calcPipelineCost' },
         { file: 'shared/quality/requirement-score.ts', export_: 'calculateRequirementScores' },
         { file: 'shared/quality/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
@@ -594,7 +594,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:1dbfb11ad96883edd4b1e6f402f588e6841b9d09b4ad8fe5e53ac26e1424cdcb */
+        /* HASH:053fa628f69210c47894be0e9babb53276194d766e63bd7af11020b5e9b3cc7c */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
