@@ -40,6 +40,7 @@ export interface SectionProps {
     marginBottom?: number;
     role?: string;
     ariaLabel?: string;
+    dataSection?: string;
 }
 
 export function Section(props: SectionProps): string {
@@ -49,7 +50,8 @@ export function Section(props: SectionProps): string {
     const styles = isCard
         ? `background:var(--color-surface-card);border-radius:${tokens.borderRadius.lg}px;padding:${padding}px;box-shadow:${tokens.shadow.card}`
         : '';
-    return `<div data-component="section" data-variant="${props.variant || 'card'}"
+    const ds = props.dataSection ? ` data-section="${props.dataSection}"` : '';
+    return `<div data-component="section" data-variant="${props.variant || 'card'}"${ds}
         role="${props.role || 'region'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
         style="${styles};margin-bottom:${mb}px">

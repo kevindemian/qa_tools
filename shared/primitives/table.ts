@@ -8,6 +8,7 @@
  */
 
 import { tokens } from '../ui/theme-tokens.js';
+import { sanitizeHtml } from '../escape.js';
 
 export type TableAlign = 'left' | 'center' | 'right';
 
@@ -43,7 +44,7 @@ function renderTableHeader(columns: TableColumn[], cellPadding: string, headStyl
         const align = col.align ? `text-align:${col.align}` : 'text-align:left';
         const width = col.width ? `width:${col.width}` : '';
         const sortAttr = col.sortable ? ' data-sortable="true"' : '';
-        html += `<th data-column="${col.key}"${sortAttr}
+        html += `<th data-column="${sanitizeHtml(col.key)}"${sortAttr}
             scope="col"
             style="padding:${cellPadding};${align};${width};
                    font-size:${tokens.fontSize.sm};text-transform:uppercase;
@@ -61,7 +62,7 @@ function renderTableRows(rows: TableRow[], columns: TableColumn[], cellPadding: 
     let html = '<tbody>';
     for (const row of rows) {
         const cls = row.class ? ` class="${row.class}"` : '';
-        html += `<tr data-row="${row.key}"${cls}${row.attrs || ''}
+        html += `<tr data-row="${sanitizeHtml(row.key)}"${cls}${row.attrs || ''}
             style="border-bottom:1px solid var(--color-border-subtle);
                    transition:background 0.15s"
             onmouseover="this.style.background='var(--color-surface-elevated)'"
@@ -126,7 +127,7 @@ export interface TrProps {
 
 export function Tr(props: TrProps): string {
     const clickAttr = props.onClick ? ` onclick="${props.onClick}"` : '';
-    return `<tr data-row="${props.key || ''}"
+    return `<tr data-row="${sanitizeHtml(props.key || '')}"
         role="${props.role || 'row'}"
         ${props.ariaExpanded !== undefined ? `aria-expanded="${props.ariaExpanded}"` : ''}
         ${clickAttr}
