@@ -168,7 +168,7 @@ describe('GenerateFlakinessHtml', () => {
 
         const html = generateFlakinessHtml([], 'Flakiness', { dataHub: hub });
 
-        expect(html).toContain('<div class="src-banner">');
+        expect(html).toContain('data-section="source-quality"');
         expect(html).toContain('failure-records source confidence: 70%');
         expect(html).toContain('failure-records quality issues: missing classification for TC-1');
     });
@@ -178,6 +178,6 @@ describe('GenerateFlakinessHtml', () => {
 
         const html = generateFlakinessHtml([], 'Flakiness');
 
-        expect(html).not.toContain('<div class="src-banner">');
+        expect(html).not.toContain('data-section="source-quality"');
     });
 });
