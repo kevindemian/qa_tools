@@ -36,6 +36,7 @@ export { computeAiMetrics } from './ai-metrics.js';
 export { computeOptimizationActions } from './optimization-actions.js';
 export { computeImpactAlerts } from './impact-alerts.js';
 export { computeIncidentEvents } from './incident-events.js';
+export { computeTraceabilityTree } from './traceability-tree.js';
 export { enrichFailuresWithAuthor } from '../extractors/failure-attribution.js';
 export type {
     AiMetricsResult,

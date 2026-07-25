@@ -71,6 +71,7 @@ const defaultComputed: ComputedMetrics = {
     testDurationMap: {},
     impactAlerts: undefined,
     incidentEvents: undefined,
+    traceabilityTree: undefined,
 };
 
 /** Build a fully-satisfied `DataHubPersistence` mock. */

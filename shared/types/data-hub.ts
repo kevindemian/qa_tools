@@ -696,6 +696,8 @@ export interface ComputedMetrics {
     impactAlerts?: import('../report/impact-alert.js').ImpactAlertResult | undefined;
     /** Incident events: failures, regressions, coverage gaps, and seasonality. */
     incidentEvents?: import('../report/incident-report.js').IncidentReport | undefined;
+    /** Traceability tree: epic > story > test mapping with coverage and health. */
+    traceabilityTree?: import('../report/traceability-matrix.js').TraceabilityResult | undefined;
 }
 
 /**

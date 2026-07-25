@@ -86,6 +86,7 @@ import {
     computeOptimizationActions,
     computeImpactAlerts,
     computeIncidentEvents,
+    computeTraceabilityTree,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -847,6 +848,10 @@ export class DataHubImpl implements DataHub {
             regressionDetection,
             seasonalityAggregation,
         } as ComputedMetrics);
+        const traceabilityTree = computeTraceabilityTree(raw, {
+            metricsRuns,
+            flakyRate,
+        } as ComputedMetrics);
 
         return {
             passRate,
@@ -884,6 +889,7 @@ export class DataHubImpl implements DataHub {
             optimizationActions,
             impactAlerts,
             incidentEvents,
+            traceabilityTree,
         };
     }
 
