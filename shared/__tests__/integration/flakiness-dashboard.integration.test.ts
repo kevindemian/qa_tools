@@ -166,4 +166,37 @@ describe('Integration: Flakiness Dashboard (FT-19)', () => {
             expect(html).not.toContain('Infinity');
         });
     });
+
+    describe('FT-19g: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
+            const entries: FlakinessEntry[] = [
+                {
+                    title: 'Flaky test',
+                    project: 'test',
+                    passCount: 5,
+                    failCount: 5,
+                    skipCount: 0,
+                    totalRuns: 10,
+                    rate: 0.5,
+                },
+            ];
+            const html = generateFlakinessHtml(entries);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: <5');
+            expect(html).toContain('target: <30%');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { generateFlakinessHtml } = await import('../../report/flakiness-dashboard.js');
+            const html = generateFlakinessHtml([]);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });

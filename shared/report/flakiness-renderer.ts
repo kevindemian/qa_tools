@@ -38,6 +38,7 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
 
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>
+            <div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>
             ${sourceBanner}
             ${buildFlakinessSummary(high, flaky, thresholds, totalTests)}
             ${buildFlakinessTable(high, thresholds)}
@@ -80,11 +81,13 @@ function buildFlakinessSummary(
                     value: String(high.length),
                     severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
                     trend: totalTests > 0 ? `${flakyRate}% of ${totalTests} total` : '',
+                    target: `target: <${thresholds.errorSeverityThreshold}`,
                 }) +
                 MetricCard({
                     label: 'Threshold',
                     value: `>${thresholds.thresholdPct}%`,
                     severity: 'default',
+                    target: `target: <${thresholds.thresholdPct}%`,
                 }) +
                 MetricCard({
                     label: 'All Candidates',
