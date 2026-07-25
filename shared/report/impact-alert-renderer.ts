@@ -14,6 +14,9 @@ import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions }
 import { rootLogger } from '../logger.js';
 import type { ImpactAlertResult, ImpactAlert, AlertSeverity } from './impact-alert.js';
 
+const CRITICAL_ALERT_TARGET = 0;
+const WARNING_ALERT_TARGET = 0;
+
 const SEVERITY_MAP: Record<AlertSeverity, 'error' | 'warn' | 'info'> = {
     critical: 'error',
     warning: 'warn',
@@ -54,6 +57,7 @@ export function generateImpactAlertHtml(result: ImpactAlertResult | null | undef
         const bodyContent = wrapContainer(
             pageTitle,
             buildMetricSummary(result) + buildAlerts(result) + buildRecommendedActions(result),
+            result.timestamp,
         );
 
         return buildHtmlPage({
@@ -72,9 +76,10 @@ export function generateImpactAlertHtml(result: ImpactAlertResult | null | undef
     }
 }
 
-function wrapContainer(pageTitle: string, children: string): string {
+function wrapContainer(pageTitle: string, children: string, timestamp: string): string {
     return `<div data-component="container" data-dashboard="impact-alert">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
     </div>`;
 }
@@ -97,11 +102,13 @@ function buildMetricSummary(result: ImpactAlertResult): string {
                     label: 'Critical',
                     value: String(result.criticalCount),
                     severity: 'error',
+                    target: `target: ${CRITICAL_ALERT_TARGET}`,
                 }) +
                 MetricCard({
                     label: 'Warning',
                     value: String(result.warningCount),
                     severity: 'warn',
+                    target: `target: ${WARNING_ALERT_TARGET}`,
                 }) +
                 MetricCard({
                     label: 'Info',
