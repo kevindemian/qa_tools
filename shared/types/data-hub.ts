@@ -694,6 +694,8 @@ export interface ComputedMetrics {
     optimizationActions?: import('./data-hub-extensions.js').OptimizationResult | undefined;
     /** Impact alerts: pipeline health correlated with coverage gaps and failures. */
     impactAlerts?: import('../report/impact-alert.js').ImpactAlertResult | undefined;
+    /** Incident events: failures, regressions, coverage gaps, and seasonality. */
+    incidentEvents?: import('../report/incident-report.js').IncidentReport | undefined;
 }
 
 /**

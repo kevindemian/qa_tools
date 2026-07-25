@@ -85,6 +85,7 @@ import {
     computeAiMetrics,
     computeOptimizationActions,
     computeImpactAlerts,
+    computeIncidentEvents,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -840,6 +841,12 @@ export class DataHubImpl implements DataHub {
             coverage,
             topFailingJobs,
         } as ComputedMetrics);
+        const incidentEvents = computeIncidentEvents(raw, {
+            passRate,
+            runFailureRate,
+            regressionDetection,
+            seasonalityAggregation,
+        } as ComputedMetrics);
 
         return {
             passRate,
@@ -876,6 +883,7 @@ export class DataHubImpl implements DataHub {
             aiMetrics,
             optimizationActions,
             impactAlerts,
+            incidentEvents,
         };
     }
 
