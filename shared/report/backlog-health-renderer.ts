@@ -46,6 +46,7 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult, title?: s
                 buildIssueCards(result) +
                 buildDensitySection(result) +
                 buildRecommendedActions(result),
+            result.timestamp,
         );
 
         return buildHtmlPage({
@@ -66,9 +67,10 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult, title?: s
     }
 }
 
-function wrapContainer(pageTitle: string, children: string): string {
+function wrapContainer(pageTitle: string, children: string, timestamp: string): string {
     return `<div data-component="container" data-dashboard="backlog-health">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
     </div>`;
 }
@@ -98,23 +100,27 @@ function buildMetricSummary(result: BacklogHealthResult): string {
                     value: result.noData ? 'N/A' : String(result.score) + '%',
                     severity: result.noData ? 'warn' : scoreSeverity,
                     trend: totalIssues > 0 ? `${totalIssues} total issues` : '',
+                    target: `target: >=${SCORE_THRESHOLD_SUCCESS}%`,
                 }) +
                 MetricCard({
                     label: 'Unassigned',
                     value: String(result.unassignedIssues.length),
                     severity: result.unassignedIssues.length > 0 ? 'warn' : 'success',
                     trend: totalIssues > 0 ? `${unassignedRate}% of total` : '',
+                    target: 'target: 0',
                 }) +
                 MetricCard({
                     label: 'Stale Issues',
                     value: String(result.staleIssues.length),
                     severity: result.staleIssues.length > 0 ? 'warn' : 'success',
                     trend: totalIssues > 0 ? `${staleRate}% of total` : '',
+                    target: 'target: 0',
                 }) +
                 MetricCard({
                     label: 'Bugs Without Tests',
                     value: String(result.bugsWithoutTests.length),
                     severity: result.bugsWithoutTests.length > 0 ? 'error' : 'success',
+                    target: 'target: 0',
                 }),
         }),
     });

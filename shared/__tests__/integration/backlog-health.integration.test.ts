@@ -131,4 +131,29 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('Showing first 1 of');
         });
     });
+
+    describe('FT-28d: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
+            const all = makeIssues();
+            const result = analyzeBacklogHealth(all);
+            const html = generateBacklogHealthHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: >=80%');
+            expect(html).toContain('target: 0');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
+            const result = analyzeBacklogHealth([]);
+            const html = generateBacklogHealthHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });
