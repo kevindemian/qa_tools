@@ -15,6 +15,9 @@ import { MetricCard, MetricGrid, DataTable, Section, EmptyState, RecommendedActi
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { SeasonalityResult } from './defect-seasonality.js';
 
+const HIGH_CONCENTRATION_DAY_MULTIPLIER = 1.5;
+const HIGH_CONCENTRATION_HOUR_MULTIPLIER = 2;
+
 function getVsAvgLabel(total: number, avgTotal: number): string {
     if (total > avgTotal * 1.2) return '\u{1F534} Above';
     if (total < avgTotal * 0.8) return '\u{1F7E2} Below';
@@ -110,7 +113,7 @@ function buildRecommendedActions(result: SeasonalityResult): string {
 
     // Action 2: High concentration days
     const avgPerDay = result.totalRecords / 7;
-    const highDays = result.byDayOfWeek.filter((d) => d.total > avgPerDay * 1.5);
+    const highDays = result.byDayOfWeek.filter((d) => d.total > avgPerDay * HIGH_CONCENTRATION_DAY_MULTIPLIER);
     if (highDays.length > 0) {
         actions.push({
             severity: 'warn',
@@ -120,7 +123,7 @@ function buildRecommendedActions(result: SeasonalityResult): string {
 
     // Action 3: High concentration hours
     const avgPerHour = result.totalRecords / 24;
-    const highHours = result.byHour.filter((h) => h.total > avgPerHour * 2);
+    const highHours = result.byHour.filter((h) => h.total > avgPerHour * HIGH_CONCENTRATION_HOUR_MULTIPLIER);
     if (highHours.length > 0) {
         const hourRanges = highHours.map((h) => `${h.hour}:00-${h.hour + 1}:00`).join(', ');
         actions.push({
@@ -172,15 +175,20 @@ export function generateSeasonalityHtml(result: SeasonalityResult, title?: strin
         const bodyContent =
             `<div data-dashboard="defect-seasonality">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
+            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
             Section({
                 dataSection: 'summary',
                 title: 'Summary',
                 children: MetricGrid({
                     children:
                         MetricCard({ label: 'Total Records', value: String(result.totalRecords) }) +
-                        MetricCard({ label: 'Peak Day', value: result.peakDay }) +
-                        MetricCard({ label: 'Peak Hour', value: peakHourLabel }) +
-                        MetricCard({ label: 'Avg Defects/Day', value: String(avgPerDay) }),
+                        MetricCard({ label: 'Peak Day', value: result.peakDay, target: 'target: N/A' }) +
+                        MetricCard({ label: 'Peak Hour', value: peakHourLabel, target: 'target: N/A' }) +
+                        MetricCard({
+                            label: 'Avg Defects/Day',
+                            value: String(avgPerDay),
+                            target: `target: <${avgPerDay}`,
+                        }),
                 }),
             }) +
             buildDayTable(result.byDayOfWeek) +
