@@ -23,6 +23,9 @@ import {
 import { icon } from '../icons.js';
 import type { TraceabilityResult, TraceabilityNode, TraceabilityAwareness } from './traceability-matrix.js';
 
+const COVERAGE_TARGET = 80;
+const FLAKINESS_TARGET = 10;
+
 function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string {
     const flakinessPct = Math.round(test.flakiness * 100);
     const iconMap: Record<string, string> = { passed: 'check-circle', failed: 'x-circle', skipped: 'skip-forward' };
@@ -151,8 +154,13 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                         label: 'Overall Test Pass Rate',
                         value: result.overallCoverage + '%',
                         severity: coverageSeverity,
+                        target: `target: >=${COVERAGE_TARGET}%`,
                     }) +
-                    MetricCard({ label: 'Avg Flakiness', value: `${totalFlakiness}%` }),
+                    MetricCard({
+                        label: 'Avg Flakiness',
+                        value: `${totalFlakiness}%`,
+                        target: `target: <${FLAKINESS_TARGET}%`,
+                    }),
             }),
         });
 
