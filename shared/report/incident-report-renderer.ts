@@ -16,6 +16,10 @@ import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { icon } from '../icons.js';
 import type { IncidentReport } from './incident-report.js';
 
+const HIGH_SEVERITY_TARGET = 0;
+const MEDIUM_SEVERITY_TARGET = 0;
+const LOW_SEVERITY_TARGET = 0;
+
 function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default' {
     if (s === 'high') return 'error';
     if (s === 'medium') return 'warn';
@@ -58,6 +62,7 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
                 buildSummary(report) +
                 buildEvents(report) +
                 buildRecommendedActions(report),
+            report.timestamp,
         );
 
         return buildHtmlPage({
@@ -77,9 +82,10 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
     }
 }
 
-function wrapContainer(pageTitle: string, children: string): string {
+function wrapContainer(pageTitle: string, children: string, timestamp: string): string {
     return `<div data-component="container" data-dashboard="incident-report">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
     </div>`;
 }
@@ -108,16 +114,19 @@ function buildMetricSummary(report: IncidentReport): string {
                     label: 'High',
                     value: String(report.highCount),
                     severity: report.highCount > 0 ? 'error' : 'default',
+                    target: `target: ${HIGH_SEVERITY_TARGET}`,
                 }) +
                 MetricCard({
                     label: 'Medium',
                     value: String(report.mediumCount),
                     severity: report.mediumCount > 0 ? 'warn' : 'default',
+                    target: `target: ${MEDIUM_SEVERITY_TARGET}`,
                 }) +
                 MetricCard({
                     label: 'Low',
                     value: String(report.lowCount),
                     severity: report.lowCount > 0 ? 'info' : 'default',
+                    target: `target: ${LOW_SEVERITY_TARGET}`,
                 }),
         }),
     });
