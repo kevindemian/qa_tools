@@ -23,6 +23,10 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { RegressionResult, RegressionEntry } from './silent-regression.js';
 
+const REGRESSION_COUNT_TARGET = 0;
+const AVG_INCREASE_WARN_THRESHOLD = 20;
+const AVG_INCREASE_ERROR_THRESHOLD = 50;
+
 function severityBadgeVariant(severity: RegressionEntry['severity']): 'fail' | 'warn' | 'info' | 'default' {
     switch (severity) {
         case 'critical':
@@ -48,6 +52,7 @@ export function generateSilentRegressionHtml(result: RegressionResult | null | u
         const bodyContent = wrapContainer(
             pageTitle,
             buildMetricSummary(result) + buildRegressions(result) + buildRecommendedActions(result),
+            result.timestamp,
         );
 
         return buildHtmlPage({
@@ -66,9 +71,10 @@ export function generateSilentRegressionHtml(result: RegressionResult | null | u
     }
 }
 
-function wrapContainer(pageTitle: string, children: string): string {
+function wrapContainer(pageTitle: string, children: string, timestamp: string): string {
     return `<div data-component="container" data-dashboard="silent-regression">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
     </div>`;
 }
@@ -96,15 +102,17 @@ function buildMetricSummary(result: RegressionResult): string {
                     label: 'Regressions Found',
                     value: String(result.regressions.length),
                     severity: result.regressions.length > 0 ? 'error' : 'success',
+                    target: `target: ${REGRESSION_COUNT_TARGET}`,
                 }) +
                 MetricCard({
                     label: 'Avg Increase',
                     value: avgIncrease > 0 ? `+${avgIncrease}%` : '0%',
                     severity: (() => {
-                        if (avgIncrease > 50) return 'error';
-                        if (avgIncrease > 20) return 'warn';
+                        if (avgIncrease > AVG_INCREASE_ERROR_THRESHOLD) return 'error';
+                        if (avgIncrease > AVG_INCREASE_WARN_THRESHOLD) return 'warn';
                         return 'default';
                     })(),
+                    target: `target: <${AVG_INCREASE_WARN_THRESHOLD}%`,
                 }) +
                 MetricCard({ label: 'Threshold (z)', value: '>' + String(result.threshold) }),
         }),
