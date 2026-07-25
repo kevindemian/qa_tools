@@ -72,6 +72,7 @@ const defaultComputed: ComputedMetrics = {
     impactAlerts: undefined,
     incidentEvents: undefined,
     traceabilityTree: undefined,
+    crossSquad: undefined,
 };
 
 /** Build a fully-satisfied `DataHubPersistence` mock. */

@@ -698,6 +698,8 @@ export interface ComputedMetrics {
     incidentEvents?: import('../report/incident-report.js').IncidentReport | undefined;
     /** Traceability tree: epic > story > test mapping with coverage and health. */
     traceabilityTree?: import('../report/traceability-matrix.js').TraceabilityResult | undefined;
+    /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
+    crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
 }
 
 /**

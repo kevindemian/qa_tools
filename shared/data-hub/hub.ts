@@ -87,6 +87,7 @@ import {
     computeImpactAlerts,
     computeIncidentEvents,
     computeTraceabilityTree,
+    computeCrossSquad,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -852,6 +853,10 @@ export class DataHubImpl implements DataHub {
             metricsRuns,
             flakyRate,
         } as ComputedMetrics);
+        const crossSquad = computeCrossSquad(raw, {
+            passRate,
+            coverage,
+        } as ComputedMetrics);
 
         return {
             passRate,
@@ -890,6 +895,7 @@ export class DataHubImpl implements DataHub {
             impactAlerts,
             incidentEvents,
             traceabilityTree,
+            crossSquad,
         };
     }
 
