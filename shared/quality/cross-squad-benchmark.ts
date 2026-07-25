@@ -66,6 +66,7 @@ export function computeCrossSquadBenchmark(
           }>
         | null
         | undefined,
+    dataHub?: import('../types/data-hub.js').DataHub,
 ): CrossSquadResult {
     if (!Array.isArray(projects)) {
         rootLogger.warn(
@@ -77,7 +78,7 @@ export function computeCrossSquadBenchmark(
             bottomSquad: '',
             averageScore: 0,
             stdDev: 0,
-            timestamp: new Date().toISOString(),
+            timestamp: dataHub?.timestamp.toISOString() ?? new Date().toISOString(),
         };
     }
     const valid = projects.filter((p) => {
@@ -140,6 +141,6 @@ export function computeCrossSquadBenchmark(
         bottomSquad,
         averageScore,
         stdDev,
-        timestamp: new Date().toISOString(),
+        timestamp: dataHub?.timestamp.toISOString() ?? new Date().toISOString(),
     };
 }

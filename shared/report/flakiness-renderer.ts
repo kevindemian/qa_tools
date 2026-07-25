@@ -33,8 +33,8 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
         const pageTitle = title || 'Flakiness Dashboard';
         const sourceBanner = buildSourceQualityBanner(options?.dataHub);
 
-        // Total test count not available from dataHub directly
-        const totalTests = 0;
+        // Total test count from DataHub computed metrics
+        const totalTests = options?.dataHub?.computed.testCounts.total ?? 0;
 
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>

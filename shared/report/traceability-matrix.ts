@@ -233,7 +233,7 @@ export function buildTraceabilityMatrix(
             totalEpics: nodes.length,
             totalTests,
             overallCoverage,
-            timestamp: new Date().toISOString(),
+            timestamp: dataHub.timestamp.toISOString(),
             awareness: buildAwareness(dataHub),
         };
     } catch (err) {
@@ -243,7 +243,7 @@ export function buildTraceabilityMatrix(
             totalEpics: 0,
             totalTests: 0,
             overallCoverage: 0,
-            timestamp: new Date().toISOString(),
+            timestamp: dataHub.timestamp.toISOString(),
             awareness: { categories: [], minConfidence: null },
         };
     }

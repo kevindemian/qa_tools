@@ -179,6 +179,7 @@ export function analyzePipelineImpact(
     coveragePct: number | null | undefined,
     uncoveredEpics: string[],
     _coverageGapResult?: CoverageGapResult,
+    dataHub?: import('../types/data-hub.js').DataHub,
 ): ImpactAlertResult {
     // Rule 24 — non-finite metrics are missing data, not "low". Never generate false critical alerts from NaN.
     if (passRate == null || coveragePct == null || !Number.isFinite(passRate) || !Number.isFinite(coveragePct)) {
@@ -202,6 +203,6 @@ export function analyzePipelineImpact(
         criticalCount: counts.criticalCount,
         warningCount: counts.warningCount,
         infoCount: counts.infoCount,
-        timestamp: new Date().toISOString(),
+        timestamp: dataHub?.timestamp.toISOString() ?? new Date().toISOString(),
     };
 }

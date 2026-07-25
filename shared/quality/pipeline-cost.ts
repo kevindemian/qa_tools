@@ -77,6 +77,6 @@ export function calculatePipelineCost(costPerMinute: number | undefined, dataHub
             from: sortedTimestamps[0] ?? '',
             to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
         },
-        timestamp: new Date().toISOString(),
+        timestamp: dataHub.timestamp.toISOString(),
     };
 }

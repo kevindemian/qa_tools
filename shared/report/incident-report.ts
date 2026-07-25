@@ -64,8 +64,9 @@ export function buildIncidentReport(
     uncoveredEpics: string[],
     passRate: number | null | undefined,
     coverageGap?: CoverageGapResult,
+    dataHub?: import('../types/data-hub.js').DataHub,
 ): IncidentReport {
-    const timestamp = new Date().toISOString();
+    const timestamp = dataHub?.timestamp.toISOString() ?? new Date().toISOString();
 
     const epics = getEpicsFromInputs(uncoveredEpics, coverageGap);
 
