@@ -84,6 +84,7 @@ import {
     detectSilentRegressions,
     computeAiMetrics,
     computeOptimizationActions,
+    computeImpactAlerts,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -834,6 +835,11 @@ export class DataHubImpl implements DataHub {
             testDurationMap,
             Object.fromEntries(flakinessEntries.map((e) => [e.title, e.rate])),
         );
+        const impactAlerts = computeImpactAlerts(raw, {
+            passRate,
+            coverage,
+            topFailingJobs,
+        } as ComputedMetrics);
 
         return {
             passRate,
@@ -869,6 +875,7 @@ export class DataHubImpl implements DataHub {
             regressionDetection,
             aiMetrics,
             optimizationActions,
+            impactAlerts,
         };
     }
 

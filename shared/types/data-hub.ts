@@ -692,6 +692,8 @@ export interface ComputedMetrics {
     regressionDetection?: import('./data-hub-extensions.js').RegressionDetectionResult | undefined;
     /** Suite optimization action recommendations. */
     optimizationActions?: import('./data-hub-extensions.js').OptimizationResult | undefined;
+    /** Impact alerts: pipeline health correlated with coverage gaps and failures. */
+    impactAlerts?: import('../report/impact-alert.js').ImpactAlertResult | undefined;
 }
 
 /**

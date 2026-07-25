@@ -69,6 +69,7 @@ const defaultComputed: ComputedMetrics = {
     testDurationP95: 0,
     runFailureRate: 0,
     testDurationMap: {},
+    impactAlerts: undefined,
 };
 
 /** Build a fully-satisfied `DataHubPersistence` mock. */
