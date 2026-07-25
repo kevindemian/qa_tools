@@ -293,4 +293,27 @@ describe('GenerateDefectTrendHtml', () => {
         expect(html).toContain('>0<');
         expect(html).toContain('>3<');
     });
+
+    it('includes data-part="target" with threshold values', () => {
+        const input: FailureClassification[] = [
+            { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
+            { timestamp: '2026-06-01T11:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'p' },
+        ];
+        const result = aggregateDefectTrends(input);
+        const html = generateDefectTrendHtml(result);
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: stable');
+        expect(html).toContain('target: <10');
+    });
+
+    it('includes data-part="timestamp"', () => {
+        const input: FailureClassification[] = [
+            { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },
+        ];
+        const result = aggregateDefectTrends(input);
+        const html = generateDefectTrendHtml(result);
+
+        expect(html).toContain('data-part="timestamp"');
+    });
 });

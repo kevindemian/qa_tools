@@ -16,6 +16,8 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { DefectTrendResult } from './defect-trend.js';
 import { sanitizeTrendResult } from './defect-trend.js';
 
+const AVG_DEFECTS_PER_DAY_TARGET = 10;
+
 function buildSummaryCards(result: DefectTrendResult): string {
     if (result.topCategories.length === 0) return '';
 
@@ -55,11 +57,13 @@ function buildSummaryCards(result: DefectTrendResult): string {
                         if (trendDirection === 'decreasing') return 'success';
                         return 'default';
                     })(),
+                    target: 'target: stable',
                 }) +
                 MetricCard({
                     label: 'Avg Defects/Day',
                     value: String(avgDefectsPerDay),
-                    severity: avgDefectsPerDay > 10 ? 'warn' : 'default',
+                    severity: avgDefectsPerDay > AVG_DEFECTS_PER_DAY_TARGET ? 'warn' : 'default',
+                    target: `target: <${AVG_DEFECTS_PER_DAY_TARGET}`,
                 }),
         }),
     });
@@ -199,6 +203,7 @@ export function generateDefectTrendHtml(result: DefectTrendResult, title?: strin
         const bodyContent =
             `<div data-dashboard="defect-trend">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
+            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
             buildSummaryCards(result) +
             buildTrendTable(result) +
             buildRecommendedActions(result) +
