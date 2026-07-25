@@ -1,7 +1,7 @@
 /**
  * AI Generation Effectiveness Dashboard — aggregates AI feedback data.
  *
- * Compute layer: produces AiEffectivenessResult from feedback store.
+ * Compute layer: produces AiMetricsResult from feedback store.
  * Render layer: see ai-effectiveness-renderer.ts.
  *
  * @module ai-effectiveness
@@ -22,29 +22,23 @@ interface AiFeedbackStore {
     records: AiFeedbackRecord[];
 }
 
-export interface AiEffectivenessResult {
-    acceptanceRate: number;
-    totalRecords: number;
-    totalGenerated: number;
-    totalModified: number;
-    totalDeleted: number;
-    topPromptVersion: string;
-    byVersion: Array<{ version: string; count: number; acceptanceRate: number }>;
-    trend: Array<{ date: string; acceptanceRate: number; generated: number }>;
-    timestamp: string;
-}
+import type { AiMetricsResult } from '../types/data-hub-extensions.js';
 
-export function computeAiEffectiveness(store: AiFeedbackStore | null | undefined): AiEffectivenessResult {
+export type { AiMetricsResult };
+
+export function computeAiEffectiveness(store: AiFeedbackStore | null | undefined): AiMetricsResult {
     if (!store || store.records.length === 0) {
         return {
             acceptanceRate: 0,
             totalRecords: 0,
             totalGenerated: 0,
+            totalKept: 0,
             totalModified: 0,
             totalDeleted: 0,
             topPromptVersion: '',
             byVersion: [],
             trend: [],
+            requirementScores: {},
             timestamp: new Date().toISOString(),
         };
     }
@@ -53,6 +47,7 @@ export function computeAiEffectiveness(store: AiFeedbackStore | null | undefined
     const accepted = store.records.filter((r) => r.accepted).length;
     const acceptanceRate = Math.round((accepted / totalRecords) * 100);
     const totalGenerated = totalRecords;
+    const totalKept = store.records.filter((r) => r.accepted).length;
     const totalModified = store.records.filter((r) => !r.accepted && r.modificationReason !== 'deleted').length;
     const totalDeleted = store.records.filter((r) => !r.accepted && r.modificationReason === 'deleted').length;
 
@@ -96,11 +91,13 @@ export function computeAiEffectiveness(store: AiFeedbackStore | null | undefined
         acceptanceRate,
         totalRecords,
         totalGenerated,
+        totalKept,
         totalModified,
         totalDeleted,
         topPromptVersion,
         byVersion,
         trend,
+        requirementScores: {},
         timestamp: new Date().toISOString(),
     };
 }

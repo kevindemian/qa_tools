@@ -334,4 +334,37 @@ describe('GenerateAiEffectivenessHtml', () => {
 
         spy.mockRestore();
     });
+
+    it('includes data-part="target" with threshold value', () => {
+        const result = computeAiEffectiveness({
+            records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
+        });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: 80%');
+    });
+
+    it('includes data-part="sample-warning" when sample size is low', () => {
+        const result = computeAiEffectiveness({
+            records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
+        });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).toContain('data-part="sample-warning"');
+        expect(html).toContain('Low sample size');
+    });
+
+    it('does not include sample-warning when sample size is sufficient', () => {
+        const records = Array.from({ length: 30 }, (_, i) => ({
+            timestamp: `2026-06-01T${String(i).padStart(2, '0')}:00:00Z`,
+            promptVersion: 'v1',
+            testTitle: `t${i}`,
+            accepted: true,
+        }));
+        const result = computeAiEffectiveness({ records });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).not.toContain('data-part="sample-warning"');
+    });
 });

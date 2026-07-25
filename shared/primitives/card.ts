@@ -59,16 +59,23 @@ export interface MetricCardProps {
     label: string;
     value: string;
     severity?: 'default' | 'success' | 'error' | 'warn' | 'info';
-    trend?: string;
-    icon?: string;
-    role?: string;
-    ariaLabel?: string;
+    trend?: string | undefined;
+    icon?: string | undefined;
+    role?: string | undefined;
+    ariaLabel?: string | undefined;
+    /** Target/threshold value displayed below the main value (e.g., "target: 80%"). */
+    target?: string | undefined;
+    /** Sample-size warning message displayed when data is insufficient. */
+    sampleWarning?: string | undefined;
 }
 
 export function MetricCard(props: MetricCardProps): string {
     const s = props.severity || 'default';
     const align = props.icon ? 'left' : 'center';
     const color = _severityColor[s] || '';
+    const targetHtml = props.target != null ? `<div data-part="target">${props.target}</div>` : '';
+    const sampleWarningHtml =
+        props.sampleWarning != null ? `<div data-part="sample-warning">${props.sampleWarning}</div>` : '';
     return `<div data-component="metric-card" data-severity="${s}" data-align="${align}"
         role="${props.role || 'region'}"
         ${color ? `style="color:${color}"` : ''}
@@ -76,7 +83,9 @@ export function MetricCard(props: MetricCardProps): string {
         ${props.icon ? `<div data-part="icon">${props.icon}</div>` : ''}
         <div data-part="label">${props.label}</div>
         <div data-part="value">${props.value}</div>
+        ${targetHtml}
         ${props.trend ? `<div data-part="trend">${props.trend}</div>` : ''}
+        ${sampleWarningHtml}
     </div>`;
 }
 

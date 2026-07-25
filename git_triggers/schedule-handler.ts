@@ -7,11 +7,7 @@ import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
-import {
-    computeAiEffectiveness,
-    generateAiEffectivenessHtml,
-    convertGenerationRecordsToFeedback,
-} from '../shared/report/ai-effectiveness.js';
+import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import Config from '../shared/config-accessor.js';
@@ -200,8 +196,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
         const backlog = analyzeBacklogHealth(backlogIssues);
 
         const aiRecords = hub.raw.aiRecords ?? null;
-        const aiStore = convertGenerationRecordsToFeedback(aiRecords ?? undefined);
-        const aiResult = computeAiEffectiveness(aiStore);
+        const aiResult = hub.computed.aiMetrics;
         const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
 
         // Fase 9: Compute real coverage gap analysis for incident/impact reports

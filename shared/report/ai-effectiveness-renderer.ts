@@ -21,9 +21,12 @@ import {
     TrendChart,
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
-import type { AiEffectivenessResult } from './ai-effectiveness.js';
+import type { AiMetricsResult } from '../types/data-hub-extensions.js';
 
-export function generateAiEffectivenessHtml(result: AiEffectivenessResult | null | undefined, title?: string): string {
+const ACCEPTANCE_RATE_TARGET = 80;
+const MIN_SAMPLE_SIZE = 30;
+
+export function generateAiEffectivenessHtml(result: AiMetricsResult | null | undefined, title?: string): string {
     try {
         if (!result) {
             rootLogger.error(
@@ -87,12 +90,12 @@ function Container(pageTitle: string, children: string): string {
     </div>`;
 }
 
-function buildMetricSummary(result: AiEffectivenessResult): string {
+function buildMetricSummary(result: AiMetricsResult): string {
     const { acceptanceRate, totalRecords, totalModified, totalDeleted } = result;
 
     // Determine severity based on acceptance rate
     let severity: 'success' | 'warn' | 'error';
-    if (acceptanceRate >= 80) {
+    if (acceptanceRate >= ACCEPTANCE_RATE_TARGET) {
         severity = 'success';
     } else if (acceptanceRate >= 50) {
         severity = 'warn';
@@ -102,6 +105,12 @@ function buildMetricSummary(result: AiEffectivenessResult): string {
 
     // Calculate modification rate for context
     const modificationRate = totalRecords > 0 ? Math.round((totalModified / totalRecords) * 100) : 0;
+
+    // Sample-size warning
+    const sampleWarning =
+        totalRecords < MIN_SAMPLE_SIZE
+            ? `Low sample size (${totalRecords}/${MIN_SAMPLE_SIZE}) — results may not be statistically significant.`
+            : undefined;
 
     return Section({
         dataSection: 'summary',
@@ -113,16 +122,20 @@ function buildMetricSummary(result: AiEffectivenessResult): string {
                     value: `${acceptanceRate}%`,
                     severity,
                     trend: `${totalRecords} total records`,
+                    target: `target: ${ACCEPTANCE_RATE_TARGET}%`,
+                    sampleWarning,
                 }) +
                 MetricCard({
                     label: 'Modified',
                     value: `${modificationRate}%`,
                     severity: modificationRate > 30 ? 'warn' : 'default',
+                    target: 'target: <30%',
                 }) +
                 MetricCard({
                     label: 'Deleted',
                     value: String(totalDeleted),
                     severity: totalDeleted > 10 ? 'error' : 'default',
+                    target: 'target: <10',
                 }),
         }),
     });
@@ -241,7 +254,7 @@ function buildTrendChart(trend: Array<{ date: string; acceptanceRate: number; ge
     });
 }
 
-function buildActions(result: AiEffectivenessResult): string {
+function buildActions(result: AiMetricsResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Low acceptance rate
