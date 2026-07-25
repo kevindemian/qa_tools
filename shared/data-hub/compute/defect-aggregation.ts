@@ -32,10 +32,12 @@ function updateMinMax(date: string, currentMin: string, currentMax: string): { m
 }
 
 function addToCategoryMap(map: Map<string, Record<string, number>>, key: string, category: string): void {
-    const bucket = map.get(key);
-    if (bucket) {
-        bucket[category] = (bucket[category] ?? 0) + 1;
+    let bucket = map.get(key);
+    if (!bucket) {
+        bucket = {};
+        map.set(key, bucket);
     }
+    bucket[category] = (bucket[category] ?? 0) + 1;
 }
 
 function mapToDayArray(map: Map<string, Record<string, number>>): SeasonalityDay[] {
