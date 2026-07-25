@@ -24,6 +24,10 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { CrossSquadResult } from './cross-squad-benchmark.js';
 
+const BOTTOM_SQUAD_SCORE_ERROR = 60;
+const STD_DEV_WARN = 20;
+const TOP_SQUAD_SCORE_INFO = 80;
+
 const _gradeVariant: Record<string, 'pass' | 'fail' | 'skip' | 'info' | 'warn'> = {
     A: 'pass',
     B: 'info',
@@ -70,7 +74,8 @@ function _buildSummaryCards(result: CrossSquadResult): string {
                 MetricCard({
                     label: 'Std Deviation',
                     value: hasData ? result.stdDev.toFixed(2) : '—',
-                    severity: result.stdDev > 20 ? 'warn' : 'default',
+                    severity: result.stdDev > STD_DEV_WARN ? 'warn' : 'default',
+                    target: `target: <${STD_DEV_WARN}`,
                 }) +
                 MetricCard({
                     label: 'Top Squad',
@@ -141,15 +146,15 @@ function _buildRecommendedActions(result: CrossSquadResult): string {
     if (result.benchmarks.length > 0) {
         // Action 1: Bottom squad with low score
         const bottomSquad = result.benchmarks[result.benchmarks.length - 1];
-        if (bottomSquad && bottomSquad.healthScore < 60) {
+        if (bottomSquad && bottomSquad.healthScore < BOTTOM_SQUAD_SCORE_ERROR) {
             actions.push({
                 severity: 'error',
-                text: `Squad "${sanitizeHtml(bottomSquad.project)}" has a health score of ${bottomSquad.healthScore.toFixed(1)} (below 60). Immediate attention required to improve test quality.`,
+                text: `Squad "${sanitizeHtml(bottomSquad.project)}" has a health score of ${bottomSquad.healthScore.toFixed(1)} (below ${BOTTOM_SQUAD_SCORE_ERROR}). Immediate attention required to improve test quality.`,
             });
         }
 
         // Action 2: High standard deviation
-        if (result.stdDev > 20) {
+        if (result.stdDev > STD_DEV_WARN) {
             actions.push({
                 severity: 'warn',
                 text: `High standard deviation (${result.stdDev.toFixed(1)}) indicates significant quality gaps between squads. Consider cross-squad knowledge sharing and standardized practices.`,
@@ -158,7 +163,7 @@ function _buildRecommendedActions(result: CrossSquadResult): string {
 
         // Action 3: Top squad best practices
         const topSquad = result.benchmarks[0];
-        if (topSquad && topSquad.healthScore > 80) {
+        if (topSquad && topSquad.healthScore > TOP_SQUAD_SCORE_INFO) {
             actions.push({
                 severity: 'info',
                 text: `Squad "${sanitizeHtml(topSquad.project)}" leads with a score of ${topSquad.healthScore.toFixed(1)}. Consider adopting their practices across other squads.`,
@@ -195,6 +200,7 @@ export function generateBenchmarkHtml(result: CrossSquadResult | null | undefine
         const bodyContent =
             `<div data-dashboard="cross-squad-benchmark">` +
             `<h1>${sanitizeHtml(reportTitle)}</h1>` +
+            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
             _buildSummaryCards(result) +
             _buildLeaderboard(result) +
             _buildRecommendedActions(result) +

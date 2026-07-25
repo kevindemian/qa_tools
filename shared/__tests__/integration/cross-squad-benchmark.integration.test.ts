@@ -119,4 +119,49 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             expect(result.averageScore).toBe(0);
         });
     });
+
+    describe('FT-25d: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
+                await import('../../quality/cross-squad-benchmark.js');
+            const projects = [
+                {
+                    name: 'Alpha',
+                    healthScore: 90,
+                    grade: 'A',
+                    passRate: 95,
+                    flakyRate: 3,
+                    coveragePct: 80,
+                    runCount: 100,
+                },
+                {
+                    name: 'Beta',
+                    healthScore: 40,
+                    grade: 'F',
+                    passRate: 50,
+                    flakyRate: 25,
+                    coveragePct: 30,
+                    runCount: 50,
+                },
+            ];
+            const result = computeCrossSquadBenchmark(projects);
+            const html = generateBenchmarkHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: <20');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
+                await import('../../quality/cross-squad-benchmark.js');
+            const result = computeCrossSquadBenchmark([]);
+            const html = generateBenchmarkHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });
