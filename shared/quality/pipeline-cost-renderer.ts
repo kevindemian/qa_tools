@@ -15,6 +15,10 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { PipelineCostResult } from './pipeline-cost.js';
 
+const TOTAL_COST_WARN_THRESHOLD = 50;
+const TOTAL_COST_ERROR_THRESHOLD = 100;
+const AVG_COST_PER_RUN_WARN_THRESHOLD = 10;
+
 function formatCurrency(value: number): string {
     return '$' + value.toFixed(2);
 }
@@ -45,7 +49,10 @@ export function generatePipelineCostHtml(result: PipelineCostResult | null | und
         const pageTitle = title || 'Pipeline Cost Analytics';
 
         let bodyContent =
-            `<div data-dashboard="pipeline-cost">` + `<h1>${sanitizeHtml(pageTitle)}</h1>` + buildMetricSummary(result);
+            `<div data-dashboard="pipeline-cost">` +
+            `<h1>${sanitizeHtml(pageTitle)}</h1>` +
+            `<div data-part="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
+            buildMetricSummary(result);
 
         if (result.costByRun.length === 0) {
             bodyContent += EmptyState({
@@ -90,21 +97,24 @@ function buildMetricSummary(result: PipelineCostResult): string {
                     label: 'Total Cost',
                     value: formatCurrency(result.totalCost),
                     severity: (() => {
-                        if (result.totalCost > 100) return 'error';
-                        if (result.totalCost > 50) return 'warn';
+                        if (result.totalCost > TOTAL_COST_ERROR_THRESHOLD) return 'error';
+                        if (result.totalCost > TOTAL_COST_WARN_THRESHOLD) return 'warn';
                         return 'info';
                     })(),
+                    target: `target: <${formatCurrency(TOTAL_COST_WARN_THRESHOLD)}`,
                 }) +
                 MetricCard({
                     label: 'Avg Cost / Run',
                     value: formatCurrency(result.avgCostPerRun),
-                    severity: result.avgCostPerRun > 10 ? 'warn' : 'info',
+                    severity: result.avgCostPerRun > AVG_COST_PER_RUN_WARN_THRESHOLD ? 'warn' : 'info',
+                    target: `target: <${formatCurrency(AVG_COST_PER_RUN_WARN_THRESHOLD)}`,
                 }) +
                 MetricCard({
                     label: 'Failed Cost',
                     value: formatCurrency(failedCost),
                     severity: failedCost > 0 ? 'error' : 'success',
                     trend: failedRuns.length > 0 ? `${failedRuns.length} failed run(s)` : '',
+                    target: 'target: $0.00',
                 }) +
                 MetricCard({
                     label: 'Total Duration',

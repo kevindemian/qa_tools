@@ -528,3 +528,43 @@ describe('CalculatePipelineCost — SSOT consumption (computed.perRunCosts)', ()
         expect(nonNull(result.costByRun[0]).durationSec).toBe(60);
     });
 });
+
+describe('GeneratePipelineCostHtml — data attributes', () => {
+    function makeResult(overrides?: Partial<PipelineCostResult>): PipelineCostResult {
+        return {
+            totalCost: 0.08,
+            avgCostPerRun: 0.04,
+            totalDurationSec: 480,
+            costPerMinute: 0.01,
+            costByRun: [
+                {
+                    timestamp: '2026-06-03T12:00:00.000Z',
+                    durationSec: 60,
+                    cost: 0.01,
+                    status: 'partial',
+                },
+            ],
+            runCount: 1,
+            period: { from: '2026-06-03T12:00:00.000Z', to: '2026-06-03T12:00:00.000Z' },
+            timestamp: '2026-06-03T12:00:00.000Z',
+            ...overrides,
+        };
+    }
+
+    it('includes data-part="target" with threshold values', () => {
+        const result = makeResult();
+        const html = generatePipelineCostHtml(result);
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: <$50.00');
+        expect(html).toContain('target: <$10.00');
+        expect(html).toContain('target: $0.00');
+    });
+
+    it('includes data-part="timestamp"', () => {
+        const result = makeResult();
+        const html = generatePipelineCostHtml(result);
+
+        expect(html).toContain('data-part="timestamp"');
+    });
+});
