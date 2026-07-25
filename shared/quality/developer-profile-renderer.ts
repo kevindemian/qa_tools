@@ -183,7 +183,7 @@ export function generateDeveloperProfileHtml(
         let bodyContent =
             `<div data-dashboard="developer-profile">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-            `<div class="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
+            `<div class="timestamp" data-part="timestamp">${sanitizeHtml(result.timestamp)}</div>` +
             Section({
                 dataSection: 'summary',
                 title: 'Summary',
@@ -199,6 +199,7 @@ export function generateDeveloperProfileHtml(
                             label: 'Top Failure Author',
                             value: sanitizeHtml(result.topFailureAuthor) || '\u2014',
                             severity: result.totalFailures > 0 ? 'error' : 'default',
+                            target: 'target: 0',
                         }),
                 }),
             });
