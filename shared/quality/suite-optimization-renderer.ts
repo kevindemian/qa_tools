@@ -19,6 +19,8 @@ import { rootLogger } from '../logger.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import type { OptimizationResult } from './suite-optimization.js';
 
+const POTENTIAL_SAVINGS_WARN_THRESHOLD = 60;
+
 function buildRecommendedActions(result: OptimizationResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
@@ -46,7 +48,7 @@ function buildRecommendedActions(result: OptimizationResult): string {
     }
 
     // Action 3: Potential savings
-    if (result.potentialSavings > 60) {
+    if (result.potentialSavings > POTENTIAL_SAVINGS_WARN_THRESHOLD) {
         actions.push({
             severity: 'warn',
             text: `Potential savings of ${result.potentialSavings.toFixed(1)}s identified. Consider parallelization or splitting slow tests.`,
@@ -82,6 +84,7 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
     let bodyContent =
         `<div data-dashboard="suite-optimization">` +
         `<h1>${sanitizeHtml(pageTitle)}</h1>` +
+        `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
         Section({
             dataSection: 'summary',
             title: 'Summary',
@@ -97,6 +100,7 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
                         label: 'Potential Savings',
                         value: `${result.potentialSavings.toFixed(1)}s`,
                         severity: result.potentialSavings > 0 ? 'success' : 'default',
+                        target: `target: <${POTENTIAL_SAVINGS_WARN_THRESHOLD}s`,
                     }),
             }),
         });
