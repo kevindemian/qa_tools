@@ -23,11 +23,18 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { RequirementScoreResult } from './requirement-score.js';
 
+const OVERALL_SCORE_ERROR = 40;
+const OVERALL_SCORE_WARN = 75;
+const ACCEPTANCE_RATE_WARN = 50;
+const ACCEPTANCE_RATE_INFO = 70;
+const LOW_SCORE_ENTRIES_ERROR = 40;
+const DELETION_RATE_WARN = 0.3;
+
 function buildRecommendedActions(result: RequirementScoreResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Low overall score
-    if (result.overallScore < 40) {
+    if (result.overallScore < OVERALL_SCORE_ERROR) {
         actions.push({
             severity: 'error',
             text: `Overall requirement quality score is ${result.overallScore} (grade ${result.overallGrade}). Immediate action required to improve testability.`,
@@ -35,7 +42,7 @@ function buildRecommendedActions(result: RequirementScoreResult): string {
     }
 
     // Action 2: Low acceptance rate
-    if (result.averageAcceptanceRate < 50) {
+    if (result.averageAcceptanceRate < ACCEPTANCE_RATE_WARN) {
         actions.push({
             severity: 'warn',
             text: `Average acceptance rate is ${result.averageAcceptanceRate}%. Review test generation quality and requirement clarity.`,
@@ -43,7 +50,7 @@ function buildRecommendedActions(result: RequirementScoreResult): string {
     }
 
     // Action 3: Low score entries with names
-    const lowScoreEntries = result.entries.filter((e) => e.score < 40);
+    const lowScoreEntries = result.entries.filter((e) => e.score < LOW_SCORE_ENTRIES_ERROR);
     if (lowScoreEntries.length > 0) {
         const reqNames = lowScoreEntries
             .slice(0, 3)
@@ -52,12 +59,12 @@ function buildRecommendedActions(result: RequirementScoreResult): string {
         const moreText = lowScoreEntries.length > 3 ? ` and ${lowScoreEntries.length - 3} more` : '';
         actions.push({
             severity: 'warn',
-            text: `${lowScoreEntries.length} requirement(s) have scores below 40: ${reqNames}${moreText}. Prioritize improvements.`,
+            text: `${lowScoreEntries.length} requirement(s) have scores below ${LOW_SCORE_ENTRIES_ERROR}: ${reqNames}${moreText}. Prioritize improvements.`,
         });
     }
 
     // Action 4: High deletion rate
-    if (result.totalDeleted > result.totalGenerated * 0.3) {
+    if (result.totalDeleted > result.totalGenerated * DELETION_RATE_WARN) {
         actions.push({
             severity: 'warn',
             text: `${result.totalDeleted} tests were deleted (${((result.totalDeleted / result.totalGenerated) * 100).toFixed(0)}% of generated). Review deletion reasons to identify systematic issues.`,
@@ -102,6 +109,7 @@ export function generateRequirementScoreHtml(
         let bodyContent =
             `<div data-dashboard="requirement-score">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
+            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
             Section({
                 dataSection: 'summary',
                 title: 'Summary',
@@ -116,19 +124,21 @@ export function generateRequirementScoreHtml(
                             label: 'Overall Score',
                             value: result.overallGrade,
                             severity: (() => {
-                                if (result.overallScore >= 75) return 'info';
-                                if (result.overallScore >= 40) return 'warn';
+                                if (result.overallScore >= OVERALL_SCORE_WARN) return 'info';
+                                if (result.overallScore >= OVERALL_SCORE_ERROR) return 'warn';
                                 return 'error';
                             })(),
+                            target: `target: >=${OVERALL_SCORE_WARN}`,
                         }) +
                         MetricCard({
                             label: 'Acceptance Rate',
                             value: result.averageAcceptanceRate + '%',
                             severity: (() => {
-                                if (result.averageAcceptanceRate >= 70) return 'info';
-                                if (result.averageAcceptanceRate >= 40) return 'warn';
+                                if (result.averageAcceptanceRate >= ACCEPTANCE_RATE_INFO) return 'info';
+                                if (result.averageAcceptanceRate >= ACCEPTANCE_RATE_WARN) return 'warn';
                                 return 'error';
                             })(),
+                            target: `target: >=${ACCEPTANCE_RATE_INFO}%`,
                         }) +
                         MetricCard({
                             label: 'Kept/Modified/Deleted',
