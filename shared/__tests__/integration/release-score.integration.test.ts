@@ -120,4 +120,27 @@ describe('Integration: Release Score', () => {
             expect(html).toContain('Release Readiness Score');
         });
     });
+
+    describe('FT-14f: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
+            const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
+            const html = generateReleaseScoreHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: >=80%');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
+            const result = calculateReleaseScore(50, 50, 'pass', 50, 50);
+            const html = generateReleaseScoreHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });

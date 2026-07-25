@@ -14,6 +14,9 @@ import { Badge, MetricCard, MetricGrid, Section, RecommendedActions, EmptyState 
 import type { ReleaseScoreResult } from './release-score.js';
 import { icon } from '../icons.js';
 
+const SCORE_CRITICAL = 50;
+const SCORE_QUALITY_GATE = 80;
+
 export function generateReleaseScoreHtml(result: ReleaseScoreResult | null | undefined): string {
     if (!result) {
         return buildHtmlPage({
@@ -54,22 +57,23 @@ export function generateReleaseScoreHtml(result: ReleaseScoreResult | null | und
 function wrapContainer(pageTitle: string, children: string): string {
     return `<div data-component="container" data-dashboard="release-score">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>
         ${children}
     </div>`;
 }
 
 function buildScoreSummary(result: ReleaseScoreResult): string {
     let scoreSeverity: 'success' | 'warn' | 'error';
-    if (result.score >= 80) {
+    if (result.score >= SCORE_QUALITY_GATE) {
         scoreSeverity = 'success';
-    } else if (result.score >= 50) {
+    } else if (result.score >= SCORE_CRITICAL) {
         scoreSeverity = 'warn';
     } else {
         scoreSeverity = 'error';
     }
 
     // Calculate deployment gate status
-    const deploymentReady = result.score >= 80;
+    const deploymentReady = result.score >= SCORE_QUALITY_GATE;
     const gateStatus = deploymentReady ? `${icon('check-circle', 14)} READY` : `${icon('x-circle', 14)} NOT READY`;
     const gateSeverity = deploymentReady ? 'success' : 'error';
 
@@ -82,7 +86,12 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
         dataSection: 'score',
         children: MetricGrid({
             children:
-                MetricCard({ label: 'Score', value: String(result.score) + '%', severity: scoreSeverity }) +
+                MetricCard({
+                    label: 'Score',
+                    value: String(result.score) + '%',
+                    severity: scoreSeverity,
+                    target: `target: >=${SCORE_QUALITY_GATE}%`,
+                }) +
                 MetricCard({ label: 'Grade', value: result.grade, severity: scoreSeverity }) +
                 MetricCard({
                     label: 'Checks',
@@ -136,18 +145,18 @@ function buildRecommendedActions(result: ReleaseScoreResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Low score
-    if (result.score < 50) {
+    if (result.score < SCORE_CRITICAL) {
         actions.push({
             severity: 'error',
-            text: `Release score is ${result.score}% — critically low. Critical issues must be resolved before release. Do NOT deploy until score reaches 50%.`,
+            text: `Release score is ${result.score}% — critically low. Critical issues must be resolved before release. Do NOT deploy until score reaches ${SCORE_CRITICAL}%.`,
         });
     }
 
     // Action 2: Below quality gate
-    if (result.score >= 50 && result.score < 80) {
+    if (result.score >= SCORE_CRITICAL && result.score < SCORE_QUALITY_GATE) {
         actions.push({
             severity: 'warn',
-            text: `Release score is ${result.score}% — below the 80% quality gate. Address remaining issues to reach deployment readiness.`,
+            text: `Release score is ${result.score}% — below the ${SCORE_QUALITY_GATE}% quality gate. Address remaining issues to reach deployment readiness.`,
         });
     }
 
@@ -161,7 +170,7 @@ function buildRecommendedActions(result: ReleaseScoreResult): string {
     }
 
     // Action 4: Deployment gate
-    if (result.score >= 80) {
+    if (result.score >= SCORE_QUALITY_GATE) {
         actions.push({
             severity: 'info',
             text: 'Release score meets quality thresholds. Ready for deployment.',
