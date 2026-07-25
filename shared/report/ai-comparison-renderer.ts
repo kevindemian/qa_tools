@@ -24,28 +24,58 @@ import {
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { AiComparisonResult } from './ai-comparison.js';
 
+const PASS_RATE_TARGET = 80;
+const FLAKINESS_TARGET = 0.1;
+const MIN_SAMPLE_SIZE = 30;
+
 function buildComparisonCards(result: AiComparisonResult): string {
     // Calculate sample size warning
     const aiSampleSize = result.aiTotal;
     const manualSampleSize = result.manualTotal;
-    const aiSampleSeverity = aiSampleSize < 30 ? 'warn' : 'default';
-    const manualSampleSeverity = manualSampleSize < 30 ? 'warn' : 'default';
+    const aiSampleSeverity = aiSampleSize < MIN_SAMPLE_SIZE ? 'warn' : 'default';
+    const manualSampleSeverity = manualSampleSize < MIN_SAMPLE_SIZE ? 'warn' : 'default';
+
+    const aiSampleWarning = aiSampleSize < MIN_SAMPLE_SIZE ? `data-part="sample-warning" data-severity="warn"` : '';
+    const manualSampleWarning =
+        manualSampleSize < MIN_SAMPLE_SIZE ? `data-part="sample-warning" data-severity="warn"` : '';
 
     return Section({
         dataSection: 'comparison',
         title: 'Comparison Overview',
         children: MetricGrid({
             children:
-                MetricCard({ label: 'AI Pass Rate', value: `${result.aiPassRate}%` }) +
-                MetricCard({ label: 'Manual Pass Rate', value: `${result.manualPassRate}%` }) +
-                MetricCard({ label: 'AI Sample Size', value: String(aiSampleSize), severity: aiSampleSeverity }) +
+                MetricCard({
+                    label: 'AI Pass Rate',
+                    value: `${result.aiPassRate}%`,
+                    target: `target: ${PASS_RATE_TARGET}%`,
+                }) +
+                MetricCard({
+                    label: 'Manual Pass Rate',
+                    value: `${result.manualPassRate}%`,
+                    target: `target: ${PASS_RATE_TARGET}%`,
+                }) +
+                MetricCard({
+                    label: 'AI Sample Size',
+                    value: String(aiSampleSize),
+                    severity: aiSampleSeverity,
+                    ...(aiSampleWarning ? { sampleWarning: aiSampleWarning } : {}),
+                }) +
                 MetricCard({
                     label: 'Manual Sample Size',
                     value: String(manualSampleSize),
                     severity: manualSampleSeverity,
+                    ...(manualSampleWarning ? { sampleWarning: manualSampleWarning } : {}),
                 }) +
-                MetricCard({ label: 'AI Avg Flakiness', value: result.aiFlakinessAvg.toFixed(3) }) +
-                MetricCard({ label: 'Manual Avg Flakiness', value: result.manualFlakinessAvg.toFixed(3) }) +
+                MetricCard({
+                    label: 'AI Avg Flakiness',
+                    value: result.aiFlakinessAvg.toFixed(3),
+                    target: `target: <${FLAKINESS_TARGET}`,
+                }) +
+                MetricCard({
+                    label: 'Manual Avg Flakiness',
+                    value: result.manualFlakinessAvg.toFixed(3),
+                    target: `target: <${FLAKINESS_TARGET}`,
+                }) +
                 MetricCard({ label: 'AI Acceptance', value: result.aiAcceptanceRate.toFixed(2) }) +
                 MetricCard({ label: 'Manual Acceptance', value: result.manualAcceptanceRate.toFixed(2) }),
         }),
@@ -77,8 +107,8 @@ function buildAdvantageSection(result: AiComparisonResult): string {
 
     // Add sample size context
     const sampleSizeWarning =
-        result.aiTotal < 30 || result.manualTotal < 30
-            ? ` ${icon('alert-triangle', 14)} Small sample size — results may not be statistically significant.`
+        result.aiTotal < MIN_SAMPLE_SIZE || result.manualTotal < MIN_SAMPLE_SIZE
+            ? ` <span data-part="sample-warning" data-severity="warn">${icon('alert-triangle', 14)} Small sample size — results may not be statistically significant.</span>`
             : '';
 
     return Section({
@@ -104,7 +134,7 @@ function buildVersionTable(result: AiComparisonResult): string {
 
     const rows: TableRow[] = result.byVersion.map((v) => {
         let qualityBadge: string;
-        if (v.version === bestVersion && v.passRate > 80) {
+        if (v.version === bestVersion && v.passRate > PASS_RATE_TARGET) {
             qualityBadge = Badge({ variant: 'pass', children: 'Best' });
         } else if (v.passRate < 50) {
             qualityBadge = Badge({ variant: 'fail', children: 'Needs Work' });
@@ -158,7 +188,7 @@ function buildRecommendedActions(result: AiComparisonResult): string {
     }
 
     // Action 4: Sample size warning
-    if (result.aiTotal < 30 || result.manualTotal < 30) {
+    if (result.aiTotal < MIN_SAMPLE_SIZE || result.manualTotal < MIN_SAMPLE_SIZE) {
         actions.push({
             text: `Small sample size detected — AI: ${result.aiTotal} tests, Manual: ${result.manualTotal} tests. Results may not be statistically significant. Increase sample size for reliable comparison.`,
             severity: 'warn',
@@ -169,7 +199,7 @@ function buildRecommendedActions(result: AiComparisonResult): string {
     if (result.byVersion.length > 1) {
         const sorted = [...result.byVersion].sort((a, b) => b.passRate - a.passRate);
         const best = sorted[0];
-        if (best && best.passRate > 80) {
+        if (best && best.passRate > PASS_RATE_TARGET) {
             actions.push({
                 text: `Best performing version: "${sanitizeHtml(best.version)}" with ${best.passRate}% pass rate. Consider reusing for new tests.`,
                 severity: 'info',
@@ -214,7 +244,7 @@ export function generateAiComparisonHtml(result: AiComparisonResult | null | und
             title: pageTitle,
             styles: buildCss(),
             theme: 'system',
-            bodyContent: wrapContainer(pageTitle, bodyContent),
+            bodyContent: wrapContainer(pageTitle, bodyContent, result.timestamp),
             footer: `Generated by QA Tools — ${pageTitle}`,
         });
     } catch (err) {
@@ -231,9 +261,10 @@ export function generateAiComparisonHtml(result: AiComparisonResult | null | und
     }
 }
 
-function wrapContainer(pageTitle: string, children: string): string {
+function wrapContainer(pageTitle: string, children: string, timestamp: string): string {
     return `<div data-component="container" data-dashboard="ai-comparison">
         <h1>${sanitizeHtml(pageTitle)}</h1>
+        <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
     </div>`;
 }

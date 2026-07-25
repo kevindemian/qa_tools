@@ -362,4 +362,33 @@ describe('GenerateAiComparisonHtml', () => {
 
         expect(html).toContain('0.67');
     });
+
+    it('includes data-part="target" with threshold values', () => {
+        const html = generateAiComparisonHtml(sampleResult());
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: 80%');
+        expect(html).toContain('target: <0.1');
+    });
+
+    it('includes data-part="sample-warning" when sample size is low', () => {
+        const result = sampleResult({ aiTotal: 15, manualTotal: 15 });
+        const html = generateAiComparisonHtml(result);
+
+        expect(html).toContain('data-part="sample-warning"');
+        expect(html).toContain('Small sample size');
+    });
+
+    it('does not include sample-warning when sample size is sufficient', () => {
+        const result = sampleResult({ aiTotal: 50, manualTotal: 50 });
+        const html = generateAiComparisonHtml(result);
+
+        expect(html).not.toContain('data-part="sample-warning"');
+    });
+
+    it('includes data-part="timestamp"', () => {
+        const html = generateAiComparisonHtml(sampleResult());
+
+        expect(html).toContain('data-part="timestamp"');
+    });
 });
