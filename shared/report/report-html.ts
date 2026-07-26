@@ -103,20 +103,50 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         const title = options?.title || DEFAULT_TITLE;
         const passRate = calcRunPassRate(stats);
         const categories = options?.testCategories || precomputeCategories(tests);
+        const timestamp = options?.generatedAt || new Date().toISOString();
 
         let bodyContent = '<h1>' + title + '</h1>';
+        bodyContent += `<div data-part="timestamp" data-dashboard="test-report">${timestamp}</div>`;
+        bodyContent += `<div data-section="summary">`;
         bodyContent += buildSummaryCards(stats, passRate);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="failed-summary">`;
         bodyContent += buildFailedSummary(tests, stats);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="llm-analysis">`;
         bodyContent += buildLlmSection(options || { title: '', includeChart: true });
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="charts">`;
         bodyContent += buildChartSection(stats, options?.includeChart !== false);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="trends">`;
         bodyContent += buildTrendSection(options?.trends || []);
-        if (options?.qualityGate !== undefined) bodyContent += buildQualityGate(passRate, options.qualityGate);
-        if (options?.healthScore) bodyContent += buildHealthSection(options.healthScore);
+        bodyContent += `</div>`;
+        if (options?.qualityGate !== undefined) {
+            bodyContent += `<div data-section="quality-gate">`;
+            bodyContent += buildQualityGate(passRate, options.qualityGate);
+            bodyContent += `</div>`;
+        }
+        if (options?.healthScore) {
+            bodyContent += `<div data-section="health">`;
+            bodyContent += buildHealthSection(options.healthScore);
+            bodyContent += `</div>`;
+        }
 
+        bodyContent += `<div data-section="test-table">`;
         bodyContent += _buildTestTableSection(tests, categories, options);
-        if (options?.diffComparison) bodyContent += buildDiffComparisonSection(options.diffComparison);
+        bodyContent += `</div>`;
+        if (options?.diffComparison) {
+            bodyContent += `<div data-section="diff-comparison">`;
+            bodyContent += buildDiffComparisonSection(options.diffComparison);
+            bodyContent += `</div>`;
+        }
+        bodyContent += `<div data-section="flakiness-link">`;
         bodyContent += _buildFlakinessLink(options || { title: '', includeChart: true });
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="timeline">`;
         bodyContent += buildTimeline(tests);
+        bodyContent += `</div>`;
 
         return buildHtmlPage({
             title,
@@ -187,6 +217,7 @@ export function generateCoverageHtml(epics: CoverageEpic[], title?: string): str
             0,
         );
         const closePct = totalIssues > 0 ? ((closedIssues / totalIssues) * 100).toFixed(1) : '0.0';
+        const timestamp = new Date().toISOString();
 
         let epicRows = '';
         for (const e of epics) {
@@ -199,13 +230,18 @@ export function generateCoverageHtml(epics: CoverageEpic[], title?: string): str
             '<h1>' +
             reportTitle +
             '</h1>' +
+            `<div data-part="timestamp" data-dashboard="coverage-report">${timestamp}</div>` +
+            `<div data-section="summary">` +
             '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">' +
-            MetricCard({ label: 'Total Epics', value: String(epics.length) }) +
+            MetricCard({ label: 'Total Epics', value: String(epics.length), target: 'target: 100%' }) +
             MetricCard({ label: 'Total Issues', value: String(totalIssues) }) +
-            MetricCard({ label: 'Closed', value: String(closedIssues), severity: 'success' }) +
-            MetricCard({ label: 'Coverage', value: closePct + '%' }) +
+            MetricCard({ label: 'Closed', value: String(closedIssues), severity: 'success', target: 'target: 80%' }) +
+            MetricCard({ label: 'Coverage', value: closePct + '%', target: 'target: 80%' }) +
             '</div>' +
-            epicRows;
+            `</div>` +
+            `<div data-section="epics">` +
+            epicRows +
+            `</div>`;
 
         return buildHtmlPage({
             title: reportTitle,

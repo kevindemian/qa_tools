@@ -154,6 +154,8 @@ export function buildTimeline(tests: FlatTest[]): string {
 }
 
 export function buildSummaryCards(stats: ReportStats, passRate: number): string {
+    const sampleWarning =
+        stats.total < 30 ? `Only ${stats.total} tests — results may not be statistically significant` : undefined;
     return MetricGrid({
         children:
             MetricCard({
@@ -171,7 +173,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number): string 
                 value: String(stats.skipped) + pctSub(stats.skipped, stats.total),
                 severity: 'warn',
             }) +
-            MetricCard({ label: 'Total', value: String(stats.total) }) +
+            MetricCard({ label: 'Total', value: String(stats.total), sampleWarning }) +
             MetricCard({ label: 'Duration', value: fmtDuration(stats.duration) }) +
             MetricCard({
                 label: 'Pass Rate',
@@ -182,6 +184,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number): string 
                     if (cls === 'warn') return 'warn';
                     return 'error';
                 })(),
+                target: 'target: 80%',
             }),
     });
 }
