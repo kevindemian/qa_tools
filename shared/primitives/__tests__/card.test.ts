@@ -85,7 +85,6 @@ describe('Card primitives', () => {
             const html = CardGrid({ children: 'cards' });
 
             expect(html).toContain('data-component="card-grid"');
-            expect(html).toContain('display:grid');
             expect(html).toContain('cards');
         });
     });
@@ -95,7 +94,6 @@ describe('Card primitives', () => {
             const html = MetricGrid({ children: 'metrics' });
 
             expect(html).toContain('data-component="metric-grid"');
-            expect(html).toContain('display:flex');
             expect(html).toContain('metrics');
         });
     });

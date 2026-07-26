@@ -98,7 +98,7 @@ describe('Table primitives', () => {
             const html = Tr({ children: '', onClick: 'alert()' });
 
             expect(html).toContain('onclick="alert()"');
-            expect(html).toContain('cursor:pointer');
+            expect(html).toContain('data-clickable="true"');
         });
 
         it('renders with ariaExpanded', () => {

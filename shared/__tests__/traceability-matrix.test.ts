@@ -399,8 +399,8 @@ describe('GenerateTraceabilityHtml', () => {
         });
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('epic-node');
-        expect(html).toContain('story-node');
+        expect(html).toContain('data-component="epic"');
+        expect(html).toContain('data-component="story"');
         expect(html).toContain('test-row');
         expect(html).toContain('EPIC-1');
         expect(html).toContain('STORY-1');

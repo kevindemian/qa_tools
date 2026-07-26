@@ -111,11 +111,11 @@ export interface TrProps {
 
 export function Tr(props: TrProps): string {
     const clickAttr = props.onClick ? ` onclick="${props.onClick}"` : '';
-    const styleAttr = props.onClick ? ` style="cursor:pointer"` : '';
+    const clickableAttr = props.onClick ? ` data-clickable="true"` : '';
     return `<tr data-row="${sanitizeHtml(props.key || '')}"
         role="${props.role || 'row'}"
         ${props.ariaExpanded !== undefined ? `aria-expanded="${props.ariaExpanded}"` : ''}
-        ${clickAttr}${styleAttr}
+        ${clickAttr}${clickableAttr}
         class="${props.class || ''}"
         ${props.attrs || ''}>
         ${props.children}

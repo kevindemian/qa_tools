@@ -11,7 +11,15 @@ import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
+import {
+    MetricCard,
+    MetricGrid,
+    Card,
+    Section,
+    EmptyState,
+    RecommendedActions,
+    SeverityBadge,
+} from '../primitives/index.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { icon } from '../icons.js';
 import type { IncidentReport } from './incident-report.js';
@@ -58,7 +66,7 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
 
         const bodyContent = wrapContainer(
             pageTitle,
-            SeverityBanner(report.overallSeverity) +
+            SeverityBadge({ severity: report.overallSeverity, children: report.overallSeverity }) +
                 buildMetricSummary(report) +
                 buildSummary(report) +
                 buildEvents(report) +
@@ -88,19 +96,6 @@ function wrapContainer(pageTitle: string, children: string, timestamp: string): 
         <h1>${sanitizeHtml(pageTitle)}</h1>
         <div data-part="timestamp">${sanitizeHtml(timestamp)}</div>
         ${children}
-    </div>`;
-}
-
-function SeverityBanner(severity: string): string {
-    const severityIcons = new Map([
-        ['high', 'x-circle'],
-        ['medium', 'alert-triangle'],
-        ['low', 'check-circle'],
-    ]);
-    const iconSvg = icon(severityIcons.get(severity) ?? 'info', 14);
-
-    return `<div data-component="severity-banner">
-        ${iconSvg} Overall Severity: ${sanitizeHtml(severity.toUpperCase())}
     </div>`;
 }
 

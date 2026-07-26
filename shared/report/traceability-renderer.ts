@@ -48,7 +48,7 @@ function buildTestHtml(test: TraceabilityNode['stories'][0]['tests'][0]): string
 
 function buildStoryHtml(story: TraceabilityNode['stories'][0]): string {
     const testsHtml = story.tests.map((t) => buildTestHtml(t)).join('');
-    return `<div class="story-node" data-component="story">
+    return `<div data-component="story">
         <div class="story-header" data-part="header" data-action="toggle-collapse">
             <span data-part="toggle-icon">&#9660;</span>
             <span data-part="key">${sanitizeHtml(story.key)}</span>
@@ -81,7 +81,7 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
         coverageIndicator = ` ${icon('check-circle', 12)}`;
     }
 
-    return `<div class="epic-node" data-component="epic">
+    return `<div data-component="epic">
         <div class="epic-header" data-part="header" data-action="toggle-collapse">
             <span data-part="toggle-icon">&#9660;</span>
             <span data-part="key">${sanitizeHtml(node.epic)}${coverageIndicator}</span>

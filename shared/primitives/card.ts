@@ -100,7 +100,6 @@ export interface CardGridProps {
 export function CardGrid(props: CardGridProps): string {
     return `<div data-component="card-grid"
         role="${props.role || 'group'}"
-        style="display:grid"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
@@ -116,7 +115,6 @@ export interface MetricGridProps {
 export function MetricGrid(props: MetricGridProps): string {
     return `<div data-component="metric-grid"
         role="${props.role || 'group'}"
-        style="display:flex"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;

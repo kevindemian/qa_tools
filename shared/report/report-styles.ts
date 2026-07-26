@@ -275,6 +275,7 @@ const TABLE_COMPONENT_CSS = `
 [data-component='data-table'] th{padding:${tokens.spacing.sm}px ${tokens.spacing.md}px;text-align:left;font-size:${tokens.fontSize.sm};text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)}
 [data-component='data-table'] td{padding:${tokens.spacing.sm}px ${tokens.spacing.md}px;font-size:${tokens.fontSize.md};color:var(--color-text-primary);border-bottom:1px solid var(--color-border-subtle)}
 [data-component='data-table'] tr:hover{background:var(--color-surface-elevated)}
+[data-component='data-table'] tr[data-clickable="true"]{cursor:pointer}
 `;
 
 const CHART_COMPONENT_CSS = `

@@ -32,8 +32,8 @@ describe('Incident Report.Integration', () => {
                 expect(html).toContain('Incident Investigation Report');
                 expect(html).toContain('data-component="metric-card"');
                 expect(html).toContain('data-component="card"');
-                expect(html).toContain('Overall Severity');
-                expect(html).toContain('HIGH');
+                expect(html).toContain('data-component="badge"');
+                expect(html).toContain('high');
                 expect(html).toContain('4 incident(s) detected');
             });
 
@@ -63,7 +63,7 @@ describe('Incident Report.Integration', () => {
 
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('No incidents to display');
-                expect(html).toContain('Overall Severity: NONE');
+                expect(html).toContain('data-component="badge"');
             });
         });
 
