@@ -26,6 +26,8 @@ import {
 } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
 
+const COVERAGE_THRESHOLD = 50;
+
 function buildSummaryCards(result: CoverageGapResult): string {
     const t = result.totals;
     return MetricGrid({
@@ -36,12 +38,14 @@ function buildSummaryCards(result: CoverageGapResult): string {
             MetricCard({
                 label: 'Weighted Coverage',
                 value: t.weightedCoveragePct + '%',
-                severity: t.weightedCoveragePct >= 50 ? 'success' : 'error',
+                severity: t.weightedCoveragePct >= COVERAGE_THRESHOLD ? 'success' : 'error',
+                target: `target: >=${COVERAGE_THRESHOLD}%`,
             }) +
             MetricCard({
                 label: 'Raw Coverage',
                 value: t.rawCoveragePct + '%',
-                severity: t.rawCoveragePct >= 50 ? 'success' : 'error',
+                severity: t.rawCoveragePct >= COVERAGE_THRESHOLD ? 'success' : 'error',
+                target: `target: >=${COVERAGE_THRESHOLD}%`,
             }),
     });
 }
@@ -76,7 +80,7 @@ function buildEpicCards(result: CoverageGapResult): string {
         if (key === '__no_epic__') continue;
         const epic = Object.entries(byEpic).find(([ek]) => ek === key)?.[1];
         if (!epic) continue;
-        const color = epic.weightedPct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
+        const color = epic.weightedPct >= COVERAGE_THRESHOLD ? tokens.color.chart.pass : tokens.color.chart.fail;
         const badge = epic.gatePass
             ? Badge({ variant: 'pass', children: 'PASS' })
             : Badge({ variant: 'fail', children: 'FAIL' });
@@ -99,7 +103,7 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
     if (nodes.length === 0) return '<p style="font-size:0.85rem;color:var(--color-text-muted)">No hierarchy data</p>';
     let html = '<div class="tree">';
     for (const node of nodes) {
-        const color = node.coveragePct >= 50 ? tokens.color.chart.pass : tokens.color.chart.fail;
+        const color = node.coveragePct >= COVERAGE_THRESHOLD ? tokens.color.chart.pass : tokens.color.chart.fail;
         const hasChildren = node.children.length > 0;
         html += '<div class="tree-node">';
         if (hasChildren) {
@@ -187,6 +191,7 @@ export function generateCoverageGapHtml(result: CoverageGapResult, title?: strin
             '<h1>' +
             sanitizeHtml(reportTitle) +
             '</h1>' +
+            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
             buildSummaryCards(result) +
             buildQualityGateSection(result) +
             '<h2>Coverage by Epic</h2>' +

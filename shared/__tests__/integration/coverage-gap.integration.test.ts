@@ -158,4 +158,25 @@ describe('Integration: Coverage Gap (FT-18)', () => {
             );
         });
     });
+
+    describe('FT-18d: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
+            const result = generateCoverageGapHtml(makeResult());
+
+            expect(result).toContain('data-part="target"');
+            expect(result).toContain('target: >=50%');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
+            const result = generateCoverageGapHtml(makeResult());
+
+            expect(result).toContain('data-part="timestamp"');
+        });
+    });
 });
