@@ -51,8 +51,9 @@ const REGRESSION_COUNT_THRESHOLD = 2;
 function getEpicsFromInputs(uncoveredEpics: string[], coverageGap?: CoverageGapResult): string[] {
     if (uncoveredEpics.length > 0) return uncoveredEpics;
     if (!coverageGap) return [];
+    const byEpicMap = new Map(Object.entries(coverageGap.byEpic));
     return Object.keys(coverageGap.byEpic).filter((epic) => {
-        const epicData = coverageGap.byEpic[epic];
+        const epicData = byEpicMap.get(epic);
         return epicData != null && !epicData.gatePass;
     });
 }

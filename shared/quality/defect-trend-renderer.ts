@@ -96,29 +96,29 @@ function buildTrendTable(result: DefectTrendResult): string {
 
     const rows: TableRow[] = result.trends.map((t, i) => {
         const catEntries = Object.entries(t.categories);
-        const cells: Record<string, string> = {
-            date: sanitizeHtml(t.date),
-            total: String(t.total),
-            trend: '',
-        };
+        const cells = new Map<string, string>([
+            ['date', sanitizeHtml(t.date)],
+            ['total', String(t.total)],
+            ['trend', ''],
+        ]);
 
         // Add trend indicator
         if (i > 0) {
             const prevTotal = result.trends[i - 1]?.total ?? 0;
             if (t.total > prevTotal * 1.5) {
-                cells['trend'] = '\u{1F534} Spike';
+                cells.set('trend', '\u{1F534} Spike');
             } else if (t.total < prevTotal * 0.7) {
-                cells['trend'] = '\u{1F7E2} Drop';
+                cells.set('trend', '\u{1F7E2} Drop');
             } else {
-                cells['trend'] = '\u{1F7E1} Stable';
+                cells.set('trend', '\u{1F7E1} Stable');
             }
         }
 
         for (const c of cats) {
             const entry = catEntries.find(([k]) => k === c);
-            cells[c] = String(entry?.[1] ?? 0);
+            cells.set(c, String(entry?.[1] ?? 0));
         }
-        return { key: t.date, cells };
+        return { key: t.date, cells: Object.fromEntries(cells) };
     });
 
     return Section({

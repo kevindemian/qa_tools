@@ -28,20 +28,21 @@ function severityToCardSeverity(s: string): 'error' | 'warn' | 'info' | 'default
 }
 
 function eventTypeToLabel(type: string): string {
-    const labels: Record<string, string> = {
-        failure: 'Failure',
-        regression: 'Regression',
-        coverage_gap: 'Coverage Gap',
-        seasonality: 'Seasonality',
-    };
-    const icons: Record<string, string> = {
-        failure: 'x-circle',
-        regression: 'trending-up',
-        coverage_gap: 'bar-chart',
-        seasonality: 'calendar',
-    };
-    const iconSvg = icons[type] ? icon(icons[type], 14) : '';
-    return `${iconSvg} ${labels[type] || type}`;
+    const labels = new Map([
+        ['failure', 'Failure'],
+        ['regression', 'Regression'],
+        ['coverage_gap', 'Coverage Gap'],
+        ['seasonality', 'Seasonality'],
+    ]);
+    const icons = new Map([
+        ['failure', 'x-circle'],
+        ['regression', 'trending-up'],
+        ['coverage_gap', 'bar-chart'],
+        ['seasonality', 'calendar'],
+    ]);
+    const iconKey = icons.get(type);
+    const iconSvg = iconKey ? icon(iconKey, 14) : '';
+    return `${iconSvg} ${labels.get(type) || type}`;
 }
 
 export function generateIncidentReportHtml(report: IncidentReport | null | undefined, title?: string): string {
@@ -91,12 +92,12 @@ function wrapContainer(pageTitle: string, children: string, timestamp: string): 
 }
 
 function SeverityBanner(severity: string): string {
-    const severityIcons: Record<string, string> = {
-        high: 'x-circle',
-        medium: 'alert-triangle',
-        low: 'check-circle',
-    };
-    const iconSvg = icon(severityIcons[severity] ?? 'info', 14);
+    const severityIcons = new Map([
+        ['high', 'x-circle'],
+        ['medium', 'alert-triangle'],
+        ['low', 'check-circle'],
+    ]);
+    const iconSvg = icon(severityIcons.get(severity) ?? 'info', 14);
 
     return `<div data-component="severity-banner">
         ${iconSvg} Overall Severity: ${sanitizeHtml(severity.toUpperCase())}

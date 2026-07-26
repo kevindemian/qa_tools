@@ -264,7 +264,12 @@ export function makeDataHubMock(
         savePullRequests: vi.fn(),
         loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(
-            overrides.quality ? (category: QualityCategory) => overrides.quality?.[category] : undefined,
+            overrides.quality
+                ? (category: QualityCategory) => {
+                      const qualityMap = new Map(Object.entries(overrides.quality ?? {}));
+                      return qualityMap.get(category);
+                  }
+                : undefined,
         ),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
         ...makeDataHubGetters(),

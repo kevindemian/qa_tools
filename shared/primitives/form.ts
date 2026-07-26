@@ -51,15 +51,15 @@ export interface ButtonProps {
     disabled?: boolean;
 }
 
-const _buttonStyles: Record<string, string> = {
-    primary: 'background:var(--color-info);color:white',
-    ghost: 'border:none;background:transparent',
-    default: '',
-};
+const _buttonStyles = new Map([
+    ['primary', 'background:var(--color-info);color:white'],
+    ['ghost', 'border:none;background:transparent'],
+    ['default', ''],
+]);
 
 export function Button(props: ButtonProps): string {
     const v = props.variant || 'default';
-    const baseStyle = _buttonStyles[v] || '';
+    const baseStyle = _buttonStyles.get(v) || '';
     const disabledStyle = props.disabled ? 'opacity:0.5;cursor:not-allowed' : '';
     const style = [baseStyle, disabledStyle].filter(Boolean).join(';');
     return `<button data-component="button" data-variant="${v}"

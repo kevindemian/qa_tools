@@ -18,21 +18,21 @@ export interface CardProps {
     ariaLabel?: string;
 }
 
-const _severityAccent: Record<string, string> = {
-    error: 'var(--color-error)',
-    warn: 'var(--color-warn)',
-    success: 'var(--color-success)',
-    info: 'var(--color-info)',
-    default: '',
-};
+const _severityAccent = new Map([
+    ['error', 'var(--color-error)'],
+    ['warn', 'var(--color-warn)'],
+    ['success', 'var(--color-success)'],
+    ['info', 'var(--color-info)'],
+    ['default', ''],
+]);
 
-const _severityColor: Record<string, string> = {
-    error: 'var(--color-error)',
-    warn: 'var(--color-warn)',
-    success: 'var(--color-success)',
-    info: 'var(--color-info)',
-    default: '',
-};
+const _severityColor = new Map([
+    ['error', 'var(--color-error)'],
+    ['warn', 'var(--color-warn)'],
+    ['success', 'var(--color-success)'],
+    ['info', 'var(--color-info)'],
+    ['default', ''],
+]);
 
 export function Card(props: CardProps): string {
     const s = props.severity || 'default';
@@ -41,8 +41,8 @@ export function Card(props: CardProps): string {
     if (variant === 'bordered') {
         styles.push('border:1px solid var(--color-border-default)');
     }
-    if (s !== 'default' && _severityAccent[s]) {
-        styles.push(`border-left:4px solid ${_severityAccent[s]}`);
+    if (s !== 'default' && _severityAccent.get(s)) {
+        styles.push(`border-left:4px solid ${_severityAccent.get(s)}`);
     }
     const style = styles.length > 0 ? styles.join(';') : '';
     return `<div data-component="card" data-variant="${variant}" data-severity="${s}"
@@ -72,7 +72,7 @@ export interface MetricCardProps {
 export function MetricCard(props: MetricCardProps): string {
     const s = props.severity || 'default';
     const align = props.icon ? 'left' : 'center';
-    const color = _severityColor[s] || '';
+    const color = _severityColor.get(s) || '';
     const targetHtml = props.target != null ? `<div data-part="target">${props.target}</div>` : '';
     const sampleWarningHtml =
         props.sampleWarning != null ? `<div data-part="sample-warning">${props.sampleWarning}</div>` : '';
