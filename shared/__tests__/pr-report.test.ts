@@ -441,7 +441,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         const commentBody = firstCall[0];
 
         expect(commentBody).toContain('Quarantine');
-        expect(commentBody).toContain('△ New');
+        expect(commentBody).toContain(':warning: New');
         expect(commentBody).toContain('flaky-test-1');
         expect(commentBody).toContain('50%');
         expect(commentBody).toContain('2/5');
@@ -494,8 +494,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         const firstCall2 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall2[0];
 
-        expect(commentBody).toContain('⊕ Quarantined');
-        expect(commentBody).not.toContain('△ New');
+        expect(commentBody).toContain(':heavy_plus_sign: Quarantined');
+        expect(commentBody).not.toContain(':warning: New');
 
         hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({ entries: [] }));
         exitSpy.mockRestore();

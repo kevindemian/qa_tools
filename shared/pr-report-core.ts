@@ -156,15 +156,15 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
 
     // Pass rate with status indicator
     let statusIcon: string;
-    if (stats.failed === 0) statusIcon = '✓';
-    else if (stats.failed <= 3) statusIcon = '△';
-    else statusIcon = '✗';
+    if (stats.failed === 0) statusIcon = ':white_check_mark:';
+    else if (stats.failed <= 3) statusIcon = ':warning:';
+    else statusIcon = ':x:';
 
     lines.push(`**${statusIcon} ${passRate}% pass rate** (${stats.passed}/${stats.total})`);
     lines.push('');
 
     // Stats table
-    lines.push('| ✓ Passed | ✗ Failed | ⏭ Skipped | ◷ Duration |');
+    lines.push('| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :clock1: Duration |');
     lines.push('|---|---|---|---|');
     lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
     lines.push('');
@@ -172,13 +172,13 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
     // Temporal context from diff
     if (diff) {
         if (diff.newFailures.length > 0) {
-            lines.push(`> ✗ **${diff.newFailures.length} new failure(s)** introduced in this PR`);
+            lines.push(`> :x: **${diff.newFailures.length} new failure(s)** introduced in this PR`);
         }
         if (diff.newPasses.length > 0) {
-            lines.push(`> ✓ **${diff.newPasses.length} test(s) fixed** by this PR`);
+            lines.push(`> :white_check_mark: **${diff.newPasses.length} test(s) fixed** by this PR`);
         }
         if (diff.flaky.length > 0) {
-            lines.push(`> ↻ **${diff.flaky.length} test(s) changed state** (potential flaky)`);
+            lines.push(`> :repeat: **${diff.flaky.length} test(s) changed state** (potential flaky)`);
         }
     }
 
@@ -201,7 +201,7 @@ function buildFailureTable(tests: FlatTest[]): string {
 
     return [
         '',
-        '### ✗ Failed Tests',
+        '### :x: Failed Tests',
         '',
         '| Test | Duration | Error |',
         '|---|---|---|',
@@ -228,7 +228,7 @@ function buildFlakySection(dataHub: DataHub): string {
 
         const rows = highFlaky.map((t) => {
             const quarantined = dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title);
-            const status = quarantined ? '⊕ Quarantined' : '△ New';
+            const status = quarantined ? ':heavy_plus_sign: Quarantined' : ':warning: New';
             return [
                 `| ${t.title.replace(/\|/g, '\\|')}`,
                 `${(t.rate * 100).toFixed(0)}%`,
@@ -240,12 +240,12 @@ function buildFlakySection(dataHub: DataHub): string {
         const newFlaky = highFlaky.filter((t) => !dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title));
         const suggestion =
             newFlaky.length > 0
-                ? `\n> ► ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
+                ? `\n> :arrow_right: ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
                 : '';
 
         return [
             '',
-            '## △ Flaky Tests (rate ≥ 30%)',
+            '## :warning: Flaky Tests (rate ≥ 30%)',
             '',
             '| Test | Flaky Rate | Passed/Total | Quarantine |',
             '|---|---|---|---|',
@@ -263,9 +263,9 @@ function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageF
     if (!coverageResult) return '';
     const { coveragePct, source, detail } = coverageResult;
     let icon: string;
-    if (coveragePct >= 70) icon = '✓';
-    else if (coveragePct >= 50) icon = '△';
-    else icon = '✗';
+    if (coveragePct >= 70) icon = ':white_check_mark:';
+    else if (coveragePct >= 50) icon = ':warning:';
+    else icon = ':x:';
     return [
         '',
         `## ${icon} Code Coverage`,
@@ -304,11 +304,11 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
     const { newFailures, newPasses, flaky } = diff;
     if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
 
-    const lines: string[] = ['', '## ↻ Changes in This PR'];
+    const lines: string[] = ['', '## :repeat: Changes in This PR'];
 
     const failureTable = buildTestTable(
         'New Failures (Introduced by this PR)',
-        '✗',
+        ':x:',
         newFailures,
         '| Test | Duration | Error |',
         10,
@@ -321,7 +321,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const passTable = buildTestTable(
         'Fixed (Previously Failing)',
-        '✓',
+        ':white_check_mark:',
         newPasses,
         '| Test | Duration |',
         10,
@@ -331,7 +331,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const flakyTable = buildTestTable(
         'Flaky (State Changed)',
-        '↻',
+        ':repeat:',
         flaky,
         '| Test | Duration |',
         10,
@@ -423,7 +423,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
         const lines: string[] = [
             '## [stats] QA Tools — PR Report',
             '',
-            '| ✓ Passed | ✗ Failed | ⏭ Skipped | Σ Total | ◷ Duration | ▶ Pass Rate |',
+            '| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :large_blue_diamond: Total | :clock1: Duration | :arrow_forward: Pass Rate |',
             '|---|---|---|---|---|---|',
             `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
         ];
@@ -695,15 +695,15 @@ type QualityGateSummary = {
 };
 
 function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return '✓';
-    if (status === 'unknown') return '?';
-    return '✗';
+    if (status === 'pass') return ':white_check_mark:';
+    if (status === 'unknown') return ':question:';
+    return ':x:';
 }
 
 function gateOverallLabel(overall: QualityGateStatus): { icon: string; word: string } {
-    if (overall === 'pass') return { icon: '✓', word: 'PASSED' };
-    if (overall === 'unknown') return { icon: '?', word: 'UNKNOWN' };
-    return { icon: '✗', word: 'FAILED' };
+    if (overall === 'pass') return { icon: ':white_check_mark:', word: 'PASSED' };
+    if (overall === 'unknown') return { icon: ':question:', word: 'UNKNOWN' };
+    return { icon: ':x:', word: 'FAILED' };
 }
 
 function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'failure' {
@@ -736,7 +736,7 @@ function buildQualityGateSection(result: QualityGateSummary): string {
 
     return [
         '',
-        `## ◎ Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
+        `## :large_blue_diamond: Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
         '| Check | Actual | Threshold | Status |',
         '|---|---|---|---|',
@@ -775,9 +775,9 @@ function buildDataQualitySection(dataQuality: DataQualitySummary): string | unde
     if (status === 'missing' && notes.length === 0) return undefined;
 
     let icon: string;
-    if (status === 'ok') icon = '✓';
-    else if (status === 'degraded') icon = '△';
-    else icon = '[i]';
+    if (status === 'ok') icon = ':white_check_mark:';
+    else if (status === 'degraded') icon = ':warning:';
+    else icon = ':information_source:';
 
     const confidenceLabel = minConfidence == null ? '_n/a_' : `${(minConfidence * 100).toFixed(0)}%`;
     const parts: string[] = [

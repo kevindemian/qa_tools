@@ -484,7 +484,7 @@ describe('Pr Report Core', () => {
                 const content = typeof summaryCall[1] === 'string' ? summaryCall[1] : '';
 
                 expect(content).toContain('QA Tools — PR Report');
-                expect(content).toContain('| ✓ Passed | ✗ Failed | ⏭ Skipped |');
+                expect(content).toContain('| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped |');
                 expect(content).toContain('| 8 | 1 | 1 | 10 |');
             } finally {
                 delete process.env['GITHUB_STEP_SUMMARY'];
