@@ -133,21 +133,29 @@ export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipe
     const periodLabel = data.period ? `${data.period.from} to ${data.period.to}` : 'N/A';
     const passedCount = data.totalRuns > 0 ? Math.round((data.totalRuns * safePassRate) / 100) : 0;
     const failedCount = data.totalRuns - passedCount;
+    const sampleWarning =
+        data.totalRuns < 30 ? `Only ${data.totalRuns} runs — results may not be statistically significant` : '';
     const bodyContent = `<h1>${sanitizeHtml(title)}</h1>
-<div class="ts">${ts} &mdash; ${periodLabel}</div>
-<div class="summary">
-  <div class="card"><div class="num" style="color:var(--color-info)">${data.totalRuns}</div><div class="lbl">Total Runs</div></div>
+<div data-part="timestamp" data-dashboard="pipeline-health">${ts} &mdash; ${periodLabel}</div>
+<div data-section="summary" class="summary">
+  <div class="card"><div class="num" style="color:var(--color-info)">${data.totalRuns}</div><div class="lbl">Total Runs</div>${sampleWarning ? `<div data-part="sample-warning">${sampleWarning}</div>` : ''}</div>
   <div class="card"><div class="num" style="color:var(--color-success)">${passedCount}</div><div class="lbl">Passed</div></div>
   <div class="card"><div class="num" style="color:var(--color-error)">${failedCount}</div><div class="lbl">Failed</div></div>
-  <div class="card"><div class="num" style="color:${passRateColor}">${safePassRate}%</div><div class="lbl">Pass Rate</div></div>
-  <div class="card"><div class="num">${formatDuration(safeAvgDuration)}</div><div class="lbl">Avg Duration</div></div>
+  <div class="card"><div class="num" style="color:${passRateColor}">${safePassRate}%</div><div class="lbl">Pass Rate</div><div data-part="target">target: 80%</div></div>
+  <div class="card"><div class="num">${formatDuration(safeAvgDuration)}</div><div class="lbl">Avg Duration</div><div data-part="target">target: < 30m</div></div>
 </div>
 <h2>\uD83D\uDD25 Top Failing Jobs</h2>
+<div data-section="failing-jobs">
 ${_renderJobsSection(data)}
+</div>
 <h2>\uD83E\uDDE0 Failure Intelligence</h2>
+<div data-section="failure-intelligence">
 ${_renderReasonsSection(data)}
+</div>
 <h2>\uD83D\uDD00 Branch Breakdown</h2>
-${_renderBranchSection(data)}`;
+<div data-section="branch-breakdown">
+${_renderBranchSection(data)}
+</div>`;
     return buildHtmlPage({
         title,
         styles: buildCss() + _PIPELINE_CSS,
