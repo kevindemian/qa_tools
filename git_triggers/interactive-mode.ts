@@ -576,7 +576,14 @@ async function _dashboardQualityGate(): Promise<void> {
     }
     const dataHub = getDataHub();
     const qualityGate = runQualityGate({ project: getCurrentProject() ?? '', dataHub });
-    const html = '<html><body><h1>Quality Gate</h1><pre>' + formatQualityGateText(qualityGate) + '</pre></body></html>';
+    const timestamp = new Date().toISOString();
+    const html = `<html><body>
+<h1>Quality Gate</h1>
+<div data-part="timestamp" data-dashboard="quality-gate">${timestamp.slice(0, 10)}</div>
+<div data-section="quality-gate">
+<pre>${formatQualityGateText(qualityGate)}</pre>
+</div>
+</body></html>`;
     await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
 }
 
