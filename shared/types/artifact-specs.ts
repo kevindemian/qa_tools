@@ -2230,10 +2230,3 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * Get artifact spec by ID
- */
-export function getArtifactSpec(id: string): ArtifactSpec | undefined {
-    return [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS].find((spec) => spec.id === id);
-}
