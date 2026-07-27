@@ -2237,29 +2237,3 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
 export function getArtifactSpec(id: string): ArtifactSpec | undefined {
     return [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS].find((spec) => spec.id === id);
 }
-
-/**
- * Validate that an artifact has all mandatory fields
- */
-export function validateArtifact(
-    artifactId: string,
-    actualMetrics: string[],
-    actualSections: string[],
-): { valid: boolean; missingMetrics: string[]; missingSections: string[] } {
-    const spec = getArtifactSpec(artifactId);
-    if (!spec) {
-        return { valid: false, missingMetrics: [], missingSections: [] };
-    }
-
-    const requiredMetrics = spec.metrics.map((m) => m.name);
-    const requiredSections = spec.sections.filter((s) => s.required).map((s) => s.name);
-
-    const missingMetrics = requiredMetrics.filter((m) => !actualMetrics.includes(m));
-    const missingSections = requiredSections.filter((s) => !actualSections.includes(s));
-
-    return {
-        valid: missingMetrics.length === 0 && missingSections.length === 0,
-        missingMetrics,
-        missingSections,
-    };
-}
