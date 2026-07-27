@@ -1,11 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterAll, describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { getHeadSha, getCurrentBranch, detectGitDir } from '../ci/git-sha.js';
 
 const tmpDir = fs.mkdtempSync(path.join(tmpdir(), 'git-sha-test-'));
 const isStryker = process.env['STRYKER_ACTIVE'] === 'true';
+
+vi.mock('node:child_process', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:child_process')>();
+    return {
+        ...actual,
+        execFileSync: vi.fn(actual.execFileSync),
+    };
+});
+
+const mockedExec = vi.mocked(execFileSync);
 
 describe.skipIf(isStryker)('Git Sha', () => {
     afterAll(() => {
@@ -70,14 +81,13 @@ describe.skipIf(isStryker)('Git Sha', () => {
             fs.mkdirSync(path.join(dir, '.git', 'refs', 'heads'), { recursive: true });
             fs.writeFileSync(path.join(dir, '.git', 'refs', 'heads', 'main'), 'abc123def\n');
             fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-            const origCwd = process.cwd();
-            process.chdir(dir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(dir);
             try {
                 const sha = getHeadSha({});
 
                 expect(sha).toBe('abc123def');
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
@@ -97,14 +107,13 @@ describe.skipIf(isStryker)('Git Sha', () => {
                 '# pack-refs with: peeled fully-peeled sorted\nabc123def refs/heads/main\n',
             );
             fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-            const origCwd = process.cwd();
-            process.chdir(dir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(dir);
             try {
                 const sha = getHeadSha({});
 
                 expect(sha).toBe('abc123def');
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
@@ -112,14 +121,13 @@ describe.skipIf(isStryker)('Git Sha', () => {
             const dir = path.join(tmpDir, 'git-detached');
             fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
             fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'abc123def\n');
-            const origCwd = process.cwd();
-            process.chdir(dir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(dir);
             try {
                 const sha = getHeadSha({});
 
                 expect(sha).toBe('abc123def');
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
@@ -132,14 +140,22 @@ describe.skipIf(isStryker)('Git Sha', () => {
         it('falls back to execSync when no .git directory exists', () => {
             const fakeDir = path.join(tmpDir, 'no-git-exec');
             fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
-            const origCwd = process.cwd();
-            process.chdir(fakeDir);
+            const origImpl = mockedExec.getMockImplementation();
+            mockedExec.mockImplementation(() => {
+                throw new Error('command not found');
+            });
+            const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(fakeDir);
             try {
                 const result = getHeadSha({});
 
                 expect(result).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                if (origImpl) {
+                    mockedExec.mockImplementation(origImpl);
+                } else {
+                    mockedExec.mockRestore();
+                }
+                cwdSpy.mockRestore();
             }
         });
 
@@ -153,14 +169,22 @@ describe.skipIf(isStryker)('Git Sha', () => {
 
             const fakeDir = path.join(tmpDir, 'no-git-omit-env');
             fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
-            const origCwd = process.cwd();
-            process.chdir(fakeDir);
+            const origImpl = mockedExec.getMockImplementation();
+            mockedExec.mockImplementation(() => {
+                throw new Error('command not found');
+            });
+            const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(fakeDir);
             try {
                 const result = getHeadSha();
 
                 expect(result).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                if (origImpl) {
+                    mockedExec.mockImplementation(origImpl);
+                } else {
+                    mockedExec.mockRestore();
+                }
+                cwdSpy.mockRestore();
                 if (origGithubSha) process.env['GITHUB_SHA'] = origGithubSha;
                 if (origCiSha) process.env['CI_COMMIT_SHA'] = origCiSha;
                 if (origBuildSha) process.env['BUILD_SOURCEVERSION'] = origBuildSha;
@@ -204,14 +228,22 @@ describe.skipIf(isStryker)('Git Sha', () => {
         it('returns null when git rev-parse fails', () => {
             const fakeDir = path.join(tmpDir, 'no-git-branch');
             fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
-            const origCwd = process.cwd();
-            process.chdir(fakeDir);
+            const origImpl = mockedExec.getMockImplementation();
+            mockedExec.mockImplementation(() => {
+                throw new Error('command not found');
+            });
+            const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(fakeDir);
             try {
                 const result = getCurrentBranch({});
 
                 expect(result).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                if (origImpl) {
+                    mockedExec.mockImplementation(origImpl);
+                } else {
+                    mockedExec.mockRestore();
+                }
+                cwdSpy.mockRestore();
             }
         });
 
@@ -219,14 +251,13 @@ describe.skipIf(isStryker)('Git Sha', () => {
             const dir = path.join(tmpDir, 'git-no-packed-refs');
             fs.mkdirSync(path.join(dir, '.git', 'refs', 'heads'), { recursive: true });
             fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-            const origCwd = process.cwd();
-            process.chdir(dir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(dir);
             try {
                 const sha = getHeadSha({});
 
                 expect(sha).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
@@ -238,8 +269,7 @@ describe.skipIf(isStryker)('Git Sha', () => {
                 '# pack-refs with: peeled fully-peeled sorted\nrefs/heads/main\n',
             );
             fs.writeFileSync(path.join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
-            const origCwd = process.cwd();
-            process.chdir(dir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(dir);
             try {
                 const sha = getHeadSha({});
 
@@ -247,7 +277,7 @@ describe.skipIf(isStryker)('Git Sha', () => {
 
                 expect(sha).toBe('refs/heads/main');
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
@@ -261,14 +291,22 @@ describe.skipIf(isStryker)('Git Sha', () => {
 
             const fakeDir = path.join(tmpDir, 'no-git-omit-env-branch');
             fs.mkdirSync(path.resolve(fakeDir), { recursive: true });
-            const origCwd = process.cwd();
-            process.chdir(fakeDir);
+            const origImpl = mockedExec.getMockImplementation();
+            mockedExec.mockImplementation(() => {
+                throw new Error('command not found');
+            });
+            const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(fakeDir);
             try {
                 const result = getCurrentBranch();
 
                 expect(result).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                if (origImpl) {
+                    mockedExec.mockImplementation(origImpl);
+                } else {
+                    mockedExec.mockRestore();
+                }
+                cwdSpy.mockRestore();
                 if (origRef) process.env['GITHUB_REF_NAME'] = origRef;
                 if (origBranch) process.env['CI_COMMIT_BRANCH'] = origBranch;
                 if (origBuildBranch) process.env['BUILD_SOURCEBRANCHNAME'] = origBuildBranch;
