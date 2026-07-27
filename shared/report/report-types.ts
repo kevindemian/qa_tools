@@ -1,7 +1,5 @@
 import type { FlatTest } from '../result_parser.js';
 
-export type { SectionResult, DashboardData } from './types/report-data.js';
-
 export interface TestHistoryRun {
     status: string;
     testExecKey: string;
