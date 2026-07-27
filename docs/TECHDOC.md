@@ -58,6 +58,31 @@ qa_tools/
 │                    setup/                                    │
 │  main.ts → detector.ts → config-writer.ts → templates/*     │
 └─────────────────────────────────────────────────────────────┘
+
+Architecture (shared/ internal):
+
+┌─────────────────────────────────────────────────────────────┐
+│  shared/primitives/                                         │
+│  badge, card, chart, empty-state, form, layout,             │
+│  recommended-actions, table (9 modules)                     │
+│  Pure HTML generators — no business logic                   │
+├─────────────────────────────────────────────────────────────┤
+│  shared/report/*-renderer.ts + shared/quality/*.ts          │
+│  16 renderers + 5 orchestrators                             │
+│  Consume dataHub.computed, use primitives                   │
+│  Compute: ai-effectiveness, defect-trend, flakiness,        │
+│  backlog-health, release-score, silent-regression,          │
+│  incident-report, impact-alert, traceability,               │
+│  ai-comparison, defect-seasonality, developer-profile,      │
+│  pipeline-cost, suite-optimization,                         │
+│  cross-squad-benchmark, requirement-score                   │
+├─────────────────────────────────────────────────────────────┤
+│  shared/data-hub/compute/                                   │
+│  9 compute modules (pure functions, no HTML)                │
+│  ai-metrics, defect-aggregation, regression-detection,      │
+│  optimization-actions, impact-alerts, incident-events,      │
+│  traceability-tree, cross-squad, coverage-gap               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Patterns
