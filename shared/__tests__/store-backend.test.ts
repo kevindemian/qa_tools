@@ -304,18 +304,14 @@ describe('Store Backend', () => {
             expect(detectProjectGitDir('/nonexistent-path-xyz')).toBeNull();
         });
 
-        it('returns null when no .git found from cwd', () => {
-            if (process.env['STRYKER_ACTIVE']) {
-                return; // Skip in Stryker mutation testing - process.chdir not supported in workers
-            }
+        it('returns null when no .git found from cwd fallback', () => {
             const noGitDir = path.join(tmpDir, 'no-git-cwd');
             fs.mkdirSync(path.resolve(noGitDir), { recursive: true });
-            const origCwd = process.cwd();
-            process.chdir(noGitDir);
+            const spy = vi.spyOn(process, 'cwd').mockReturnValue(noGitDir);
             try {
                 expect(detectProjectGitDir()).toBeNull();
             } finally {
-                process.chdir(origCwd);
+                spy.mockRestore();
             }
         });
 
