@@ -16,6 +16,51 @@ O PR Report é uma funcionalidade que gera relatórios de testes automaticamente
 | **HTML Report** | Relatório completo com 12+ seções, gráficos, tabela de testes | Link no comment do PR      |
 | **Check Run**   | Status de qualidade na aba "Checks" do PR                     | GitHub Checks tab          |
 
+### 3 Distinct PR Report Artifacts
+
+The PR Report produces **3 distinct artifacts**, each with its own format and flow:
+
+| Artifact | Format | Flow | Description |
+|----------|--------|------|-------------|
+| **PR Comment Markdown** | Markdown | `postPrComment()` → GitHub API | Inline comment on the PR with summary metrics |
+| **GitHub Job Summary** | Markdown | `$GITHUB_STEP_SUMMARY` → GitHub Actions | Summary visible in the Actions tab |
+| **HTML Report Artifact** | HTML | `writeFileSync()` → artifact upload | Full interactive report linked from the comment |
+
+Each artifact uses the same DataHub SSOT but renders differently:
+- PR Comment: concise summary with emoji shortcodes (`:white_check_mark:`, `:x:`)
+- Job Summary: same format as PR Comment, displayed in Actions tab
+- HTML Report: full interactive dashboard with charts, tables, dark mode support
+
+### Compute/Render Separation in PR Report
+
+The PR Report follows the compute/render separation pattern:
+
+```
+pr-report-core.ts (orchestrator)
+├── Compute: consumes dataHub.computed (metrics, health, quality)
+├── PR Comment: renderPrCommentMarkdown(computed) → Markdown string
+├── Job Summary: renderJobSummary(computed) → Markdown string
+└── HTML Report: renderHtmlReport(computed) → HTML string
+```
+
+- **Compute** is done via `data-hub/compute/` modules (pure functions)
+- **Render** is done via dedicated renderers (no business logic)
+- **Orchestration** coordinates the 3 output formats
+
+### Cross-Platform Shortcodes
+
+PR Comment and Job Summary use **cross-platform emoji shortcodes** (not Unicode symbols):
+
+| Shortcode | Meaning | Usage |
+|-----------|---------|-------|
+| `:white_check_mark:` | Pass/success | Quality gate passed, test passed |
+| `:x:` | Fail/error | Quality gate failed, test failed |
+| `:warning:` | Warning/skip | Warnings, skipped tests |
+| `:hourglass_flowing_sand:` | In progress | Running tests |
+| `:arrow_right:` | Next step | Recommended action |
+| `:arrows_counterclockwise:` | Retry | Retry suggestion |
+| `:bar_chart:` | Metrics | Score/metric display |
+
 ### O que NÃO precisa ser feito pelo usuário
 
 - Push não precisa ser feito pelo sistema

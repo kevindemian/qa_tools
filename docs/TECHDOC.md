@@ -132,6 +132,103 @@ módulo-renderer.ts     → render (geração HTML) — importa do barrel
 - Renderers podem ser substituídos (ex: SVG, PDF) sem afetar compute
 - Imports circulares impossíveis (renderer → barrel, nunca ao contrário)
 
+### 9 Quality Criteria for HTML Reports
+
+| # | Criterion | Description |
+|---|-----------|-------------|
+| 1 | **Util** | Report provides actionable information for the target audience |
+| 2 | **Correto** | Data is accurate, derived from authoritative sources (DataHub SSOT) |
+| 3 | **Adequado** | Report format matches the intended use case (PR comment vs artifact vs summary) |
+| 4 | **Completeness** | All relevant data is included; empty states are explicit |
+| 5 | **Legibilidade** | Clear structure, consistent formatting, readable without CSS |
+| 6 | **Sem poluição** | No inline styles, no unnecessary markup, no decorative elements |
+| 7 | **Arquitetura** | Compute/render separation, primitives reuse, no circular dependencies |
+| 8 | **Dados ausentes visíveis** | Missing data is explicitly shown, never silently omitted |
+| 9 | **Ação recomendada** | Every finding includes a suggested next step |
+
+### MODULE MAP — shared/
+
+```
+shared/
+├── primitives/                          # HTML primitives (reusable components)
+│   ├── badge.ts                         # Badge (status, severity)
+│   ├── card.ts                          # Card (content container)
+│   ├── chart.ts                         # Chart (bar chart)
+│   ├── empty-state.ts                   # Empty state placeholder
+│   ├── form.ts                          # Form elements
+│   ├── layout.ts                        # Layout primitives (Container, Section, Grid, FlexRow, Separator)
+│   ├── recommended-actions.ts           # Actionable recommendations
+│   ├── table.ts                         # DataTable, MetricCard, MetricGrid, CardGrid
+│   └── index.ts                         # Barrel re-export
+│
+├── data-hub/compute/                    # Compute modules (pure functions, no HTML)
+│   ├── ai-metrics.ts                    # AI effectiveness metrics
+│   ├── defect-aggregation.ts            # Defect trend aggregation
+│   ├── regression-detection.ts          # Silent regression detection
+│   ├── optimization-actions.ts          # Suite optimization suggestions
+│   ├── impact-alerts.ts                 # Impact alert computation
+│   ├── incident-events.ts               # Incident event processing
+│   ├── traceability-tree.ts             # Traceability tree building
+│   ├── cross-squad.ts                   # Cross-squad benchmark computation
+│   ├── coverage-gap.ts                  # Coverage gap analysis
+│   └── index.ts                         # Barrel re-export
+│
+├── report/                              # Renderers (HTML generation)
+│   ├── ai-effectiveness-renderer.ts     # AI effectiveness dashboard
+│   ├── ai-comparison-renderer.ts        # AI comparison dashboard
+│   ├── backlog-health-renderer.ts       # Backlog health dashboard
+│   ├── defect-seasonality-renderer.ts   # Defect seasonality dashboard
+│   ├── defect-trend-renderer.ts         # Defect trend dashboard
+│   ├── developer-profile-renderer.ts    # Developer profile dashboard
+│   ├── flakiness-renderer.ts            # Flakiness dashboard
+│   ├── impact-alert-renderer.ts         # Impact alert dashboard
+│   ├── incident-report-renderer.ts      # Incident report dashboard
+│   ├── pipeline-cost-renderer.ts        # Pipeline cost dashboard
+│   ├── release-score-renderer.ts        # Release score dashboard
+│   ├── requirement-score-renderer.ts    # Requirement score dashboard
+│   ├── silent-regression-renderer.ts    # Silent regression dashboard
+│   ├── suite-optimization-renderer.ts   # Suite optimization dashboard
+│   ├── traceability-renderer.ts         # Traceability dashboard
+│   ├── markdown-renderer.ts             # Markdown output renderer
+│   └── report-html.ts                   # Orchestrator: assembles full HTML report
+│
+├── quality/                             # Quality dashboards (barrel + renderer)
+│   ├── health-score.ts                  # Health score computation + re-export
+│   ├── quality-gate.ts                  # Quality gate orchestration
+│   ├── quality-metrics.ts               # Quality metrics collection
+│   ├── quality-suggester.ts             # Quality signal detection
+│   └── cross-squad-benchmark.ts         # Cross-squad benchmark
+│
+├── coverage/                            # Coverage analysis
+│   ├── coverage-source.ts               # Coverage data resolution
+│   └── coverage-gap-renderer.ts         # Coverage gap HTML
+│
+├── pipeline/                            # Pipeline analysis
+│   ├── pipeline-cost.ts                 # Pipeline cost computation
+│   └── pipeline-health-renderer.ts      # Pipeline health HTML
+│
+├── ci/                                  # CI integrations
+│   ├── github-check-run.ts              # GitHub Check Run API
+│   └── github-pr-comment.ts             # GitHub PR Comment API
+│
+├── pr-report-core.ts                    # PR report orchestrator (3 outputs)
+│   ├── PR Comment Markdown
+│   ├── GitHub Job Summary
+│   └── HTML Report Artifact
+│
+├── infra/                               # Infrastructure
+│   ├── store-backend.ts                 # Git/Fs store backend
+│   ├── circuit-breaker.ts               # Circuit breaker pattern
+│   └── llm-rate-limiter.ts              # LLM rate limiting
+│
+└── types/                               # Type definitions
+    ├── common.ts                        # Common types
+    ├── jira.ts                          # Jira types
+    ├── data-hub.ts                      # DataHub types
+    ├── feature-config.ts                # Feature config schema (Zod)
+    └── artifact-specs.ts                # Artifact specifications
+```
+
 ### Resilience Stack (LLM)
 
 ```
