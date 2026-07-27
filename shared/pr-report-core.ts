@@ -147,14 +147,10 @@ export function computeDiffComparison(current: FlatTest[], previous: FlatTest[])
     return { newFailures, newPasses, flaky };
 }
 
-function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string {
-    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
+function renderQualityGateTable(passRate: number, stats: PrReportStats, diff?: DiffComparison): string {
     const durationSec = (stats.duration / 1000).toFixed(1);
+    const lines: string[] = [];
 
-    // Build summary with temporal context
-    const lines: string[] = ['## [stats] Test Results', ''];
-
-    // Pass rate with status indicator
     let statusIcon: string;
     if (stats.failed === 0) statusIcon = ':white_check_mark:';
     else if (stats.failed <= 3) statusIcon = ':warning:';
@@ -163,13 +159,11 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
     lines.push(`**${statusIcon} ${passRate}% pass rate** (${stats.passed}/${stats.total})`);
     lines.push('');
 
-    // Stats table
     lines.push('| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :clock1: Duration |');
     lines.push('|---|---|---|---|');
     lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
     lines.push('');
 
-    // Temporal context from diff
     if (diff) {
         if (diff.newFailures.length > 0) {
             lines.push(`> :x: **${diff.newFailures.length} new failure(s)** introduced in this PR`);
@@ -182,6 +176,14 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
         }
     }
 
+    return lines.join('\n');
+}
+
+function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string {
+    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
+
+    const lines: string[] = ['## [stats] Test Results', ''];
+    lines.push(renderQualityGateTable(Number(passRate), stats, diff));
     lines.push('');
     return lines.join('\n');
 }

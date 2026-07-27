@@ -43,10 +43,8 @@ function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     } as GitProvider;
 }
 
-const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
-const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -60,10 +58,8 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../quality/quality-gate.js', () => mockQualityGate);
 vi.mock('../ci/github-check-run.js', () => mockCheckRun);
 vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
-vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -108,10 +104,8 @@ describe('TryCreateDataHub wiring', () => {
         delete process.env['CI_JOB_TOKEN'];
         delete process.env['CI_PROJECT_ID'];
 
-        mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
-        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',
