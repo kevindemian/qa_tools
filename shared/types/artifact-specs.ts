@@ -2239,27 +2239,6 @@ export function getArtifactSpec(id: string): ArtifactSpec | undefined {
 }
 
 /**
- * Get all artifact specs
- */
-export function getAllArtifactSpecs(): ArtifactSpec[] {
-    return [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS];
-}
-
-/**
- * Get renderers-only specs (16 artifacts)
- */
-export function getRendererSpecs(): ArtifactSpec[] {
-    return ARTIFACT_SPECS;
-}
-
-/**
- * Get non-renderer specs (11 artifacts)
- */
-export function getNonRendererSpecs(): ArtifactSpec[] {
-    return ADDITIONAL_ARTIFACT_SPECS;
-}
-
-/**
  * Validate that an artifact has all mandatory fields
  */
 export function validateArtifact(
