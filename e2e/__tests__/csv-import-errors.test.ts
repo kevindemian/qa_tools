@@ -59,9 +59,9 @@ function csvPath(name: string): string {
     return sanitizePath(tmpHome, name + '.csv');
 }
 
-function writeCsv(name: string, content: string): string {
+async function writeCsv(name: string, content: string): Promise<string> {
     const p = csvPath(name);
-    fs.writeFileSync(p, content, 'utf8');
+    await fs.promises.writeFile(p, content, 'utf8');
     return p;
 }
 
@@ -109,7 +109,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c1',
             [
                 'Title: TC01',
@@ -142,7 +142,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c2',
             [
                 'Title: TC01',
@@ -171,7 +171,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c3',
             [
                 'Title: TC01',
@@ -214,7 +214,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c4',
             [
                 'Title: TC01',
@@ -259,7 +259,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         // which differs from the cloud issue-link path. Pin mode per-test.
         process.env['JIRA_MODE'] = 'server';
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c5',
             ['Title: TC01', 'Pre-condition: KEY-100', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );
@@ -292,7 +292,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c6',
             [
                 'Title: TC01',
@@ -337,7 +337,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c7',
             ['Title: TC01', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );
@@ -361,7 +361,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['DRY_RUN'] = 'true';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c8',
             ['Title: TC Dry', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );

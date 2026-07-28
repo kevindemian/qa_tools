@@ -169,27 +169,6 @@ function processLintResults(out: string, violations: Violation[]): number {
     return warningCount;
 }
 
-const ESLINT_SOURCE_DIRS = [
-    'scripts/',
-    'shared/validation/',
-    'shared/ui/',
-    'shared/types/',
-    'shared/quality/',
-    'shared/report/',
-    'shared/data-hub/',
-    'shared/ci/',
-    'shared/infra/',
-    'shared/invariants/',
-    'shared/jira/',
-    'shared/llm/',
-    'shared/primitives/',
-    'shared/prompts/',
-    'shared/test-utils/',
-    'git_triggers/',
-    'jira_management/',
-    'e2e/',
-];
-
 function runEslintBatchAsync(dirs: string[]): Promise<{ out: string | null; error: string | null }> {
     const eslintBin = path.resolve('node_modules/eslint/bin/eslint.js');
     return new Promise((resolve) => {
@@ -212,18 +191,13 @@ export async function checkEslintBaseline(): Promise<{ result: CheckResult; warn
     const violations: Violation[] = [];
     let warningCount = 0;
 
-    const mid = Math.ceil(ESLINT_SOURCE_DIRS.length / 2);
-    const batch1 = ESLINT_SOURCE_DIRS.slice(0, mid);
-    const batch2 = ESLINT_SOURCE_DIRS.slice(mid);
+    // Lint the entire codebase (all .ts files via eslint config)
+    const [result] = await Promise.all([runEslintBatchAsync(['.'])]);
 
-    const [batch1Result, batch2Result] = await Promise.all([runEslintBatchAsync(batch1), runEslintBatchAsync(batch2)]);
-
-    for (const { out, error } of [batch1Result, batch2Result]) {
-        if (error) {
-            violations.push({ file: 'eslint-batch', line: 1, content: `ESLint: ${error}` });
-        } else if (out) {
-            warningCount += processLintResults(out, violations);
-        }
+    if (result.error) {
+        violations.push({ file: 'eslint-batch', line: 1, content: `ESLint: ${result.error}` });
+    } else if (result.out) {
+        warningCount += processLintResults(result.out, violations);
     }
 
     return {
@@ -598,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:bc880368e59049e62921ce2ddffa88b77d7593de796c3614d85760840f351d33 */
+        /* HASH:f658b96ee40991118a13c3182f390b6c59e2cd13a7ee42fd31a7db554ac013e1 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
