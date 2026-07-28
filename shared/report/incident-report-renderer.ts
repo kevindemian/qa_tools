@@ -120,19 +120,19 @@ function buildMetricSummary(report: IncidentReport): string {
                 }) +
                 MetricCard({ label: 'Total Events', value: String(report.eventCount) }) +
                 MetricCard({
-                    label: 'High',
+                    label: 'High Severity',
                     value: String(report.highCount),
                     severity: report.highCount > 0 ? 'error' : 'default',
                     target: `target: ${HIGH_SEVERITY_TARGET}`,
                 }) +
                 MetricCard({
-                    label: 'Medium',
+                    label: 'Medium Severity',
                     value: String(report.mediumCount),
                     severity: report.mediumCount > 0 ? 'warn' : 'default',
                     target: `target: ${MEDIUM_SEVERITY_TARGET}`,
                 }) +
                 MetricCard({
-                    label: 'Low',
+                    label: 'Low Severity',
                     value: String(report.lowCount),
                     severity: report.lowCount > 0 ? 'info' : 'default',
                     target: `target: ${LOW_SEVERITY_TARGET}`,
@@ -182,7 +182,7 @@ function buildEvents(report: IncidentReport): string {
 
     return Section({
         dataSection: 'events',
-        title: 'Events',
+        title: 'Events Timeline',
         children: eventsHtml,
     });
 }

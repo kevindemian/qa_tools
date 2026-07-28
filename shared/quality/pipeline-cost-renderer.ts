@@ -104,7 +104,7 @@ function buildMetricSummary(result: PipelineCostResult): string {
                     target: `target: <${formatCurrency(TOTAL_COST_WARN_THRESHOLD)}`,
                 }) +
                 MetricCard({
-                    label: 'Avg Cost / Run',
+                    label: 'Avg Cost/Run',
                     value: formatCurrency(result.avgCostPerRun),
                     severity: result.avgCostPerRun > AVG_COST_PER_RUN_WARN_THRESHOLD ? 'warn' : 'info',
                     target: `target: <${formatCurrency(AVG_COST_PER_RUN_WARN_THRESHOLD)}`,
@@ -155,7 +155,7 @@ function buildCostTable(result: PipelineCostResult): string {
 
     return Section({
         dataSection: 'cost-breakdown',
-        title: 'Cost Breakdown',
+        title: 'Cost per Run Table',
         children: DataTable({
             columns,
             rows,

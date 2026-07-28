@@ -117,7 +117,7 @@ function buildMetricSummary(result: BacklogHealthResult): string {
                     target: 'target: 0',
                 }) +
                 MetricCard({
-                    label: 'Bugs Without Tests',
+                    label: 'Bugs w/o Tests',
                     value: String(result.bugsWithoutTests.length),
                     severity: result.bugsWithoutTests.length > 0 ? 'error' : 'success',
                     target: 'target: 0',
@@ -163,7 +163,7 @@ function buildIssueCards(result: BacklogHealthResult): string {
 
     if (result.bugsWithoutTests.length > 0) {
         html += Card({
-            title: 'Bugs Without Tests (' + result.bugsWithoutTests.length + ')',
+            title: 'Bugs w/o Tests (' + result.bugsWithoutTests.length + ')',
             variant: 'bordered',
             severity: 'error',
             children: buildIssueListCapped(result.bugsWithoutTests, result.displayLimit),

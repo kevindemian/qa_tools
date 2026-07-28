@@ -55,29 +55,27 @@ function buildComparisonCards(result: AiComparisonResult): string {
                     target: `target: ${PASS_RATE_TARGET}%`,
                 }) +
                 MetricCard({
-                    label: 'AI Sample Size',
+                    label: 'AI Sample',
                     value: String(aiSampleSize),
                     severity: aiSampleSeverity,
                     ...(aiSampleWarning ? { sampleWarning: aiSampleWarning } : {}),
                 }) +
                 MetricCard({
-                    label: 'Manual Sample Size',
+                    label: 'Manual Sample',
                     value: String(manualSampleSize),
                     severity: manualSampleSeverity,
                     ...(manualSampleWarning ? { sampleWarning: manualSampleWarning } : {}),
                 }) +
                 MetricCard({
-                    label: 'AI Avg Flakiness',
+                    label: 'AI Flakiness',
                     value: result.aiFlakinessAvg.toFixed(3),
                     target: `target: <${FLAKINESS_TARGET}`,
                 }) +
                 MetricCard({
-                    label: 'Manual Avg Flakiness',
+                    label: 'Manual Flakiness',
                     value: result.manualFlakinessAvg.toFixed(3),
                     target: `target: <${FLAKINESS_TARGET}`,
-                }) +
-                MetricCard({ label: 'AI Acceptance', value: result.aiAcceptanceRate.toFixed(2) }) +
-                MetricCard({ label: 'Manual Acceptance', value: result.manualAcceptanceRate.toFixed(2) }),
+                }),
         }),
     });
 }
@@ -113,7 +111,7 @@ function buildAdvantageSection(result: AiComparisonResult): string {
 
     return Section({
         dataSection: 'advantage',
-        title: 'AI Advantage',
+        title: 'Advantage Analysis',
         children: `<div data-part="advantage" data-severity="${severity}">${badgeHtml} — ${sanitizeHtml(description)}${sampleSizeWarning}</div>`,
     });
 }
