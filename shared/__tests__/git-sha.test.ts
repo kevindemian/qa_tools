@@ -5,9 +5,6 @@ import { execFileSync } from 'node:child_process';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { getHeadSha, getCurrentBranch, detectGitDir } from '../ci/git-sha.js';
 
-const tmpDir = fs.mkdtempSync(path.join(tmpdir(), 'git-sha-test-'));
-const isStryker = process.env['STRYKER_ACTIVE'] === 'true';
-
 vi.mock('node:child_process', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:child_process')>();
     return {
@@ -18,9 +15,15 @@ vi.mock('node:child_process', async (importOriginal) => {
 
 const mockedExec = vi.mocked(execFileSync);
 
-describe.skipIf(isStryker)('Git Sha', () => {
+describe('Git Sha', () => {
+    let tmpDir: string;
+
+    beforeAll(() => {
+        tmpDir = fs.mkdtempSync(path.join(tmpdir(), 'git-sha-test-'));
+    });
+
     afterAll(() => {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
+        if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
     describe('DetectGitDir', () => {

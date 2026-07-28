@@ -9,6 +9,9 @@
     "concurrency": 1,
     "maxConcurrentTestRunners": 1,
     "timeoutMS": 300000,
+    "dryRunTimeoutMinutes": 10,
+    "vitest": { "related": false },
+    "disableTypeChecks": "!reports/**",
     "ignorePatterns": [
         "scripts/quality-check.ts",
         "scripts/validation-hook.ts",

@@ -188,11 +188,6 @@ describe('Quality check integrated', () => {
         it('checkIntegrity passes with the current regenerated hash', async () => {
             expect.hasAssertions();
 
-            // Skip during mutation testing - integrity check intentionally fails on mutated code
-            if (process.env['STRYKER_ACTIVE'] === 'true') {
-                return;
-            }
-
             const { checkIntegrity } = await load();
 
             const r = checkIntegrity();

@@ -6,9 +6,6 @@ import { applyProjectContext } from '../cli-dispatch.js';
 import { getCurrentProject, clearCurrentProject } from '../../shared/project-context.js';
 
 describe('ApplyProjectContext — self-host resolution (CI post-process path)', () => {
-    if (process.env['STRYKER_ACTIVE'] === 'true') {
-        return;
-    }
     let TMP: string;
     let repoDir: string;
 
@@ -42,28 +39,16 @@ describe('ApplyProjectContext — self-host resolution (CI post-process path)', 
     it('resolves a checked-out self-host repo without a registry entry (never silent)', () => {
         expect.hasAssertions();
 
-        const prevCwd = process.cwd();
-        process.chdir(repoDir);
-        try {
-            const result = applyProjectContext({ project: 'qa_tools' });
+        const result = applyProjectContext({ project: 'qa_tools' }, repoDir);
 
-            expect(result).toBe('qa_tools');
+        expect(result).toBe('qa_tools');
 
-            expect(getCurrentProject()).toBe('qa_tools');
-        } finally {
-            process.chdir(prevCwd);
-        }
+        expect(getCurrentProject()).toBe('qa_tools');
     });
 
     it('throws when the checked-out repo is not the requested project (never silent)', () => {
         expect.hasAssertions();
 
-        const prevCwd = process.cwd();
-        process.chdir(repoDir);
-        try {
-            expect(() => applyProjectContext({ project: 'other_proj' })).toThrow(/não registrado/);
-        } finally {
-            process.chdir(prevCwd);
-        }
+        expect(() => applyProjectContext({ project: 'other_proj' }, repoDir)).toThrow(/não registrado/);
     });
 });

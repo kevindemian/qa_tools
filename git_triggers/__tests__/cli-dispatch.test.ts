@@ -58,7 +58,7 @@ describe('Cli-dispatch', () => {
             const result = applyProjectContext({ project: 'flagProject' });
 
             expect(result).toBe('flagProject');
-            expect(ensureSelfHostProject).toHaveBeenCalledWith('flagProject');
+            expect(ensureSelfHostProject).toHaveBeenCalledWith('flagProject', process.cwd());
         });
 
         it('falls back to the env var when no flag given', () => {
@@ -68,7 +68,7 @@ describe('Cli-dispatch', () => {
             const result = applyProjectContext({});
 
             expect(result).toBe('envProject');
-            expect(ensureSelfHostProject).toHaveBeenCalledWith('envProject');
+            expect(ensureSelfHostProject).toHaveBeenCalledWith('envProject', process.cwd());
         });
 
         it('ignores an empty env var', () => {
