@@ -219,7 +219,7 @@ function buildVersionTable(
 
     return Section({
         dataSection: 'version-breakdown',
-        title: 'By Prompt Version',
+        title: 'Version Breakdown',
         children: DataTable({
             columns,
             rows,

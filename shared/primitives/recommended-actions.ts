@@ -7,6 +7,8 @@
  * @module primitives/recommended-actions
  */
 
+import { icon } from '../icons.js';
+
 export interface RecommendedAction {
     severity: 'error' | 'warn' | 'info';
     text: string;
@@ -23,9 +25,9 @@ export function RecommendedActions(props: RecommendedActionsProps): string {
     if (props.actions.length === 0) return '';
 
     const icons: Record<string, string> = {
-        error: '\u26A0',
-        warn: '\u26A0',
-        info: '\u2139',
+        error: icon('alert-triangle', 14),
+        warn: icon('alert-triangle', 14),
+        info: icon('info', 14),
     };
 
     const items = props.actions

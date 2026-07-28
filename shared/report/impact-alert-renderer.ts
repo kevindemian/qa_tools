@@ -12,6 +12,7 @@ import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { MetricCard, MetricGrid, Card, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import type { ImpactAlertResult, ImpactAlert, AlertSeverity } from './impact-alert.js';
 
 const CRITICAL_ALERT_TARGET = 0;
@@ -24,9 +25,9 @@ const SEVERITY_MAP: Record<AlertSeverity, 'error' | 'warn' | 'info'> = {
 };
 
 const SEVERITY_ICON: Record<AlertSeverity, string> = {
-    critical: '\u{1F534}',
-    warning: '\u{1F7E1}',
-    info: '\u{1F535}',
+    critical: icon('alert-circle', 16),
+    warning: icon('alert-triangle', 16),
+    info: icon('info', 16),
 };
 
 function renderAlertCard(alert: ImpactAlert): string {
@@ -137,7 +138,7 @@ function buildAlerts(result: ImpactAlertResult): string {
 
     return Section({
         dataSection: 'alerts',
-        title: 'Alerts',
+        title: 'Alert Cards',
         children: sorted.map(renderAlertCard).join(''),
     });
 }

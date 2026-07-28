@@ -41,7 +41,7 @@ function buildComparisonCards(result: AiComparisonResult): string {
 
     return Section({
         dataSection: 'comparison',
-        title: 'Comparison Overview',
+        title: 'Summary',
         children: MetricGrid({
             children:
                 MetricCard({
@@ -158,6 +158,35 @@ function buildVersionTable(result: AiComparisonResult): string {
     });
 }
 
+function buildSampleSizeWarning(result: AiComparisonResult): string {
+    const MIN_SAMPLE = 30;
+    const warnings: string[] = [];
+
+    if (result.aiTotal < MIN_SAMPLE) {
+        warnings.push(
+            `AI sample size (${result.aiTotal}) is below ${MIN_SAMPLE}. Results may not be statistically significant.`,
+        );
+    }
+    if (result.manualTotal < MIN_SAMPLE) {
+        warnings.push(
+            `Manual sample size (${result.manualTotal}) is below ${MIN_SAMPLE}. Results may not be statistically significant.`,
+        );
+    }
+
+    if (warnings.length === 0) return '';
+
+    return Section({
+        dataSection: 'sample-warning',
+        title: 'Sample Size Warning',
+        children: EmptyState({
+            title: 'Insufficient sample size',
+            description: warnings.join(' '),
+            action: 'Collect more test data before drawing conclusions from this comparison.',
+            icon: icon('search', 16),
+        }),
+    });
+}
+
 function buildRecommendedActions(result: AiComparisonResult): string {
     const actions: Array<{ text: string; severity: 'error' | 'warn' | 'info' }> = [];
 
@@ -234,6 +263,7 @@ export function generateAiComparisonHtml(result: AiComparisonResult | null | und
             bodyContent =
                 buildComparisonCards(result) +
                 buildAdvantageSection(result) +
+                buildSampleSizeWarning(result) +
                 buildVersionTable(result) +
                 buildRecommendedActions(result);
         }

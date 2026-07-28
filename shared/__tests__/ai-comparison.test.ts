@@ -245,8 +245,8 @@ describe('GenerateAiComparisonHtml', () => {
         const html = generateAiComparisonHtml(result);
 
         expect(html).toContain('No comparison data available.');
-        expect(html).not.toContain('Comparison Overview');
-        expect(html).not.toContain('AI Advantage');
+        expect(html).not.toContain('Summary');
+        expect(html).not.toContain('Advantage Analysis');
         expect(html).not.toContain('Version Breakdown');
     });
 
@@ -256,10 +256,8 @@ describe('GenerateAiComparisonHtml', () => {
         expect(html).toContain('data-component="metric-card"');
         expect(html).toContain('AI Pass Rate');
         expect(html).toContain('Manual Pass Rate');
-        expect(html).toContain('AI Avg Flakiness');
-        expect(html).toContain('Manual Avg Flakiness');
-        expect(html).toContain('AI Acceptance');
-        expect(html).toContain('Manual Acceptance');
+        expect(html).toContain('AI Flakiness');
+        expect(html).toContain('Manual Flakiness');
         expect(html).toContain('75%');
     });
 
@@ -272,7 +270,7 @@ describe('GenerateAiComparisonHtml', () => {
     it('renders AI advantage section with Badge', () => {
         const html = generateAiComparisonHtml(sampleResult());
 
-        expect(html).toContain('AI Advantage');
+        expect(html).toContain('Advantage Analysis');
         expect(html).toContain('data-component="badge"');
         expect(html).toContain('Pass Rate');
     });
@@ -354,13 +352,6 @@ describe('GenerateAiComparisonHtml', () => {
 
         expect(html).toContain('0.100');
         expect(html).toContain('0.235');
-    });
-
-    it('formats acceptance rate with 2 decimal places', () => {
-        const result = sampleResult({ aiAcceptanceRate: 0.6667 });
-        const html = generateAiComparisonHtml(result);
-
-        expect(html).toContain('0.67');
     });
 
     it('includes data-part="target" with threshold values', () => {

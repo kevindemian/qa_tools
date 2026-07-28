@@ -70,6 +70,7 @@ export function generateIncidentReportHtml(report: IncidentReport | null | undef
                 buildMetricSummary(report) +
                 buildSummary(report) +
                 buildEvents(report) +
+                buildPerTypeSummary(report) +
                 buildRecommendedActions(report),
             report.timestamp,
         );
@@ -184,6 +185,32 @@ function buildEvents(report: IncidentReport): string {
         dataSection: 'events',
         title: 'Events Timeline',
         children: eventsHtml,
+    });
+}
+
+function buildPerTypeSummary(report: IncidentReport): string {
+    const typeCounts: Record<string, number> = {};
+    for (const event of report.events) {
+        typeCounts[event.type] = (typeCounts[event.type] ?? 0) + 1;
+    }
+
+    const labels: Record<string, string> = {
+        failure: 'Failures',
+        regression: 'Regressions',
+        coverage_gap: 'Coverage Gaps',
+        seasonality: 'Seasonality Events',
+    };
+
+    const children = Object.entries(typeCounts)
+        .map(([type, count]) => MetricCard({ label: labels[type] ?? type, value: String(count) }))
+        .join('');
+
+    if (!children) return '';
+
+    return Section({
+        dataSection: 'per-type',
+        title: 'Per-Type Count Summary',
+        children: MetricGrid({ children }),
     });
 }
 

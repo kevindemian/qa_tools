@@ -356,7 +356,7 @@ describe('GeneratePipelineCostHtml', () => {
         const html = generatePipelineCostHtml(makeResult());
 
         expect(html).toContain('Total Cost');
-        expect(html).toContain('Avg Cost / Run');
+        expect(html).toContain('Avg Cost/Run');
         expect(html).toContain('Total Duration');
         expect(html).toContain('Run Count');
         expect(html).toContain('$0.08');

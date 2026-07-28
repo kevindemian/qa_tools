@@ -25,6 +25,7 @@ import {
     FilterBar,
 } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
+import { icon } from '../icons.js';
 
 const COVERAGE_THRESHOLD = 50;
 
@@ -144,7 +145,7 @@ function buildGapsTable(result: CoverageGapResult): string {
     let html = FilterBar({
         children:
             SearchInput({ placeholder: 'Filter gaps...', onInput: 'filterGaps()', id: 'gapSearchInput' }) +
-            Button({ children: '🌓', onClick: 'toggleTheme()', variant: 'ghost' }),
+            Button({ children: icon('moon', 16), onClick: 'toggleTheme()', variant: 'ghost' }),
     });
     html +=
         '<div style="overflow-x:auto;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';

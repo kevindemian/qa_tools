@@ -210,7 +210,7 @@ describe('GenerateOptimizationHtml', () => {
 
         expect(html).toContain('data-component="metric-grid"');
         expect(html).toContain('data-component="metric-card"');
-        expect(html).toContain('Total Tests');
+        expect(html).toContain('Tests to Optimize');
         expect(html).toContain('Total Duration');
         expect(html).toContain('Potential Savings');
     });

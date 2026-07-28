@@ -164,7 +164,7 @@ function buildRegressions(result: RegressionResult): string {
 
     return Section({
         dataSection: 'regressions',
-        title: 'Regressions',
+        title: 'Regression Table',
         children: DataTable({
             columns,
             rows,

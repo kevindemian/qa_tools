@@ -30,7 +30,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-26 Test');
-            expect(html).toContain('Total Tests');
+            expect(html).toContain('Tests to Optimize');
             expect(html).toContain('Total Duration');
             expect(html).toContain('Potential Savings');
             expect(html).toContain('Slow Test');

@@ -166,7 +166,7 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
 
     return Section({
         dataSection: 'flakiness-table',
-        title: 'Flaky Tests',
+        title: 'Flaky Tests Table',
         children: DataTable({
             columns,
             rows,
@@ -176,24 +176,28 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
 }
 
 function buildSourceQualityBanner(dataHub?: DataHub): string {
-    if (!dataHub) return '';
     const parts: string[] = [];
-    const provenance = dataHub.getProvenance()?.get('failureRecords');
-    if (provenance && Number.isFinite(provenance.confidence)) {
-        parts.push(
-            `<span data-part="confidence">failure-records source confidence: ${Math.round(provenance.confidence * 100)}%</span>`,
-        );
+    if (dataHub) {
+        const provenance = dataHub.getProvenance()?.get('failureRecords');
+        if (provenance && Number.isFinite(provenance.confidence)) {
+            parts.push(
+                `<span data-part="confidence">failure-records source confidence: ${Math.round(provenance.confidence * 100)}%</span>`,
+            );
+        }
+        const report = dataHub.getQuality('failureRecords');
+        if (report && !report.valid) {
+            parts.push(
+                `<span data-part="quality-warning">failure-records quality issues: ${sanitizeHtml(report.issues.join('; '))}</span>`,
+            );
+        }
     }
-    const report = dataHub.getQuality('failureRecords');
-    if (report && !report.valid) {
-        parts.push(
-            `<span data-part="quality-warning">failure-records quality issues: ${sanitizeHtml(report.issues.join('; '))}</span>`,
-        );
-    }
-    if (!parts.length) return '';
     return Section({
         dataSection: 'source-quality',
-        children: parts.join(' '),
+        title: 'Source Quality Banner',
+        children:
+            parts.length > 0
+                ? parts.join(' ')
+                : '<span data-part="no-data">Source data provenance not available.</span>',
     });
 }
 

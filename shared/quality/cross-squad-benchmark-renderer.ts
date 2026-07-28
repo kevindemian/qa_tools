@@ -22,6 +22,7 @@ import {
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import type { CrossSquadResult } from './cross-squad-benchmark.js';
 
 const BOTTOM_SQUAD_SCORE_ERROR = 60;
@@ -86,6 +87,11 @@ function _buildSummaryCards(result: CrossSquadResult): string {
                     label: 'Bottom Squad',
                     value: result.bottomSquad ? sanitizeHtml(result.bottomSquad) : '—',
                     severity: result.topSquad === result.bottomSquad ? 'default' : 'error',
+                }) +
+                MetricCard({
+                    label: 'Squad Count',
+                    value: String(result.benchmarks.length),
+                    severity: 'info',
                 }),
         }),
     });
@@ -97,7 +103,7 @@ function _buildLeaderboard(result: CrossSquadResult): string {
             title: 'No squad data available',
             description: 'No squad benchmark data is available for comparison.',
             action: 'Run health score calculations to generate benchmark data.',
-            icon: '\u{1F3C6}',
+            icon: icon('trophy', 16),
         });
     }
 
@@ -130,7 +136,7 @@ function _buildLeaderboard(result: CrossSquadResult): string {
 
     return Section({
         dataSection: 'leaderboard',
-        title: 'Leaderboard',
+        title: 'Score Distribution',
         children: DataTable({
             columns,
             rows,

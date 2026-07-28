@@ -324,7 +324,7 @@ describe('GenerateBenchmarkHtml', () => {
     it('renders leaderboard heading', () => {
         const html = generateBenchmarkHtml(makeResult());
 
-        expect(html).toContain('Leaderboard');
+        expect(html).toContain('Score Distribution');
     });
 
     it('renders table with all squad rows', () => {

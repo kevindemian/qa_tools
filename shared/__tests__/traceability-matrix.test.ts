@@ -593,7 +593,7 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
 
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('Cross-References');
+        expect(html).toContain('Awareness Section');
         expect(html).toContain('PROJ-1');
         expect(html).toContain('invalid');
     });
@@ -607,6 +607,6 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
         const result = buildTraceabilityMatrix([], undefined, hub);
 
         expect(result.awareness.categories).toHaveLength(0);
-        expect(generateTraceabilityHtml(result)).not.toContain('Cross-References');
+        expect(generateTraceabilityHtml(result)).not.toContain('Awareness Section');
     });
 });

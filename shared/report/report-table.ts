@@ -14,6 +14,7 @@ import type { TestHistoryRun } from './report-types.js';
 import { Badge } from '../primitives/index.js';
 import { Tr, Td } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
+import { icon } from '../icons.js';
 
 export function precomputeCategories(tests: FlatTest[]): Record<string, string> {
     const cats: Record<string, string> = {};
@@ -146,7 +147,7 @@ export function buildFlakinessBadge(rate: number): string {
         color = '#16a34a';
         label = 'baixa';
     }
-    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">🔄 ${label}</span>`;
+    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;
 }
 
 const DEFAULT_MAX_VISIBLE_PASSED = 50;

@@ -248,7 +248,7 @@ describe('GenerateAiEffectivenessHtml', () => {
         });
         const html = generateAiEffectivenessHtml(result);
 
-        expect(html).toContain('By Prompt Version');
+        expect(html).toContain('Version Breakdown');
         expect(html).toContain('v1');
         expect(html).toContain('v2');
         expect(html).toContain('Version');
@@ -280,7 +280,7 @@ describe('GenerateAiEffectivenessHtml', () => {
         const html = generateAiEffectivenessHtml(result);
 
         expect(html).toContain('No AI generation data available');
-        expect(html).not.toContain('By Prompt Version');
+        expect(html).not.toContain('Version Breakdown');
         expect(html).not.toContain('Daily Trend');
     });
 

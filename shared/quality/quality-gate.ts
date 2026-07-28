@@ -13,6 +13,7 @@ import type { HealthScoreResult } from '../types.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { humanizeError } from '../ui/prompt-errors.js';
 
@@ -276,9 +277,9 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
 }
 
 function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return '✅';
-    if (status === 'unknown') return '❓';
-    return '❌';
+    if (status === 'pass') return `${icon('check-circle', 14)}`;
+    if (status === 'unknown') return `${icon('help-circle', 14)}`;
+    return `${icon('x-circle', 14)}`;
 }
 
 export function formatQualityGateJson(result: QualityGateResult): string {

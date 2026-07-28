@@ -56,7 +56,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('FT-23 Test');
             expect(html).toContain('50%');
             expect(html).toContain('Total Records');
-            expect(html).toContain('By Prompt Version');
+            expect(html).toContain('Version Breakdown');
         });
 
         it('shows no data message for empty store', async () => {
@@ -68,7 +68,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             const html = generateAiEffectivenessHtml(result);
 
             expect(html).toContain('No AI generation data available');
-            expect(html).not.toContain('By Prompt Version');
+            expect(html).not.toContain('Version Breakdown');
             expect(html).not.toContain('Daily Trend');
         });
 

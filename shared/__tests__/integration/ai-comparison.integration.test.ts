@@ -50,8 +50,8 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-24 Test');
-            expect(html).toContain('Comparison Overview');
-            expect(html).toContain('AI Advantage');
+            expect(html).toContain('Summary');
+            expect(html).toContain('Advantage Analysis');
             expect(html).toContain('AI Pass Rate');
             expect(html).toContain('Manual Pass Rate');
         });
@@ -64,7 +64,7 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const html = generateAiComparisonHtml(result);
 
             expect(html).toContain('No comparison data available.');
-            expect(html).not.toContain('Comparison Overview');
+            expect(html).not.toContain('Summary');
         });
 
         it('uses custom title', async () => {

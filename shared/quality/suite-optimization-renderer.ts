@@ -17,6 +17,7 @@ import { RecommendedActions } from '../primitives/index.js';
 import { buildCss } from '../report/report-styles.js';
 import { rootLogger } from '../logger.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
+import { icon } from '../icons.js';
 import type { OptimizationResult } from './suite-optimization.js';
 
 const POTENTIAL_SAVINGS_WARN_THRESHOLD = 60;
@@ -90,7 +91,11 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
             title: 'Summary',
             children: MetricGrid({
                 children:
-                    MetricCard({ label: 'Total Tests', value: String(result.totalTests), severity: 'info' }) +
+                    MetricCard({
+                        label: 'Tests to Optimize',
+                        value: String(result.totalTests),
+                        severity: 'warn',
+                    }) +
                     MetricCard({
                         label: 'Total Duration',
                         value: `${result.totalDuration.toFixed(1)}s`,
@@ -101,6 +106,16 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
                         value: `${result.potentialSavings.toFixed(1)}s`,
                         severity: result.potentialSavings > 0 ? 'success' : 'default',
                         target: `target: <${POTENTIAL_SAVINGS_WARN_THRESHOLD}s`,
+                    }) +
+                    MetricCard({
+                        label: 'Slow Threshold',
+                        value: `${result.slowThreshold}s`,
+                        severity: 'info',
+                    }) +
+                    MetricCard({
+                        label: 'Flaky Threshold',
+                        value: `${(result.flakyThreshold * 100).toFixed(0)}%`,
+                        severity: 'info',
                     }),
             }),
         });
@@ -108,7 +123,7 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
     if (actionable.length === 0) {
         bodyContent +=
             `<div class="clean-state" data-empty-state="no-optimizations">` +
-            `<div class="icon">\u2714</div>` +
+            `<div class="icon">${icon('check-circle', 16)}</div>` +
             `<p>All tests are within acceptable thresholds — no optimizations needed.</p>` +
             `</div>`;
     } else {
@@ -159,9 +174,31 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
 
         bodyContent += Section({
             dataSection: 'optimizations',
-            title: 'Optimization Opportunities',
+            title: 'Optimization Table',
             children: DataTable({ columns, rows }),
         });
+
+        const actionCounts: Record<string, number> = {};
+        for (const entry of result.optimizations) {
+            actionCounts[entry.action] = (actionCounts[entry.action] ?? 0) + 1;
+        }
+        const actionSummaryChildren = Object.entries(actionCounts)
+            .map(([action, count]) =>
+                MetricCard({
+                    label: action.replace(/_/g, ' '),
+                    value: String(count),
+                    severity: 'info',
+                }),
+            )
+            .join('');
+
+        if (actionSummaryChildren) {
+            bodyContent += Section({
+                dataSection: 'action-summary',
+                title: 'Action Summary',
+                children: MetricGrid({ children: actionSummaryChildren }),
+            });
+        }
     }
 
     bodyContent += buildRecommendedActions(result) + `</div>`;

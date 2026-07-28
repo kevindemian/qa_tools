@@ -13,6 +13,7 @@ import { buildCss } from '../report/report-styles.js';
 import { MetricCard, MetricGrid, DataTable, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import type { PipelineCostResult } from './pipeline-cost.js';
 
 const TOTAL_COST_WARN_THRESHOLD = 50;
@@ -59,7 +60,7 @@ export function generatePipelineCostHtml(result: PipelineCostResult | null | und
                 title: 'No pipeline run data available',
                 description: 'No pipeline execution data is available for cost analysis.',
                 action: 'Run CI/CD pipelines to generate cost data.',
-                icon: '\u{1F4B0}',
+                icon: icon('dollar-sign', 16),
             });
         } else {
             bodyContent += buildCostTable(result);
@@ -85,9 +86,6 @@ export function generatePipelineCostHtml(result: PipelineCostResult | null | und
 }
 
 function buildMetricSummary(result: PipelineCostResult): string {
-    const failedRuns = result.costByRun.filter((r) => r.status === 'failed');
-    const failedCost = failedRuns.reduce((sum, r) => sum + r.cost, 0);
-
     return Section({
         dataSection: 'summary',
         title: 'Summary',
@@ -110,10 +108,9 @@ function buildMetricSummary(result: PipelineCostResult): string {
                     target: `target: <${formatCurrency(AVG_COST_PER_RUN_WARN_THRESHOLD)}`,
                 }) +
                 MetricCard({
-                    label: 'Failed Cost',
-                    value: formatCurrency(failedCost),
-                    severity: failedCost > 0 ? 'error' : 'success',
-                    trend: failedRuns.length > 0 ? `${failedRuns.length} failed run(s)` : '',
+                    label: 'Cost/Minute',
+                    value: formatCurrency(result.costPerMinute),
+                    severity: 'info',
                     target: 'target: $0.00',
                 }) +
                 MetricCard({

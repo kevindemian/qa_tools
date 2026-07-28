@@ -22,6 +22,7 @@ import {
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import type { AuthorStat, DeveloperProfileResult } from './developer-profile.js';
+import { icon } from '../icons.js';
 
 const DEVELOPER_PROFILE_CSS = `
 .author-section{margin-bottom:20px;background:var(--color-surface-card);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden}
@@ -57,7 +58,7 @@ function buildCategoryTable(categories: Record<string, number>): string {
         return EmptyState({
             title: 'No categories',
             description: 'No failure categories recorded for this developer.',
-            icon: '\u{1F4CB}',
+            icon: icon('clipboard', 16),
         });
     }
 
@@ -209,16 +210,51 @@ export function generateDeveloperProfileHtml(
                 title: 'No developer profile data available',
                 description: 'No failure data is available for developer profiling.',
                 action: 'Run test suite to generate failure data.',
-                icon: '\u{1F464}',
+                icon: icon('user', 16),
             });
         } else {
             // Sort authors by failure rate (highest first) for ranking
             const sorted = [...result.authors].sort((a, b) => b.failureRate - a.failureRate);
             bodyContent += Section({
                 dataSection: 'authors',
-                title: 'Developer Profiles',
+                title: 'Author Ranking',
                 children: sorted.map((author, i) => buildAuthorSectionHtml(author, i + 1)).join(''),
             });
+
+            const categoryTotals = new Map<string, number>();
+            for (const author of result.authors) {
+                for (const [cat, count] of Object.entries(author.categories)) {
+                    categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + count);
+                }
+            }
+
+            if (categoryTotals.size > 0) {
+                const catColumns: TableColumn[] = [
+                    { key: 'category', label: 'Category' },
+                    { key: 'count', label: 'Failures', align: 'center' },
+                    { key: 'percentage', label: '%', align: 'center' },
+                ];
+                const catRows: TableRow[] = [...categoryTotals.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, count]) => ({
+                        key: cat,
+                        cells: {
+                            category: sanitizeHtml(cat),
+                            count: String(count),
+                            percentage: `${Math.round((count / result.totalFailures) * 100)}%`,
+                        },
+                    }));
+
+                bodyContent += Section({
+                    dataSection: 'category-ranking',
+                    title: 'Category Ranking',
+                    children: DataTable({
+                        columns: catColumns,
+                        rows: catRows,
+                        caption: 'Failure counts by category across all developers',
+                    }),
+                });
+            }
         }
 
         bodyContent += buildRecommendedActions(result) + `</div>`;

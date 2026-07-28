@@ -22,6 +22,7 @@ import {
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import type { RequirementScoreResult } from './requirement-score.js';
+import { icon } from '../icons.js';
 
 const OVERALL_SCORE_ERROR = 40;
 const OVERALL_SCORE_WARN = 75;
@@ -156,7 +157,7 @@ export function generateRequirementScoreHtml(
                 title: 'No requirement data available',
                 description: 'No requirement quality data is available for analysis.',
                 action: 'Run AI test generation to generate requirement data.',
-                icon: '\u{1F4CB}',
+                icon: icon('clipboard', 16),
             });
         } else {
             // Sort by score (lowest first) for prioritization

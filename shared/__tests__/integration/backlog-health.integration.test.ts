@@ -83,7 +83,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('Backlog Score');
             expect(html).toMatch(/Unassigned Issues\s*\(2\)/);
             expect(html).toMatch(/Stale Issues\s*\(2\)/);
-            expect(html).toMatch(/Bugs Without Tests\s*\(2\)/);
+            expect(html).toMatch(/Bugs w\/o Tests\s*\(2\)/);
             expect(html).toContain('PROJ-2');
             expect(html).toContain('PROJ-3');
             expect(html).toContain('PROJ-4');
@@ -112,7 +112,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('N/A');
             expect(html).not.toContain('Unassigned Issues (');
             expect(html).not.toContain('Stale Issues (');
-            expect(html).not.toContain('Bugs Without Tests (');
+            expect(html).not.toContain('Bugs w/o Tests (');
         });
     });
 

@@ -71,7 +71,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                 '<!DOCTYPE html>',
                 'Pipeline Cost Analytics',
                 'Total Cost',
-                'Avg Cost / Run',
+                'Avg Cost/Run',
                 'Total Duration',
                 'Run Count',
                 '$0.02',

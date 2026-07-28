@@ -274,7 +274,7 @@ export function buildReleaseSection(
     let breakdownHtml = '';
     for (const item of breakdown) {
         const statusColor = item.status === 'pass' ? 'var(--color-success)' : 'var(--color-error)';
-        const statusIcon = item.status === 'pass' ? '\u2713' : '\u2717';
+        const statusIcon = item.status === 'pass' ? icon('check-circle', 14) : icon('x-circle', 14);
         const statusText = item.noData ? 'no data' : item.status;
         const scoreText = item.noData ? 'N/A' : String(item.score);
         breakdownHtml +=

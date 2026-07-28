@@ -49,7 +49,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
             expect(html).toContain('FT-25 Test');
             expect(html).toContain('Squad Alpha');
             expect(html).toContain('Squad Beta');
-            expect(html).toContain('Leaderboard');
+            expect(html).toContain('Score Distribution');
             expect(html).toContain('Average Score');
         });
 

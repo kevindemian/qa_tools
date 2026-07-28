@@ -70,6 +70,7 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
                   title: 'No tests linked',
                   description: `This epic (${sanitizeHtml(node.epic)}) has no linked stories or tests.`,
                   action: 'Link test cases to this epic in your test management tool to enable traceability.',
+                  icon: icon('search', 16),
               })
             : '';
 
@@ -115,7 +116,7 @@ function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
         awareness.minConfidence == null
             ? ''
             : `<div data-part="min-confidence">min confidence: ${Math.round(awareness.minConfidence * 100)}%</div>`;
-    return `<section data-section="awareness"><h2>Cross-References &amp; Data Quality</h2>${rows}${minLine}</section>`;
+    return `<section data-section="awareness"><h2>Awareness Section</h2>${rows}${minLine}</section>`;
 }
 
 export function generateTraceabilityHtml(result: TraceabilityResult | null | undefined, title?: string): string {
@@ -174,6 +175,7 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             result.nodes.length > 0
                 ? Section({
                       dataSection: 'tree',
+                      title: 'Traceability Tree',
                       children:
                           '<div data-component="tree">' +
                           result.nodes.map((n) => buildEpicNodeHtml(n)).join('') +
@@ -184,6 +186,7 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
                       description:
                           'The traceability matrix requires epic-to-test mappings. No nodes were found to display.',
                       action: 'Configure test-to-requirement links in your test management tool and re-run the traceability analysis.',
+                      icon: icon('search', 16),
                   });
 
         const collapseScript = `<script>
@@ -200,7 +203,7 @@ export function generateTraceabilityHtml(result: TraceabilityResult | null | und
             uncoveredEpics.length > 0
                 ? Section({
                       dataSection: 'uncovered',
-                      title: 'Uncovered Epics',
+                      title: 'Uncovered Epics Highlight',
                       children: DataTable({
                           columns: [
                               { key: 'epic', label: 'Epic' },

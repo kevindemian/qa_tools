@@ -94,11 +94,11 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
                 }) +
                 MetricCard({ label: 'Grade', value: result.grade, severity: scoreSeverity }) +
                 MetricCard({
-                    label: 'Checks',
-                    value: `${passedChecks}/${totalChecks} passed`,
+                    label: 'Checks Passed',
+                    value: `${passedChecks}/${totalChecks}`,
                     severity: failedChecks > 0 ? 'warn' : 'success',
                 }) +
-                MetricCard({ label: 'Deployment', value: gateStatus, severity: gateSeverity }),
+                MetricCard({ label: 'Release Gate', value: gateStatus, severity: gateSeverity }),
         }),
     });
 }
@@ -106,7 +106,7 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
 function buildBreakdown(result: ReleaseScoreResult): string {
     const items = result.breakdown
         .map((item) => {
-            const statusIcon = item.status === 'pass' ? '\u2713' : '\u2717';
+            const statusIcon = item.status === 'pass' ? icon('check-circle', 14) : icon('x-circle', 14);
             const scoreText = item.noData ? 'N/A' : String(item.score);
             const statusText = item.noData ? 'no data' : item.status;
 
