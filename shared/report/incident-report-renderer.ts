@@ -100,11 +100,24 @@ function wrapContainer(pageTitle: string, children: string, timestamp: string): 
 }
 
 function buildMetricSummary(report: IncidentReport): string {
+    const overallSeverity = report.overallSeverity;
+    let overallSeveritySeverity: 'error' | 'warn' | 'info' | 'default';
+    if (overallSeverity === 'high') overallSeveritySeverity = 'error';
+    else if (overallSeverity === 'medium') overallSeveritySeverity = 'warn';
+    else if (overallSeverity === 'low') overallSeveritySeverity = 'info';
+    else overallSeveritySeverity = 'default';
+
     return Section({
         dataSection: 'summary',
         title: 'Summary',
         children: MetricGrid({
             children:
+                MetricCard({
+                    label: 'Overall Severity',
+                    value: overallSeverity.charAt(0).toUpperCase() + overallSeverity.slice(1),
+                    severity: overallSeveritySeverity,
+                    target: 'target: none',
+                }) +
                 MetricCard({ label: 'Total Events', value: String(report.eventCount) }) +
                 MetricCard({
                     label: 'High',

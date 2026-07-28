@@ -7,15 +7,31 @@
  */
 
 import { escapeHtml } from './report-utils.js';
+import { icon } from '../icons.js';
 import type { FlatTest } from '../result_parser.js';
 import type { ReportOptions } from './report-types.js';
 import { Card, Badge, MetricCard, FlexRow } from '../primitives/index.js';
 
 function _buildDiffSummaryCards(newFails: number, newPasses: number, flakyCount: number): string {
-    let html = MetricCard({ label: 'new failures', value: String(newFails), severity: 'error', icon: '❌' });
-    html += MetricCard({ label: 'fixed', value: String(newPasses), severity: 'success', icon: '✅' });
+    let html = MetricCard({
+        label: 'new failures',
+        value: String(newFails),
+        severity: 'error',
+        icon: icon('x-circle', 16),
+    });
+    html += MetricCard({
+        label: 'fixed',
+        value: String(newPasses),
+        severity: 'success',
+        icon: icon('check-circle', 16),
+    });
     if (flakyCount > 0) {
-        html += MetricCard({ label: 'flaky', value: String(flakyCount), severity: 'warn', icon: '🔄' });
+        html += MetricCard({
+            label: 'flaky',
+            value: String(flakyCount),
+            severity: 'warn',
+            icon: icon('refresh-cw', 16),
+        });
     }
     return FlexRow({ children: html, gap: 12 });
 }
@@ -68,7 +84,10 @@ export function buildDiffComparisonSection(diff: NonNullable<ReportOptions['diff
     if (newFails === 0 && newPasses === 0 && flakyCount === 0) return '';
 
     let content = '';
-    content += '<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Run Comparison</div>';
+    content +=
+        '<div class="label" style="margin-bottom:12px;font-size:1rem">' +
+        icon('bar-chart', 16) +
+        ' Run Comparison</div>';
     content += _buildDiffSummaryCards(newFails, newPasses, flakyCount);
     if (newFails > 0) content += _buildDiffSection(diff.newFailures, 'New failures:', 'failed', 'failed');
     if (newPasses > 0)

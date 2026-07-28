@@ -7,6 +7,7 @@
  * @module report-sections
  */
 
+import { icon } from '../icons.js';
 import { escapeHtml, fmtDuration, pctSub, pctClass } from './report-utils.js';
 import { extractSuite } from './report-types.js';
 import type { FlatTest } from '../result_parser.js';
@@ -63,8 +64,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
     if (suites.size === 0) return '';
     const sorted = Array.from(suites).sort((a, b) => a.localeCompare(b));
     let html = '<div class="sidebar">';
-    html +=
-        '<div style="font-weight:600;margin-bottom:6px;font-size:0.8rem;text-transform:uppercase;color:var(--color-text-muted)">Suites</div>';
+    html += '<div class="section-label">Suites</div>';
     for (const suite of sorted) {
         html +=
             '<div class="tree-node" onclick="filterByHierarchy(\'' +
@@ -73,8 +73,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
             escapeHtml(suite) +
             '</div>';
     }
-    html +=
-        '<div class="tree-node" onclick="clearHierarchy()" style="margin-top:6px;font-style:italic;color:var(--color-text-muted)">Clear filter</div>';
+    html += '<div class="tree-node tree-node-hint" onclick="clearHierarchy()">Clear filter</div>';
     html += '</div>';
     return html;
 }
@@ -120,7 +119,7 @@ export function buildTimeline(tests: FlatTest[]): string {
         ariaLabel: 'Test timeline',
     });
     const label =
-        '<div class="label" style="margin-bottom:8px">Timeline <button id="timelineToggle" onclick="toggleTimeline()" style="font-size:0.75rem;margin-left:8px">Hide</button></div>';
+        '<div class="label timeline-label">Timeline <button id="timelineToggle" onclick="toggleTimeline()" class="timeline-toggle">Hide</button></div>';
     html = html.replace('<div data-part="body">', `<div data-part="body">${label}`);
     html += '<div id="timelineBody">';
     for (const s of suites) {
@@ -133,27 +132,22 @@ export function buildTimeline(tests: FlatTest[]): string {
         const suiteLabel = s.suite === '(root)' ? '(root)' : s.suite;
         html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(s.suite) + '\')">';
         html += summary;
-        html +=
-            '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-            escapeHtml(suiteLabel) +
-            '</span>';
+        html += '<span class="suite-name">' + escapeHtml(suiteLabel) + '</span>';
         html +=
             '<div class="timeline-bar" style="width:' +
             barW.toFixed(0) +
             'px;background:' +
             tokens.color.chart.pass +
             '"></div>';
-        html +=
-            '<span style="font-size:0.75rem;color:var(--color-text-muted);flex-shrink:0">' +
-            fmtDuration(s.totalDuration) +
-            '</span>';
+        html += '<span class="timeline-duration">' + fmtDuration(s.totalDuration) + '</span>';
         html += '</div>';
     }
     html += '</div></div>';
     return html;
 }
 
-export function buildSummaryCards(stats: ReportStats, passRate: number): string {
+export function buildSummaryCards(stats: ReportStats, passRate: number, passRateThreshold?: number): string {
+    const threshold = passRateThreshold ?? 80;
     const sampleWarning =
         stats.total < 30 ? `Only ${stats.total} tests — results may not be statistically significant` : undefined;
     return MetricGrid({
@@ -184,7 +178,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number): string 
                     if (cls === 'warn') return 'warn';
                     return 'error';
                 })(),
-                target: 'target: 80%',
+                target: 'target: ' + threshold + '%',
             }),
     });
 }
@@ -194,7 +188,9 @@ export function buildLlmSection(options: ReportOptions): string {
     let content = '';
     if (options.llmFallback) {
         content =
-            '<p style="color:#ca8a04;font-size:0.8rem">⚠ AI Analysis unavailable — displaying template report.</p>';
+            '<p class="llm-warn">' +
+            icon('alert-triangle', 14) +
+            ' AI Analysis unavailable — displaying template report.</p>';
     } else if (options.llmConfidence) {
         const CONFIDENCE_BADGES: Record<string, string> = {
             high: '\ud83d\udfe2',
@@ -202,15 +198,9 @@ export function buildLlmSection(options: ReportOptions): string {
             low: '\ud83d\udd34',
         };
         const badge = CONFIDENCE_BADGES[options.llmConfidence] || '\ud83d\udd34';
-        content +=
-            '<p style="font-size:0.8rem;margin-bottom:8px">Confian\u00e7a: ' +
-            badge +
-            ' ' +
-            options.llmConfidence +
-            '</p>';
+        content += '<p class="llm-confidence">Confian\u00e7a: ' + badge + ' ' + options.llmConfidence + '</p>';
     }
-    content +=
-        '<pre style="white-space:pre-wrap;font-family:inherit;margin:0">' + escapeHtml(options.llmAnalysis) + '</pre>';
+    content += '<pre class="llm-content">' + escapeHtml(options.llmAnalysis) + '</pre>';
     return Card({
         title: 'AI Analysis',
         children: content,
@@ -223,8 +213,8 @@ export function buildQualityGate(passRate: number, threshold: number): string {
     return Card({
         variant: 'bordered',
         severity: 'error',
-        children: `<div class="label" style="color:var(--color-badge-fail-text);margin-bottom:4px">❌ Quality Gate Failed</div>
-<p style="margin:0;font-size:0.85rem;color:var(--color-text-primary)">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
+        children: `<div class="label qg-fail">${icon('x-circle', 16)} Quality Gate Failed</div>
+<p class="qg-fail">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
     });
 }
 
@@ -257,7 +247,11 @@ export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): strin
         severity: 'error',
         ariaLabel: 'Failed tests summary',
         children:
-            `<div class="label" style="margin-bottom:8px;color:var(--color-error)"><b>❌ Failed Tests (${stats.failed})</b></div>` +
+            '<div class="label failed-header"><b>' +
+            icon('x-circle', 16) +
+            ' Failed Tests (' +
+            stats.failed +
+            ')</b></div>' +
             items,
     });
 }
@@ -284,17 +278,15 @@ export function buildReleaseSection(
         const statusText = item.noData ? 'no data' : item.status;
         const scoreText = item.noData ? 'N/A' : String(item.score);
         breakdownHtml +=
-            '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-subtle)">' +
-            '<span style="color:var(--color-text-primary)">' +
+            '<div class="breakdown-row">' +
+            '<span class="label">' +
             escapeHtml(item.label) +
             '</span>' +
-            '<span style="font-weight:600">' +
-            '<span style="color:' +
+            '<span class="score"><span style="color:' +
             statusColor +
             '">' +
             statusIcon +
-            '</span> ' +
-            '<span style="color:var(--color-text-secondary);margin:0 4px">' +
+            '</span> <span class="score-text">' +
             scoreText +
             '</span>' +
             Badge({
@@ -308,28 +300,20 @@ export function buildReleaseSection(
         variant: 'elevated',
         children:
             '<div id="release-readiness">' +
-            '<div style="text-align:center;padding:16px 0">' +
-            '<div style="font-size:' +
-            tokens.fontSize['2xl'] +
-            ';font-weight:' +
-            tokens.fontWeight.bold +
-            ';color:' +
+            '<div class="score-value">' +
+            '<div class="score-value-number" style="color:' +
             scoreColor +
             '">' +
             score +
             '</div>' +
-            '<div style="font-size:' +
-            tokens.fontSize.lg +
-            ';color:var(--color-text-secondary);margin-top:4px;text-transform:uppercase">' +
+            '<div class="score-grade">' +
             escapeHtml(grade) +
             '</div>' +
             '</div>' +
-            '<div style="margin-top:8px">' +
+            '<div class="score-details">' +
             breakdownHtml +
             '</div>' +
-            '<div style="margin-top:12px;padding:10px;background:var(--color-surface-elevated);border-radius:' +
-            tokens.borderRadius.md +
-            'px;font-size:0.85rem;color:var(--color-text-secondary)">' +
+            '<div class="score-recommendation">' +
             escapeHtml(recommendation) +
             '</div>' +
             '</div>',
@@ -355,12 +339,27 @@ function qualityGateBadge(gate: HealthScoreResult['qualityGate']): {
     bg: string;
 } {
     if (gate === 'unknown') {
-        return { icon: '❓', text: 'Unknown', color: 'var(--color-text-muted)', bg: 'var(--color-bg-warning)' };
+        return {
+            icon: icon('help-circle', 16),
+            text: 'Unknown',
+            color: 'var(--color-text-muted)',
+            bg: 'var(--color-bg-warning)',
+        };
     }
     if (gate === 'pass') {
-        return { icon: '✅', text: 'Pass', color: 'var(--color-badge-pass-text)', bg: 'var(--color-badge-pass-bg)' };
+        return {
+            icon: icon('check-circle', 16),
+            text: 'Pass',
+            color: 'var(--color-badge-pass-text)',
+            bg: 'var(--color-badge-pass-bg)',
+        };
     }
-    return { icon: '❌', text: 'Fail', color: 'var(--color-badge-fail-text)', bg: 'var(--color-badge-fail-bg)' };
+    return {
+        icon: icon('x-circle', 16),
+        text: 'Fail',
+        color: 'var(--color-badge-fail-text)',
+        bg: 'var(--color-badge-fail-bg)',
+    };
 }
 
 function healthDimCard(label: string, score: number, status: string, available: boolean): string {
@@ -368,18 +367,16 @@ function healthDimCard(label: string, score: number, status: string, available: 
     const barWidth = available ? score : 0;
     const barColor = available ? healthColor(score) : 'var(--color-border-subtle)';
     const bg = available ? healthBg(score) : 'var(--color-bg-warning)';
-    let icon = '❓';
+    let iconSvg = icon('help-circle', 16);
     if (available) {
-        icon = status === 'pass' ? '✅' : '❌';
+        iconSvg = status === 'pass' ? icon('check-circle', 16) : icon('x-circle', 16);
     }
-    return `<div style="background:${bg};border-radius:6px;padding:10px 12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:0.75rem;color:var(--color-text-secondary)">${label}</span>
-            <span style="font-size:0.8rem;font-weight:700;color:${barColor}">${displayScore} ${icon}</span>
+    return `<div class="dim-card" style="background:${bg}">
+        <div class="dim-header">
+            <span class="dim-label">${label}</span>
+            <span class="dim-value" style="color:${barColor}">${displayScore} ${iconSvg}</span>
         </div>
-        <div style="height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${barWidth}%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
-        </div>
+        <div class="dim-bar"><div class="dim-bar-fill" style="width:${barWidth}%;background:${barColor}"></div></div>
     </div>`;
 }
 
@@ -413,14 +410,16 @@ export function buildHealthSection(health: HealthScoreResult): string {
     const html = Card({
         variant: 'default',
         children:
-            `<div class="label" style="margin-bottom:12px;font-size:1rem">📊 Test Suite Health</div>` +
-            `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px">` +
-            `<div style="text-align:center;min-width:100px"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
+            '<div class="label" style="margin-bottom:12px;font-size:1rem">' +
+            icon('bar-chart', 16) +
+            ' Test Suite Health</div>' +
+            '<div class="health-grid">' +
+            `<div class="score-value"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
             `<div style="font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span style="padding:4px 12px;border-radius:9999px;font-size:0.85rem;font-weight:600;background:${qc.bg};color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
-            `<span style="font-size:0.75rem;color:var(--color-text-muted)">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
+            `<span class="qc-badge" style="background:${qc.bg};color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
+            `<span class="health-meta">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
             `</div>` +
-            `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">${dimCards}</div>` +
+            `<div class="categories-grid">${dimCards}</div>` +
             provenanceHtml,
     });
     return html;
@@ -434,29 +433,29 @@ export function buildProvenanceSection(provenance: HealthScoreProvenance): strin
     for (const entry of provenance) {
         const overrideBadge = entry.overridden ? Badge({ variant: 'warn', children: 'overridden' }) : '';
         rows += `<tr>
-            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap;font-weight:600">${escapeHtml(entry.dimension)}</td>
-            <td style="padding:6px 8px;font-size:0.75rem">${escapeHtml(entry.formula)}</td>
-            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap">${escapeHtml(entry.source)}</td>
-            <td style="padding:6px 8px;font-size:0.75rem;white-space:nowrap">${escapeHtml(entry.standard)}</td>
-            <td style="padding:6px 8px;font-size:0.7rem;color:var(--color-text-muted)">${escapeHtml(entry.thresholdBasis)}</td>
-            <td style="padding:6px 8px;text-align:center">${overrideBadge}</td>
+            <td class="provenance-td provenance-dim">${escapeHtml(entry.dimension)}</td>
+            <td class="provenance-td">${escapeHtml(entry.formula)}</td>
+            <td class="provenance-td">${escapeHtml(entry.source)}</td>
+            <td class="provenance-td">${escapeHtml(entry.standard)}</td>
+            <td class="provenance-td provenance-threshold">${escapeHtml(entry.thresholdBasis)}</td>
+            <td class="provenance-td provenance-override">${overrideBadge}</td>
         </tr>`;
     }
 
-    return `<details style="margin-top:12px;font-size:0.75rem">
-        <summary style="cursor:pointer;color:var(--color-text-muted);font-weight:600;padding:4px 0">
-            📖 Methodology & References
+    return `<details class="provenance">
+        <summary>
+            ${icon('book-open', 16)}Methodology & References
         </summary>
-        <div style="overflow-x:auto;margin-top:8px">
-            <table style="width:100%;border-collapse:collapse">
+        <div class="provenance-table-wrapper">
+            <table class="provenance-table">
                 <thead>
-                    <tr style="border-bottom:1px solid var(--color-border-subtle)">
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Dimension</th>
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Formula</th>
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Source</th>
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Standard</th>
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:left;color:var(--color-text-muted)">Threshold Basis</th>
-                        <th style="padding:6px 8px;font-size:0.7rem;text-align:center;color:var(--color-text-muted)">Config</th>
+                    <tr>
+                        <th class="provenance-th">Dimension</th>
+                        <th class="provenance-th">Formula</th>
+                        <th class="provenance-th">Source</th>
+                        <th class="provenance-th">Standard</th>
+                        <th class="provenance-th">Threshold Basis</th>
+                        <th class="provenance-th">Config</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>

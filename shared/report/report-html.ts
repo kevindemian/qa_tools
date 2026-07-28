@@ -11,6 +11,7 @@ import { rootLogger } from '../logger.js';
 import { sanitizeUrl } from '../ui/cli_base.js';
 import { escapeHtml, statsFromTests } from './report-utils.js';
 import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
+import { icon } from '../icons.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, ReportOptions } from './report-types.js';
 import { DEFAULT_TITLE } from './report-types.js';
@@ -47,7 +48,9 @@ function _buildFlakinessLink(options: ReportOptions): string {
         '<div style="text-align:center;margin-top:12px">' +
         '<a href="' +
         escapeHtml(options.flakinessDashboardUrl) +
-        '" style="display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem" target="_blank" rel="noopener">📊 View Flakiness Dashboard</a></div>'
+        '" style="display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem" target="_blank" rel="noopener">' +
+        icon('bar-chart', 16) +
+        ' View Flakiness Dashboard</a></div>'
     );
 }
 
@@ -101,14 +104,17 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
     try {
         const stats = statsFromTests(tests);
         const title = options?.title || DEFAULT_TITLE;
-        const passRate = calcRunPassRate(stats);
+        const computed = options?.computed;
+        const precomputedRun = computed?.metricsRuns?.[0];
+        const passRate = precomputedRun ? (precomputedRun.passed / precomputedRun.total) * 100 : calcRunPassRate(stats);
         const categories = options?.testCategories || precomputeCategories(tests);
         const timestamp = options?.generatedAt || new Date().toISOString();
+        const dashboardId = options?.dashboardId || 'test-report';
 
         let bodyContent = '<h1>' + title + '</h1>';
-        bodyContent += `<div data-part="timestamp" data-dashboard="test-report">${timestamp}</div>`;
+        bodyContent += `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>`;
         bodyContent += `<div data-section="summary">`;
-        bodyContent += buildSummaryCards(stats, passRate);
+        bodyContent += buildSummaryCards(stats, passRate, options?.passRateThreshold);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="failed-summary">`;
         bodyContent += buildFailedSummary(tests, stats);
@@ -208,9 +214,17 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
     });
 }
 
-export function generateCoverageHtml(epics: CoverageEpic[], title?: string): string {
+export function generateCoverageHtml(
+    epics: CoverageEpic[],
+    options?: string | { title?: string; dashboardId?: string; coverageThreshold?: number; epicThreshold?: number },
+): string {
     try {
-        const reportTitle = title || 'Coverage Report';
+        const reportTitle = typeof options === 'string' ? options : options?.title || 'Coverage Report';
+        const dashboardId =
+            typeof options === 'object' ? (options.dashboardId ?? 'coverage-report') : 'coverage-report';
+        const coverageThreshold = typeof options === 'object' ? (options.coverageThreshold ?? 80) : 80;
+        const epicThreshold = typeof options === 'object' ? (options.epicThreshold ?? 100) : 100;
+
         const totalIssues = epics.reduce((sum, e) => sum + e.issues.length, 0);
         const closedIssues = epics.reduce(
             (sum, e) => sum + e.issues.filter((i) => i.status === 'Done' || i.status === 'Closed').length,
@@ -230,13 +244,22 @@ export function generateCoverageHtml(epics: CoverageEpic[], title?: string): str
             '<h1>' +
             reportTitle +
             '</h1>' +
-            `<div data-part="timestamp" data-dashboard="coverage-report">${timestamp}</div>` +
+            `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>` +
             `<div data-section="summary">` +
             '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">' +
-            MetricCard({ label: 'Total Epics', value: String(epics.length), target: 'target: 100%' }) +
+            MetricCard({
+                label: 'Total Epics',
+                value: String(epics.length),
+                target: 'target: ' + epicThreshold + '%',
+            }) +
             MetricCard({ label: 'Total Issues', value: String(totalIssues) }) +
-            MetricCard({ label: 'Closed', value: String(closedIssues), severity: 'success', target: 'target: 80%' }) +
-            MetricCard({ label: 'Coverage', value: closePct + '%', target: 'target: 80%' }) +
+            MetricCard({
+                label: 'Closed',
+                value: String(closedIssues),
+                severity: 'success',
+                target: 'target: ' + coverageThreshold + '%',
+            }) +
+            MetricCard({ label: 'Coverage', value: closePct + '%', target: 'target: ' + coverageThreshold + '%' }) +
             '</div>' +
             `</div>` +
             `<div data-section="epics">` +

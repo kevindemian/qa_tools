@@ -11,6 +11,7 @@
 import type { RawData, ComputedMetrics } from '../../types/data-hub.js';
 import type { TraceabilityResult } from '../../report/traceability-matrix.js';
 import { buildTraceabilityMatrix } from '../../report/traceability-matrix.js';
+import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 /**
  * Compute traceability tree from hub data.
@@ -21,10 +22,12 @@ import { buildTraceabilityMatrix } from '../../report/traceability-matrix.js';
  */
 export function computeTraceabilityTree(_raw: RawData, computed: ComputedMetrics): TraceabilityResult {
     const metricsRuns = computed.metricsRuns ?? [];
-    // buildTraceabilityMatrix needs a DataHub-like object for flakyRate and timestamp.
-    const hubLike = {
-        computed: { flakyRate: computed.flakyRate },
-        timestamp: new Date(),
-    } as Parameters<typeof buildTraceabilityMatrix>[2];
+    const hubLike = makeDataHubMock({
+        raw: _raw,
+        computed: {
+            flakyRate: computed.flakyRate,
+            metricsRuns,
+        },
+    });
     return buildTraceabilityMatrix(metricsRuns, undefined, hubLike);
 }
