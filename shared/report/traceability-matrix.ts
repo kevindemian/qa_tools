@@ -4,6 +4,7 @@ import type { CoverageGapResult, CoverageGapItem } from '../types/coverage.js';
 import { rootLogger } from '../logger.js';
 
 export { generateTraceabilityHtml } from './traceability-renderer.js';
+export { buildTraceabilityMatrix };
 
 type TestStatus = 'passed' | 'failed' | 'skipped';
 
@@ -102,7 +103,43 @@ function _awarenessEntityIds(dataHub: DataHub, category: QualityCategory): strin
     }
 }
 
+function validateDataHub(dataHub: DataHub): void {
+    const requiredMethods: Array<keyof DataHub> = [
+        'getProvenance',
+        'getPmIssues',
+        'getPullRequests',
+        'getFailureRecords',
+        'getSecurityFindings',
+        'getQuality',
+    ];
+    for (const method of requiredMethods) {
+        // eslint-disable-next-line security/detect-object-injection -- requiredMethods is hardcoded to DataHub keys
+        if (typeof dataHub[method] !== 'function') {
+            const msg = `validateDataHub: dataHub.${method} is not a function. Required accessor method missing from DataHub.`;
+            rootLogger.error(`validateDataHub: Missing required accessor method`, {
+                operation: 'validateDataHub',
+                cause: 'MISSING_ACCESSOR',
+                missingMethod: method,
+                remediation: `Implement DataHub.${method}() accessor method in DataHub implementation.`,
+            });
+            throw new Error(msg);
+        }
+    }
+}
+
 function buildAwareness(dataHub: DataHub): TraceabilityAwareness {
+    validateDataHub(dataHub);
+    try {
+        const categories = _buildAwarenessCategories(dataHub);
+        const minConfidence = _computeMinConfidence(categories);
+        return { categories, minConfidence };
+    } catch (err) {
+        _logAwarenessError(err, 'buildAwareness');
+        throw err;
+    }
+}
+
+function _buildAwarenessCategories(dataHub: DataHub): TraceabilityAwarenessCategory[] {
     const provenance = dataHub.getProvenance();
     const categories: TraceabilityAwarenessCategory[] = [];
     for (const category of AWARENESS_CATEGORIES) {
@@ -111,11 +148,12 @@ function buildAwareness(dataHub: DataHub): TraceabilityAwareness {
         const report = dataHub.getQuality(category);
         const valid = report ? report.valid : true;
         const confidence = provenance?.get(category)?.confidence ?? null;
-        categories.push({
-            category,
-            entities: ids.map((id) => ({ id, confidence, valid })),
-        });
+        categories.push({ category, entities: ids.map((id) => ({ id, confidence, valid })) });
     }
+    return categories;
+}
+
+function _computeMinConfidence(categories: TraceabilityAwarenessCategory[]): number | null {
     let min = 1;
     let has = false;
     for (const c of categories) {
@@ -126,7 +164,20 @@ function buildAwareness(dataHub: DataHub): TraceabilityAwareness {
             }
         }
     }
-    return { categories, minConfidence: has ? min : null };
+    return has ? min : null;
+}
+
+function _logAwarenessError(err: unknown, operation: string): void {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    rootLogger.error(`${operation} FAILED`, {
+        operation,
+        cause: err instanceof Error ? err.name : 'UNKNOWN_ERROR',
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+        remediation:
+            'Verify DataHub accessor methods (getProvenance, getPmIssues, getPullRequests, getFailureRecords, getSecurityFindings, getQuality) are properly implemented and return valid data. Check that provenance data includes confidence values for each category.',
+        recoverable: false,
+    });
 }
 
 function buildStoryNode(
@@ -185,66 +236,56 @@ function buildEpicNode(
     return { epic: epicKey, coverage: epicData.rawPct, health, flakiness: epicFlakiness, stories };
 }
 
-export function buildTraceabilityMatrix(
+function buildTraceabilityMatrix(
     runs: MetricsRun[],
     coverageResult: CoverageGapResult | undefined,
     dataHub: DataHub,
 ): TraceabilityResult {
-    try {
-        const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(runs);
-        // FlakyRate é SSOT do DataHub (Camada 1–6); sem fallback silencioso ao MetricsStore.
-        // FlakyResult.rate é 0–100; normalizado para 0–1 (contrato de exibição via *100).
-        const flakinessByTitle = new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate / 100]));
-        const byEpic = coverageResult?.byEpic ?? {};
-        const epicKeys = Object.keys(byEpic);
-        const itemsByEpic = groupItemsByEpic(coverageResult?.items);
+    validateDataHub(dataHub);
+    const { nodes, totalTests, passedTests } = _buildTraceabilityNodes(runs, coverageResult, dataHub);
+    const overallCoverage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+    const timestamp =
+        dataHub.timestamp instanceof Date ? dataHub.timestamp.toISOString() : new Date(dataHub.timestamp).toISOString();
+    const awareness = buildAwareness(dataHub);
+    return { nodes, totalEpics: nodes.length, totalTests, overallCoverage, timestamp, awareness };
+}
 
-        const nodes: TraceabilityNode[] = [];
-        let totalTests = 0;
-        let passedTests = 0;
+function _buildTraceabilityNodes(
+    runs: MetricsRun[],
+    coverageResult: CoverageGapResult | undefined,
+    dataHub: DataHub,
+): { nodes: TraceabilityNode[]; totalTests: number; passedTests: number } {
+    const { statusByTitle, durationByTitle } = extractLatestRunSnapshots(runs);
+    const flakinessByTitle = new Map(dataHub.computed.flakyRate.map((f) => [f.title, f.rate / 100]));
+    const byEpic = coverageResult?.byEpic ?? {};
+    const epicKeys = Object.keys(byEpic);
+    const itemsByEpic = groupItemsByEpic(coverageResult?.items);
 
-        for (const epicKey of epicKeys) {
-            const epicData = Object.entries(byEpic).find(([k]) => k === epicKey)?.[1];
-            if (!epicData) continue;
+    const nodes: TraceabilityNode[] = [];
+    let totalTests = 0;
+    let passedTests = 0;
 
-            const items = itemsByEpic.get(epicKey) || [];
-            const stories: TraceabilityNode['stories'] = [];
-            let epicPassed = 0;
-            let epicTotal = 0;
+    for (const epicKey of epicKeys) {
+        const epicData = Object.entries(byEpic).find(([k]) => k === epicKey)?.[1];
+        if (!epicData) continue;
+        const items = itemsByEpic.get(epicKey) || [];
+        const stories: TraceabilityNode['stories'] = [];
+        let epicPassed = 0;
+        let epicTotal = 0;
 
-            for (const item of items) {
-                const result = buildStoryNode(item, epicKey, statusByTitle, durationByTitle, flakinessByTitle);
-                if (result) {
-                    stories.push(result.node);
-                    epicPassed += result.storyPassed;
-                    epicTotal += result.node.tests.length;
-                }
+        for (const item of items) {
+            const result = buildStoryNode(item, epicKey, statusByTitle, durationByTitle, flakinessByTitle);
+            if (result) {
+                stories.push(result.node);
+                epicPassed += result.storyPassed;
+                epicTotal += result.node.tests.length;
             }
-
-            nodes.push(buildEpicNode(epicKey, epicData, stories, epicPassed, epicTotal));
-            totalTests += epicTotal;
-            passedTests += epicPassed;
         }
 
-        const overallCoverage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
-
-        return {
-            nodes,
-            totalEpics: nodes.length,
-            totalTests,
-            overallCoverage,
-            timestamp: dataHub.timestamp.toISOString(),
-            awareness: buildAwareness(dataHub),
-        };
-    } catch (err) {
-        rootLogger.error('Failed to build traceability matrix: ' + (err instanceof Error ? err.message : String(err)));
-        return {
-            nodes: [],
-            totalEpics: 0,
-            totalTests: 0,
-            overallCoverage: 0,
-            timestamp: dataHub.timestamp.toISOString(),
-            awareness: { categories: [], minConfidence: null },
-        };
+        nodes.push(buildEpicNode(epicKey, epicData, stories, epicPassed, epicTotal));
+        totalTests += epicTotal;
+        passedTests += epicPassed;
     }
+
+    return { nodes, totalTests, passedTests };
 }
