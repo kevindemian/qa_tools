@@ -10,13 +10,6 @@ import type { PipelineRun } from '../types/ci-cd.js';
 import { nullAs, undefinedAs, nonNull } from '../test-utils.js';
 import { createTestHub } from './test-hub.js';
 
-/** Custo é SSOT: derivado de dataHub.raw.runs (PipelineRun do CI), não de MetricsRun local. */
-function makeHub(ciRuns: PipelineRun[]): DataHub {
-    const hub = createTestHub();
-    hub.raw.runs = ciRuns;
-    return hub;
-}
-
 function makeCiRun(overrides?: Partial<PipelineRun>): PipelineRun {
     const started = '2026-06-01T12:00:00.000Z';
     const updated = '2026-06-01T12:01:00.000Z'; // 60s de duração
@@ -59,9 +52,16 @@ function makeCiRuns(): PipelineRun[] {
     ];
 }
 
+/** Creates a DataHub with pre-computed perRunCosts (SSOT) for testing. */
+function makeHubWithSsot(ciRuns: PipelineRun[], ssot: PerRunCost[]): DataHub {
+    const hub = createTestHub({ perRunCosts: ssot });
+    hub.raw.runs = ciRuns;
+    return hub;
+}
+
 describe('CalculatePipelineCost', () => {
     it('returns zeroed result when DataHub has no CI runs', () => {
-        const result = calculatePipelineCost(0.01, makeHub([]));
+        const result = calculatePipelineCost(0.01, makeHubWithSsot([], []));
 
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
@@ -73,9 +73,13 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('calculates cost correctly for a single run', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
-        ]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' })],
+            ssot,
+        );
         const result = calculatePipelineCost(undefined, hub);
 
         expect(result.runCount).toBe(1);
@@ -91,7 +95,12 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('aggregates multiple runs correctly', () => {
-        const result = calculatePipelineCost(undefined, makeHub(makeCiRuns()));
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:02:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+            { runId: 2, timestamp: '2026-06-02T12:02:00.000Z', minutes: 5, cost: 0.05, branch: 'main' },
+            { runId: 3, timestamp: '2026-06-03T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+        ];
+        const result = calculatePipelineCost(undefined, makeHubWithSsot(makeCiRuns(), ssot));
 
         expect(result.runCount).toBe(3);
         expect(result.totalDurationSec).toBe(480);
@@ -101,9 +110,13 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('uses custom cost per minute', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
-        ]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.05, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' })],
+            ssot,
+        );
         const result = calculatePipelineCost(0.05, hub);
 
         expect(result.costPerMinute).toBe(0.05);
@@ -112,9 +125,13 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('allows explicit zero cost per minute', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
-        ]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' })],
+            ssot,
+        );
         const result = calculatePipelineCost(0, hub);
 
         expect(result.costPerMinute).toBe(0);
@@ -126,13 +143,19 @@ describe('CalculatePipelineCost', () => {
         const prev = process.env['QA_COST_PER_COMPUTE_MINUTE'];
         process.env['QA_COST_PER_COMPUTE_MINUTE'] = '0.10';
         try {
-            const hub = makeHub([
-                makeCiRun({
-                    id: 1,
-                    run_started_at: '2026-06-01T12:00:00.000Z',
-                    updated_at: '2026-06-01T12:01:00.000Z',
-                }),
-            ]);
+            const ssot: PerRunCost[] = [
+                { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.1, branch: 'main' },
+            ];
+            const hub = makeHubWithSsot(
+                [
+                    makeCiRun({
+                        id: 1,
+                        run_started_at: '2026-06-01T12:00:00.000Z',
+                        updated_at: '2026-06-01T12:01:00.000Z',
+                    }),
+                ],
+                ssot,
+            );
             const result = calculatePipelineCost(undefined, hub);
 
             expect(result.costPerMinute).toBe(0.1);
@@ -147,9 +170,13 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('aGGRESIVE: negative cost per minute is rejected (Rule 24) and falls back to default, never producing negative cost', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
-        ]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' })],
+            ssot,
+        );
         const result = calculatePipelineCost(-5, hub);
 
         expect(result.costPerMinute).toBe(DEFAULT_COST_PER_MINUTE);
@@ -158,9 +185,13 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('aGGRESIVE: NaN cost per minute is rejected (Rule 24) and falls back to default', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
-        ]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' })],
+            ssot,
+        );
         const result = calculatePipelineCost(Number.NaN, hub);
 
         expect(result.costPerMinute).toBe(DEFAULT_COST_PER_MINUTE);
@@ -168,59 +199,86 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('sorts entries by timestamp descending', () => {
-        const result = calculatePipelineCost(undefined, makeHub(makeCiRuns()));
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+            { runId: 2, timestamp: '2026-06-02T12:01:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+            { runId: 3, timestamp: '2026-06-03T12:01:00.000Z', minutes: 3, cost: 0.03, branch: 'main' },
+        ];
+        const ciRuns = [
+            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
+            makeCiRun({ id: 2, run_started_at: '2026-06-02T12:00:00.000Z', updated_at: '2026-06-02T12:01:00.000Z' }),
+            makeCiRun({ id: 3, run_started_at: '2026-06-03T12:00:00.000Z', updated_at: '2026-06-03T12:01:00.000Z' }),
+        ];
+        const result = calculatePipelineCost(undefined, makeHubWithSsot(ciRuns, ssot));
 
-        expect(nonNull(result.costByRun[0]).timestamp).toBe('2026-06-03T12:00:00.000Z');
-        expect(nonNull(result.costByRun[1]).timestamp).toBe('2026-06-02T12:00:00.000Z');
-        expect(nonNull(result.costByRun[2]).timestamp).toBe('2026-06-01T12:00:00.000Z');
+        expect(nonNull(result.costByRun[0]).timestamp).toBe('2026-06-03T12:01:00.000Z');
+        expect(nonNull(result.costByRun[1]).timestamp).toBe('2026-06-02T12:01:00.000Z');
+        expect(nonNull(result.costByRun[2]).timestamp).toBe('2026-06-01T12:01:00.000Z');
     });
 
     it('determines failed status from conclusion', () => {
-        const hub = makeHub([makeCiRun({ id: 1, conclusion: 'failure' })]);
+        const ssot: PerRunCost[] = [
+            { runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+        ];
+        const hub = makeHubWithSsot([makeCiRun({ id: 1, conclusion: 'failure' })], ssot);
         const result = calculatePipelineCost(undefined, hub);
 
         expect(nonNull(result.costByRun[0]).status).toBe('failed');
     });
 
     it('determines passed status from conclusion', () => {
-        const hub = makeHub([makeCiRun({ id: 1, conclusion: 'success' })]);
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, conclusion: 'success' })],
+            [{ runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' }],
+        );
         const result = calculatePipelineCost(undefined, hub);
 
         expect(nonNull(result.costByRun[0]).status).toBe('passed');
     });
 
     it('determines unknown status when conclusion is absent', () => {
-        const hub = makeHub([
-            {
-                id: 1,
-                created_at: '2026-06-01T12:00:00.000Z',
-                run_started_at: '2026-06-01T12:00:00.000Z',
-                updated_at: '2026-06-01T12:01:00.000Z',
-            },
-        ]);
+        const hub = makeHubWithSsot(
+            [
+                {
+                    id: 1,
+                    created_at: '2026-06-01T12:00:00.000Z',
+                    run_started_at: '2026-06-01T12:00:00.000Z',
+                    updated_at: '2026-06-01T12:01:00.000Z',
+                },
+            ],
+            [{ runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' }],
+        );
         const result = calculatePipelineCost(undefined, hub);
 
         expect(nonNull(result.costByRun[0]).status).toBe('unknown');
     });
 
     it('sets period from sorted timestamps', () => {
-        const result = calculatePipelineCost(undefined, makeHub(makeCiRuns()));
+        const result = calculatePipelineCost(
+            undefined,
+            makeHubWithSsot(makeCiRuns(), [
+                { runId: 1, timestamp: '2026-06-01T12:00:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+                { runId: 2, timestamp: '2026-06-02T12:00:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+                { runId: 3, timestamp: '2026-06-03T12:00:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+            ]),
+        );
 
         expect(result.period.from).toBe('2026-06-01T12:00:00.000Z');
         expect(result.period.to).toBe('2026-06-03T12:00:00.000Z');
     });
 
     it('sets timestamp to valid ISO string', () => {
-        const result = calculatePipelineCost(undefined, makeHub([]));
+        const result = calculatePipelineCost(undefined, makeHubWithSsot([], []));
 
         expect(new Date(result.timestamp).toString()).not.toBe('Invalid Date');
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
     it('handles duration exceeding one hour', () => {
-        const hub = makeHub([
-            makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T14:00:00.000Z' }),
-        ]);
+        const hub = makeHubWithSsot(
+            [makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T14:00:00.000Z' })],
+            [{ runId: 1, timestamp: '2026-06-01T14:00:00.000Z', minutes: 120, cost: 1.2, branch: 'main' }],
+        );
         const result = calculatePipelineCost(undefined, hub);
 
         expect(result.totalDurationSec).toBe(7200);
@@ -228,7 +286,10 @@ describe('CalculatePipelineCost', () => {
     });
 
     it('guards invalid duration (no timestamps) from producing negative/NaN cost', () => {
-        const hub = makeHub([{ id: 1, conclusion: 'success', created_at: '2026-06-01T12:00:00.000Z' }]);
+        const hub = makeHubWithSsot(
+            [{ id: 1, conclusion: 'success', created_at: '2026-06-01T12:00:00.000Z' }],
+            [{ runId: 1, timestamp: '2026-06-01T12:00:00.000Z', minutes: 0, cost: 0, branch: 'main' }],
+        );
         const result = calculatePipelineCost(undefined, hub);
 
         expect(result.totalDurationSec).toBe(0);
@@ -506,7 +567,7 @@ describe('CalculatePipelineCost — SSOT consumption (computed.perRunCosts)', ()
         expect(result.runCount).toBe(3);
     });
 
-    it('falls back to local computation when perRunCosts is empty array', () => {
+    it('returns empty result when perRunCosts is empty array (no fallback)', () => {
         const ciRuns = [
             makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
         ];
@@ -514,10 +575,12 @@ describe('CalculatePipelineCost — SSOT consumption (computed.perRunCosts)', ()
         hub.raw.runs = ciRuns;
         const result = calculatePipelineCost(undefined, hub);
 
-        expect(nonNull(result.costByRun[0]).durationSec).toBe(60);
+        expect(result.costByRun).toStrictEqual([]);
+        expect(result.runCount).toBe(0);
+        expect(result.totalCost).toBe(0);
     });
 
-    it('falls back to local computation when perRunCosts is absent', () => {
+    it('returns empty result when perRunCosts is absent', () => {
         const ciRuns = [
             makeCiRun({ id: 1, run_started_at: '2026-06-01T12:00:00.000Z', updated_at: '2026-06-01T12:01:00.000Z' }),
         ];
@@ -525,7 +588,9 @@ describe('CalculatePipelineCost — SSOT consumption (computed.perRunCosts)', ()
         hub.raw.runs = ciRuns;
         const result = calculatePipelineCost(undefined, hub);
 
-        expect(nonNull(result.costByRun[0]).durationSec).toBe(60);
+        expect(result.costByRun).toStrictEqual([]);
+        expect(result.runCount).toBe(0);
+        expect(result.totalCost).toBe(0);
     });
 });
 

@@ -76,23 +76,35 @@ function buildFlakinessSummary(
         title: 'Summary',
         children: MetricGrid({
             children:
+                // 1. Flaky Tests
                 MetricCard({
                     label: 'Flaky Tests',
                     value: String(high.length),
                     severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
-                    trend: totalTests > 0 ? `${flakyRate}% of ${totalTests} total` : '',
+                    trend:
+                        totalTests > 0 ? `${Math.round((high.length / totalTests) * 100)}% of ${totalTests} total` : '',
                     target: `target: <${thresholds.errorSeverityThreshold}`,
                 }) +
+                // 2. Flaky Rate
+                MetricCard({
+                    label: 'Flaky Rate',
+                    value: `${flakyRate}%`,
+                    severity: flakyRate > 5 ? 'warn' : 'default',
+                    target: 'target: <5%',
+                }) +
+                // 3. High Flakiness
+                MetricCard({
+                    label: 'High Flakiness',
+                    value: String(flaky.length),
+                    severity: flaky.length > high.length * 2 ? 'warn' : 'default',
+                    trend: `${high.length} high severity`,
+                }) +
+                // 4. Threshold
                 MetricCard({
                     label: 'Threshold',
                     value: `>${thresholds.thresholdPct}%`,
                     severity: 'default',
                     target: `target: <${thresholds.thresholdPct}%`,
-                }) +
-                MetricCard({
-                    label: 'All Candidates',
-                    value: String(flaky.length),
-                    severity: flaky.length > high.length * 2 ? 'warn' : 'default',
                 }),
         }),
     });
@@ -118,13 +130,10 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
 
     const columns: TableColumn[] = [
         { key: 'test', label: 'Test', width: '30%' },
+        { key: 'rate', label: 'Flakiness (%)', align: 'center' },
+        { key: 'severity', label: 'Severity Badge' },
+        { key: 'sparkline', label: 'Sparkline' },
         { key: 'runs', label: 'Runs', align: 'center' },
-        { key: 'pass', label: 'Pass', align: 'center' },
-        { key: 'fail', label: 'Fail', align: 'center' },
-        { key: 'skip', label: 'Skip', align: 'center' },
-        { key: 'rate', label: 'Rate', align: 'center' },
-        { key: 'severity', label: 'Severity' },
-        { key: 'sparkline', label: 'Trend' },
     ];
 
     const rows: TableRow[] = sorted.map((f) => {
@@ -136,10 +145,6 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
             key: f.title,
             cells: {
                 test: sanitizeHtml(f.title.slice(0, 80)),
-                runs: String(f.totalRuns),
-                pass: String(f.passCount),
-                fail: String(f.failCount),
-                skip: String(f.skipCount),
                 rate: Badge({
                     variant: severityVariant,
                     children: pct + '%',
@@ -154,6 +159,7 @@ function buildFlakinessTable(high: FlakinessEntry[], thresholds: FlakinessThresh
                     width: 100,
                     height: 8,
                 }),
+                runs: String(f.totalRuns),
             },
         };
     });

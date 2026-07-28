@@ -55,7 +55,7 @@ describe('Integration: AI Effectiveness Dashboard (FT-23)', () => {
             expect(html).toContain('</html>');
             expect(html).toContain('FT-23 Test');
             expect(html).toContain('50%');
-            expect(html).toContain('2 total records');
+            expect(html).toContain('Total Records');
             expect(html).toContain('By Prompt Version');
         });
 

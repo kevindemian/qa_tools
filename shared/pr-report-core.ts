@@ -89,6 +89,7 @@ export interface PrReportCoreOptions {
     ciEnv?: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string };
     /** Data Hub — SSOT obrigatório. Toda métrica vem do DataHub; nunca opcional. */
     dataHub: DataHub;
+    qualityGateThreshold?: number;
 }
 
 export interface PrReportResult {
@@ -185,6 +186,12 @@ function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string 
     const lines: string[] = ['## [stats] Test Results', ''];
     lines.push(renderQualityGateTable(Number(passRate), stats, diff));
     lines.push('');
+    if (stats.total < 30) {
+        lines.push(
+            `> :warning: **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
+        );
+        lines.push('');
+    }
     return lines.join('\n');
 }
 
@@ -429,7 +436,12 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
             '|---|---|---|---|---|---|',
             `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
         ];
-
+        if (stats.total < 30) {
+            lines.push(
+                '',
+                `> :warning: **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
+            );
+        }
         if (htmlArtifactUrl) {
             lines.push('', `[link] [Download full HTML report](${htmlArtifactUrl})`);
         }
@@ -557,6 +569,8 @@ function generateHtmlReportFile(
             trends: dataHub.computed.metricsTrends ?? [],
             includeChart: true,
             coverageSource,
+            dashboardId: 'pr-report-html',
+            passRateThreshold: options.qualityGateThreshold ?? 80,
             ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
             ...(ghBranch ? { branch: ghBranch } : {}),
             ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),
@@ -714,16 +728,21 @@ function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'fa
     return 'failure';
 }
 
+function renderQualityGateChecksTable(result: QualityGateSummary): string {
+    const checkRows = result.checks.map(
+        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${gateStatusIcon(c.status)} |`,
+    );
+
+    return ['', '| Check | Score | Threshold | Status |', '|---|---|---|---|', ...checkRows, ''].join('\n');
+}
+
 function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifactUrl?: string): string {
     const { icon, word } = gateOverallLabel(result.overall);
     const lines: string[] = [`**Quality Gate: ${icon} ${word}**`, '', `**Score:** ${result.score}/100`];
     if (grade) {
         lines.push(`**Grade:** ${grade}`);
     }
-    lines.push('', '| Check | Score | Threshold | Status |', '|---|---|---|---|');
-    for (const check of result.checks) {
-        lines.push(`| ${check.name} | ${check.score} | ${check.threshold} | ${gateStatusIcon(check.status)} |`);
-    }
+    lines.push(renderQualityGateChecksTable(result));
     if (artifactUrl) {
         lines.push('', `[link] [Download HTML report](${artifactUrl})`);
     }
@@ -732,18 +751,12 @@ function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifac
 
 function buildQualityGateSection(result: QualityGateSummary): string {
     const { icon, word } = gateOverallLabel(result.overall);
-    const checkRows = result.checks.map(
-        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${gateStatusIcon(c.status)} |`,
-    );
 
     return [
         '',
         `## :large_blue_diamond: Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
-        '| Check | Actual | Threshold | Status |',
-        '|---|---|---|---|',
-        ...checkRows,
-        '',
+        renderQualityGateChecksTable(result),
     ].join('\n');
 }
 

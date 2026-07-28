@@ -179,7 +179,7 @@ describe('GenerateFlakinessHtml — property-based', () => {
         );
     });
 
-    it('always shows summary cards with threshold and all-candidates count', () => {
+    it('always shows summary cards with threshold and flaky tests count', () => {
         expect.hasAssertions();
 
         fc.assert(
@@ -187,7 +187,7 @@ describe('GenerateFlakinessHtml — property-based', () => {
                 const html = generateFlakinessHtml(entries);
 
                 expect(html).toContain('Threshold');
-                expect(html).toContain('All Candidates');
+                expect(html).toContain('Flaky Tests');
                 expect(html).toContain(String(entries.length));
             }),
             { numRuns: 50 },

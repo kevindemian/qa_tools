@@ -1,11 +1,12 @@
-import type { DataHub, ComputedMetrics } from '../types/data-hub.js';
+import type { DataHub, ComputedMetrics, RawData } from '../types/data-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 /**
  * Reusable DataHub test double. Defaults to a healthy-ish hub; override
  * any ComputedMetrics field via `overrides`. Persistence methods are mocks.
  */
-export function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
+export function createTestHub(overrides: Partial<ComputedMetrics> & { raw?: Partial<RawData> } = {}): DataHub {
+    const { raw: rawOverrides, ...computedOverrides } = overrides;
     return makeDataHubMock({
         computed: {
             passRate: 50,
@@ -15,7 +16,20 @@ export function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub
             testPassRate: 50,
             testCounts: { passed: 50, failed: 50, skipped: 0, total: 100 },
             framework: 'vitest',
-            ...overrides,
+            ...computedOverrides,
+        },
+        raw: {
+            runs: [],
+            jobs: new Map(),
+            artifacts: new Map(),
+            failureReasons: new Map(),
+            xray: {
+                requirementCoverage: [],
+                testRuns: [],
+                testExecutions: [],
+            },
+            pmIssues: [],
+            ...rawOverrides,
         },
     });
 }

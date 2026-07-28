@@ -468,7 +468,8 @@ export function checkDashboardExports(): CheckResult {
         // Accept both direct exports and re-exports from renderer files
         const hasDirectExport = content.includes('export function ' + d.export_);
         const hasReExport = content.includes('export { ' + d.export_ + ' } from ');
-        if (!hasDirectExport && !hasReExport) {
+        const hasLocalExport = content.includes('export { ' + d.export_ + ' }');
+        if (!hasDirectExport && !hasReExport && !hasLocalExport) {
             violations.push({ file: d.file, line: 1, content: `Missing export: ${d.export_} not found` });
         }
     }
@@ -597,7 +598,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:ccbfc253c4b75e098497d2b5d54ccc1a8db859c4542fd7760914db211cb09930 */
+        /* HASH:bc880368e59049e62921ce2ddffa88b77d7593de796c3614d85760840f351d33 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

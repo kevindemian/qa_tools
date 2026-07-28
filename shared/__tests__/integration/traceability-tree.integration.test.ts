@@ -9,7 +9,13 @@ import { createTestHub } from '../test-hub.js';
 import type { RawData, ComputedMetrics } from '../../types/data-hub.js';
 
 function makeHub(overrides?: { raw?: Partial<RawData>; computed?: Partial<ComputedMetrics> }) {
-    const hub = createTestHub(overrides?.computed);
+    const hub = createTestHub({
+        raw: {
+            xray: { requirementCoverage: [], testRuns: [], testExecutions: [] },
+            pmIssues: [],
+        },
+        ...overrides,
+    });
     if (overrides?.raw) {
         Object.assign(hub.raw, overrides.raw);
     }

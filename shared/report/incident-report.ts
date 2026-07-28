@@ -58,6 +58,12 @@ function getEpicsFromInputs(uncoveredEpics: string[], coverageGap?: CoverageGapR
     });
 }
 
+function formatTimestamp(ts: Date | string | undefined): string {
+    if (ts instanceof Date) return ts.toISOString();
+    if (ts) return new Date(ts).toISOString();
+    return new Date().toISOString();
+}
+
 export function buildIncidentReport(
     failRate: number | null | undefined,
     regressionCount: number,
@@ -67,7 +73,7 @@ export function buildIncidentReport(
     coverageGap?: CoverageGapResult,
     dataHub?: import('../types/data-hub.js').DataHub,
 ): IncidentReport {
-    const timestamp = dataHub?.timestamp.toISOString() ?? new Date().toISOString();
+    const timestamp = formatTimestamp(dataHub?.timestamp);
 
     const epics = getEpicsFromInputs(uncoveredEpics, coverageGap);
 

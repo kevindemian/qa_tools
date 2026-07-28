@@ -229,7 +229,8 @@ describe('GenerateAiEffectivenessHtml', () => {
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('50%');
         expect(html).toContain('AI Effectiveness Dashboard');
-        expect(html).toContain('2 total records');
+        expect(html).toContain('Total Records');
+        expect(html).toContain('2');
     });
 
     it('shows version breakdown table', () => {

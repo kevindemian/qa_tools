@@ -49,6 +49,9 @@ export interface ReportOptions {
     flakinessDashboardUrl?: string;
     previousRunTests?: import('../result_parser.js').FlatTest[];
     coverageSource?: string;
+    dashboardId?: string;
+    passRateThreshold?: number;
+    computed?: import('../types/data-hub.js').ComputedMetrics;
 }
 
 export interface ReportStats {

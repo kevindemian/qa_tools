@@ -86,42 +86,16 @@ export function calculatePipelineCost(costPerMinute: number | undefined, dataHub
         };
     }
 
-    // Fallback: compute locally when perRunCosts is absent (backward compat).
-    const ciRuns = dataHub.getRuns();
-    const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
-        const durationSec =
-            r.run_started_at && r.updated_at
-                ? (new Date(r.updated_at).getTime() - new Date(r.run_started_at).getTime()) / 1000
-                : 0;
-        const safeDuration = Number.isFinite(durationSec) && durationSec >= 0 ? durationSec : 0;
-        return {
-            timestamp: r.created_at ?? new Date().toISOString(),
-            durationSec: safeDuration,
-            cost: (safeDuration / 60) * cpm,
-            status: mapConclusionToStatus(r.conclusion),
-        };
-    });
-
-    costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
-    const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
-    const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
-    const sortedTimestamps = ciRuns
-        .map((r) => r.created_at ?? '')
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
-
+    // Fallback: perRunCosts not available — return empty result instead of computing locally.
+    // DataHub always computes perRunCosts when runs exist, so this branch only triggers on empty data.
     return {
-        totalCost,
-        avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
-        totalDurationSec,
+        totalCost: 0,
+        avgCostPerRun: 0,
+        totalDurationSec: 0,
         costPerMinute: cpm,
-        costByRun,
-        runCount: ciRuns.length,
-        period: {
-            from: sortedTimestamps[0] ?? '',
-            to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
-        },
+        costByRun: [],
+        runCount: 0,
+        period: { from: '', to: '' },
         timestamp: dataHub.timestamp.toISOString(),
     };
 }
