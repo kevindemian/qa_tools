@@ -471,6 +471,58 @@ function buildRendererEntries(): RendererEntry[] {
 }
 
 // ============================================================================
+// R8.7 Cross-validation: specs vs renderers (C17)
+// ============================================================================
+
+/** Specs that are HTML renderers in shared/report/ and can be validated with real output. */
+const HTML_RENDERER_SPECS = [
+    'ai-effectiveness',
+    'ai-comparison',
+    'incident-report',
+    'impact-alert',
+    'traceability',
+    'flakiness',
+    'backlog-health',
+    'pipeline-cost',
+    'suite-optimization',
+    'cross-squad-benchmark',
+    'release-score',
+    'silent-regression',
+    'defect-trend',
+    'defect-seasonality',
+    'developer-profile',
+    'requirement-score',
+    'coverage-gap',
+];
+
+describe('R8.7 Cross-validation: specs vs renderers (C17)', () => {
+    it('all HTML renderer specs have corresponding renderer entries', () => {
+        expect.hasAssertions();
+        const entries = buildRendererEntries();
+        const entryIds = new Set(entries.map((e) => e.specId));
+        const missing = HTML_RENDERER_SPECS.filter((id) => !entryIds.has(id));
+        expect(missing).toEqual([]);
+    });
+
+    it('no orphan renderer entries (entries must match a spec)', () => {
+        expect.hasAssertions();
+        const entries = buildRendererEntries();
+        const specIds = new Set(ALL_SPECS.map((s) => s.id));
+        const orphans = entries.filter((e) => !specIds.has(e.specId));
+        expect(orphans.map((e) => e.specId)).toEqual([]);
+    });
+
+    it('non-HTML specs are documented as excluded from real-output validation', () => {
+        expect.hasAssertions();
+        const excludedSpecs = ALL_SPECS.map((s) => s.id).filter((id) => !HTML_RENDERER_SPECS.includes(id));
+        // These specs are git triggers, markdown outputs, or orchestrators — not standalone HTML renderers
+        expect(excludedSpecs).toContain('pipeline-health');
+        expect(excludedSpecs).toContain('pr-report-markdown');
+        expect(excludedSpecs).toContain('pr-report-job-summary');
+    });
+});
+
+// ============================================================================
 // R8.1 Spec Structure Validation (unchanged — validates metadata only)
 // ============================================================================
 
