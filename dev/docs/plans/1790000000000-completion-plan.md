@@ -1657,10 +1657,11 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 **Problema:** O teste de validação R8 verifica apenas que `artifact-specs.ts` tem campos internamente consistentes. NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "28/28 validated" é verdadeiro apenas para especificações, não para implementação.
 **Correção planeada:** Adicionar teste de integração que (a) renderize output real de cada artefact via seu renderer/orchestrator e (b) valide que cada métrica, secção, acção, threshold e timestamp definido em `CONTENT-SPECIFICATION.md` está presente no output real.
 
-#### C2. report-html.ts não consome dataHub.computed para cards de resumo (R2.18 violação)
-**Arquivo:** `shared/report/report-html.ts:102`
-**Problema:** Orquestrador usa `statsFromTests(tests)` (cálculo local de raw data) e `calcRunPassRate(stats)` em vez de ler `dataHub.computed.metricsRuns` ou computações pre-computadas.
-**Correção planeada:** Receber `dataHub.computed` via parâmetro `ReportOptions` e usá-lo para summary cards quando disponível, apenas calculando localmente como fallback quando DataHub não tem dados pre-computados.
+#### C2. report-html.ts consome exclusivamente DataHub.computed (SSOT) — sem fallback local
+**Arquivos:** `shared/report/report-html.ts`, test files
+**Problema:** report-html.ts computa `statsFromTests(tests)` e `calcRunPassRate(stats)` localmente quando `computed.metricsRuns` não disponível. Viola R2.18 — orquestrador deve consumir DataHub.computed como ÚNICA fonte de verdade (DataHub já prevê fallback para modo manual).
+**Correção planeada:** Remover `statsFromTests` fallback e `calcRunPassRate` fallback. Quando `options.computed.metricsRuns[0]` não existe, log erro estruturado e retornar `buildErrorPage`. Todos os dados (stats, passRate, categories, timeline) vêm exclusivamente de `precomputedRun` (DataHub). Default `dashboardId` alterado de `'test-report'` para `'coverage-report'`.
+**Status:** Pendente implementação.
 
 #### C3. Helpers de secção não consomem dataHub.computed
 **Arquivos:** `shared/report/report-sections.ts`, `shared/report/report-diff.ts`, `shared/report/report-chart.ts`, `shared/report/report-table.ts`, `shared/report/report-utils.ts`

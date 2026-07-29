@@ -9,8 +9,7 @@
 
 import { rootLogger } from '../logger.js';
 import { sanitizeUrl } from '../ui/cli_base.js';
-import { escapeHtml, statsFromTests } from './report-utils.js';
-import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
+import { escapeHtml } from './report-utils.js';
 import { icon } from '../icons.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, ReportOptions } from './report-types.js';
@@ -100,16 +99,28 @@ function _buildTestTableSection(
     return html;
 }
 
-export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
+export function generateReportWithFallback(_tests: FlatTest[], options?: ReportOptions): string {
     try {
-        const stats = statsFromTests(tests);
-        const title = options?.title || DEFAULT_TITLE;
         const computed = options?.computed;
         const precomputedRun = computed?.metricsRuns?.[0];
-        const passRate = precomputedRun ? (precomputedRun.passed / precomputedRun.total) * 100 : calcRunPassRate(stats);
-        const categories = options?.testCategories || precomputeCategories(tests);
+        if (!precomputedRun) {
+            const msg = 'DataHub precomputed data (metricsRuns) is required for HTML report generation.';
+            rootLogger.error(msg);
+            return buildErrorPage('Error generating report', msg);
+        }
+        const stats = {
+            passed: precomputedRun.passed,
+            failed: precomputedRun.failed,
+            skipped: precomputedRun.skipped,
+            total: precomputedRun.total,
+            duration: precomputedRun.duration,
+        };
+        const passRate = (precomputedRun.passed / precomputedRun.total) * 100;
+        const title = options?.title || DEFAULT_TITLE;
+        const categories = options?.testCategories || precomputeCategories(precomputedRun.tests);
         const timestamp = options?.generatedAt || new Date().toISOString();
-        const dashboardId = options?.dashboardId || 'test-report';
+        const dashboardId = options?.dashboardId || 'coverage-report';
+        const trends = computed.metricsTrends ?? options?.trends ?? [];
 
         let bodyContent = '<h1>' + title + '</h1>';
         bodyContent += `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>`;
@@ -117,7 +128,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         bodyContent += buildSummaryCards(stats, passRate, options?.passRateThreshold);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="failed-summary">`;
-        bodyContent += buildFailedSummary(tests, stats);
+        bodyContent += buildFailedSummary(precomputedRun.tests, stats);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="llm-analysis">`;
         bodyContent += buildLlmSection(options || { title: '', includeChart: true });
@@ -126,7 +137,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         bodyContent += buildChartSection(stats, options?.includeChart !== false);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="trends">`;
-        bodyContent += buildTrendSection(options?.trends || []);
+        bodyContent += buildTrendSection(trends);
         bodyContent += `</div>`;
         if (options?.qualityGate !== undefined) {
             bodyContent += `<div data-section="quality-gate">`;
@@ -140,7 +151,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         }
 
         bodyContent += `<div data-section="test-table">`;
-        bodyContent += _buildTestTableSection(tests, categories, options);
+        bodyContent += _buildTestTableSection(precomputedRun.tests, categories, options);
         bodyContent += `</div>`;
         if (options?.diffComparison) {
             bodyContent += `<div data-section="diff-comparison">`;
@@ -151,7 +162,7 @@ export function generateReportWithFallback(tests: FlatTest[], options?: ReportOp
         bodyContent += _buildFlakinessLink(options || { title: '', includeChart: true });
         bodyContent += `</div>`;
         bodyContent += `<div data-section="timeline">`;
-        bodyContent += buildTimeline(tests);
+        bodyContent += buildTimeline(precomputedRun.tests);
         bodyContent += `</div>`;
 
         return buildHtmlPage({
