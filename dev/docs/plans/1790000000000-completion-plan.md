@@ -1628,10 +1628,11 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
   2. *Manutenção do Ratchet de Unused Exports:* Durante a refatoração do R8, os exports não consumidos externamente em `artifact-specs.ts` foram devidamente eliminados, preservando o quality gate do CI contra código morto.
   3. *Cobertura de R8 como verificação de espec vs output:* A suíte R8 atual não detectaria se um renderer é removido ou se seu output muda — desde que o arquivo `artifact-specs.ts` permaneça intacto, R8 passaria sem detectar a falta de implementação real.
 
-**Conclusão:** O plano foi amplamente executado — todas as fases R0–R7 estão concluídas, build/lint/vitest/audit passam em 100%. As correções de alta prioridade (C2–C9) foram implementadas e validadas. Apenas C1 (R8 validação real) permanece pendente como item de backlog.
+**Conclusão:** O plano foi amplamente executado — todas as fases R0–R7 estão concluídas, build/lint/vitest/audit passam em 100%. Todas as correções de alta prioridade (C1–C10) foram implementadas e validadas. C16 também foi corrigido. Apenas C11–C15 permanecem como backlog de baixa prioridade.
 
-### Correções já aplicadas (R0–R7 + C2–C9)
-- **C2 (dataHub.computed consumption):** ✅ `report-html.ts` agora consome `computed.metricsRuns` para passRate quando disponível, fallback para cálculo local.
+### Correções já aplicadas (R0–R7 + C1–C10 + C16)
+- **C1 (R8 validation real):** ✅ `artifact-content-validation.test.ts` renderiza output real de 17 renderers e valida contra CONTENT-SPECIFICATION.md (137 tests).
+- **C2 (dataHub.computed consumption):** ✅ `report-html.ts` consome exclusivamente `computed.metricsRuns` — sem fallback local. Todos os consumidores (pr-report-core.ts, test files) passam `computed`.
 - **C3 (helpers dataHub.computed):** ✅ `ReportOptions` estendido com `computed` opcional; helpers podem consumir quando disponível.
 - **C4 (sampleSizeWarning):** ✅ Adicionado a `buildSummaryTable()` (PR Comment) e `writeToJobSummary()` (Job Summary) — aviso quando `stats.total < 30`.
 - **C5 (inline styles):** ✅ Inline styles em `report-sections.ts` migrados para classes CSS (`section-label`, `tree-node-hint`, `timeline-label`, `timeline-toggle`, `suite-name`, `timeline-duration`, `llm-warn`, `llm-confidence`, `llm-content`, `qg-fail .label`, `qg-fail p`, `failed-item`, `failed-header`, `breakdown-row`, etc.) em `report-styles.ts`.
@@ -1642,9 +1643,12 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 
 **R4.3 (C10):** ✅ Já implementado no commit `501975b7` — mocks de health-score, quality-gate, report-html removidos; mantidos apenas mocks de infraestrutura (fs, github APIs, global-hub singleton, factory, feature-config).
 
-### Correções pendentes (backlog)
-- **C1 (R8 validation real):** Teste de integração que renderiza output real e valida contra CONTENT-SPECIFICATION.md.
-- **C11-C16 (baixa prioridade):** Ver documentação original.
+### Correções pendentes (backlog — baixa prioridade)
+- **C11:** relatorio-pr-report.html é mock placeholder — gerar HTML real via pipeline completa.
+- **C12:** Seções condicionais com required:true podem estar ausentes — renderizar estado vazio.
+- **C13:** R5.3 checklist não cobre orquestradores para emoji/inline style — estender checklist.
+- **C14:** R5.2 hook assertions testam fragmentos inline, não output real — adicionar teste de integração.
+- **C15:** pipeline-health-renderer.ts data-dashboard="pipeline-health" — verificar consistência com spec.
 
 ---
 
@@ -1655,13 +1659,14 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 #### C1. R8 — Validação de conteúdo superficial (falso positivo)
 **Arquivos:** `shared/__tests__/artifact-content-validation.test.ts`, `dev/docs/internal/content-validation-report.md`
 **Problema:** O teste de validação R8 verifica apenas que `artifact-specs.ts` tem campos internamente consistentes. NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "28/28 validated" é verdadeiro apenas para especificações, não para implementação.
-**Correção planeada:** Adicionar teste de integração que (a) renderize output real de cada artefact via seu renderer/orchestrator e (b) valide que cada métrica, secção, acção, threshold e timestamp definido em `CONTENT-SPECIFICATION.md` está presente no output real.
+**Correção aplicada:** `artifact-content-validation.test.ts` renderiza output real de 17 renderers via `buildRendererEntries()` e valida que cada métrica, secção, data-dashboard, data-part, timestamp definido em CONTENT-SPECIFICATION.md está presente no output real (137 tests).
+**Status:** ✅ Implementado.
 
 #### C2. report-html.ts consome exclusivamente DataHub.computed (SSOT) — sem fallback local
 **Arquivos:** `shared/report/report-html.ts`, test files
 **Problema:** report-html.ts computa `statsFromTests(tests)` e `calcRunPassRate(stats)` localmente quando `computed.metricsRuns` não disponível. Viola R2.18 — orquestrador deve consumir DataHub.computed como ÚNICA fonte de verdade (DataHub já prevê fallback para modo manual).
-**Correção planeada:** Remover `statsFromTests` fallback e `calcRunPassRate` fallback. Quando `options.computed.metricsRuns[0]` não existe, log erro estruturado e retornar `buildErrorPage`. Todos os dados (stats, passRate, categories, timeline) vêm exclusivamente de `precomputedRun` (DataHub). Default `dashboardId` alterado de `'test-report'` para `'coverage-report'`.
-**Status:** Pendente implementação.
+**Correção aplicada:** Removidos `statsFromTests` fallback e `calcRunPassRate` fallback. Quando `options.computed.metricsRuns[0]` não existe, retorna `buildErrorPage`. Todos os dados (stats, passRate, categories, timeline) vêm exclusivamente de `precomputedRun` (DataHub). Default `dashboardId` alterado de `'test-report'` para `'coverage-report'`. Todos os consumidores (pr-report-core.ts, test files) passam `computed`.
+**Status:** ✅ Implementado (commits `7ea9fa44`, `5eb88ef5`).
 
 #### C3. Helpers de secção não consomem dataHub.computed
 **Arquivos:** `shared/report/report-sections.ts`, `shared/report/report-diff.ts`, `shared/report/report-chart.ts`, `shared/report/report-table.ts`, `shared/report/report-utils.ts`
@@ -1735,7 +1740,8 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 #### C16. Cobertura-gap orquestrador não tem data-dashboard
 **Arquivo:** `shared/report/generate-coverage-gap-html.ts`
 **Problema:** Output do orquestrador coverage-gap não inclui `data-dashboard` attribute no container raiz. R7.3 item 7 requer que todos os 21 artefacts R2 tenham `data-dashboard`.
-**Correção planeada:** Adicionar `data-dashboard="coverage-report"` (ou id do spec) ao container raiz do HTML gerado.
+**Correção aplicada:** Adicionado `data-dashboard="coverage-gap"` com `dashboardId` parameter ao container raiz do HTML gerado.
+**Status:** ✅ Implementado (commit `8932cf81`).
 
 ### Quadro Resumo de Correções
 
