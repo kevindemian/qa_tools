@@ -129,7 +129,7 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
 }
 
 export function buildCategoryBadge(cat: string): string {
-    const color = Object.entries(CATEGORY_COLORS).find(([k]) => k === cat)?.[1] || '#6b7280';
+    const color = Object.entries(CATEGORY_COLORS).find(([k]) => k === cat)?.[1] || tokens.color.chart.pass;
     return `<span class="category-badge category-badge-dynamic" style="--badge-bg:${color}20;--badge-color:${color}">${cat}</span>`;
 }
 
@@ -138,13 +138,13 @@ export function buildFlakinessBadge(rate: number): string {
     let color: string;
     let label: string;
     if (pct >= 50) {
-        color = '#dc2626';
+        color = tokens.color.chart.fail;
         label = 'alta';
     } else if (pct >= 20) {
-        color = '#ca8a04';
+        color = tokens.color.semantic.warn.light;
         label = 'média';
     } else {
-        color = '#16a34a';
+        color = tokens.color.chart.pass;
         label = 'baixa';
     }
     return `<span class="flakiness-badge" style="--badge-bg:${color}20;--badge-color:${color}" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;

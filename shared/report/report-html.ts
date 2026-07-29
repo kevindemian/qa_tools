@@ -9,7 +9,7 @@
 
 import { rootLogger } from '../logger.js';
 import { sanitizeUrl } from '../ui/cli_base.js';
-import { escapeHtml } from './report-utils.js';
+import { escapeHtml, statsFromMetricsRun } from './report-utils.js';
 import { icon } from '../icons.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, ReportOptions } from './report-types.js';
@@ -108,14 +108,9 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
             rootLogger.error(msg);
             return buildErrorPage('Error generating report', msg);
         }
-        const stats = {
-            passed: precomputedRun.passed,
-            failed: precomputedRun.failed,
-            skipped: precomputedRun.skipped,
-            total: precomputedRun.total,
-            duration: precomputedRun.duration,
-        };
-        const passRate = (precomputedRun.passed / precomputedRun.total) * 100;
+        const stats = statsFromMetricsRun(precomputedRun);
+        const passRate =
+            computed?.passRate ?? (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
         const title = options?.title || DEFAULT_TITLE;
         const categories = options?.testCategories || precomputeCategories(precomputedRun.tests);
         const timestamp = options?.generatedAt || new Date().toISOString();

@@ -1653,6 +1653,7 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 - **C13:** R5.3 checklist não cobre orquestradores para emoji/inline style — estender checklist.
 - **C14:** R5.2 hook assertions testam fragmentos inline, não output real — adicionar teste de integração.
 - **C15:** pipeline-health-renderer.ts data-dashboard="pipeline-health" — verificar consistência com spec.
+- **C17:** R8 não detecta renderer removido — `buildRendererEntries()` valida apenas 17 renderers hardcoded; se renderer for deletado mas spec mantida, R8 passa sem detectar ausência. Adicionar verificação cruzada specs vs renderers implementados.
 
 ---
 

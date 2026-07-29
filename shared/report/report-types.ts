@@ -1,4 +1,5 @@
 import type { FlatTest } from '../result_parser.js';
+import { tokens } from '../ui/theme-tokens.js';
 
 export interface TestHistoryRun {
     status: string;
@@ -67,12 +68,12 @@ export const PASS_RATE_GOOD_THRESHOLD = 90;
 export const PASS_RATE_WARN_THRESHOLD = 70;
 
 export const CATEGORY_COLORS: Record<string, string> = {
-    ASSERTION: '#6366f1',
-    TIMEOUT: '#f59e0b',
-    ENVIRONMENT: '#10b981',
-    APPLICATION: '#ef4444',
-    FLAKY: '#8b5cf6',
-    UNKNOWN: '#6b7280',
+    ASSERTION: tokens.color.chart.pass,
+    TIMEOUT: tokens.color.semantic.warn.light,
+    ENVIRONMENT: tokens.color.semantic.success.light,
+    APPLICATION: tokens.color.chart.fail,
+    FLAKY: tokens.color.semantic.warn.dark,
+    UNKNOWN: tokens.color.text.muted.light,
 };
 
 export function categorizeFailure(error: string): string {
