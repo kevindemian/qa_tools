@@ -99,8 +99,8 @@ const SCROLL_JS = `function scrollToTest(title) {
         var firstTd = r.querySelector('td');
         if (firstTd && firstTd.textContent.trim() === title) {
             r.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            r.style.background = '#fef3c7';
-            setTimeout(function() { r.style.background = ''; }, 2000);
+            r.classList.add('highlight-row');
+            setTimeout(function() { r.classList.remove('highlight-row'); }, 2000);
             return;
         }
     }

@@ -157,6 +157,15 @@ export const tokens: DesignTokens = {
             primary: { light: '#111827', dark: '#c9d1d9' },
             secondary: { light: '#4b5563', dark: '#8b949e' },
             muted: { light: '#6b7280', dark: '#9ca3af' },
+            inverse: { light: '#ffffff', dark: '#111827' },
+        },
+        tooltip: {
+            bg: { light: '#1f2937', dark: '#1f2937' },
+            text: { light: '#f9fafb', dark: '#f9fafb' },
+        },
+        code: {
+            bg: { light: '#1f2937', dark: '#1f2937' },
+            text: { light: '#e5e7eb', dark: '#e5e7eb' },
         },
         border: {
             default: { light: '#d1d5db', dark: '#30363d' },
