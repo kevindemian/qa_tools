@@ -1756,3 +1756,62 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 | C14 | BAIXA | R5.2 | Hook assertions testam fragmentos | pr-report-core.hooks.test.ts |
 | C15 | BAIXA | R2 | pipeline-health data-dashboard consistency | pipeline-health-renderer.ts |
 | C16 | BAIXA | R7.3 | Cobertura-gap sem data-dashboard | generate-coverage-gap-html.ts |
+
+---
+
+## Registro de Achados — Sessão 29/Jul/2026 (Auditoria Pós-Correções C1-C9)
+
+Auditoria atualizada realizada em 29/Jul/2026 após aplicação de correções C1 (labels/sections/emoji→SVG), C2-C9, e fix de infraestrutura de mutation testing. Substitui o registro de 27/Jul/2026 para reflectir estado atual da base.
+
+### 1. Correções Confirmadas nesta Sessão
+- **C4 (sampleSizeWarning):** ✅ Verificado presente em `buildSummaryTable()` (PR Comment, line 189) e `writeToJobSummary()` (Job Summary, line 439). `stats.total < 30` exibe warning com shortcode `:warning:` cross-platform.
+- **C6 (emojis → Lucide):** ✅ Zero ocorrências de emojis Unicode em `report-sections.ts`, `report-diff.ts`, `report-html.ts` helpers/output.
+- **C9 (R4.2 sharing):** ✅ `renderQualityGateChecksTable()` compartilhada entre `buildQualityGateSection()` (line 759) e `buildQGCHeckSummary()` (line 745). C9 R4.2 resolvido para check tables.
+- **inline styles reduzidos:** report-sections.ts reduziu de 53 para 11; helpers restantes totalizam ~30 inline styles (vs 79 original).
+- **C2 (report-html.ts SSOT partial):** ✅ `options?.computed?.metricsRuns?.[0]` consumed para precomputed passRate (line 107-109).
+
+### 2. Gaps Confirmados (Atualizados)
+
+**[ALTO] R8 — Validação de conteúdo é superficial.**
+`artifact-content-validation.test.ts` (759 linhas) valida que spec definitions são internamente consistentes. NÃO renderiza HTML/Markdown real de orquestradores nem compara output contra `CONTENT-SPECIFICATION.md` para todos os 21 artefatos R2 + 3 pr-report. "28/28 validated" = specs definidas, NÃO output renderizado conforme spec.
+
+**[ALTO] report-html.ts não consome `dataHub.computed` full (R2.18).**
+`report-html.ts:107-109` usa `options?.computed?.metricsRuns?.[0]` MAS apenas para passRate. Não consome flakiness, health score, trends. Quando chamado sem `computed`, recai em cálculo local. R2.18 exige que orquestrador consuma `dataHub.computed` onde aplicável.
+
+**[ALTO] coverage-gap: sem `data-dashboard` (C16) e sem compute/render separation (R2.17).**
+`shared/report/generate-coverage-gap-html.ts`:
+- Nenhum `data-dashboard` attribute (C16 confirmado aberto)
+- Mistura compute inline com render HTML (R2.17 zero iniciado)
+- `coverageGap` NÃO existe em `ComputedMetrics` — falta `shared/data-hub/compute/coverage-gap.ts`
+
+**[MÉDIO] Inline styles residuais (~30 em helpers/orquestradores).**
+R3 removeu inline styles de primitives (card.ts, table.ts). Restam em:
+- report-sections.ts: 11 (reduzido de 53)
+- report-diff.ts: 4
+- report-html.ts: 9
+- report-table.ts: 12
+- report-chart.ts: 3
+- report-utils.ts: 1
+R3/R5 não cobriram estes arquivos.
+
+**[MÉDIO] R4.3 mocks internos — 6 de 7 test files com mocks internos.**
+Mock counts: main.test.ts (6), property.test.ts (6), wiring.property.test.ts (10), wiring.test.ts (8), test.ts (5), pr-report.test.ts (15). Mocks de infra (fs, github APIs) são corretos. Mocks internos (global-hub, factory, test-source-fallback, feature-config, validation/quarantine, compute modules) ainda presentes.
+
+**[MÉDIO] data-dashboard default "test-report" em report-html.ts.**
+`report-html.ts:112`: `options?.dashboardId || 'test-report'`. Default contradiz `CONTENT-SPECIFICATION.md` (`id: 'pr-report-html'`). Pr-report-core.ts passa `'pr-report-html'` corretamente. Default deveria ser `'pr-report-html'`.
+
+**[MÉDIO] Threshold hardcoded `?? 80`.**
+`report-sections.ts:150` usa `passRateThreshold ?? 80`. `pr-report-core.ts:573` usa `options.qualityGateThreshold ?? 80`. Default deveria vir de `config-accessor.ts`/spec, não hardcoded.
+
+### 3. Status Resumido por Fase (29/Jul/2026)
+| Fase | Status | Observação |
+|------|--------|------------|
+| R0 | ✅ 100% | pipeline-cost consumindo computed.perRunCosts |
+| R1 | ✅ 100% | 4 compute modules implementados e expostos |
+| R2 | ⚡ Parcial | Renderers SSOT OK; orquestradores parciais |
+| R3 | ⚡ Parcial | ~30 inline styles residual em helpers |
+| R4 | ⚡ Parcial | Shortcodes OK; R4.2 (check table) OK; R4.3 (mocks) parcial |
+| R5 | ⚡ Parcial | Hooks test existe mas testa fragmentos inline |
+| R6 | ✅ 100% | Documentação completa |
+| R7 | ✅ 100% | Build/lint/vitest/audit passam |
+| R8 | ⚠ Superficial | Specs validadas internamente; output real não comparado |
