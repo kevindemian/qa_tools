@@ -1633,15 +1633,19 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 ### Correções já aplicadas (R0–R7 + C1–C10 + C16)
 - **C1 (R8 validation real):** ✅ `artifact-content-validation.test.ts` renderiza output real de 17 renderers e valida contra CONTENT-SPECIFICATION.md (137 tests).
 - **C2 (dataHub.computed consumption):** ✅ `report-html.ts` consome exclusivamente `computed.metricsRuns` — sem fallback local. Todos os consumidores (pr-report-core.ts, test files) passam `computed`.
-- **C3 (helpers dataHub.computed):** ✅ `ReportOptions` estendido com `computed` opcional; helpers podem consumir quando disponível.
+- **C3 (helpers dataHub.computed):** ⚠️ **FALSO POSITIVO** — Verificação manual (29/Jul/2026) revelou ZERO referências a `computed` em report-sections.ts, report-diff.ts, report-chart.ts, report-table.ts, report-utils.ts. Status anterior estava incorreto. Necessita correção.
 - **C4 (sampleSizeWarning):** ✅ Adicionado a `buildSummaryTable()` (PR Comment) e `writeToJobSummary()` (Job Summary) — aviso quando `stats.total < 30`.
-- **C5 (inline styles):** ✅ Inline styles em `report-sections.ts` migrados para classes CSS (`section-label`, `tree-node-hint`, `timeline-label`, `timeline-toggle`, `suite-name`, `timeline-duration`, `llm-warn`, `llm-confidence`, `llm-content`, `qg-fail .label`, `qg-fail p`, `failed-item`, `failed-header`, `breakdown-row`, etc.) em `report-styles.ts`.
+- **C5 (inline styles):** ⚠️ **FALSO POSITIVO** — Verificação manual (29/Jul/2026) revelou 56 ocorrências de `style=` restantes (report-sections.ts:11, report-table.ts:12, generate-coverage-gap-html.ts:16, report-html.ts:9, report-diff.ts:4, report-chart.ts:3, report-utils.ts:1). Status anterior estava incorreto. Necessita correção.
 - **C6 (emojis → Lucide):** ✅ Unicode emojis substituídos por chamadas `icon('x-circle', 16)`, `icon('check-circle', 16)`, `icon('alert-triangle', 16)`, `icon('bar-chart', 16)`, `icon('help-circle', 16)`, `icon('refresh-cw', 16)` em `report-sections.ts`.
 - **C7 (data-dashboard parameter):** ✅ `ReportOptions` estendido com `dashboardId`; `generateHtmlReport()`, `generateCoverageHtml()`, `generateHtmlReportFile()` passam `dashboardId` (ex: `pr-report-html`, `coverage-report`).
 - **C8 (hardcoded thresholds):** ✅ `passRateThreshold` opcional em `ReportOptions`; `buildSummaryCards()` usa threshold configurável (default 80%); `generateCoverageHtml()` aceita `coverageThreshold` e `epicThreshold`.
 - **C9 (R4.2 sharing):** ✅ Extraída `renderQualityGateChecksTable()` compartilhada entre `buildQualityGateSection()` e `buildQGCHeckSummary()` em `pr-report-core.ts`.
 
 **R4.3 (C10):** ✅ Já implementado no commit `501975b7` — mocks de health-score, quality-gate, report-html removidos; mantidos apenas mocks de infraestrutura (fs, github APIs, global-hub singleton, factory, feature-config).
+
+### Achados de verificação manual (29/Jul/2026)
+**FALSO POSITIVO C3:** Helpers não consomem `dataHub.computed`. Plan dizia ✅ mas codebase tem ZERO referências a `computed` nos helpers.
+**FALSO POSITIVO C5:** 56 inline styles permanecem. Plan dizia ✅ mas codebase tem `style=` em 7 arquivos.
 
 ### Correções pendentes (backlog — baixa prioridade)
 - **C11:** relatorio-pr-report.html é mock placeholder — gerar HTML real via pipeline completa.

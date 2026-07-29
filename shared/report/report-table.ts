@@ -27,11 +27,11 @@ export function precomputeCategories(tests: FlatTest[]): Record<string, string> 
 }
 
 function _renderStepsHtml(steps: NonNullable<FlatTest['steps']>): string {
-    let html = '<div><strong>Steps</strong></div><div style="margin-bottom:8px">';
+    let html = '<div><strong>Steps</strong></div><div class="steps-wrapper">';
     let stepIdx = 0;
     for (const step of steps) {
         stepIdx++;
-        html += '<div style="display:flex;gap:6px;align-items:flex-start;margin:4px 0">';
+        html += '<div class="step-row">';
         html += '<span class="detail-step-num">' + stepIdx + '</span><div>';
         if (step.action) html += '<div><strong>Action:</strong> ' + escapeHtml(step.action) + '</div>';
         if (step.expected) html += '<div><strong>Expected:</strong> ' + escapeHtml(step.expected) + '</div>';
@@ -73,11 +73,11 @@ export function buildDetailRow(t: FlatTest, index: number, colspan: number): str
     const hasLogs = t.logs && t.logs.length > 0;
     if (!hasSteps && !hasScreenshots && !hasLogs) return '';
     let html =
-        '<tr class="detail-row" id="detail-row-' +
+        '<tr class="detail-row detail-row-hidden" id="detail-row-' +
         index +
         '" data-detail-for="test-' +
         index +
-        '" style="display:none"><td colspan="' +
+        '"><td colspan="' +
         colspan +
         '">';
     if (hasSteps) html += _renderStepsHtml(t.steps as NonNullable<FlatTest['steps']>);
@@ -115,10 +115,10 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
     const lines = history
         .map(
             (r) =>
-                '<span style="display:flex;gap:6px;align-items:center">' +
-                '<span class="hist-dot ' +
+                '<span class="step-icon-row">' +
+                '<span class="hist-dot step-icon ' +
                 dotClass(r.status) +
-                '" style="flex-shrink:0"></span>' +
+                '"></span>' +
                 escapeHtml(r.status) +
                 ' &mdash; ' +
                 escapeHtml(r.testExecKey) +
@@ -130,7 +130,7 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
 
 export function buildCategoryBadge(cat: string): string {
     const color = Object.entries(CATEGORY_COLORS).find(([k]) => k === cat)?.[1] || '#6b7280';
-    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px">${cat}</span>`;
+    return `<span class="category-badge category-badge-dynamic" style="--badge-bg:${color}20;--badge-color:${color}">${cat}</span>`;
 }
 
 export function buildFlakinessBadge(rate: number): string {
@@ -147,7 +147,7 @@ export function buildFlakinessBadge(rate: number): string {
         color = '#16a34a';
         label = 'baixa';
     }
-    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${color}20;color:${color};font-size:0.7rem;font-weight:600;margin-left:4px" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;
+    return `<span class="flakiness-badge" style="--badge-bg:${color}20;--badge-color:${color}" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;
 }
 
 const DEFAULT_MAX_VISIBLE_PASSED = 50;
@@ -184,7 +184,7 @@ function buildTestCell(t: FlatTest, categories?: Record<string, string>, rowInde
 function buildFlakyCell(t: FlatTest, flakinessMap?: Record<string, number>): string {
     if (!flakinessMap) return '';
     const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
-    return rate > 0 ? buildFlakinessBadge(rate) : '<span style="color:var(--color-text-muted)">—</span>';
+    return rate > 0 ? buildFlakinessBadge(rate) : '<span class="flakiness-dash">—</span>';
 }
 
 function buildCellsForTest(
@@ -246,11 +246,10 @@ function buildColumns(opts: {
 }
 
 function buildThead(columns: ColDef[]): string {
-    const cellPadding = `${tokens.spacing.xs}px ${tokens.spacing.sm}px`;
-    let thead = '<thead style="background:var(--color-surface-elevated)"><tr>';
+    let thead = '<thead class="thead-colored"><tr>';
     for (const col of columns) {
         const width = col.width ? `width:${col.width};` : '';
-        thead += `<th data-column="${col.key}" scope="col" style="padding:${cellPadding};${width}font-size:${tokens.fontSize.sm};text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)">${col.label}</th>`;
+        thead += `<th data-column="${col.key}" scope="col" class="th-cell" style="--th-padding:${tokens.spacing.xs}px ${tokens.spacing.sm}px;--th-font-size:${tokens.fontSize.sm};${width}">${col.label}</th>`;
     }
     return thead + '</tr></thead>';
 }
@@ -289,7 +288,7 @@ function buildControls(hasPassed: boolean, overflowCount: number): string {
         : '';
     const showAllBtn =
         overflowCount > 0
-            ? '<div class="control-bar" style="margin-top:8px"><button id="showAllBtn" onclick="showAllTests()">Show all ' +
+            ? '<div class="control-bar control-bar-top"><button id="showAllBtn" onclick="showAllTests()">Show all ' +
               overflowCount +
               ' passed tests</button></div>'
             : '';
@@ -332,7 +331,7 @@ export function buildTestTable(
     if (history !== undefined) tbodyOpts.history = history;
     if (flakinessMap !== undefined) tbodyOpts.flakinessMap = flakinessMap;
     const tbody = buildTbody(allTests, totalVisible, columns, tbodyOpts);
-    const tableHtml = `<div data-component="table-wrapper" style="overflow-x:auto;border-radius:${tokens.borderRadius.lg}px;box-shadow:${tokens.shadow.card}"><table data-component="data-table" role="table" style="width:100%;border-collapse:collapse;background:var(--color-surface-card);font-size:${tokens.fontSize.lg};color:var(--color-text-primary)">${thead}${tbody}</table></div>`;
+    const tableHtml = `<div data-component="table-wrapper"><table data-component="data-table" role="table">${thead}${tbody}</table></div>`;
     const controls = buildControls(hasPassed, overflowPassed.length);
 
     return controls + tableHtml;

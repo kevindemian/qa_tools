@@ -134,7 +134,7 @@ export function buildTimeline(tests: FlatTest[]): string {
         html += summary;
         html += '<span class="suite-name">' + escapeHtml(suiteLabel) + '</span>';
         html +=
-            '<div class="timeline-bar" style="width:' +
+            '<div class="timeline-bar timeline-bar-width" style="--bar-width:' +
             barW.toFixed(0) +
             'px;background:' +
             tokens.color.chart.pass +
@@ -234,7 +234,7 @@ export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): strin
     let items = '';
     for (const t of failed) {
         items +=
-            '<p style="margin:4px 0">\u2022 ' +
+            '<p class="timeline-item">\u2022 ' +
             escapeHtml(t.title) +
             ' ' +
             Badge({ variant: 'fail', children: 'failed' }) +
@@ -282,7 +282,7 @@ export function buildReleaseSection(
             '<span class="label">' +
             escapeHtml(item.label) +
             '</span>' +
-            '<span class="score"><span style="color:' +
+            '<span class="score"><span class="score-color" style="--score-color:' +
             statusColor +
             '">' +
             statusIcon +
@@ -301,7 +301,7 @@ export function buildReleaseSection(
         children:
             '<div id="release-readiness">' +
             '<div class="score-value">' +
-            '<div class="score-value-number" style="color:' +
+            '<div class="score-value-number score-value-number-color" style="--score-color:' +
             scoreColor +
             '">' +
             score +
@@ -371,12 +371,12 @@ function healthDimCard(label: string, score: number, status: string, available: 
     if (available) {
         iconSvg = status === 'pass' ? icon('check-circle', 16) : icon('x-circle', 16);
     }
-    return `<div class="dim-card" style="background:${bg}">
+    return `<div class="dim-card dim-card-bg" style="--dim-bg:${bg}">
         <div class="dim-header">
             <span class="dim-label">${label}</span>
-            <span class="dim-value" style="color:${barColor}">${displayScore} ${iconSvg}</span>
+            <span class="dim-value dim-value-color" style="--dim-color:${barColor}">${displayScore} ${iconSvg}</span>
         </div>
-        <div class="dim-bar"><div class="dim-bar-fill" style="width:${barWidth}%;background:${barColor}"></div></div>
+        <div class="dim-bar"><div class="dim-bar-fill dim-bar-fill-width" style="--bar-width:${barWidth}%;--bar-color:${barColor}"></div></div>
     </div>`;
 }
 
@@ -410,13 +410,13 @@ export function buildHealthSection(health: HealthScoreResult): string {
     const html = Card({
         variant: 'default',
         children:
-            '<div class="label" style="margin-bottom:12px;font-size:1rem">' +
+            '<div class="label health-label-large">' +
             icon('bar-chart', 16) +
             ' Test Suite Health</div>' +
             '<div class="health-grid">' +
-            `<div class="score-value"><div style="font-size:2.5rem;font-weight:800;color:${overallColor}">${health.overall}</div>` +
-            `<div style="font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span class="qc-badge" style="background:${qc.bg};color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
+            `<div class="score-value"><div class="health-overall-value" style="--overall-color:${overallColor}">${health.overall}</div>` +
+            `<div class="health-grade-text">${health.grade.replace(/_/g, ' ')}</div></div>` +
+            `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
             `<span class="health-meta">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
             `</div>` +
             `<div class="categories-grid">${dimCards}</div>` +

@@ -399,6 +399,80 @@ const INLINE_STYLES_CSS = `
 .category-bar{width:60px;height:6px;background:var(--color-border-subtle);border-radius:3px;overflow:hidden;margin-left:8px;flex-shrink:0}
 .category-fill{height:100%;background:var(--color-info);border-radius:3px;transition:width 0.3s}
 .category-pct{font-size:0.7rem;color:var(--color-text-muted);min-width:32px;text-align:right}
+
+/* Coverage gap report */
+.qg-label-pass{color:var(--color-badge-pass-text);margin-bottom:4px}
+.qg-label-fail{color:var(--color-badge-fail-text);margin-bottom:4px}
+.qg-value-pass{font-size:1rem;font-weight:600;color:var(--color-badge-pass-text)}
+.qg-value-fail{font-size:1rem;font-weight:600;color:var(--color-badge-fail-text)}
+.qg-failing-list{margin:8px 0 0;font-size:0.85rem;padding-left:20px}
+.qg-failing-item{color:var(--color-badge-fail-text)}
+.epic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.epic-title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+.epic-summary{font-size:0.75rem;color:var(--color-text-muted);margin-bottom:8px}
+.epic-stats{display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px}
+.hierarchy-empty{font-size:0.85rem;color:var(--color-text-muted)}
+.hierarchy-summary{color:var(--color-text-muted);font-size:0.8rem}
+.hierarchy-pct{float:right;font-size:0.8rem;font-weight:600;color:var(--hierarchy-color,var(--color-text-primary))}
+.tree-children-hidden{display:none}
+.gaps-empty{color:var(--color-success);font-weight:600}
+.gaps-table-wrapper{overflow-x:auto;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.gap-row-border{border-bottom:1px solid var(--color-border-subtle)}
+
+/* Report table */
+.steps-wrapper{margin-bottom:8px}
+.step-row{display:flex;gap:6px;align-items:flex-start;margin:4px 0}
+.step-icon{flex-shrink:0}
+.step-icon-row{display:flex;gap:6px;align-items:center}
+.category-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-left:4px}
+.category-badge-dynamic{background:var(--badge-bg);color:var(--badge-color)}
+.flakiness-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-left:4px;background:var(--badge-bg);color:var(--badge-color)}
+.flakiness-dash{color:var(--color-text-muted)}
+.thead-colored{background:var(--color-surface-elevated)}
+.th-cell{padding:var(--th-padding);font-size:var(--th-font-size);text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)}
+.control-bar-top{margin-top:8px}
+.detail-row-hidden{display:none}
+
+/* Report sections */
+.timeline-bar-width{width:var(--bar-width)}
+.timeline-item{margin:4px 0}
+.score-color{color:var(--score-color)}
+.score-value-number-color{color:var(--score-color)}
+.dim-card-bg{background:var(--dim-bg)}
+.dim-value-color{color:var(--dim-color)}
+.dim-bar-fill-width{width:var(--bar-width);background:var(--bar-color)}
+.health-label-large{margin-bottom:12px;font-size:1rem}
+.health-overall-value{font-size:2.5rem;font-weight:800;color:var(--overall-color)}
+.health-grade-text{font-size:0.8rem;color:var(--color-text-muted);text-transform:capitalize}
+.qc-badge-dynamic{background:var(--qc-bg);color:var(--qc-color)}
+
+/* Report HTML */
+.timestamp-wrapper{text-align:center;margin-top:12px}
+.timestamp-link{display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem}
+.timestamp-link:hover{background:var(--color-surface-hover)}
+.timestamp-icon{color:inherit}
+.page-grid{display:flex;gap:0}
+.page-grid-sidebar{flex:1;min-width:0}
+.summary-row{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem}
+.timestamp-small{font-size:0.7rem;color:var(--color-text-muted)}
+.section-header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.section-title-bold{font-weight:700}
+.summary-cards-grid{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+
+/* Diff report */
+.diff-row{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem}
+.diff-file-name{color:var(--color-text-muted);font-size:0.75rem;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.diff-title{margin-bottom:12px;font-size:1rem}
+.diff-section{margin-bottom:8px}
+.diff-section-spaced{margin-top:8px}
+
+/* Chart legend */
+.dot-pass{background:var(--color-chart-pass)}
+.dot-fail{background:var(--color-chart-fail)}
+.dot-skip{background:var(--color-chart-skip)}
+
+/* Utils */
+.metric-subtitle{font-size:0.75rem;color:var(--color-text-muted);font-weight:400}
 `;
 
 const PRINT_CSS = `

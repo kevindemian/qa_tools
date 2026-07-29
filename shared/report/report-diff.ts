@@ -46,17 +46,9 @@ function _buildDiffRow(t: FlatTest, badgeText: string, badgeClass: string): stri
         badgeVariant = 'skip';
     }
     const badge = Badge({ variant: badgeVariant, children: badgeText });
-    let html =
-        '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">' +
-        badge +
-        '<span>' +
-        escapeHtml(t.title) +
-        '</span>';
+    let html = '<div class="diff-row">' + badge + '<span>' + escapeHtml(t.title) + '</span>';
     if (t.error) {
-        html +=
-            '<span style="color:var(--color-text-muted);font-size:0.75rem;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-            escapeHtml(t.error) +
-            '</span>';
+        html += '<span class="diff-file-name">' + escapeHtml(t.error) + '</span>';
     }
     html += '</div>';
     return html;
@@ -67,10 +59,10 @@ function _buildDiffSection(
     title: string,
     badgeText: string,
     badgeClass: string,
-    extraStyle?: string,
+    spaced?: boolean,
 ): string {
-    const style = 'margin-bottom:8px' + (extraStyle ? ';' + extraStyle : '');
-    let html = '<div style="' + style + '"><strong>' + title + '</strong></div>';
+    const cls = spaced ? 'diff-section diff-section-spaced' : 'diff-section';
+    let html = '<div class="' + cls + '"><strong>' + title + '</strong></div>';
     for (const t of tests) {
         html += _buildDiffRow(t, badgeText, badgeClass);
     }
@@ -84,16 +76,11 @@ export function buildDiffComparisonSection(diff: NonNullable<ReportOptions['diff
     if (newFails === 0 && newPasses === 0 && flakyCount === 0) return '';
 
     let content = '';
-    content +=
-        '<div class="label" style="margin-bottom:12px;font-size:1rem">' +
-        icon('bar-chart', 16) +
-        ' Run Comparison</div>';
+    content += '<div class="label diff-title">' + icon('bar-chart', 16) + ' Run Comparison</div>';
     content += _buildDiffSummaryCards(newFails, newPasses, flakyCount);
     if (newFails > 0) content += _buildDiffSection(diff.newFailures, 'New failures:', 'failed', 'failed');
-    if (newPasses > 0)
-        content += _buildDiffSection(diff.newPasses, 'Fixed (now passing):', 'passed', 'passed', 'margin-top:8px');
-    if (flakyCount > 0)
-        content += _buildDiffSection(diff.flaky, 'Flaky (status changed):', 'flaky', 'skip', 'margin-top:8px');
+    if (newPasses > 0) content += _buildDiffSection(diff.newPasses, 'Fixed (now passing):', 'passed', 'passed', true);
+    if (flakyCount > 0) content += _buildDiffSection(diff.flaky, 'Flaky (status changed):', 'flaky', 'skip', true);
 
     return Card({
         variant: 'default',

@@ -44,10 +44,10 @@ function _buildFlakinessLink(options: ReportOptions): string {
     if (!options.flakinessDashboardUrl || !options.flakinessMap || Object.keys(options.flakinessMap).length === 0)
         return '';
     return (
-        '<div style="text-align:center;margin-top:12px">' +
+        '<div class="timestamp-wrapper">' +
         '<a href="' +
         escapeHtml(options.flakinessDashboardUrl) +
-        '" style="display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem" target="_blank" rel="noopener">' +
+        '" class="timestamp-link" target="_blank" rel="noopener">' +
         icon('bar-chart', 16) +
         ' View Flakiness Dashboard</a></div>'
     );
@@ -71,7 +71,7 @@ function _buildReportFooter(options?: ReportOptions): string {
             text +=
                 ' · <a href="' +
                 escapeHtml(sanitizeUrl(ciUrl)) +
-                '" style="color:inherit">' +
+                '" class="timestamp-icon">' +
                 escapeHtml(branch) +
                 '</a>';
         else text += ' · ' + escapeHtml(branch);
@@ -91,7 +91,7 @@ function _buildTestTableSection(
     const hasSidebar = tests.some((t) => t.fullTitle && t.fullTitle.indexOf(' > ') !== -1);
     let html = '';
     if (hasSidebar) {
-        html += '<div style="display:flex;gap:0">' + buildHierarchySidebar(tests) + '<div style="flex:1;min-width:0">';
+        html += '<div class="page-grid">' + buildHierarchySidebar(tests) + '<div class="page-grid-sidebar">';
     }
     html += buildFilterBar();
     html += buildTestTable(tests, categories, options?.testHistory, options?.flakinessMap);
@@ -195,7 +195,7 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
     let issues = '';
     for (const issue of e.issues) {
         issues +=
-            '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">' +
+            '<div class="summary-row">' +
             Badge({
                 variant: (() => {
                     const cls = _coverageStatusClass(issue.status);
@@ -211,15 +211,15 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
             '<span>' +
             escapeHtml(issue.summary) +
             '</span>' +
-            '<span style="font-size:0.7rem;color:var(--color-text-muted)">' +
+            '<span class="timestamp-small">' +
             escapeHtml(issue.type) +
             '</span></div>';
     }
     return Card({
         variant: 'default',
         children:
-            `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">` +
-            `<div><span style="font-weight:700">${escapeHtml(e.key)}</span> &mdash; ${escapeHtml(e.summary)}</div>` +
+            `<div class="section-header-row">` +
+            `<div><span class="section-title-bold">${escapeHtml(e.key)}</span> &mdash; ${escapeHtml(e.summary)}</div>` +
             Badge({ variant: 'info', children: `${e.issues.length} issues, ${closePct}% closed` }) +
             `</div>${issues}`,
     });
@@ -257,7 +257,7 @@ export function generateCoverageHtml(
             '</h1>' +
             `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>` +
             `<div data-section="summary">` +
-            '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">' +
+            '<div class="summary-cards-grid">' +
             MetricCard({
                 label: 'Total Epics',
                 value: String(epics.length),
