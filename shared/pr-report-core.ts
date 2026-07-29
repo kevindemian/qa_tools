@@ -427,6 +427,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
     if (!stepSummaryPath) return;
 
     try {
+        const resolvedSummary = path.resolve(stepSummaryPath);
         const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
         const durationSec = (stats.duration / 1000).toFixed(1);
         const lines: string[] = [
@@ -447,7 +448,7 @@ function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void
         }
         lines.push('', `_${new Date().toISOString()}_`, '');
 
-        fs.writeFileSync(path.resolve(stepSummaryPath), lines.join('\n'), 'utf8');
+        fs.writeFileSync(resolvedSummary, lines.join('\n'), 'utf8');
         rootLogger.info('Job summary written to $GITHUB_STEP_SUMMARY');
     } catch (err) {
         rootLogger.warn(`Failed to write job summary: ${String(err)}`);
@@ -566,6 +567,7 @@ function generateHtmlReportFile(
             title: `QA Tools — PR Report${branchLabel}`,
             qualityGate: Math.round(passRate),
             healthScore,
+            computed: dataHub.computed,
             trends: dataHub.computed.metricsTrends ?? [],
             includeChart: true,
             coverageSource,
@@ -579,8 +581,9 @@ function generateHtmlReportFile(
 
         const html = generateHtmlReport(tests, htmlOptions);
         const htmlPath = options.htmlOutputPath ?? 'reports/pr-report.html';
-        fs.mkdirSync('reports', { recursive: true });
-        fs.writeFileSync(path.resolve(htmlPath), html, 'utf8');
+        const resolvedPath = path.resolve(htmlPath);
+        fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+        fs.writeFileSync(resolvedPath, html, 'utf8');
         rootLogger.info(`HTML report generated: ${htmlPath} (${html.length} bytes)`);
         return htmlPath;
     } catch (err) {

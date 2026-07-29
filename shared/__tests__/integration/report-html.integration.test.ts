@@ -8,6 +8,44 @@
  * - Key sections present: summary, chart, table, footer
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FlatTest } from '../../result_parser.js';
+import type { ComputedMetrics } from '../../types/data-hub.js';
+
+function computedFor(tests: FlatTest[]): ComputedMetrics {
+    const passed = tests.filter((t) => t.state === 'passed').length;
+    const failed = tests.filter((t) => t.state === 'failed').length;
+    const skipped = tests.filter((t) => t.state === 'skipped').length;
+    const totalDuration = tests.reduce((s: number, t: FlatTest) => s + t.duration, 0);
+    return {
+        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        avgDuration: 0,
+        suiteSpeedP95: 0,
+        flakyRate: [],
+        coverage: 0,
+        pipelineCost: { totalRuns: 0, totalCostUsd: 0, billableMinutes: 0 },
+        defectTrends: [],
+        branchBreakdown: {},
+        topFailingJobs: [],
+        topFailureReasons: [],
+        releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
+        quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
+        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testCounts: { passed, failed, skipped, total: tests.length },
+        framework: '',
+        metricsRuns: [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'qa-tools',
+                total: tests.length,
+                passed,
+                failed,
+                skipped,
+                duration: totalDuration,
+                tests,
+            },
+        ],
+    } as unknown as ComputedMetrics;
+}
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -41,7 +79,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 { title: 'Login Test', state: 'passed' as const, duration: 1.2, fullTitle: 'Auth > Login' },
                 { title: 'Fail Test', state: 'failed' as const, duration: 0.5, fullTitle: 'Auth > Fail' },
             ];
-            const html = generateHtmlReport(tests, { title: 'FT-17 Test Report' });
+            const html = generateHtmlReport(tests, { computed: computedFor(tests), title: 'FT-17 Test Report' });
 
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
@@ -55,7 +93,7 @@ describe('Integration: HTML Report (FT-17)', () => {
             expect.hasAssertions();
 
             const { generateHtmlReport } = await import('../../report/report-html.js');
-            const html = generateHtmlReport([], { title: 'Empty' });
+            const html = generateHtmlReport([], { computed: computedFor([]), title: 'Empty' });
 
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('Empty');
@@ -81,7 +119,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                     executionRate: { score: 100, status: 'pass' as const, available: true },
                 },
             };
-            const html = generateHtmlReport(tests, { title: 'Health', healthScore });
+            const html = generateHtmlReport(tests, { computed: computedFor(tests), title: 'Health', healthScore });
 
             expect(html).toContain('Test Suite Health');
             expect(html).toContain('Quality Gate: Pass');
@@ -95,7 +133,7 @@ describe('Integration: HTML Report (FT-17)', () => {
                 { title: 'Pass', state: 'passed' as const, duration: 1 },
                 { title: 'Fail', state: 'failed' as const, duration: 2 },
             ];
-            const html = generateHtmlReport(tests, { title: 'QG', qualityGate: 99 });
+            const html = generateHtmlReport(tests, { computed: computedFor(tests), title: 'QG', qualityGate: 99 });
 
             expect(html).toContain('Quality Gate');
         });
@@ -107,6 +145,7 @@ describe('Integration: HTML Report (FT-17)', () => {
             const chromeTests = [{ title: 'C1', state: 'passed' as const, duration: 1 }];
             const firefoxTests = [{ title: 'F1', state: 'passed' as const, duration: 2 }];
             const html = generateHtmlReport(chromeTests, {
+                computed: computedFor(chromeTests),
                 title: 'Multi',
                 runs: [
                     { name: 'Chrome', tests: chromeTests },
@@ -182,6 +221,7 @@ describe('Integration: HTML Report (FT-17)', () => {
             });
 
             const html = generateHtmlReport([{ title: 'T1', state: 'passed' as const, duration: 1 }], {
+                computed: computedFor([{ title: 'T1', state: 'passed' as const, duration: 1 }]),
                 title: 'Error Test',
             });
 
