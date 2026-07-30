@@ -1,5 +1,12 @@
 import type { FlatTest } from '../result_parser.js';
 import { tokens } from '../ui/theme-tokens.js';
+import { extractSuiteFromTitle } from '../primitives/extract-suite.js';
+
+export { classifyError as categorizeFailure } from '../primitives/classify-error.js';
+
+export function extractSuite(t: FlatTest): string {
+    return t.fullTitle ? extractSuiteFromTitle(t.fullTitle) : '';
+}
 
 export interface TestHistoryRun {
     status: string;
@@ -75,21 +82,3 @@ export const CATEGORY_COLORS: Record<string, string> = {
     FLAKY: tokens.color.semantic.warn.dark,
     UNKNOWN: tokens.color.text.muted.light,
 };
-
-export function categorizeFailure(error: string): string {
-    const upper = error.toUpperCase();
-    if (/TIMEOUT|TIMED OUT|30S|60S/.test(upper)) return 'TIMEOUT';
-    if (/ASSERT|EXPECTED|GOT |ACTUAL|TO BE /.test(upper)) return 'ASSERTION';
-    if (/CONNECT|DATABASE|NETWORK|REFUSED|ECONNREFUSED/.test(upper)) return 'ENVIRONMENT';
-    if (/NULL|UNDEFINED|CANNOT READ|TYPEERROR|REFERENCEERROR/.test(upper)) return 'APPLICATION';
-    if (/FLAKY|INTERMITTENT|RETRY/.test(upper)) return 'FLAKY';
-    return 'UNKNOWN';
-}
-
-export function extractSuite(t: FlatTest): string {
-    if (t.fullTitle) {
-        const parts = t.fullTitle.split(' > ');
-        return parts.length > 1 ? parts.slice(0, -1).join(' > ') : '';
-    }
-    return '';
-}

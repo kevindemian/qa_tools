@@ -11,6 +11,7 @@
 import type { SuiteBreakdown } from '../../types/data-hub.js';
 import type { MetricsRun } from '../../types/data-hub.js';
 import { rootLogger } from '../../logger.js';
+import { extractSuiteFromTitle } from '../../primitives/extract-suite.js';
 
 /**
  * Aggregate test results by suite from metrics runs.
@@ -64,12 +65,4 @@ export function computeSuiteBreakdown(metricsRuns: MetricsRun[]): SuiteBreakdown
         rootLogger.error('Failed to compute suite breakdown. Verify that metrics run data is valid. Details: ' + msg);
         return [];
     }
-}
-
-/**
- * Extract suite name from test title (e.g., "Suite > Test" → "Suite").
- */
-function extractSuiteFromTitle(title: string): string {
-    const parts = title.split(' > ');
-    return parts.length > 1 ? parts.slice(0, -1).join(' > ') : '';
 }
