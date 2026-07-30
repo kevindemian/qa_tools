@@ -1,6 +1,9 @@
 vi.mock('../../shared/state', () => ({ update: vi.fn() }));
 vi.mock('../../shared/logger', () => ({
     rootLogger: {
+        warn: vi.fn(),
+        info: vi.fn(),
+        error: vi.fn(),
         child: vi.fn().mockReturnValue({
             info: vi.fn(),
             warn: vi.fn(),
@@ -322,6 +325,43 @@ describe('Import Loop', () => {
             expect(inMemoryTasksId).toStrictEqual(['T-NEW']);
             expect(resultSink).toHaveLength(1);
             expect(nonNull(resultSink[0]).status).toBe('ok');
+        });
+
+        it('rolls back partially-created issue on linkTestRelations abort (Risk #3)', async () => {
+            expect.hasAssertions();
+
+            const factory = makeFactory();
+            const linker = makeLinker();
+            factory.createIssue.mockResolvedValue({ key: 'T-PARTIAL' });
+            linker.associatePrecondition.mockResolvedValue(null);
+            factory.postSteps.mockResolvedValue({ action: 'abort' });
+
+            const tests = [testBase];
+            const inMemoryTasksId: string[] = [];
+            const inMemoryTasksText: string[] = [];
+
+            await executeTestCreationLoop({
+                tests,
+                factory,
+                linker,
+                projectName: 'PROJ',
+                jiraLabels: [],
+                baseUrl: 'https://jira',
+                opLog,
+                sourcePath: '/path.csv',
+                sourceType: 'csv',
+                inMemoryTasksId,
+                inMemoryTasksText,
+                results: resultSink,
+                resumeFrom: 0,
+                isQuiet: () => true,
+                reportInfo: vi.fn(),
+                reportPrint: vi.fn(),
+                failedLinks: [],
+            });
+
+            // Should have attempted to delete the partially-created issue
+            expect(factory.jiraResource.deleteJiraResource).toHaveBeenCalledWith('issue/T-PARTIAL');
         });
     });
 });

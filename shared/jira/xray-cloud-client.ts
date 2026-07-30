@@ -45,38 +45,79 @@ export class XrayCloudClient {
     }
 
     /** Authenticate with Xray Cloud and cache the token.
-     *  Returns null on failure (logs warning). */
+     *  Returns null on failure (logs warning).
+     *
+     *  Transient network errors (ECONNRESET, EINVAL, etc.) are retried up to 3 times
+     *  with exponential backoff (1s, 2s, 4s). Non-transient errors or exhausted retries
+     *  return null with a warning logged. */
     async authenticate(clientId: string, clientSecret: string): Promise<string | null> {
         if (this.token && Date.now() < this.tokenExpiresAt) return this.token;
-        try {
-            const res = await this.httpClient.post<string>(AUTH_PATH, {
-                client_id: clientId,
-                client_secret: clientSecret,
-            });
-            const raw = res.data;
-            const token = typeof raw === 'string' ? raw.replace(/^"|"$/g, '') : raw;
-            if (!token) {
-                rootLogger.warn('Xray Cloud authentication returned empty token');
+        const AUTH_MAX_RETRIES = 3;
+        const AUTH_BASE_DELAY_MS = 1000;
+        let lastErr: unknown;
+        for (let attempt = 1; attempt <= AUTH_MAX_RETRIES; attempt++) {
+            try {
+                const res = await this.httpClient.post<string>(AUTH_PATH, {
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                });
+                const raw = res.data;
+                const token = typeof raw === 'string' ? raw.replace(/^"|"$/g, '') : raw;
+                if (!token) {
+                    rootLogger.warn('Xray Cloud authentication returned empty token');
+                    return null;
+                }
+                this.token = token;
+                this.tokenExpiresAt = Date.now() + 55 * 60 * 1000;
+                return token;
+            } catch (err) {
+                lastErr = err;
+                const isTransient =
+                    ((err as { code?: string })?.code
+                        ? ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EINVAL', 'EAI_AGAIN'].includes(
+                              (err as { code: string }).code,
+                          )
+                        : false) ||
+                    (err instanceof Error && /read EINVAL|ECONNRESET/i.test(err.message));
+                if (isTransient && attempt < AUTH_MAX_RETRIES) {
+                    const delay = AUTH_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                    rootLogger.warn(
+                        `[authenticate] Transient error (attempt ${attempt}/${AUTH_MAX_RETRIES}): ` +
+                            (err instanceof Error ? err.message : String(err)) +
+                            ` — retrying in ${delay}ms`,
+                    );
+                    await new Promise((r) => setTimeout(r, delay));
+                    continue;
+                }
+                rootLogger.warn('Xray Cloud auth failed: ' + formatErr(err));
                 return null;
             }
-            this.token = token;
-            this.tokenExpiresAt = Date.now() + 55 * 60 * 1000;
-            return token;
-        } catch (err) {
-            rootLogger.warn('Xray Cloud auth failed: ' + formatErr(err));
-            return null;
         }
+        const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+        rootLogger.warn(`[authenticate] Auth failed after ${AUTH_MAX_RETRIES} retries: ${msg}`);
+        return null;
     }
 
-    /** Ensure a valid token exists (authenticate if needed). */
+    /** Ensure a valid token exists (authenticate if needed).
+     *  Clears stale token on failure to force fresh authentication on next call. */
     private async _ensureToken(clientId: string, clientSecret: string): Promise<string | null> {
         if (this.token && Date.now() < this.tokenExpiresAt) return this.token;
-        return this.authenticate(clientId, clientSecret);
+        const token = await this.authenticate(clientId, clientSecret);
+        if (!token) {
+            // Clear stale token so next call retries authentication
+            this.token = null;
+            this.tokenExpiresAt = 0;
+        }
+        return token;
     }
 
     /** Execute a GraphQL query against Xray Cloud.
      *  Automatically authenticates if no valid token exists.
-     *  Returns the response data object, or null on failure. */
+     *  Returns the response data object, or null on failure.
+     *
+     *  Transient network errors (ECONNRESET, EINVAL, etc.) are retried up to 3 times
+     *  with exponential backoff (1s, 2s, 4s). Non-transient errors or exhausted retries
+     *  return null with a warning logged. */
     async graphql(
         query: string,
         variables: Record<string, unknown>,
@@ -85,30 +126,57 @@ export class XrayCloudClient {
     ): Promise<Record<string, unknown> | null> {
         const token = await this._ensureToken(clientId, clientSecret);
         if (!token) return null;
-        try {
-            const res = await this.httpClient.post<GraphqlResponse>(
-                GRAPHQL_PATH,
-                { query, variables },
-                { headers: { Authorization: 'Bearer ' + token } },
-            );
-            const errors = res.data.errors;
-            if (errors && errors.length > 0) {
-                for (const gqlErr of errors) {
-                    rootLogger.warn('GraphQL error: ' + gqlErr.message);
-                }
-            }
-            return res.data.data ?? null;
-        } catch (err) {
-            const axiosErr = err as { response?: { status?: number; data?: unknown } };
-            if (axiosErr.response) {
-                rootLogger.warn(
-                    `Xray Cloud GraphQL HTTP ${axiosErr.response.status}: ` + JSON.stringify(axiosErr.response.data),
+        const QUERY_MAX_RETRIES = 3;
+        const QUERY_BASE_DELAY_MS = 1000;
+        let lastErr: unknown;
+        for (let attempt = 1; attempt <= QUERY_MAX_RETRIES; attempt++) {
+            try {
+                const res = await this.httpClient.post<GraphqlResponse>(
+                    GRAPHQL_PATH,
+                    { query, variables },
+                    { headers: { Authorization: 'Bearer ' + token } },
                 );
-            } else {
-                rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));
+                const errors = res.data.errors;
+                if (errors && errors.length > 0) {
+                    for (const gqlErr of errors) {
+                        rootLogger.warn('GraphQL error: ' + gqlErr.message);
+                    }
+                }
+                return res.data.data ?? null;
+            } catch (err) {
+                lastErr = err;
+                const isTransient =
+                    ((err as { code?: string })?.code
+                        ? ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EINVAL', 'EAI_AGAIN'].includes(
+                              (err as { code: string }).code,
+                          )
+                        : false) ||
+                    (err instanceof Error && /read EINVAL|ECONNRESET/i.test(err.message));
+                if (isTransient && attempt < QUERY_MAX_RETRIES) {
+                    const delay = QUERY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                    rootLogger.warn(
+                        `[graphql] Transient error (attempt ${attempt}/${QUERY_MAX_RETRIES}): ` +
+                            (err instanceof Error ? err.message : String(err)) +
+                            ` — retrying in ${delay}ms`,
+                    );
+                    await new Promise((r) => setTimeout(r, delay));
+                    continue;
+                }
+                const axiosErr = err as { response?: { status?: number; data?: unknown } };
+                if (axiosErr.response) {
+                    rootLogger.warn(
+                        `Xray Cloud GraphQL HTTP ${axiosErr.response.status}: ` +
+                            JSON.stringify(axiosErr.response.data),
+                    );
+                } else {
+                    rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));
+                }
+                return null;
             }
-            return null;
         }
+        const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+        rootLogger.warn(`[graphql] Query failed after ${QUERY_MAX_RETRIES} retries: ${msg}`);
+        return null;
     }
 
     /** Execute a GraphQL mutation (no return data expected).

@@ -86,24 +86,76 @@ async function snapshotDescription(jiraResource: JiraResourceLike, issueKey: str
 
 async function snapshotSteps(ctx: SnapshotContext, issueKey: string): Promise<StepSnapshot[]> {
     if (!ctx.xrayCloud) return [];
-    try {
-        const numId = await ctx.resolveNumericId(issueKey);
-        return await ctx.xrayCloud.getTestSteps(numId, ctx.clientId, ctx.clientSecret);
-    } catch (err) {
-        rootLogger.warn('snapshotSteps: falha ao ler steps de ' + issueKey + ': ' + formatErr(err));
-        return [];
+    const SNAPSHOT_MAX_RETRIES = 3;
+    const SNAPSHOT_BASE_DELAY_MS = 1000;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= SNAPSHOT_MAX_RETRIES; attempt++) {
+        try {
+            const numId = await ctx.resolveNumericId(issueKey);
+            return await ctx.xrayCloud.getTestSteps(numId, ctx.clientId, ctx.clientSecret);
+        } catch (err) {
+            lastErr = err;
+            const isTransient =
+                ((err as { code?: string })?.code
+                    ? ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EINVAL', 'EAI_AGAIN'].includes(
+                          (err as { code: string }).code,
+                      )
+                    : false) ||
+                (err instanceof Error && /read EINVAL|ECONNRESET/i.test(err.message));
+            if (isTransient && attempt < SNAPSHOT_MAX_RETRIES) {
+                const delay = SNAPSHOT_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                rootLogger.warn(
+                    `[snapshotSteps] Transient error (attempt ${attempt}/${SNAPSHOT_MAX_RETRIES}): ` +
+                        (err instanceof Error ? err.message : String(err)) +
+                        ` — retrying in ${delay}ms`,
+                );
+                await new Promise((r) => setTimeout(r, delay));
+                continue;
+            }
+            rootLogger.warn('snapshotSteps: falha ao ler steps de ' + issueKey + ': ' + formatErr(err));
+            return [];
+        }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    rootLogger.warn(`[snapshotSteps] Failed after ${SNAPSHOT_MAX_RETRIES} retries: ${msg}`);
+    return [];
 }
 
 async function snapshotPreconditions(ctx: SnapshotContext, issueKey: string): Promise<string[]> {
     if (!ctx.xrayCloud) return [];
-    try {
-        const numId = await ctx.resolveNumericId(issueKey);
-        return await ctx.xrayCloud.getTestPreconditions(numId, ctx.clientId, ctx.clientSecret);
-    } catch (err) {
-        rootLogger.warn('snapshotPreconditions: falha ao ler preconditions de ' + issueKey + ': ' + formatErr(err));
-        return [];
+    const SNAPSHOT_MAX_RETRIES = 3;
+    const SNAPSHOT_BASE_DELAY_MS = 1000;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= SNAPSHOT_MAX_RETRIES; attempt++) {
+        try {
+            const numId = await ctx.resolveNumericId(issueKey);
+            return await ctx.xrayCloud.getTestPreconditions(numId, ctx.clientId, ctx.clientSecret);
+        } catch (err) {
+            lastErr = err;
+            const isTransient =
+                ((err as { code?: string })?.code
+                    ? ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EINVAL', 'EAI_AGAIN'].includes(
+                          (err as { code: string }).code,
+                      )
+                    : false) ||
+                (err instanceof Error && /read EINVAL|ECONNRESET/i.test(err.message));
+            if (isTransient && attempt < SNAPSHOT_MAX_RETRIES) {
+                const delay = SNAPSHOT_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                rootLogger.warn(
+                    `[snapshotPreconditions] Transient error (attempt ${attempt}/${SNAPSHOT_MAX_RETRIES}): ` +
+                        (err instanceof Error ? err.message : String(err)) +
+                        ` — retrying in ${delay}ms`,
+                );
+                await new Promise((r) => setTimeout(r, delay));
+                continue;
+            }
+            rootLogger.warn('snapshotPreconditions: falha ao ler preconditions de ' + issueKey + ': ' + formatErr(err));
+            return [];
+        }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    rootLogger.warn(`[snapshotPreconditions] Failed after ${SNAPSHOT_MAX_RETRIES} retries: ${msg}`);
+    return [];
 }
 
 async function snapshotLinks(ctx: SnapshotContext, issueKey: string, linkTypeNames: string[]): Promise<LinkSnapshot[]> {

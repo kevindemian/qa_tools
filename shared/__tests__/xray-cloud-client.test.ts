@@ -69,6 +69,73 @@ describe('Shared/xray-cloud-client', () => {
 
             expect(token).toBeNull();
         });
+
+        it('retries on transient ECONNRESET and succeeds on attempt 2', async () => {
+            expect.hasAssertions();
+
+            vi.useFakeTimers();
+            const err = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+            postSpy.mockRejectedValueOnce(err).mockResolvedValueOnce({ data: '"tok-retry"' });
+
+            const promise = makeClient().authenticate('id', 'secret');
+
+            await vi.advanceTimersByTimeAsync(1000);
+
+            const token = await promise;
+            expect(token).toBe('tok-retry');
+            expect(postSpy).toHaveBeenCalledTimes(2);
+            vi.useRealTimers();
+        });
+
+        it('retries on read EINVAL and succeeds on attempt 3', async () => {
+            expect.hasAssertions();
+
+            vi.useFakeTimers();
+            const err = new Error('read EINVAL');
+            postSpy
+                .mockRejectedValueOnce(err)
+                .mockRejectedValueOnce(err)
+                .mockResolvedValueOnce({ data: '"tok-einval"' });
+
+            const promise = makeClient().authenticate('id', 'secret');
+
+            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
+
+            const token = await promise;
+            expect(token).toBe('tok-einval');
+            expect(postSpy).toHaveBeenCalledTimes(3);
+            vi.useRealTimers();
+        });
+
+        it('returns null after 3 transient auth failures', async () => {
+            expect.hasAssertions();
+
+            vi.useFakeTimers();
+            const err = Object.assign(new Error('read EINVAL'), { code: 'EINVAL' });
+            postSpy.mockRejectedValue(err);
+
+            const promise = makeClient().authenticate('id', 'secret');
+
+            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
+            await vi.advanceTimersByTimeAsync(4000);
+
+            const token = await promise;
+            expect(token).toBeNull();
+            expect(postSpy).toHaveBeenCalledTimes(3);
+            vi.useRealTimers();
+        });
+
+        it('does NOT retry non-transient auth errors', async () => {
+            expect.hasAssertions();
+
+            postSpy.mockRejectedValue(new Error('Permission denied'));
+            const token = await makeClient().authenticate('id', 'secret');
+
+            expect(token).toBeNull();
+            expect(postSpy).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('Graphql', () => {

@@ -5,6 +5,7 @@ import type IssueLinker from './issue-linker.js';
 import { rootLogger } from '../shared/logger.js';
 import { update as updateState } from '../shared/state.js';
 import { JiraPayloadSchema } from './csv-import-schema.js';
+import type { JiraResourceLike } from './jira-resource-types.js';
 
 interface LinkRelationsResult {
     abort: boolean;
@@ -251,6 +252,24 @@ function updateFinalState(sourceType: string, sourcePath: string, projectName: s
     updateState((state) => Object.assign(state, stateUpdate));
 }
 
+/** Delete a partially-created issue on abort (Risk #3 rollback).
+ *  Best-effort: logs warning on failure but does not throw. */
+async function rollbackCreatedIssue(
+    jiraResource: JiraResourceLike,
+    issueKey: string,
+    testTitle: string,
+): Promise<void> {
+    try {
+        await jiraResource.deleteJiraResource('issue/' + issueKey);
+        rootLogger.warn(`rollback: deleted partially-created issue ${issueKey} for "${testTitle}"`);
+    } catch (err) {
+        rootLogger.warn(
+            `rollback: failed to delete ${issueKey} — manual cleanup needed: ` +
+                (err instanceof Error ? err.message : String(err)),
+        );
+    }
+}
+
 export interface TestCreationLoopOptions {
     tests: TestCase[];
     factory: TestCaseFactory;
@@ -375,7 +394,11 @@ async function _finalizeAfterIssueCreation(
         ...(issueResult.updated ? { replaceSteps: true } : {}),
     });
     if (linkState.failedLinkKeys.length) failedLinks.push(...linkState.failedLinkKeys);
-    if (linkState.abort) return 'abort';
+    if (linkState.abort) {
+        // Risk #3: Rollback partially-created issue on abort
+        await rollbackCreatedIssue(factory.jiraResource, createdTestIssue.key, testTitle);
+        return 'abort';
+    }
     const testStatus = linkState.errored ? 'error' : 'ok';
     if (!isQuiet()) reportPrint('  -> ' + baseUrl + '/browse/' + createdTestIssue.key);
     results.push({ status: testStatus, label: testTitle, message: '' });
