@@ -7,10 +7,13 @@
         "mixed": 60
     },
     "stryker": {
-        "incremental": true,
-        "timeoutMS": 300000,
-        "concurrency": 1,
+        "incremental": false,
+        "timeoutMS": 600000,
+        "dryRunTimeoutMinutes": 15,
+        "concurrency": 2,
+        "vitest": { "related": false },
         "vitestConfigFile": "vitest.config.ts",
+        "disableTypeChecks": ["!reports/**", "!**/*.html"],
         "userConfig": {
             "ignorePatterns": [
                 "scripts/quality-check.ts",

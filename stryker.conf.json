@@ -5,12 +5,11 @@
     "coverageAnalysis": "perTest",
     "thresholds": { "high": 80, "low": 60, "break": 60 },
     "reporters": ["html", "clear-text", "progress", "json"],
-    "incremental": true,
-    "concurrency": 1,
-    "maxConcurrentTestRunners": 1,
-    "timeoutMS": 300000,
-    "dryRunTimeoutMinutes": 10,
-    "vitest": { "related": false },
+    "incremental": false,
+    "concurrency": 2,
+    "timeoutMS": 600000,
+    "dryRunTimeoutMinutes": 15,
+    "vitest": { "related": false, "configFile": "vitest.config.ts" },
     "disableTypeChecks": "!reports/**",
     "ignorePatterns": [
         "scripts/quality-check.ts",
@@ -18,9 +17,5 @@
         "scripts/audit-mock-boundaries.ts",
         "scripts/__tests__/quality-check.test.ts",
         "scripts/__tests__/validation-hook*.test.ts"
-    ],
-    "env": {
-        "STRYKER_ACTIVE": "true",
-        "CI": "true"
-    }
+    ]
 }
