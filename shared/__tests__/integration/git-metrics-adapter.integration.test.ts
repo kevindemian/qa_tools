@@ -12,6 +12,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { rootLogger } from '../../logger.js';
 
 import {
     generateGitMetricsRuns,
@@ -49,8 +50,10 @@ describe('Git Metrics Adapter Integration', () => {
     afterEach(() => {
         try {
             fs.rmSync(TEST_DIR, { recursive: true, force: true });
-        } catch {
-            /* best effort */
+        } catch (err) {
+            rootLogger.warn(
+                `cleanup: failed to remove ${TEST_DIR}: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     });
 

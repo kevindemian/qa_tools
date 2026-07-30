@@ -124,7 +124,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
         }
 
         const { summary, status, failedLinks, inMemoryTasksId, parentIssues } = outcome.result;
-        if (failedLinks.length) {
+        if (failedLinks && failedLinks.length) {
             printError(summary, undefined);
         } else {
             info(summary);
@@ -372,12 +372,12 @@ async function initializeSession() {
     }
 
     if (_isJiraConfigured() && ctx.project_name) {
-        console.error('[init] Validating project: getJiraResource(project/' + ctx.project_name + ')');
+        rootLogger.debug('[init] Validating project: getJiraResource(project/' + ctx.project_name + ')');
         try {
             await jiraResource.getJiraResource('project/' + ctx.project_name);
-            console.error('[init] project lookup OK');
+            rootLogger.debug('[init] project lookup OK');
         } catch (err) {
-            console.error('[init] project lookup FAILED: ' + String(err));
+            rootLogger.debug('[init] project lookup FAILED: ' + String(err));
             rootLogger.error('[init] Jira project validation failed: ' + String(err));
             warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
         }
@@ -514,97 +514,106 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
     }
 }
 
-async function main(): Promise<void> {
-    if (process.argv.includes('--help') || process.argv.includes('-h')) {
-        rootLogger.info('QA Tools — Jira Management');
-        rootLogger.info('');
-        rootLogger.info('Uso: npx tsx jira_management/main.ts [opcoes]');
-        rootLogger.info('');
-        rootLogger.info('Opcoes:');
-        rootLogger.info('  --help, -h     Exibe esta ajuda');
-        rootLogger.info('  --version      Exibe a versao');
-        rootLogger.info('  --csv <path>   Importa um CSV de testes sem menu interativo (headless)');
-        rootLogger.info('  --auto         Forca AUTO_CONFIRM (usado com --csv em automacao/CI)');
-        rootLogger.info('  --update-policy <auto|skip|prompt>');
-        rootLogger.info('                 auto: atualiza automaticamente');
-        rootLogger.info('                 skip: pula issues existentes');
-        rootLogger.info('                 prompt: pergunta o que fazer');
-        rootLogger.info('  --target-keys <KEY1,KEY2,...>');
-        rootLogger.info('                 atualiza issues por chave, na ordem do CSV');
-        rootLogger.info('  --dry-run      Simula a importacao sem criar ou atualizar issues');
-        rootLogger.info('  --create-te    Cria Test Execution e associa todos os testes ao final');
-        rootLogger.info('  --associate-te <TE_KEY>');
-        rootLogger.info('                 associa testes a uma Test Execution existente');
-        rootLogger.info('  --tests <KEY1,KEY2,...>');
-        rootLogger.info('                 lista de keys dos testes para associar (usado com --associate-te)');
-        rootLogger.info('');
-        rootLogger.info('Exemplos:');
-        rootLogger.info(
-            '  npx tsx jira_management/main.ts --associate-te ECSPOL-1624 --tests ECSPOL-1605,ECSPOL-1606,ECSPOL-1607',
-        );
-        gracefulExit(ExitCode.OK);
-        return;
+function showHelp(): void {
+    rootLogger.info('QA Tools — Jira Management');
+    rootLogger.info('');
+    rootLogger.info('Uso: npx tsx jira_management/main.ts [opcoes]');
+    rootLogger.info('');
+    rootLogger.info('Opcoes:');
+    rootLogger.info('  --help, -h     Exibe esta ajuda');
+    rootLogger.info('  --version      Exibe a versao');
+    rootLogger.info('  --csv <path>   Importa um CSV de testes sem menu interativo (headless)');
+    rootLogger.info('  --auto         Forca AUTO_CONFIRM (usado com --csv em automacao/CI)');
+    rootLogger.info('  --update-policy <auto|skip|prompt>');
+    rootLogger.info('                 auto: atualiza automaticamente');
+    rootLogger.info('                 skip: pula issues existentes');
+    rootLogger.info('                 prompt: pergunta o que fazer');
+    rootLogger.info('  --target-keys <KEY1,KEY2,...>');
+    rootLogger.info('                 atualiza issues por chave, na ordem do CSV');
+    rootLogger.info('  --dry-run      Simula a importacao sem criar ou atualizar issues');
+    rootLogger.info('  --create-te    Cria Test Execution e associa todos os testes ao final');
+    rootLogger.info('  --te-parent <KEY1,KEY2,...>');
+    rootLogger.info('                 issues pai para vincular à Test Execution');
+    rootLogger.info('  --associate-te <TE_KEY>');
+    rootLogger.info('                 associa testes a uma Test Execution existente');
+    rootLogger.info('  --tests <KEY1,KEY2,...>');
+    rootLogger.info('                 lista de keys dos testes para associar (usado com --associate-te)');
+    rootLogger.info('');
+    rootLogger.info('Exemplos:');
+    rootLogger.info(
+        '  npx tsx jira_management/main.ts --associate-te ECSPOL-1624 --tests ECSPOL-1605,ECSPOL-1606,ECSPOL-1607',
+    );
+}
+
+function getFlagValue(flag: string): string | undefined {
+    const idx = process.argv.indexOf(flag);
+    return idx !== -1 && idx + 1 < process.argv.length ? process.argv[idx + 1] : undefined;
+}
+
+function parseUpdatePolicy(): void {
+    const val = getFlagValue('--update-policy');
+    if (!val) return;
+    if (!['auto', 'skip', 'prompt'].includes(val)) {
+        rootLogger.error('--update-policy deve ser auto, skip ou prompt');
+        process.exit(ExitCode.ERROR);
     }
-    if (process.argv.includes('--version')) {
-        rootLogger.info(pkg.version);
-        gracefulExit(ExitCode.OK);
-        return;
+    if (Config.get<boolean>('autoConfirm') && val === 'prompt') {
+        rootLogger.warn('--auto ativo, --update-policy=prompt ignorado; usando auto');
+        Config.set('updatePolicy', 'auto');
+    } else {
+        Config.set('updatePolicy', val);
     }
-    if (process.argv.includes('--auto')) {
-        Config.setAutoConfirm(true);
+}
+
+function parseTargetKeys(): void {
+    const raw = getFlagValue('--target-keys');
+    if (!raw) return;
+    const keys = raw
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean);
+    if (keys.length === 0) {
+        rootLogger.error('--target-keys requer pelo menos uma chave separada por vírgula');
+        process.exit(ExitCode.ERROR);
     }
-    if (process.argv.includes('--dry-run')) {
-        Config.set('dryRun', true);
+    Config.set('targetKeys', keys.join(','));
+}
+
+function parseAssociateTe(): void {
+    const val = getFlagValue('--associate-te');
+    if (!val) return;
+    const teKey = val.trim().toUpperCase();
+    if (!teKey) {
+        rootLogger.error('--associate-te requer uma key de Test Execution (ex: ECSPOL-1624)');
+        process.exit(ExitCode.ERROR);
     }
-    const upIdx = process.argv.indexOf('--update-policy');
-    if (upIdx !== -1 && upIdx + 1 < process.argv.length) {
-        const val: string = process.argv[upIdx + 1] ?? '';
-        if (!['auto', 'skip', 'prompt'].includes(val)) {
-            rootLogger.error('--update-policy deve ser auto, skip ou prompt');
-            process.exit(ExitCode.ERROR);
-        }
-        if (Config.get<boolean>('autoConfirm') && val === 'prompt') {
-            rootLogger.warn('--auto ativo, --update-policy=prompt ignorado; usando auto');
-            Config.set('updatePolicy', 'auto');
-        } else {
-            Config.set('updatePolicy', val);
-        }
+    Config.set('associateTeKey', teKey);
+}
+
+function parseTestKeys(): void {
+    const raw = getFlagValue('--tests');
+    if (!raw) return;
+    const keys = raw
+        .split(',')
+        .map((k) => k.trim().toUpperCase())
+        .filter(Boolean);
+    if (keys.length === 0) {
+        rootLogger.error('--tests requer pelo menos uma chave separada por vírgula (ex: ECSPOL-1605,ECSPOL-1606)');
+        process.exit(ExitCode.ERROR);
     }
-    const tkIdx = process.argv.indexOf('--target-keys');
-    if (tkIdx !== -1 && tkIdx + 1 < process.argv.length) {
-        const raw: string = process.argv[tkIdx + 1] ?? '';
-        const keys = raw
-            .split(',')
-            .map((k) => k.trim())
-            .filter(Boolean);
-        if (keys.length === 0) {
-            rootLogger.error('--target-keys requer pelo menos uma chave separada por vírgula');
-            process.exit(ExitCode.ERROR);
-        }
-        Config.set('targetKeys', keys.join(','));
-    }
-    const atIdx = process.argv.indexOf('--associate-te');
-    if (atIdx !== -1 && atIdx + 1 < process.argv.length) {
-        const teKey = (process.argv[atIdx + 1] ?? '').trim().toUpperCase();
-        if (!teKey) {
-            rootLogger.error('--associate-te requer uma key de Test Execution (ex: ECSPOL-1624)');
-            process.exit(ExitCode.ERROR);
-        }
-        Config.set('associateTeKey', teKey);
-    }
-    const testsIdx = process.argv.indexOf('--tests');
-    if (testsIdx !== -1 && testsIdx + 1 < process.argv.length) {
-        const raw: string = process.argv[testsIdx + 1] ?? '';
-        const keys = raw
-            .split(',')
-            .map((k) => k.trim().toUpperCase())
-            .filter(Boolean);
-        if (keys.length === 0) {
-            rootLogger.error('--tests requer pelo menos uma chave separada por vírgula (ex: ECSPOL-1605,ECSPOL-1606)');
-            process.exit(ExitCode.ERROR);
-        }
-        Config.set('associateTestKeys', keys.join(','));
-    }
+    Config.set('associateTestKeys', keys.join(','));
+}
+
+function parseArgs(): void {
+    if (process.argv.includes('--auto')) Config.setAutoConfirm(true);
+    if (process.argv.includes('--dry-run')) Config.set('dryRun', true);
+    parseUpdatePolicy();
+    parseTargetKeys();
+    parseAssociateTe();
+    parseTestKeys();
+}
+
+async function initStartup(): Promise<void> {
     if (process.stdout.isTTY && !_shouldNoClear()) {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
@@ -632,35 +641,39 @@ async function main(): Promise<void> {
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
-        // DataHub may not be initialized in headless mode — this is expected.
         rootLogger.debug('[startup] Health score unavailable: ' + String(err));
     }
-    console.error('[startup] Calling showSplash...');
     await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
-    console.error('[startup] showSplash done');
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {
-        // env setup offered
+        /* env setup offered */
     }
-    console.error('[startup] Calling maybeRunFirstRunWizard...');
     try {
         await maybeRunFirstRunWizard();
     } catch (err) {
-        console.error('[startup] Setup wizard failed:', err);
+        rootLogger.debug('[startup] Setup wizard failed:', err);
         rootLogger.error('Setup wizard failed: ' + String(err));
     }
-    console.error('[startup] maybeRunFirstRunWizard done');
+}
 
-    // Early SIGINT handler: protege contra crash durante prompts síncronos
-    // (readline-sync) que ocorrem dentro de initializeSession.
-    // Removido após initializeSession e substituído pelo handler definitivo.
+async function main(): Promise<void> {
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+        showHelp();
+        gracefulExit(ExitCode.OK);
+        return;
+    }
+    if (process.argv.includes('--version')) {
+        rootLogger.info(pkg.version);
+        gracefulExit(ExitCode.OK);
+        return;
+    }
+    parseArgs();
+    await initStartup();
+
     const _earlyHandler = () => {};
     process.on('SIGINT', _earlyHandler);
-    console.error('[startup] Calling initializeSession (Jira API)...');
     const res = await initializeSession();
-    console.error('[startup] initializeSession done');
-
     process.removeListener('SIGINT', _earlyHandler);
     setupSigint(
         () => res.ctx.isBusy,
@@ -671,24 +684,19 @@ async function main(): Promise<void> {
     const associateTestKeysStr = Config.get<string | undefined>('associateTestKeys');
     const associateTestKeys = associateTestKeysStr ? associateTestKeysStr.split(',').filter(Boolean) : [];
     if (associateTeKey && associateTestKeys.length > 0) {
-        console.error('[startup] Calling runAssociateTe...');
         const code = await runAssociateTe(res, associateTeKey, associateTestKeys);
-        console.error('[startup] runAssociateTe done, code:', code);
         gracefulExit(code);
         return;
     }
 
     const headlessCsvPath = parseCsvArg(process.argv);
     if (headlessCsvPath) {
-        console.error('[startup] Calling runHeadlessCsvImport...');
         const code = await runHeadlessCsvImport(res, headlessCsvPath);
-        console.error('[startup] runHeadlessCsvImport done, code:', code);
         gracefulExit(code);
         return;
     }
 
     await showGapBadge(res.jiraResource, res.ctx.project_name);
-
     await runMainLoop(res);
 }
 

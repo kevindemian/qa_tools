@@ -14,7 +14,7 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { MetricsStore, MetricsRun, DataHub, ComputedMetrics } from '../types/data-hub.js';
-import { calculateHealthScore } from '../quality/health-score.js';
+import { calculateHealthScore, evaluateQualityGate } from '../quality/health-score.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
@@ -275,5 +275,139 @@ describe('CalculateHealthScore — property-based', () => {
             ),
             { numRuns: 50 },
         );
+    });
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * evaluateQualityGate — pure function, no mocks needed
+ * Tests mathematical invariants of the gate logic
+ * ────────────────────────────────────────────────────────────── */
+
+describe('EvaluateQualityGate — property-based (no mocks)', () => {
+    const NumberArb = fc.float({ min: -1000, max: 2000, noDefaultInfinity: true, noNaN: true });
+
+    it('always returns pass | fail | unknown', () => {
+        expect.hasAssertions();
+
+        fc.assert(
+            fc.property(NumberArb, NumberArb, NumberArb, NumberArb, NumberArb, (p, f, c, e, s) => {
+                const result = evaluateQualityGate(p, f, c, e, s);
+
+                expect(['pass', 'fail', 'unknown']).toContain(result);
+            }),
+            { numRuns: 200 },
+        );
+    });
+
+    it('naN in any dimension yields unknown, never fail', () => {
+        expect.hasAssertions();
+
+        const dims = ['passRate', 'flakyPct', 'coverage', 'executionRate', 'suiteSpeed'] as const;
+        for (const dim of dims) {
+            const args = { passRate: 95, flakyPct: 0, coverage: 80, executionRate: 95, suiteSpeed: 500 };
+            args[dim] = Number.NaN;
+            const result = evaluateQualityGate(
+                args.passRate,
+                args.flakyPct,
+                args.coverage,
+                args.executionRate,
+                args.suiteSpeed,
+            );
+
+            expect(result).not.toBe('fail');
+        }
+    });
+
+    it('infinity in any dimension yields unknown, never fail', () => {
+        expect.hasAssertions();
+
+        const args = { passRate: 95, flakyPct: 0, coverage: 80, executionRate: 95, suiteSpeed: 500 };
+        for (const dim of ['passRate', 'flakyPct', 'coverage', 'executionRate', 'suiteSpeed'] as const) {
+            const copy = { ...args };
+            copy[dim] = Number.POSITIVE_INFINITY;
+            const result = evaluateQualityGate(
+                copy.passRate,
+                copy.flakyPct,
+                copy.coverage,
+                copy.executionRate,
+                copy.suiteSpeed,
+            );
+
+            expect(result).not.toBe('fail');
+        }
+    });
+
+    it('all dimensions above thresholds → pass', () => {
+        const result = evaluateQualityGate(95, 0, 80, 95, 500);
+
+        expect(result).toBe('pass');
+    });
+
+    it('one dimension below threshold → fail', () => {
+        const result = evaluateQualityGate(50, 0, 80, 95, 500);
+
+        expect(result).toBe('fail');
+    });
+
+    it('all dimensions unavailable → unknown', () => {
+        const result = evaluateQualityGate(
+            95,
+            0,
+            80,
+            95,
+            500,
+            {},
+            {
+                passRate: false,
+                flaky: false,
+                coverage: false,
+                executionRate: false,
+                suiteSpeed: false,
+            },
+        );
+
+        expect(result).toBe('unknown');
+    });
+
+    it('mixed: one fail overrides all passes', () => {
+        const result = evaluateQualityGate(95, 0, 30, 95, 500);
+
+        expect(result).toBe('fail');
+    });
+
+    it('mixed: one unknown with no fail → unknown', () => {
+        const result = evaluateQualityGate(
+            95,
+            0,
+            80,
+            95,
+            500,
+            {},
+            {
+                passRate: true,
+                flaky: false,
+                coverage: true,
+                executionRate: true,
+                suiteSpeed: true,
+            },
+        );
+
+        expect(result).toBe('unknown');
+    });
+
+    it('custom thresholds override defaults', () => {
+        const result = evaluateQualityGate(60, 0, 50, 60, 2000, {
+            minPassRateGate: 50,
+            minCoverageGate: 40,
+            minExecutionRateGate: 50,
+        });
+
+        expect(result).toBe('pass');
+    });
+
+    it('negative values are treated as present (not NaN/Infinity)', () => {
+        const result = evaluateQualityGate(-10, 0, 80, 95, 500);
+
+        expect(result).toBe('fail');
     });
 });

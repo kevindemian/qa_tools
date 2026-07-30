@@ -32,8 +32,8 @@ describe('Incident Report.Integration', () => {
                 expect(html).toContain('Incident Investigation Report');
                 expect(html).toContain('data-component="metric-card"');
                 expect(html).toContain('data-component="card"');
-                expect(html).toContain('Overall Severity');
-                expect(html).toContain('HIGH');
+                expect(html).toContain('data-component="badge"');
+                expect(html).toContain('high');
                 expect(html).toContain('4 incident(s) detected');
             });
 
@@ -63,7 +63,7 @@ describe('Incident Report.Integration', () => {
 
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('No incidents to display');
-                expect(html).toContain('Overall Severity: NONE');
+                expect(html).toContain('data-component="badge"');
             });
         });
 
@@ -110,6 +110,31 @@ describe('Incident Report.Integration', () => {
 
                 expect(html).toContain('<title>Incident Investigation Report</title>');
                 expect(html).toContain('<h1>Incident Investigation Report</h1>');
+            });
+        });
+
+        describe('FT-31e: data attributes', () => {
+            it('includes data-part="target" with threshold values', async () => {
+                expect.hasAssertions();
+
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
+                const report = buildIncidentReport(10, 2, 'High', [], 95);
+                const html = generateIncidentReportHtml(report);
+
+                expect(html).toContain('data-part="target"');
+                expect(html).toContain('target: 0');
+            });
+
+            it('includes data-part="timestamp"', async () => {
+                expect.hasAssertions();
+
+                const { buildIncidentReport, generateIncidentReportHtml } =
+                    await import('../../report/incident-report.js');
+                const report = buildIncidentReport(10, 0, 'N/A', [], 95);
+                const html = generateIncidentReportHtml(report);
+
+                expect(html).toContain('data-part="timestamp"');
             });
         });
     });

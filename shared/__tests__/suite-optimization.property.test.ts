@@ -196,7 +196,7 @@ describe('GenerateOptimizationHtml — property-based', () => {
         );
     });
 
-    it('contains Total Tests metric card', () => {
+    it('contains Tests to Optimize metric card', () => {
         expect.hasAssertions();
 
         fc.assert(
@@ -204,7 +204,7 @@ describe('GenerateOptimizationHtml — property-based', () => {
                 const result = analyzeSuiteOptimization(tests);
                 const html = generateOptimizationHtml(result);
 
-                expect(html).toContain('Total Tests');
+                expect(html).toContain('Tests to Optimize');
                 expect(html).toContain(String(result.totalTests));
             }),
             { numRuns: 50 },

@@ -167,5 +167,30 @@ describe('Requirement Score.Integration', () => {
                 expect(html).toContain('<h1>Requirement Quality Score</h1>');
             });
         });
+
+        describe('FT-32d: data attributes', () => {
+            it('includes data-part="target" with threshold values', async () => {
+                expect.hasAssertions();
+
+                const { calculateRequirementScores, generateRequirementScoreHtml } =
+                    await import('../../quality/requirement-score.js');
+                const result = calculateRequirementScores(makeRecords());
+                const html = generateRequirementScoreHtml(result);
+
+                expect(html).toContain('data-part="target"');
+                expect(html).toContain('target: >=75');
+            });
+
+            it('includes data-part="timestamp"', async () => {
+                expect.hasAssertions();
+
+                const { calculateRequirementScores, generateRequirementScoreHtml } =
+                    await import('../../quality/requirement-score.js');
+                const result = calculateRequirementScores([]);
+                const html = generateRequirementScoreHtml(result);
+
+                expect(html).toContain('data-part="timestamp"');
+            });
+        });
     });
 });

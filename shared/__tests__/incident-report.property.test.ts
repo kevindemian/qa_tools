@@ -307,7 +307,7 @@ describe('Incident Report.Property', () => {
                         );
                         const html = generateIncidentReportHtml(report);
 
-                        expect(html).toContain('Overall Severity');
+                        expect(html).toContain('data-component="badge"');
                         expect(html).toContain(report.summary);
                     },
                 ),

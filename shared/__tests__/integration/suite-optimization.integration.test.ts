@@ -30,7 +30,7 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('</html>');
             expect(html).toContain('FT-26 Test');
-            expect(html).toContain('Total Tests');
+            expect(html).toContain('Tests to Optimize');
             expect(html).toContain('Total Duration');
             expect(html).toContain('Potential Savings');
             expect(html).toContain('Slow Test');
@@ -89,6 +89,32 @@ describe('Integration: Suite Optimization (FT-26)', () => {
             expect(html).toContain('Error generating');
 
             spy.mockRestore();
+        });
+    });
+
+    describe('FT-26c: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
+            const tests = [{ title: 'slow test', duration: 20, flakiness: 0.1 }];
+            const result = analyzeSuiteOptimization(tests);
+            const html = generateOptimizationHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: <60s');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { analyzeSuiteOptimization, generateOptimizationHtml } =
+                await import('../../quality/suite-optimization.js');
+            const result = analyzeSuiteOptimization([]);
+            const html = generateOptimizationHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
         });
     });
 });

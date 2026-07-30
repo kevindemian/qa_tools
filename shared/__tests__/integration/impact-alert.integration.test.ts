@@ -98,4 +98,40 @@ describe('Integration: Impact Alert (FT-30)', () => {
             expect(html).toContain('Custom Alert');
         });
     });
+
+    describe('FT-30e: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { generateImpactAlertHtml } = await import('../../report/impact-alert.js');
+            const result = makeResult({
+                alerts: [
+                    {
+                        severity: 'critical',
+                        title: 'Critical Alert',
+                        message: 'msg',
+                        affectedArea: 'area',
+                        recommendation: 'rec',
+                    },
+                ],
+                criticalCount: 1,
+                warningCount: 0,
+                infoCount: 0,
+            });
+            const html = generateImpactAlertHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: 0');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { generateImpactAlertHtml } = await import('../../report/impact-alert.js');
+            const result = makeResult({ alerts: [], criticalCount: 0, warningCount: 0, infoCount: 0 });
+            const html = generateImpactAlertHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });

@@ -103,7 +103,7 @@ describe('Incident Report', () => {
             expect(html).toContain('Incident Investigation Report');
             expect(html).toContain('data-component="metric-card"');
             expect(html).toContain('data-component="card"');
-            expect(html).toContain('Overall Severity');
+            expect(html).toContain('data-component="badge"');
         });
 
         it('returns error page for null result', () => {

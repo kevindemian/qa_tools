@@ -123,8 +123,8 @@ describe('Traceability Matrix.Integration', () => {
                     '<!DOCTYPE html>',
                     'Traceability Matrix',
                     'data-component="metric-card"',
-                    'epic-node',
-                    'story-node',
+                    'data-component="epic"',
+                    'data-component="story"',
                     'test-row',
                     'test-passed',
                     'EPIC-1',
@@ -301,6 +301,44 @@ describe('Traceability Matrix.Integration', () => {
                 const result = matrix(metrics, coverageResult, hub);
 
                 expect(result.nodes.length).toBeGreaterThan(0);
+            });
+
+            it('includes data-part="target" with threshold values', async () => {
+                expect.hasAssertions();
+
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
+                const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+                const hub = makeDataHub();
+                const coverageResult = {
+                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    totals: { total: 1, covered: 1 },
+                    byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+                };
+
+                const result = matrix(metrics, coverageResult, hub);
+                const html = generateTraceabilityHtml(result);
+
+                expect(html).toContain('data-part="target"');
+                expect(html).toContain('target: >=80%');
+                expect(html).toContain('target: <10%');
+            });
+
+            it('includes data-part="timestamp"', async () => {
+                expect.hasAssertions();
+
+                const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
+                const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
+                const hub = makeDataHub();
+                const coverageResult = {
+                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    totals: { total: 1, covered: 1 },
+                    byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+                };
+
+                const result = matrix(metrics, coverageResult, hub);
+                const html = generateTraceabilityHtml(result);
+
+                expect(html).toContain('data-part="timestamp"');
             });
         });
     });

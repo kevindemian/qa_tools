@@ -81,7 +81,11 @@ export async function generateWithRetry<T>(
     config: RetryConfig = DEFAULT_CONFIG,
 ): Promise<RetryResult<T>> {
     let attempts = 0;
-    const layerFailures: { layer1: number; layer2: number; layer3: number } = { layer1: 0, layer2: 0, layer3: 0 };
+    const layerFailures = new Map<string, number>([
+        ['layer1', 0],
+        ['layer2', 0],
+        ['layer3', 0],
+    ]);
 
     async function tryLayer(system: string, user: string, layer: string, hint: string): Promise<T | null> {
         const hintSystem = hint ? `${system}\n\n[${layer.toUpperCase()} VALIDATION FAILED]\n${hint}` : system;
@@ -106,11 +110,11 @@ export async function generateWithRetry<T>(
             if (attempt !== null) {
                 const schemaResult = schema.safeParse(attempt);
                 if (schemaResult.success) return { result: attempt, updatedSystem: sys, failed: false };
-                layerFailures.layer1++;
+                layerFailures.set('layer1', (layerFailures.get('layer1') ?? 0) + 1);
                 recordRetry();
                 sys = `${sys}\n\n[SCHEMA VALIDATION FAILED]\nFix these issues:\n${buildSchemaHint(schemaResult)}`;
             } else {
-                layerFailures.layer1++;
+                layerFailures.set('layer1', (layerFailures.get('layer1') ?? 0) + 1);
                 recordRetry();
             }
         }
@@ -128,12 +132,12 @@ export async function generateWithRetry<T>(
             ) => ValidatorSummary;
         },
     ): Promise<T> {
-        const maxRetries = config[layer].maxRetries;
+        const maxRetries = layer === 'layer2' ? config.layer2.maxRetries : config.layer3.maxRetries;
         let result = currentResult;
         for (let i = 0; i < maxRetries; i++) {
             const summary = validator.validate(result, validationCtx);
             if (summary.allPassed) break;
-            layerFailures[layer]++;
+            layerFailures.set(layer, (layerFailures.get(layer) ?? 0) + 1);
             recordRetry();
             const hint = buildInvariantHint(summary.results);
             const retryResult = await tryLayer(currentSystem, opts.user, layer, hint);
@@ -150,7 +154,7 @@ export async function generateWithRetry<T>(
         return {
             data: null,
             attempts,
-            layerFailures,
+            layerFailures: Object.fromEntries(layerFailures),
             finalErrors: ['Layer 1: all retries exhausted'],
         };
     }
@@ -159,7 +163,7 @@ export async function generateWithRetry<T>(
         return {
             data: null,
             attempts,
-            layerFailures,
+            layerFailures: Object.fromEntries(layerFailures),
             finalErrors: ['Layer 1: result is null after retries'],
         };
     }
@@ -181,7 +185,7 @@ export async function generateWithRetry<T>(
     return {
         data: finalErrors.length === 0 ? result : null,
         attempts,
-        layerFailures,
+        layerFailures: Object.fromEntries(layerFailures),
         finalErrors,
     };
 }

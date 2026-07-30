@@ -95,7 +95,6 @@ import { generateRequirementScoreHtml } from '../shared/quality/requirement-scor
 import { calculateReleaseScore } from '../shared/quality/release-score.js';
 import { aggregateDefectTrends } from '../shared/quality/defect-trend.js';
 import { buildTraceabilityMatrix } from '../shared/report/traceability-matrix.js';
-import { computeAiEffectiveness } from '../shared/report/ai-effectiveness.js';
 import { aggregateDefectSeasonality } from '../shared/quality/defect-seasonality.js';
 import { detectSilentRegression } from '../shared/quality/silent-regression.js';
 import { compareAiVsManual } from '../shared/report/ai-comparison.js';
@@ -412,7 +411,8 @@ async function _dashboardTraceabilityMatrix(): Promise<void> {
 }
 
 async function _dashboardAiEffectiveness(): Promise<void> {
-    const aiResult = computeAiEffectiveness({ records: [] });
+    const hub = getDataHub();
+    const aiResult = hub.computed.aiMetrics;
     await _generateAndOpenDashboard(generateAiEffectivenessHtml(aiResult), 'ai-effectiveness', 'AI Effectiveness');
 }
 
@@ -576,7 +576,14 @@ async function _dashboardQualityGate(): Promise<void> {
     }
     const dataHub = getDataHub();
     const qualityGate = runQualityGate({ project: getCurrentProject() ?? '', dataHub });
-    const html = '<html><body><h1>Quality Gate</h1><pre>' + formatQualityGateText(qualityGate) + '</pre></body></html>';
+    const timestamp = new Date().toISOString();
+    const html = `<html><body>
+<h1>Quality Gate</h1>
+<div data-part="timestamp" data-dashboard="quality-gate">${timestamp.slice(0, 10)}</div>
+<div data-section="quality-gate">
+<pre>${formatQualityGateText(qualityGate)}</pre>
+</div>
+</body></html>`;
     await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
 }
 

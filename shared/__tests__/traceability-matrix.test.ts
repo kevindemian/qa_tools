@@ -399,8 +399,8 @@ describe('GenerateTraceabilityHtml', () => {
         });
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('epic-node');
-        expect(html).toContain('story-node');
+        expect(html).toContain('data-component="epic"');
+        expect(html).toContain('data-component="story"');
         expect(html).toContain('test-row');
         expect(html).toContain('EPIC-1');
         expect(html).toContain('STORY-1');
@@ -593,9 +593,9 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
 
         const html = generateTraceabilityHtml(result);
 
-        expect(html).toContain('Cross-References');
+        expect(html).toContain('Awareness Section');
         expect(html).toContain('PROJ-1');
-        expect(html).toContain('⚠ invalid');
+        expect(html).toContain('invalid');
     });
 
     it('omits the awareness panel when no ST-1 category is present', () => {
@@ -607,6 +607,6 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
         const result = buildTraceabilityMatrix([], undefined, hub);
 
         expect(result.awareness.categories).toHaveLength(0);
-        expect(generateTraceabilityHtml(result)).not.toContain('Cross-References');
+        expect(generateTraceabilityHtml(result)).not.toContain('Awareness Section');
     });
 });

@@ -9,8 +9,8 @@
 
 import { rootLogger } from '../logger.js';
 import { sanitizeUrl } from '../ui/cli_base.js';
-import { escapeHtml, statsFromTests } from './report-utils.js';
-import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
+import { escapeHtml, statsFromMetricsRun } from './report-utils.js';
+import { icon } from '../icons.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, ReportOptions } from './report-types.js';
 import { DEFAULT_TITLE } from './report-types.js';
@@ -18,6 +18,7 @@ import { buildCss } from './report-styles.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildToggleScript } from './report-scripts.js';
 import { buildChartSection, buildTrendSection } from './report-chart.js';
+import { COVERAGE_TARGET } from '../constants/thresholds.js';
 
 import {
     buildSummaryCards,
@@ -44,10 +45,12 @@ function _buildFlakinessLink(options: ReportOptions): string {
     if (!options.flakinessDashboardUrl || !options.flakinessMap || Object.keys(options.flakinessMap).length === 0)
         return '';
     return (
-        '<div style="text-align:center;margin-top:12px">' +
+        '<div class="timestamp-wrapper">' +
         '<a href="' +
         escapeHtml(options.flakinessDashboardUrl) +
-        '" style="display:inline-block;padding:8px 16px;background:var(--color-surface-elevated);border-radius:6px;color:var(--color-text-primary);text-decoration:none;font-size:0.85rem" target="_blank" rel="noopener">📊 View Flakiness Dashboard</a></div>'
+        '" class="timestamp-link" target="_blank" rel="noopener">' +
+        icon('bar-chart', 16) +
+        ' View Flakiness Dashboard</a></div>'
     );
 }
 
@@ -69,7 +72,7 @@ function _buildReportFooter(options?: ReportOptions): string {
             text +=
                 ' · <a href="' +
                 escapeHtml(sanitizeUrl(ciUrl)) +
-                '" style="color:inherit">' +
+                '" class="timestamp-icon">' +
                 escapeHtml(branch) +
                 '</a>';
         else text += ' · ' + escapeHtml(branch);
@@ -89,7 +92,7 @@ function _buildTestTableSection(
     const hasSidebar = tests.some((t) => t.fullTitle && t.fullTitle.indexOf(' > ') !== -1);
     let html = '';
     if (hasSidebar) {
-        html += '<div style="display:flex;gap:0">' + buildHierarchySidebar(tests) + '<div style="flex:1;min-width:0">';
+        html += '<div class="page-grid">' + buildHierarchySidebar(tests) + '<div class="page-grid-sidebar">';
     }
     html += buildFilterBar();
     html += buildTestTable(tests, categories, options?.testHistory, options?.flakinessMap);
@@ -97,31 +100,77 @@ function _buildTestTableSection(
     return html;
 }
 
-export function generateReportWithFallback(tests: FlatTest[], options?: ReportOptions): string {
+export function generateReportWithFallback(_tests: FlatTest[], options?: ReportOptions): string {
     try {
-        const stats = statsFromTests(tests);
-        const title = options?.title || DEFAULT_TITLE;
-        const passRate = calcRunPassRate(stats);
-        const categories = options?.testCategories || precomputeCategories(tests);
+        const computed = options?.computed;
+        if (!computed) {
+            const msg = 'DataHub precomputed data (computed) is required for HTML report generation.';
+            rootLogger.error(msg);
+            return buildErrorPage('Error generating report', msg);
+        }
+        const precomputedRun = computed.metricsRuns?.[0];
+        if (!precomputedRun) {
+            const msg = 'DataHub precomputed data (metricsRuns) is required for HTML report generation.';
+            rootLogger.error(msg);
+            return buildErrorPage('Error generating report', msg);
+        }
+        const stats = statsFromMetricsRun(precomputedRun);
+        const passRate =
+            computed.passRate || (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
+        const title = options.title || DEFAULT_TITLE;
+        const categories =
+            options.testCategories || computed.failureClassifications || precomputeCategories(precomputedRun.tests);
+        const timestamp = options.generatedAt || new Date().toISOString();
+        const dashboardId = options.dashboardId || 'coverage-report';
+        const trends = computed.metricsTrends ?? options.trends ?? [];
 
         let bodyContent = '<h1>' + title + '</h1>';
-        bodyContent += buildSummaryCards(stats, passRate);
-        bodyContent += buildFailedSummary(tests, stats);
-        bodyContent += buildLlmSection(options || { title: '', includeChart: true });
-        bodyContent += buildChartSection(stats, options?.includeChart !== false);
-        bodyContent += buildTrendSection(options?.trends || []);
-        if (options?.qualityGate !== undefined) bodyContent += buildQualityGate(passRate, options.qualityGate);
-        if (options?.healthScore) bodyContent += buildHealthSection(options.healthScore);
+        bodyContent += `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>`;
+        bodyContent += `<div data-section="summary">`;
+        bodyContent += buildSummaryCards(stats, passRate, options.passRateThreshold);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="failed-summary">`;
+        bodyContent += buildFailedSummary(precomputedRun.tests, stats);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="llm-analysis">`;
+        bodyContent += buildLlmSection(options);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="charts">`;
+        bodyContent += buildChartSection(stats, options.includeChart !== false);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="trends">`;
+        bodyContent += buildTrendSection(trends);
+        bodyContent += `</div>`;
+        if (options.qualityGate !== undefined) {
+            bodyContent += `<div data-section="quality-gate">`;
+            bodyContent += buildQualityGate(passRate, options.qualityGate);
+            bodyContent += `</div>`;
+        }
+        if (options.healthScore) {
+            bodyContent += `<div data-section="health">`;
+            bodyContent += buildHealthSection(options.healthScore);
+            bodyContent += `</div>`;
+        }
 
-        bodyContent += _buildTestTableSection(tests, categories, options);
-        if (options?.diffComparison) bodyContent += buildDiffComparisonSection(options.diffComparison);
-        bodyContent += _buildFlakinessLink(options || { title: '', includeChart: true });
-        bodyContent += buildTimeline(tests);
+        bodyContent += `<div data-section="test-table">`;
+        bodyContent += _buildTestTableSection(precomputedRun.tests, categories, options);
+        bodyContent += `</div>`;
+        if (options.diffComparison) {
+            bodyContent += `<div data-section="diff-comparison">`;
+            bodyContent += buildDiffComparisonSection(options.diffComparison);
+            bodyContent += `</div>`;
+        }
+        bodyContent += `<div data-section="flakiness-link">`;
+        bodyContent += _buildFlakinessLink(options);
+        bodyContent += `</div>`;
+        bodyContent += `<div data-section="timeline">`;
+        bodyContent += buildTimeline(precomputedRun.tests, computed);
+        bodyContent += `</div>`;
 
         return buildHtmlPage({
             title,
             styles: buildCss(),
-            theme: options?.theme || 'system',
+            theme: options.theme || 'system',
             headExtra: _buildProjectMeta(),
             bodyContent,
             footer: _buildReportFooter(options),
@@ -148,7 +197,7 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
     let issues = '';
     for (const issue of e.issues) {
         issues +=
-            '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:0.85rem">' +
+            '<div class="summary-row">' +
             Badge({
                 variant: (() => {
                     const cls = _coverageStatusClass(issue.status);
@@ -164,29 +213,39 @@ function _renderEpicRow(e: CoverageEpic, closePct: string): string {
             '<span>' +
             escapeHtml(issue.summary) +
             '</span>' +
-            '<span style="font-size:0.7rem;color:var(--color-text-muted)">' +
+            '<span class="timestamp-small">' +
             escapeHtml(issue.type) +
             '</span></div>';
     }
     return Card({
         variant: 'default',
         children:
-            `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">` +
-            `<div><span style="font-weight:700">${escapeHtml(e.key)}</span> &mdash; ${escapeHtml(e.summary)}</div>` +
+            `<div class="section-header-row">` +
+            `<div><span class="section-title-bold">${escapeHtml(e.key)}</span> &mdash; ${escapeHtml(e.summary)}</div>` +
             Badge({ variant: 'info', children: `${e.issues.length} issues, ${closePct}% closed` }) +
             `</div>${issues}`,
     });
 }
 
-export function generateCoverageHtml(epics: CoverageEpic[], title?: string): string {
+export function generateCoverageHtml(
+    epics: CoverageEpic[],
+    options?: string | { title?: string; dashboardId?: string; coverageThreshold?: number; epicThreshold?: number },
+): string {
     try {
-        const reportTitle = title || 'Coverage Report';
+        const reportTitle = typeof options === 'string' ? options : options?.title || 'Coverage Report';
+        const dashboardId =
+            typeof options === 'object' ? (options.dashboardId ?? 'coverage-report') : 'coverage-report';
+        const coverageThreshold =
+            typeof options === 'object' ? (options.coverageThreshold ?? COVERAGE_TARGET) : COVERAGE_TARGET;
+        const epicThreshold = typeof options === 'object' ? (options.epicThreshold ?? 100) : 100;
+
         const totalIssues = epics.reduce((sum, e) => sum + e.issues.length, 0);
         const closedIssues = epics.reduce(
             (sum, e) => sum + e.issues.filter((i) => i.status === 'Done' || i.status === 'Closed').length,
             0,
         );
         const closePct = totalIssues > 0 ? ((closedIssues / totalIssues) * 100).toFixed(1) : '0.0';
+        const timestamp = new Date().toISOString();
 
         let epicRows = '';
         for (const e of epics) {
@@ -199,13 +258,27 @@ export function generateCoverageHtml(epics: CoverageEpic[], title?: string): str
             '<h1>' +
             reportTitle +
             '</h1>' +
-            '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">' +
-            MetricCard({ label: 'Total Epics', value: String(epics.length) }) +
+            `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>` +
+            `<div data-section="summary">` +
+            '<div class="summary-cards-grid">' +
+            MetricCard({
+                label: 'Total Epics',
+                value: String(epics.length),
+                target: 'target: ' + epicThreshold + '%',
+            }) +
             MetricCard({ label: 'Total Issues', value: String(totalIssues) }) +
-            MetricCard({ label: 'Closed', value: String(closedIssues), severity: 'success' }) +
-            MetricCard({ label: 'Coverage', value: closePct + '%' }) +
+            MetricCard({
+                label: 'Closed',
+                value: String(closedIssues),
+                severity: 'success',
+                target: 'target: ' + coverageThreshold + '%',
+            }) +
+            MetricCard({ label: 'Coverage', value: closePct + '%', target: 'target: ' + coverageThreshold + '%' }) +
             '</div>' +
-            epicRows;
+            `</div>` +
+            `<div data-section="epics">` +
+            epicRows +
+            `</div>`;
 
         return buildHtmlPage({
             title: reportTitle,

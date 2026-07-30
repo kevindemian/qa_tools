@@ -13,17 +13,26 @@ import type { HealthScoreResult } from '../types.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
 import { rootLogger } from '../logger.js';
+import { icon } from '../icons.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { humanizeError } from '../ui/prompt-errors.js';
 
 /* ── Fixed thresholds — never overridable ─────────────────────────────── */
 
+import {
+    MIN_PASS_RATE,
+    MAX_FLAKY_PCT,
+    MIN_COVERAGE,
+    MAX_SUITE_SPEED,
+    MIN_HEALTH_SCORE,
+} from '../constants/thresholds.js';
+
 const THRESHOLDS = {
-    minPassRate: 80,
-    maxFlakyPct: 30,
-    minCoverage: 70,
-    maxSuiteSpeed: 8,
-    minHealthScore: 70,
+    minPassRate: MIN_PASS_RATE,
+    maxFlakyPct: MAX_FLAKY_PCT,
+    minCoverage: MIN_COVERAGE,
+    maxSuiteSpeed: MAX_SUITE_SPEED,
+    minHealthScore: MIN_HEALTH_SCORE,
 } as const;
 
 export type QualityGateStatus = 'pass' | 'fail' | 'unknown';
@@ -276,9 +285,9 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
 }
 
 function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return '✅';
-    if (status === 'unknown') return '❓';
-    return '❌';
+    if (status === 'pass') return `${icon('check-circle', 14)}`;
+    if (status === 'unknown') return `${icon('help-circle', 14)}`;
+    return `${icon('x-circle', 14)}`;
 }
 
 export function formatQualityGateJson(result: QualityGateResult): string {

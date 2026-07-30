@@ -59,9 +59,9 @@ function csvPath(name: string): string {
     return sanitizePath(tmpHome, name + '.csv');
 }
 
-function writeCsv(name: string, content: string): string {
+async function writeCsv(name: string, content: string): Promise<string> {
     const p = csvPath(name);
-    fs.writeFileSync(p, content, 'utf8');
+    await fs.promises.writeFile(p, content, 'utf8');
     return p;
 }
 
@@ -109,7 +109,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c1: POST /issue 500 + ON_ERROR=skip — skip on error, continue next', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c1',
             [
                 'Title: TC01',
@@ -124,10 +124,10 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
-        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-2', id: '10002' }));
-        jira.post('/test/TEST-2/steps').reply(201);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -142,7 +142,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c2',
             [
                 'Title: TC01',
@@ -171,7 +171,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c3: POST /issueLink 403 — 4xx sem retry, erro nao bloqueante', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c3',
             [
                 'Title: TC01',
@@ -188,20 +188,19 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
-        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
                 issueCount++;
                 return { key: 'TEST-' + issueCount, id: '' + (10000 + issueCount) };
             });
-        jira.get('/issue/TEST-1?fields=issuelinks').reply(200, { fields: { issuelinks: [] } });
         jira.get('/issueLinkType').reply(200, {
             issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
         });
         jira.post('/issueLink').reply(403, { errorMessages: ['Permission denied'] });
-        jira.post('/test/TEST-1/steps').reply(201);
-        jira.post('/test/TEST-2/steps').reply(201);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-1/steps').reply(201);
+        xray.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -215,7 +214,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c4: GET /issueLinkType 404 — fallback para FALLBACK_LINK_TYPES', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c4',
             [
                 'Title: TC01',
@@ -232,18 +231,17 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
-        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
                 issueCount++;
                 return { key: 'TEST-' + issueCount, id: '' + (10000 + issueCount) };
             });
-        jira.get('/issue/TEST-1?fields=issuelinks').reply(200, { fields: { issuelinks: [] } });
         jira.get('/issueLinkType').reply(404);
         jira.post('/issueLink').reply(201);
-        jira.post('/test/TEST-1/steps').reply(201);
-        jira.post('/test/TEST-2/steps').reply(201);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-1/steps').reply(201);
+        xray.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -261,7 +259,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         // which differs from the cloud issue-link path. Pin mode per-test.
         process.env['JIRA_MODE'] = 'server';
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c5',
             ['Title: TC01', 'Pre-condition: KEY-100', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );
@@ -276,8 +274,10 @@ describe('E2E: CSV Import - Error Paths', () => {
                 schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' },
             },
         ]);
-        jira.put('/issue/TEST-1').times(2).reply(500);
-        jira.post('/test/TEST-1/steps').reply(201);
+        jira.get('/issue/TEST-1').reply(200, { key: 'TEST-1', fields: { customfield_13708: [] } });
+        jira.put('/issue/TEST-1').times(11).reply(500);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-1/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -292,7 +292,7 @@ describe('E2E: CSV Import - Error Paths', () => {
     it('c6: Cross-ref PUT 403 — erro nao propaga para o caller', async () => {
         expect.hasAssertions();
 
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c6',
             [
                 'Title: TC01',
@@ -310,7 +310,6 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
-        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
@@ -321,8 +320,9 @@ describe('E2E: CSV Import - Error Paths', () => {
         jira.put('/issue/TEST-1').reply(403);
         jira.get('/issue/TEST-2').reply(200, { fields: { description: '' } });
         jira.put('/issue/TEST-2').reply(403);
-        jira.post('/test/TEST-1/steps').reply(201);
-        jira.post('/test/TEST-2/steps').reply(201);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-1/steps').reply(201);
+        xray.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -337,7 +337,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['ON_ERROR'] = 'abort';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c7',
             ['Title: TC01', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );
@@ -345,7 +345,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-1', id: '10001' }));
-        jira.post('/test/TEST-1/steps').reply(500);
+        const xray = nock(XRAY);
+        xray.post('/test/TEST-1/steps').reply(500);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -360,7 +361,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         expect.hasAssertions();
 
         process.env['DRY_RUN'] = 'true';
-        process.env['CSV_PATH'] = writeCsv(
+        process.env['CSV_PATH'] = await writeCsv(
             'c8',
             ['Title: TC Dry', 'Action,Data,Expected Result', 'Step1,,R1'].join('\n'),
         );

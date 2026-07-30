@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import process from 'node:process';
 import {
     loadFeatureConfig,
     saveFeatureConfig,
@@ -17,28 +16,21 @@ import {
 } from '../feature-config.js';
 import { DEFAULT_PR_REPORT_CONFIG } from '../types/feature-config.js';
 
-describe('Feature-config (hermetic, fs-backed, chdir-isolated)', () => {
-    if (process.env['STRYKER_ACTIVE'] === 'true') {
-        return;
-    }
+describe('Feature-config (hermetic, fs-backed, baseDir-isolated)', () => {
     let TMP: string;
-    let ORIG_CWD: string;
 
     beforeEach(() => {
         TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'feature-config-test-'));
-        ORIG_CWD = process.cwd();
-        process.chdir(TMP);
     });
 
     afterEach(() => {
-        process.chdir(ORIG_CWD);
         fs.rmSync(TMP, { recursive: true, force: true });
     });
 
     it('loadFeatureConfig returns empty store when features.json is absent (NOT an explicit disable)', () => {
         expect.hasAssertions();
 
-        const store = loadFeatureConfig();
+        const store = loadFeatureConfig(TMP);
 
         expect(store).toStrictEqual({});
     });
@@ -53,7 +45,7 @@ describe('Feature-config (hermetic, fs-backed, chdir-isolated)', () => {
             'utf8',
         );
 
-        expect(loadFeatureConfig()).toStrictEqual({});
+        expect(loadFeatureConfig(TMP)).toStrictEqual({});
     });
 
     it('saveFeatureConfig then loadFeatureConfig round-trips without data loss', () => {
@@ -65,25 +57,25 @@ describe('Feature-config (hermetic, fs-backed, chdir-isolated)', () => {
                 features: { prReport: { enabled: true, publishTarget: 'github-actions' as const } },
             },
         };
-        saveFeatureConfig(store);
+        saveFeatureConfig(store, TMP);
 
-        expect(loadFeatureConfig()).toStrictEqual(store);
+        expect(loadFeatureConfig(TMP)).toStrictEqual(store);
     });
 
     it('getPrReportConfig returns DEFAULT_PR_REPORT_CONFIG (disabled) when project has no entry', () => {
         expect.hasAssertions();
-        expect(getPrReportConfig('ghost')).toStrictEqual(DEFAULT_PR_REPORT_CONFIG);
-        expect(isPrReportEnabled('ghost')).toBeFalsy();
+        expect(getPrReportConfig('ghost', TMP)).toStrictEqual(DEFAULT_PR_REPORT_CONFIG);
+        expect(isPrReportEnabled('ghost', TMP)).toBeFalsy();
     });
 
     it('isPrReportEnabled reflects an enabled project config', () => {
         expect.hasAssertions();
 
-        setPrReportConfig('beta', { enabled: true, publishTarget: 'gitlab-ci' });
+        setPrReportConfig('beta', { enabled: true, publishTarget: 'gitlab-ci' }, TMP);
 
-        expect(isPrReportEnabled('beta')).toBeTruthy();
+        expect(isPrReportEnabled('beta', TMP)).toBeTruthy();
 
-        const cfg = getPrReportConfig('beta');
+        const cfg = getPrReportConfig('beta', TMP);
 
         expect(cfg.enabled).toBeTruthy();
         expect(cfg.publishTarget).toBe('gitlab-ci');
@@ -92,56 +84,60 @@ describe('Feature-config (hermetic, fs-backed, chdir-isolated)', () => {
     it('setPrReportConfig creates the project entry when missing and preserves other projects', () => {
         expect.hasAssertions();
 
-        setPrReportConfig('p1', { enabled: false, publishTarget: 's3' });
-        setPrReportConfig('p2', { enabled: true, publishTarget: 'slack' });
-        const p1 = getProjectFeatureConfig('p1');
-        const p2 = getProjectFeatureConfig('p2');
+        setPrReportConfig('p1', { enabled: false, publishTarget: 's3' }, TMP);
+        setPrReportConfig('p2', { enabled: true, publishTarget: 'slack' }, TMP);
+        const p1 = getProjectFeatureConfig('p1', TMP);
+        const p2 = getProjectFeatureConfig('p2', TMP);
 
         expect(p1?.features.prReport?.publishTarget).toBe('s3');
         expect(p2?.features.prReport?.enabled).toBeTruthy();
-        expect(Object.keys(loadFeatureConfig()).sort((a, b) => a.localeCompare(b))).toStrictEqual(['p1', 'p2']);
+        expect(Object.keys(loadFeatureConfig(TMP)).sort((a, b) => a.localeCompare(b))).toStrictEqual(['p1', 'p2']);
     });
 
     it('resolvePublishTarget returns config target when enabled', () => {
         expect.hasAssertions();
 
-        setPrReportConfig('gh', { enabled: true, publishTarget: 'gh-pages' });
+        setPrReportConfig('gh', { enabled: true, publishTarget: 'gh-pages' }, TMP);
 
-        expect(resolvePublishTarget('gh')).toBe('gh-pages');
+        expect(resolvePublishTarget('gh', undefined, TMP)).toBe('gh-pages');
     });
 
     it('resolvePublishTarget falls back to gitlab-ci when disabled and provider is gitlab', () => {
         expect.hasAssertions();
 
-        setPrReportConfig('gl', { enabled: false, publishTarget: 'github-actions' });
+        setPrReportConfig('gl', { enabled: false, publishTarget: 'github-actions' }, TMP);
 
-        expect(resolvePublishTarget('gl', 'gitlab')).toBe('gitlab-ci');
+        expect(resolvePublishTarget('gl', 'gitlab', TMP)).toBe('gitlab-ci');
     });
 
     it('resolvePublishTarget falls back to github-actions when disabled and provider unknown', () => {
         expect.hasAssertions();
 
-        setPrReportConfig('x', { enabled: false, publishTarget: 's3' });
+        setPrReportConfig('x', { enabled: false, publishTarget: 's3' }, TMP);
 
-        expect(resolvePublishTarget('x')).toBe('github-actions');
+        expect(resolvePublishTarget('x', undefined, TMP)).toBe('github-actions');
     });
 
     it('skip flags default to false (not skipped) and reflect config when set', () => {
         expect.hasAssertions();
-        expect(isAiSkipped('absent')).toBeFalsy();
-        expect(isQualitySkipped('absent')).toBeFalsy();
-        expect(isFlakySkipped('absent')).toBeFalsy();
+        expect(isAiSkipped('absent', TMP)).toBeFalsy();
+        expect(isQualitySkipped('absent', TMP)).toBeFalsy();
+        expect(isFlakySkipped('absent', TMP)).toBeFalsy();
 
-        setPrReportConfig('sk', {
-            enabled: true,
-            publishTarget: 'github-actions',
-            skipAi: true,
-            skipQuality: true,
-            skipFlaky: true,
-        });
+        setPrReportConfig(
+            'sk',
+            {
+                enabled: true,
+                publishTarget: 'github-actions',
+                skipAi: true,
+                skipQuality: true,
+                skipFlaky: true,
+            },
+            TMP,
+        );
 
-        expect(isAiSkipped('sk')).toBeTruthy();
-        expect(isQualitySkipped('sk')).toBeTruthy();
-        expect(isFlakySkipped('sk')).toBeTruthy();
+        expect(isAiSkipped('sk', TMP)).toBeTruthy();
+        expect(isQualitySkipped('sk', TMP)).toBeTruthy();
+        expect(isFlakySkipped('sk', TMP)).toBeTruthy();
     });
 });

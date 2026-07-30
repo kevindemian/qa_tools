@@ -634,19 +634,20 @@ describe('Handlers Happy Paths', () => {
     describe('Case15 — import JSON tests', () => {
         it('happy path: creates test from JSON then Test Execution', async () => {
             expect.hasAssertions();
-            process.env['AUTO_CONFIRM'] = 'true';
 
-            const { api } = freshScope();
+            const { api, xray } = freshScope();
             // createTestsFromJson creates 1 test from JSON fixture:
             // 1. POST /issue to create the test case
             // 1a. GET /search (skipExisting check in createIssue)
             api.get('/search').query(true).reply(200, { issues: [] });
             // 2. POST /issue to create the test case
             api.post('/issue').reply(201, { key: 'TEST-1', id: '10001' });
-            // 3. POST /test/{key}/steps via jiraResource (baseURL = API)
-            api.post('/test/TEST-1/steps').reply(201);
+            // 3. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
+            xray.post('/test/TEST-1/steps').reply(201);
             // Then TE creation (confirm=true):
-            // findExistingTe → GET /search
+            // findExistingTe in TestExecutionCreator.create() → GET /search
+            api.get('/search').query(true).reply(200, { issues: [], total: 0 });
+            // 2nd GET /search: findExistingTe inside create()
             api.get('/search').query(true).reply(200, { issues: [], total: 0 });
             api.get('/issuetype').reply(200, [
                 { id: '11200', name: 'Epic' },
@@ -688,7 +689,6 @@ describe('Handlers Happy Paths', () => {
             expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'EXEC-1', 'ok');
             // Server mode: tests are associated to the TE via the "Tests" issue link.
             expect(nock.isDone()).toBeTruthy();
-            delete process.env['AUTO_CONFIRM'];
         }, 15000);
     });
 

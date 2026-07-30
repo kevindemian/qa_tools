@@ -323,8 +323,43 @@ Este fluxo adiciona a **análise de falhas com IA** e geração de **relatório 
     - Tabela de testes com cores por status
 
     **Adicional (se IA foi usada):**
-    - **Seção "Análise IA"** com badge de confiança (🟢 alta / 🟡 média / 🔴 baixa)
-    - ⚠ Warning se fallback foi ativado
+    - **Seção "Análise IA"** com badge de confiança (alta / média / baixa)
+    - Warning se fallback foi ativado
+
+### Compute/Render Separation Pattern
+
+Toda geração de HTML segue o padrão **compute/render separation**:
+
+```
+DataHub SSOT (dataHub.computed)
+    ↓
+Compute modules (pure functions)
+    ↓
+Renderers (HTML generation)
+    ↓
+HTML output (dashboards, PR reports, coverage)
+```
+
+- **Compute** (`data-hub/compute/`): funções puras que processam dados brutos
+- **Render** (`*-renderer.ts`): funções que geram HTML a partir dos dados computados
+- **Orchestrate** (`report-html.ts`, `pr-report-core.ts`): coordenam múltiplos renderers
+
+**21 dashboards** consomem `dataHub.computed` via este padrão:
+- 16 renderers principais (ai-effectiveness, defect-trend, flakiness, etc.)
+- 3 orchestrators (report-html, coverage-gap, pipeline-health)
+- 2 git_triggers renderers (schedule-handler, interactive-mode)
+
+### 3 Distinct PR Report Artifacts
+
+O PR Report gera **3 artefatos distintos** a partir do mesmo DataHub SSOT:
+
+| Artifact | Format | Flow |
+|----------|--------|------|
+| **PR Comment Markdown** | Markdown | `postPrComment()` → GitHub API |
+| **GitHub Job Summary** | Markdown | `$GITHUB_STEP_SUMMARY` |
+| **HTML Report Artifact** | HTML | `writeFileSync()` → artifact upload |
+
+Cada artefato usa os mesmos dados computados, mas renderiza em formato diferente para seu contexto de uso.
 
 6. **Mapeamento para Jira (opcional)**
 

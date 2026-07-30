@@ -5,12 +5,10 @@ import { join } from 'node:path';
 import { writePrePushHook, writeDotEnvExample } from '../config-writer.js';
 
 const isStryker = process.env['STRYKER_ACTIVE'] === 'true';
-const runSuite = isStryker ? describe.skip : describe;
 
-runSuite('Config-writer — integração real (fs verdadeiro)', () => {
+describe.skipIf(isStryker)('Config-writer — integração real (fs verdadeiro)', () => {
     let base: string;
 
-    // runSuite resolve para describe (describe.skip se Stryker ativo)
     beforeEach(() => {
         base = mkdtempSync(join(tmpdir(), 'config-writer-int-'));
     });

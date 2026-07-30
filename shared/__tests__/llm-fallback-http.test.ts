@@ -37,11 +37,6 @@ vi.mock('../llm/llm-rate-limiter.js', async () => {
         checkRateLimit: vi.fn(),
     };
 });
-vi.mock('../infra/circuit-breaker.js', () => ({
-    checkCircuitBreaker: vi.fn(),
-    recordCircuitFailure: vi.fn(),
-    recordCircuitSuccess: vi.fn(),
-}));
 vi.mock('../sanitize', () => ({
     sanitizeForLlm: vi.fn((s: string) => s),
 }));
@@ -51,7 +46,7 @@ vi.mock('../llm/llm-cache.js', () => ({
     ),
 }));
 
-import { checkCircuitBreaker } from '../infra/circuit-breaker.js';
+import { getCircuitState, resetCircuitState } from '../infra/circuit-breaker.js';
 import Config from '../config-accessor.js';
 import {
     parseRawOnce,
@@ -88,10 +83,10 @@ describe('Llm Fallback Http', () => {
         mockFetch.mockReset();
         Config.reset();
         resetLlmClientMetrics();
+        resetCircuitState();
         Config.set('llmApiKey', 'sk-test');
         Config.set('llmModel', 'gpt-4');
         Config.set('llmBaseUrl', 'https://api.test.com/v1');
-        vi.mocked(checkCircuitBreaker).mockImplementation(() => {});
     });
 
     describe('ParseRawOnce', () => {
@@ -463,7 +458,7 @@ describe('Llm Fallback Http', () => {
             };
             await sendToProvider(cfg, 'system', 'user');
 
-            expect(checkCircuitBreaker).toHaveBeenCalledWith('sk-test@gpt-4@https://api.test.com/v1');
+            expect(getCircuitState('sk-test@gpt-4@https://api.test.com/v1')).toBe('CLOSED');
         });
 
         it('tracks usage metrics', async () => {

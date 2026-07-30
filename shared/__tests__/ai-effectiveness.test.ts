@@ -229,7 +229,8 @@ describe('GenerateAiEffectivenessHtml', () => {
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('50%');
         expect(html).toContain('AI Effectiveness Dashboard');
-        expect(html).toContain('2 total records');
+        expect(html).toContain('Total Records');
+        expect(html).toContain('2');
     });
 
     it('shows version breakdown table', () => {
@@ -247,7 +248,7 @@ describe('GenerateAiEffectivenessHtml', () => {
         });
         const html = generateAiEffectivenessHtml(result);
 
-        expect(html).toContain('By Prompt Version');
+        expect(html).toContain('Version Breakdown');
         expect(html).toContain('v1');
         expect(html).toContain('v2');
         expect(html).toContain('Version');
@@ -279,7 +280,7 @@ describe('GenerateAiEffectivenessHtml', () => {
         const html = generateAiEffectivenessHtml(result);
 
         expect(html).toContain('No AI generation data available');
-        expect(html).not.toContain('By Prompt Version');
+        expect(html).not.toContain('Version Breakdown');
         expect(html).not.toContain('Daily Trend');
     });
 
@@ -333,5 +334,38 @@ describe('GenerateAiEffectivenessHtml', () => {
         expect(html).toContain('Error generating dashboard');
 
         spy.mockRestore();
+    });
+
+    it('includes data-part="target" with threshold value', () => {
+        const result = computeAiEffectiveness({
+            records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
+        });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: 80%');
+    });
+
+    it('includes data-part="sample-warning" when sample size is low', () => {
+        const result = computeAiEffectiveness({
+            records: [{ timestamp: '2026-06-01T10:00:00Z', promptVersion: 'v1', testTitle: 't1', accepted: true }],
+        });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).toContain('data-part="sample-warning"');
+        expect(html).toContain('Low sample size');
+    });
+
+    it('does not include sample-warning when sample size is sufficient', () => {
+        const records = Array.from({ length: 30 }, (_, i) => ({
+            timestamp: `2026-06-01T${String(i).padStart(2, '0')}:00:00Z`,
+            promptVersion: 'v1',
+            testTitle: `t${i}`,
+            accepted: true,
+        }));
+        const result = computeAiEffectiveness({ records });
+        const html = generateAiEffectivenessHtml(result);
+
+        expect(html).not.toContain('data-part="sample-warning"');
     });
 });

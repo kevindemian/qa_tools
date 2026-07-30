@@ -227,7 +227,7 @@ class TestCaseFactory {
     }
 
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
-        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting, checkOnly } = params;
+        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
 
         const targetKeys = this._getTargetKeys();
         const hasTargetKey = targetKeys && testIdx < targetKeys.length && targetKeys[testIdx];
@@ -236,7 +236,7 @@ class TestCaseFactory {
             const result = await this._attemptUpdate(params);
             if (result !== null) {
                 if (result.updated) return result;
-                if (result.ambiguous || checkOnly) return { skipped: true };
+                if (result.ambiguous || params.checkOnly) return { skipped: true };
                 if (hasTargetKey) {
                     warn('Target key ' + targetKeys![testIdx] + ' falhou — issue NAO pode ser criada');
                     opLog.info('Target key update falhou, criacao bloqueada', {
@@ -247,7 +247,7 @@ class TestCaseFactory {
                 }
                 return result;
             }
-            if (checkOnly) return { skipped: true };
+            if (params.checkOnly) return { skipped: true };
             if (hasTargetKey) {
                 warn('Target key ' + targetKeys![testIdx] + ' nao encontrada — issue NAO pode ser criada');
                 opLog.info('Target key nao encontrada, criacao bloqueada', {
@@ -272,23 +272,19 @@ class TestCaseFactory {
         }
     }
 
-    async postSteps(
-        issueKey: string,
-        test: TestCase,
-        _opLog: { info: (msg: string, meta?: LogContext) => void },
-        replaceSteps = false,
-    ): Promise<StepsResult | null> {
-        if (replaceSteps && test.steps.length > 0) {
-            try {
-                await this.stepImporter.setSteps(issueKey, test.steps);
-                return null;
-            } catch (err) {
-                const action = onError('  Steps de "' + test.title + '"', err, { details: true });
-                return action === 'abort' ? { action: 'abort' } : null;
-            }
+    private async _replaceSteps(issueKey: string, test: TestCase): Promise<StepsResult | null> {
+        try {
+            await this.stepImporter.setSteps(issueKey, test.steps);
+            return null;
+        } catch (err) {
+            const action = onError('  Steps de "' + test.title + '"', err, { details: true });
+            return action === 'abort' ? { action: 'abort' } : null;
         }
-        let abortSteps = false;
+    }
+
+    private async _importStepsIndividually(issueKey: string, test: TestCase): Promise<StepsResult | null> {
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
+        let abortSteps = false;
         for (let i = 0; i < test.steps.length; i++) {
             try {
                 await this.stepImporter.importStep(issueKey, i + 1, Reflect.get(test.steps, i));
@@ -305,6 +301,18 @@ class TestCaseFactory {
         }
         if (stepBar) stepBar.stop();
         return abortSteps ? { action: 'abort' } : null;
+    }
+
+    async postSteps(
+        issueKey: string,
+        test: TestCase,
+        _opLog: { info: (msg: string, meta?: LogContext) => void },
+        replaceSteps = false,
+    ): Promise<StepsResult | null> {
+        if (replaceSteps && test.steps.length > 0) {
+            return this._replaceSteps(issueKey, test);
+        }
+        return this._importStepsIndividually(issueKey, test);
     }
 }
 

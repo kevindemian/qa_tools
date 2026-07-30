@@ -1,26 +1,24 @@
 /**
  * Impact-Aware Pipeline Alert — correlates pipeline health with coverage gaps.
  *
- * Generates intelligent alerts when pipeline failures intersect with areas of
- * low test coverage, enabling teams to prioritize fixes by risk impact.
+ * Compute layer: produces ImpactAlertResult from pipeline and coverage data.
+ * Render layer: see impact-alert-renderer.ts.
  *
  * @module impact-alert
  */
 
-import { sanitizeHtml } from '../escape.js';
-import { buildHtmlPage, buildErrorPage } from './html-factory.js';
-import { buildCss } from './report-styles.js';
-import { MetricCard, MetricGrid, Card } from '../primitives/index.js';
-import { rootLogger } from '../logger.js';
 import type { CoverageGapResult } from '../types/coverage.js';
+import { MIN_PASS_RATE, MIN_COVERAGE, COVERAGE_TARGET, PASS_RATE_CRITICAL } from '../constants/thresholds.js';
+
+export { generateImpactAlertHtml } from './impact-alert-renderer.js';
 
 /**
  * Dimension 5 Provenance — documents the source and justification for alert thresholds.
  */
 export const IMPACT_ALERT_PROVENANCE = {
     thresholds: {
-        low: { value: 70, source: 'Quality gate minimum threshold', standard: 'Internal' },
-        high: { value: 80, source: 'Quality gate target threshold', standard: 'Internal' },
+        low: { value: PASS_RATE_CRITICAL, source: 'Critical pass rate threshold', standard: 'Internal' },
+        high: { value: MIN_PASS_RATE, source: 'Quality gate target threshold', standard: 'Internal' },
     },
 } as const;
 
@@ -42,10 +40,10 @@ export interface ImpactAlertResult {
     timestamp: string;
 }
 
-const PASS_RATE_THRESHOLD_LOW = 70;
-const COVERAGE_THRESHOLD_LOW = 70;
-const PASS_RATE_THRESHOLD_HIGH = 80;
-const COVERAGE_THRESHOLD_HIGH = 80;
+const PASS_RATE_THRESHOLD_LOW = PASS_RATE_CRITICAL;
+const COVERAGE_THRESHOLD_LOW = MIN_COVERAGE;
+const PASS_RATE_THRESHOLD_HIGH = MIN_PASS_RATE;
+const COVERAGE_THRESHOLD_HIGH = COVERAGE_TARGET;
 const TOP_FAILURES_DISPLAY_LIMIT = 3;
 
 const DEFAULT_RESULT: ImpactAlertResult = {
@@ -182,6 +180,7 @@ export function analyzePipelineImpact(
     coveragePct: number | null | undefined,
     uncoveredEpics: string[],
     _coverageGapResult?: CoverageGapResult,
+    dataHub?: import('../types/data-hub.js').DataHub,
 ): ImpactAlertResult {
     // Rule 24 — non-finite metrics are missing data, not "low". Never generate false critical alerts from NaN.
     if (passRate == null || coveragePct == null || !Number.isFinite(passRate) || !Number.isFinite(coveragePct)) {
@@ -205,90 +204,6 @@ export function analyzePipelineImpact(
         criticalCount: counts.criticalCount,
         warningCount: counts.warningCount,
         infoCount: counts.infoCount,
-        timestamp: new Date().toISOString(),
+        timestamp: dataHub?.timestamp.toISOString() ?? new Date().toISOString(),
     };
-}
-
-const SEVERITY_MAP: Record<AlertSeverity, 'error' | 'warn' | 'info'> = {
-    critical: 'error',
-    warning: 'warn',
-    info: 'info',
-};
-
-function renderAlertCard(alert: ImpactAlert): string {
-    const cardSeverity = SEVERITY_MAP[alert.severity];
-    return Card({
-        severity: cardSeverity,
-        children:
-            '<div style="font-weight:600;margin-bottom:8px">' +
-            sanitizeHtml(alert.title) +
-            '</div>' +
-            '<div style="margin-bottom:8px">' +
-            sanitizeHtml(alert.message) +
-            '</div>' +
-            '<div style="font-size:0.85rem;color:var(--color-text-secondary);margin-bottom:4px">' +
-            '<strong>Affected:</strong> ' +
-            sanitizeHtml(alert.affectedArea) +
-            '</div>' +
-            '<div style="font-size:0.85rem;color:var(--color-text-secondary)">' +
-            '<strong>Recommendation:</strong> ' +
-            sanitizeHtml(alert.recommendation) +
-            '</div>',
-    });
-}
-
-export function generateImpactAlertHtml(result: ImpactAlertResult | null | undefined, title?: string): string {
-    try {
-        if (!result) {
-            rootLogger.error(
-                'Impact alert result is null or undefined. Verify pipeline metrics and coverage data are being collected.',
-            );
-            return buildErrorPage('Error generating report', 'Impact Alert Report Error');
-        }
-
-        const pageTitle = title || 'Impact-Aware Pipeline Alert';
-
-        const summaryCards = MetricGrid({
-            children:
-                MetricCard({ label: 'Total Alerts', value: String(result.alerts.length) }) +
-                MetricCard({
-                    label: 'Critical',
-                    value: String(result.criticalCount),
-                    severity: 'error',
-                }) +
-                MetricCard({
-                    label: 'Warning',
-                    value: String(result.warningCount),
-                    severity: 'warn',
-                }) +
-                MetricCard({
-                    label: 'Info',
-                    value: String(result.infoCount),
-                    severity: 'info',
-                }),
-        });
-
-        let alertsHtml: string;
-        if (result.alerts.length === 0) {
-            alertsHtml = '<p style="color:var(--color-text-muted)">No alerts to display.</p>';
-        } else {
-            alertsHtml = result.alerts.map(renderAlertCard).join('');
-        }
-
-        const bodyContent = '<h1>' + sanitizeHtml(pageTitle) + '</h1>' + summaryCards + alertsHtml;
-
-        return buildHtmlPage({
-            title: pageTitle,
-            styles: buildCss(),
-            theme: 'system',
-            bodyContent,
-            footer: 'Generated by QA Tools — Impact-Aware Pipeline Alert',
-        });
-    } catch (err) {
-        const msg = String(err);
-        rootLogger.error(
-            'Failed to generate impact alert HTML: ' + msg + '. Check html-factory dependencies and try again.',
-        );
-        return buildErrorPage('Error generating report', 'Impact Alert Report Error');
-    }
 }

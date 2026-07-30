@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../logger.js';
 import { printError, warn, info, divider } from '../ui/prompt.js';
+import { tokens } from '../ui/theme-tokens.js';
 import { openWithFallback, getDocsOutputDir } from '../open.js';
 import { mdToHtml } from './markdown.js';
 import { buildHtmlPage } from './html-factory.js';
@@ -13,8 +14,9 @@ import { buildHtmlPage } from './html-factory.js';
 function _loadDocFiles(docsDir: string): Array<{ label: string; file: string }> | null {
     let files: string[];
     try {
+        const resolvedDocsDir = path.resolve(docsDir);
         files = fs
-            .readdirSync(docsDir)
+            .readdirSync(resolvedDocsDir)
             .filter((f) => /^\d{2}-.+\.md$/.test(f))
             .sort((a, b) => a.localeCompare(b));
     } catch (err: unknown) {
@@ -41,8 +43,7 @@ function _buildIndexHtml(docs: Array<{ label: string; file: string }>): string {
                 '</a></li>',
         )
         .join('\n');
-    const css =
-        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;line-height:1.6;color:#1a1a1a;background:#fafafa}h1{color:#111;border-bottom:2px solid #1a73e8;padding-bottom:.5rem}ul{list-style:none;padding:0}li{padding:.5rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}a{color:#1a73e8;text-decoration:none;font-size:1.1rem}a:hover{text-decoration:underline}.subtitle{color:#555;margin-top:-.5rem}";
+    const css = `body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;line-height:1.6;color:${tokens.color.text.primary.light};background:${tokens.color.surface.page.light}}h1{color:${tokens.color.text.primary.light};border-bottom:2px solid ${tokens.color.semantic.info.light};padding-bottom:.5rem}ul{list-style:none;padding:0}li{padding:.5rem 0;border-bottom:1px solid ${tokens.color.border.subtle.light}}li:last-child{border-bottom:none}a{color:${tokens.color.semantic.info.light};text-decoration:none;font-size:1.1rem}a:hover{text-decoration:underline}.subtitle{color:${tokens.color.text.secondary.light};margin-top:-.5rem}`;
     const bodyContent =
         '<h1>QA Tools — Documentação</h1><p class="subtitle">' +
         docs.length +
@@ -63,22 +64,25 @@ export async function showDocs(docsDir: string = path.join(import.meta.dirname, 
         printError('Documentação', new Error('Não foi possível determinar diretório de saída'));
         return;
     }
-    fs.mkdirSync(path.resolve(outDir), { recursive: true });
+    const resolvedOutDir = path.resolve(outDir);
+    fs.mkdirSync(resolvedOutDir, { recursive: true });
     for (let i = 0; i < docs.length; i++) {
         const doc: unknown = Reflect.get(docs, i);
         if (doc === undefined || doc === null || typeof doc !== 'object') continue;
         const d = doc as { file: string; label: string };
         let content: string;
         try {
-            content = fs.readFileSync(path.join(docsDir, d.file), 'utf8');
+            const resolvedDocPath = path.resolve(docsDir, d.file);
+            content = fs.readFileSync(resolvedDocPath, 'utf8');
         } catch (e: unknown) {
             printError('Erro ao ler ' + d.file, e);
             continue;
         }
         const prevDoc = i > 0 ? docs[i - 1] : undefined;
         const nextDoc = i < docs.length - 1 ? docs[i + 1] : undefined;
+        const resolvedHtmlPath = path.resolve(resolvedOutDir, d.file.replace(/\.md$/, '.html'));
         fs.writeFileSync(
-            path.join(outDir, d.file.replace(/\.md$/, '.html')),
+            resolvedHtmlPath,
             mdToHtml(content, d.label, {
                 ...(prevDoc ? { prev: { label: prevDoc.label, file: prevDoc.file.replace(/\.md$/, '.html') } } : {}),
                 ...(nextDoc ? { next: { label: nextDoc.label, file: nextDoc.file.replace(/\.md$/, '.html') } } : {}),
@@ -86,7 +90,7 @@ export async function showDocs(docsDir: string = path.join(import.meta.dirname, 
             'utf8',
         );
     }
-    const indexPath = path.join(outDir, 'index.html');
-    fs.writeFileSync(path.resolve(indexPath), _buildIndexHtml(docs), 'utf8');
+    const indexPath = path.resolve(resolvedOutDir, 'index.html');
+    fs.writeFileSync(indexPath, _buildIndexHtml(docs), 'utf8');
     await openWithFallback(indexPath, 'Documentação', info);
 }

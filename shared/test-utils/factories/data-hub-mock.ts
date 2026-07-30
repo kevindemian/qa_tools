@@ -69,6 +69,10 @@ const defaultComputed: ComputedMetrics = {
     testDurationP95: 0,
     runFailureRate: 0,
     testDurationMap: {},
+    impactAlerts: undefined,
+    incidentEvents: undefined,
+    traceabilityTree: undefined,
+    crossSquad: undefined,
 };
 
 /** Build a fully-satisfied `DataHubPersistence` mock. */
@@ -260,7 +264,12 @@ export function makeDataHubMock(
         savePullRequests: vi.fn(),
         loadPullRequests: vi.fn().mockReturnValue([]),
         getQuality: vi.fn<(category: QualityCategory) => QualityReport | undefined>(
-            overrides.quality ? (category: QualityCategory) => overrides.quality?.[category] : undefined,
+            overrides.quality
+                ? (category: QualityCategory) => {
+                      const qualityMap = new Map(Object.entries(overrides.quality ?? {}));
+                      return qualityMap.get(category);
+                  }
+                : undefined,
         ),
         getQuarantine: vi.fn<() => QuarantineStore>(() => ({ entries: [] })),
         ...makeDataHubGetters(),

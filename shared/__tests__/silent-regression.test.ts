@@ -460,4 +460,18 @@ describe('GenerateSilentRegressionHtml', () => {
 
         expect(html).toContain('Error generating silent regression report');
     });
+
+    it('includes data-part="target" with threshold values', () => {
+        const html = generateSilentRegressionHtml(makeResult());
+
+        expect(html).toContain('data-part="target"');
+        expect(html).toContain('target: 0');
+        expect(html).toContain('target: <20%');
+    });
+
+    it('includes data-part="timestamp"', () => {
+        const html = generateSilentRegressionHtml(makeResult());
+
+        expect(html).toContain('data-part="timestamp"');
+    });
 });

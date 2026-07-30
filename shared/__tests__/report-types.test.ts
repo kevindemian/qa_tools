@@ -6,6 +6,7 @@ import {
     PASS_RATE_WARN_THRESHOLD,
     CATEGORY_COLORS,
 } from '../report/report-types.js';
+import { tokens } from '../ui/theme-tokens.js';
 import type { FlatTest } from '../result_parser.js';
 
 describe('Report-types constants', () => {
@@ -21,13 +22,13 @@ describe('Report-types constants', () => {
         expect(PASS_RATE_WARN_THRESHOLD).toBe(70);
     });
 
-    it('cATEGORY_COLORS has all expected keys', () => {
-        expect(CATEGORY_COLORS['ASSERTION']).toBe('#6366f1');
-        expect(CATEGORY_COLORS['TIMEOUT']).toBe('#f59e0b');
-        expect(CATEGORY_COLORS['ENVIRONMENT']).toBe('#10b981');
-        expect(CATEGORY_COLORS['APPLICATION']).toBe('#ef4444');
-        expect(CATEGORY_COLORS['FLAKY']).toBe('#8b5cf6');
-        expect(CATEGORY_COLORS['UNKNOWN']).toBe('#6b7280');
+    it('cATEGORY_COLORS has all expected keys and uses design tokens', () => {
+        expect(CATEGORY_COLORS['ASSERTION']).toBe(tokens.color.chart.pass);
+        expect(CATEGORY_COLORS['TIMEOUT']).toBe(tokens.color.semantic.warn.light);
+        expect(CATEGORY_COLORS['ENVIRONMENT']).toBe(tokens.color.semantic.success.light);
+        expect(CATEGORY_COLORS['APPLICATION']).toBe(tokens.color.chart.fail);
+        expect(CATEGORY_COLORS['FLAKY']).toBe(tokens.color.semantic.warn.dark);
+        expect(CATEGORY_COLORS['UNKNOWN']).toBe(tokens.color.text.muted.light);
     });
 });
 

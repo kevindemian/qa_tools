@@ -83,7 +83,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('Backlog Score');
             expect(html).toMatch(/Unassigned Issues\s*\(2\)/);
             expect(html).toMatch(/Stale Issues\s*\(2\)/);
-            expect(html).toMatch(/Bugs Without Tests\s*\(2\)/);
+            expect(html).toMatch(/Bugs w\/o Tests\s*\(2\)/);
             expect(html).toContain('PROJ-2');
             expect(html).toContain('PROJ-3');
             expect(html).toContain('PROJ-4');
@@ -112,7 +112,7 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(html).toContain('N/A');
             expect(html).not.toContain('Unassigned Issues (');
             expect(html).not.toContain('Stale Issues (');
-            expect(html).not.toContain('Bugs Without Tests (');
+            expect(html).not.toContain('Bugs w/o Tests (');
         });
     });
 
@@ -129,6 +129,31 @@ describe('Integration: Backlog Health (FT-28)', () => {
             expect(result.totalIssues).toBe(all.length);
             // Display is capped and the truncation is explicit (no silent data loss).
             expect(html).toContain('Showing first 1 of');
+        });
+    });
+
+    describe('FT-28d: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
+            const all = makeIssues();
+            const result = analyzeBacklogHealth(all);
+            const html = generateBacklogHealthHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: >=80%');
+            expect(html).toContain('target: 0');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { analyzeBacklogHealth, generateBacklogHealthHtml } = await import('../../report/backlog-health.js');
+            const result = analyzeBacklogHealth([]);
+            const html = generateBacklogHealthHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
         });
     });
 });

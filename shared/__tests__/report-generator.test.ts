@@ -1,7 +1,43 @@
 import { nonNull, nullAs } from '../test-utils.js';
 import { generateHtmlReport, generateCoverageHtml } from '../report/report-generator.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report/report-generator.js';
+import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { ComputedMetrics } from '../types/data-hub.js';
+
+function computedFor(tests: FlatTest[]): ComputedMetrics {
+    const passed = tests.filter((t) => t.state === 'passed').length;
+    const failed = tests.filter((t) => t.state === 'failed').length;
+    const skipped = tests.filter((t) => t.state === 'skipped').length;
+    return {
+        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        avgDuration: 0,
+        suiteSpeedP95: 0,
+        flakyRate: [],
+        coverage: 0,
+        pipelineCost: { totalRuns: 0, totalCostUsd: 0, billableMinutes: 0 },
+        defectTrends: [],
+        branchBreakdown: {},
+        topFailingJobs: [],
+        topFailureReasons: [],
+        releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
+        quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
+        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testCounts: { passed, failed, skipped, total: tests.length },
+        framework: '',
+        metricsRuns: [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'qa-tools',
+                total: tests.length,
+                passed,
+                failed,
+                skipped,
+                duration: tests.reduce((s, t) => s + t.duration, 0),
+                tests,
+            },
+        ],
+    } as unknown as ComputedMetrics;
+}
 
 describe('GenerateHtmlReport', () => {
     it('generates a complete HTML document with summary cards', () => {
@@ -12,7 +48,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Pending feature', state: 'skipped', duration: 0 },
         ];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Login works');
@@ -32,7 +68,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Pending feature', state: 'skipped', duration: 0 },
         ];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('passed');
         expect(html).toContain('failed');
@@ -47,7 +83,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Fail B', state: 'failed', duration: 200 },
         ];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('0.0%');
     });
@@ -58,13 +94,13 @@ describe('GenerateHtmlReport', () => {
             { title: 'Pass B', state: 'passed', duration: 200 },
         ];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('100.0%');
     });
 
     it('handles empty test list gracefully', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('0');
         expect(html).toContain('Total');
@@ -76,7 +112,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'B', state: 'failed', duration: 100 },
         ];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('<svg');
         expect(html).toContain('Distribution');
@@ -85,13 +121,13 @@ describe('GenerateHtmlReport', () => {
     it('omits chart when includeChart is false', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
-        const html = generateHtmlReport(tests, { includeChart: false });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), includeChart: false });
 
         expect(html).not.toContain('<svg');
     });
 
     it('uses custom title when provided', () => {
-        const html = generateHtmlReport([], { title: 'My Custom Report' });
+        const html = generateHtmlReport([], { computed: computedFor([]), title: 'My Custom Report' });
 
         expect(html).toContain('My Custom Report');
     });
@@ -102,7 +138,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Fail B', state: 'failed', duration: 100 },
         ];
 
-        const html = generateHtmlReport(tests, { qualityGate: 90 });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
         expect(html).toContain('Quality Gate Failed');
         expect(html).toContain('below the configured threshold');
@@ -114,7 +150,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Pass B', state: 'passed', duration: 100 },
         ];
 
-        const html = generateHtmlReport(tests, { qualityGate: 90 });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
         expect(html).not.toContain('Quality Gate Failed');
     });
@@ -123,6 +159,7 @@ describe('GenerateHtmlReport', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
         const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             source: 'pipeline-42',
             ciUrl: 'https://ci.example.com/job/42',
             branch: 'main',
@@ -136,7 +173,7 @@ describe('GenerateHtmlReport', () => {
     it('includes branch without link when ciUrl is empty', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
 
-        const html = generateHtmlReport(tests, { branch: 'develop' });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), branch: 'develop' });
 
         expect(html).toContain('develop');
     });
@@ -150,21 +187,21 @@ describe('GenerateHtmlReport', () => {
     it('escapes HTML in test titles', () => {
         const tests: FlatTest[] = [{ title: '<script>alert("xss")</script>', state: 'passed', duration: 0 }];
 
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
         expect(html).not.toContain('<script>alert("xss")</script>');
     });
 
     it('skips chart when tests array is empty', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).not.toContain('<svg');
     });
 
     it('includes LLM analysis section when provided', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, { llmAnalysis: 'All tests passed.' });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), llmAnalysis: 'All tests passed.' });
 
         expect(html).toContain('AI Analysis');
         expect(html).toContain('All tests passed.');
@@ -172,22 +209,38 @@ describe('GenerateHtmlReport', () => {
 
     it('shows fallback warning when llmFallback is true', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, { llmAnalysis: 'fallback', llmFallback: true });
+        const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
+            llmAnalysis: 'fallback',
+            llmFallback: true,
+        });
 
         expect(html).toContain('unavailable');
     });
 
     it('displays confidence badge for each level', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const htmlLow = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'low' });
+        const htmlLow = generateHtmlReport(tests, {
+            computed: computedFor(tests),
+            llmAnalysis: 'ok',
+            llmConfidence: 'low',
+        });
 
         expect(htmlLow).toContain('low');
 
-        const htmlMedium = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'medium' });
+        const htmlMedium = generateHtmlReport(tests, {
+            computed: computedFor(tests),
+            llmAnalysis: 'ok',
+            llmConfidence: 'medium',
+        });
 
         expect(htmlMedium).toContain('medium');
 
-        const htmlHigh = generateHtmlReport(tests, { llmAnalysis: 'ok', llmConfidence: 'high' });
+        const htmlHigh = generateHtmlReport(tests, {
+            computed: computedFor(tests),
+            llmAnalysis: 'ok',
+            llmConfidence: 'high',
+        });
 
         expect(htmlHigh).toContain('high');
     });
@@ -197,13 +250,13 @@ describe('GenerateHtmlReport', () => {
             { title: 'Fail', state: 'failed', duration: 100, error: 'Expected true, got false' },
             { title: 'Pass', state: 'passed', duration: 100 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('Expected true, got false');
     });
 
     it('includes timestamp in footer', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('Generated by QA Tools ·');
     });
@@ -213,7 +266,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'failed', duration: 200 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('id="toggleBtn"');
         expect(html).toContain("getElementById('toggleBtn')");
@@ -225,7 +278,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 200 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).not.toContain('Toggle Passed');
     });
@@ -235,7 +288,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'A', state: 'passed', duration: 100 },
             { title: 'B', state: 'failed', duration: 100, error: 'err' },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain("Array.from(document.querySelectorAll('thead th'))");
         expect(html).not.toContain('cells.slice(0, 4)');
@@ -243,27 +296,27 @@ describe('GenerateHtmlReport', () => {
     });
 
     it('cSV export only exports visible rows (respects filter)', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain("r.style.display !== 'none'");
     });
 
     it('theme option "light" forces light mode (no dark class)', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, { theme: 'light' });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), theme: 'light' });
 
         expect(html).toContain("'light'");
     });
 
     it('theme option "dark" forces dark mode', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, { theme: 'dark' });
+        const html = generateHtmlReport(tests, { computed: computedFor(tests), theme: 'dark' });
 
         expect(html).toContain("'dark'");
     });
 
     it('includes theme toggle button in filter bar', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('toggleTheme()');
         expect(html).toContain('🌓');
@@ -271,26 +324,26 @@ describe('GenerateHtmlReport', () => {
 
     it('shows dash for skipped test duration', () => {
         const tests: FlatTest[] = [{ title: 'Skip', state: 'skipped', duration: 0 }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('\u2014');
     });
 
     it('includes dark theme CSS via html.dark selector', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('html.dark');
     });
 
     it('includes theme toggle script in head', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('toggleTheme');
         expect(html).toContain('qa-report-theme');
     });
 
     it('includes zebra striping CSS', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('nth-child(even)');
     });
@@ -301,14 +354,14 @@ describe('GenerateHtmlReport', () => {
             { title: 'B', state: 'passed', duration: 100 },
             { title: 'C', state: 'failed', duration: 100 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('<text');
     });
 
     it('shows fullTitle as tooltip when present', () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth Tests > Login' }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('title="Auth Tests &gt; Login"');
         expect(html).toContain('data-hierarchy="Auth Tests &gt; Login"');
@@ -320,7 +373,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'B', state: 'failed', duration: 100 },
             { title: 'C', state: 'skipped', duration: 0 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('(33.3%)');
     });
@@ -328,7 +381,7 @@ describe('GenerateHtmlReport', () => {
     it('renders error as expandable when truncated', () => {
         const longMsg = 'x'.repeat(200);
         const tests: FlatTest[] = [{ title: 'Fail', state: 'failed', duration: 100, error: longMsg }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('error-truncated');
         expect(html).toContain('data-full="' + longMsg + '"');
@@ -336,7 +389,7 @@ describe('GenerateHtmlReport', () => {
 
     it('uses responsive SVG viewBox', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('viewBox="0 0 300 30"');
         expect(html).toContain('width="100%"');
@@ -345,6 +398,7 @@ describe('GenerateHtmlReport', () => {
     it('renders history column with mixed statuses', () => {
         const tests: FlatTest[] = [{ title: 'FlakyTest', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             testHistory: {
                 FlakyTest: [
                     { status: 'PASSED', testExecKey: 'TEST-1' },
@@ -368,6 +422,7 @@ describe('GenerateHtmlReport', () => {
     it('renders trend chart when trends are provided', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             trends: [
                 { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
                 { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
@@ -383,6 +438,7 @@ describe('GenerateHtmlReport', () => {
     it('omits trend chart when trends have fewer than 2 points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlSingle = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
         });
 
@@ -391,7 +447,7 @@ describe('GenerateHtmlReport', () => {
 
     it('omits trend chart when trends is empty', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const htmlEmpty = generateHtmlReport(tests, { trends: [] });
+        const htmlEmpty = generateHtmlReport(tests, { computed: computedFor(tests), trends: [] });
 
         expect(htmlEmpty).not.toContain('Pass Rate Trend');
     });
@@ -399,6 +455,7 @@ describe('GenerateHtmlReport', () => {
     it('renders trend chart with 90% reference line', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             trends: [
                 { label: '2026-05-01', passRate: 70, total: 10, failed: 3 },
                 { label: '2026-05-02', passRate: 85, total: 10, failed: 1 },
@@ -417,7 +474,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Logout', state: 'passed', duration: 100, fullTitle: 'Auth > Logout' },
             { title: 'Search', state: 'failed', duration: 200, fullTitle: 'Core > Search' },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('class="sidebar"');
         expect(html).toContain('Auth');
@@ -430,21 +487,21 @@ describe('GenerateHtmlReport', () => {
             { title: 'Login', state: 'passed', duration: 100 },
             { title: 'Logout', state: 'passed', duration: 100 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).not.toContain('class="sidebar"');
     });
 
     it('adds data-hierarchy attribute to table rows', () => {
         const tests: FlatTest[] = [{ title: 'Login', state: 'passed', duration: 100, fullTitle: 'Auth > Login' }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('data-hierarchy="Auth &gt; Login"');
     });
 
     it('includes hierarchy filtering JavaScript functions', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100, fullTitle: 'Suite > A' }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('filterByHierarchy');
         expect(html).toContain('clearHierarchy');
@@ -459,7 +516,7 @@ describe('GenerateHtmlReport', () => {
             { title: 'Slow', state: 'failed', duration: 500 },
             { title: 'Skip', state: 'skipped', duration: 0 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('Timeline');
         expect(html).toContain('timeline-row');
@@ -471,14 +528,14 @@ describe('GenerateHtmlReport', () => {
             { title: 'Pass', state: 'passed', duration: 100 },
             { title: 'Fail', state: 'failed', duration: 200 },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('#22c55e');
         expect(html).toContain('#ef4444');
     });
 
     it('omits timeline when test list is empty', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).not.toContain('id="timelineBody"');
         expect(html).not.toContain('id="timelineToggle"');
@@ -486,7 +543,7 @@ describe('GenerateHtmlReport', () => {
 
     it('includes timeline toggle function', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('toggleTimeline');
         expect(html).toContain('timelineBody');
@@ -503,7 +560,7 @@ describe('GenerateHtmlReport', () => {
                 steps: [{ action: 'Open page', expected: 'Page loads' }],
             },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('detail-toggle');
         expect(html).toContain('detail-row');
@@ -513,7 +570,7 @@ describe('GenerateHtmlReport', () => {
 
     it('omits detail row when test has no steps/screenshots/logs', () => {
         const tests: FlatTest[] = [{ title: 'Plain', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).not.toContain('data-detail-for');
         expect(html).not.toContain('id="detail-row-');
@@ -532,7 +589,7 @@ describe('GenerateHtmlReport', () => {
                 ],
             },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('detail-step-num');
         expect(html).toContain('Step 1');
@@ -542,7 +599,7 @@ describe('GenerateHtmlReport', () => {
 
     it('includes toggleDetail JavaScript function', () => {
         const tests: FlatTest[] = [{ title: 'T', state: 'passed', duration: 100, steps: [{ action: 'A' }] }];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('toggleDetail');
     });
@@ -558,7 +615,7 @@ describe('GenerateHtmlReport', () => {
                 screenshots: [{ title: 'Screenshot 1', dataUri: 'data:image/png;base64,iVBORw0KGgo=' }],
             },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('detail-screenshots');
         expect(html).toContain('data:image/png;base64,iVBORw0KGgo=');
@@ -574,7 +631,7 @@ describe('GenerateHtmlReport', () => {
                 logs: ['Error: something broke', '  at Object.<anonymous> (test.ts:1:1)'],
             },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('detail-logs');
         expect(html).toContain('Error: something broke');
@@ -592,7 +649,7 @@ describe('GenerateHtmlReport', () => {
                 logs: ['done'],
             },
         ];
-        const html = generateHtmlReport(tests);
+        const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
         expect(html).toContain('Steps');
         expect(html).toContain('Screenshots');
@@ -674,6 +731,7 @@ describe('GenerateHtmlReport', () => {
     it('renders mini trend chart when trends have 2+ points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const html = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             trends: [
                 { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
                 { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
@@ -687,6 +745,7 @@ describe('GenerateHtmlReport', () => {
     it('omits mini trend chart when trends have <2 points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
         const htmlSingle = generateHtmlReport(tests, {
+            computed: computedFor(tests),
             trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
         });
 
@@ -700,7 +759,10 @@ describe('GenerateHtmlReport', () => {
             { name: 'Chrome', tests: [{ title: 'Login', state: 'passed', duration: 100 }] },
             { name: 'Firefox', tests: [{ title: 'Login', state: 'failed', duration: 200 }] },
         ];
-        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, {
+            computed: computedFor(nonNull(runs[0]).tests),
+            runs,
+        });
 
         expect(html).toContain('envTabs');
         expect(html).toContain('Chrome');
@@ -713,7 +775,10 @@ describe('GenerateHtmlReport', () => {
             { name: 'Env A', tests: [{ title: 'Test A', state: 'passed', duration: 100 }] },
             { name: 'Env B', tests: [{ title: 'Test B', state: 'failed', duration: 200 }] },
         ];
-        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, {
+            computed: computedFor(nonNull(runs[0]).tests),
+            runs,
+        });
 
         expect(html).toContain('tab-content');
         expect(html).toContain('tabContent-0');
@@ -725,7 +790,10 @@ describe('GenerateHtmlReport', () => {
             { name: 'A', tests: [{ title: 'T1', state: 'passed', duration: 100 }] },
             { name: 'B', tests: [{ title: 'T2', state: 'failed', duration: 100 }] },
         ];
-        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, {
+            computed: computedFor(nonNull(runs[0]).tests),
+            runs,
+        });
 
         expect(html).toContain('class="tab-btn active"');
         expect(html).toContain('class="tab-content active"');
@@ -733,7 +801,10 @@ describe('GenerateHtmlReport', () => {
 
     it('omits tabs when only 1 run', () => {
         const runs: TestRunTab[] = [{ name: 'Single', tests: [{ title: 'T', state: 'passed', duration: 100 }] }];
-        const html = generateHtmlReport(nonNull(runs[0]).tests, { runs });
+        const html = generateHtmlReport(nonNull(runs[0]).tests, {
+            computed: computedFor(nonNull(runs[0]).tests),
+            runs,
+        });
 
         expect(html).not.toContain('envTabs');
     });
@@ -741,14 +812,14 @@ describe('GenerateHtmlReport', () => {
     // ── R12: PDF Export ─────────────────────────────────────────────
 
     it('includes PDF export button', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('window.print()');
         expect(html).toContain('PDF');
     });
 
     it('includes print CSS media query', () => {
-        const html = generateHtmlReport([]);
+        const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('@media print');
         expect(html).toContain('.control-bar,.detail-toggle');

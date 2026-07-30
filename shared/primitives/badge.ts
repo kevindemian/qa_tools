@@ -1,12 +1,10 @@
 /**
  * Badge primitives — Badge, StatusBadge, SeverityBadge.
  *
- * Consistent badge rendering across all report types using design tokens.
+ * Consistent badge rendering using data-* attributes for CSS styling.
  *
  * @module primitives/badge
  */
-
-import { tokens } from '../ui/theme-tokens.js';
 
 export interface BadgeProps {
     variant?: 'default' | 'pass' | 'fail' | 'skip' | 'info' | 'warn';
@@ -16,26 +14,23 @@ export interface BadgeProps {
     ariaLabel?: string | undefined;
 }
 
-const _badgeStyles: Record<string, { bg: string; text: string }> = {
-    pass: { bg: 'var(--color-badge-pass-bg)', text: 'var(--color-badge-pass-text)' },
-    fail: { bg: 'var(--color-badge-fail-bg)', text: 'var(--color-badge-fail-text)' },
-    skip: { bg: 'var(--color-badge-skip-bg)', text: 'var(--color-badge-skip-text)' },
-    info: { bg: 'var(--color-info)', text: '#ffffff' },
-    warn: { bg: 'var(--color-warn)', text: '#333333' },
-    default: { bg: 'var(--color-border-subtle)', text: 'var(--color-text-secondary)' },
-};
+const _variantStyles = new Map([
+    ['pass', 'background:var(--color-badge-pass-bg);color:var(--color-badge-pass-fg)'],
+    ['fail', 'background:var(--color-badge-fail-bg);color:var(--color-badge-fail-fg)'],
+    ['skip', 'background:var(--color-badge-skip-bg);color:var(--color-badge-skip-fg)'],
+    ['info', 'background:var(--color-info);color:white'],
+    ['warn', 'background:var(--color-badge-warn-bg);color:var(--color-badge-warn-fg)'],
+    ['default', ''],
+]);
 
 export function Badge(props: BadgeProps): string {
     const v = props.variant || 'default';
-    const style = Object.entries(_badgeStyles).find(([k]) => k === v)?.[1] as { bg: string; text: string };
+    const style = _variantStyles.get(v) || '';
     return `<span data-component="badge" data-variant="${v}"
         role="${props.role || 'status'}"
+        ${style ? `style="${style}"` : ''}
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        ${props.title ? `title="${props.title}"` : ''}
-        style="display:inline-block;padding:2px 8px;border-radius:${tokens.borderRadius.pill}px;
-               font-size:${tokens.fontSize.sm};font-weight:${tokens.fontWeight.semibold};
-               background:${style.bg};color:${style.text};
-               line-height:1.4;vertical-align:middle">
+        ${props.title ? `title="${props.title}"` : ''}>
         ${props.children}
     </span>`;
 }

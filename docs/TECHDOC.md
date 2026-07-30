@@ -58,6 +58,31 @@ qa_tools/
 │                    setup/                                    │
 │  main.ts → detector.ts → config-writer.ts → templates/*     │
 └─────────────────────────────────────────────────────────────┘
+
+Architecture (shared/ internal):
+
+┌─────────────────────────────────────────────────────────────┐
+│  shared/primitives/                                         │
+│  badge, card, chart, empty-state, form, layout,             │
+│  recommended-actions, table (9 modules)                     │
+│  Pure HTML generators — no business logic                   │
+├─────────────────────────────────────────────────────────────┤
+│  shared/report/*-renderer.ts + shared/quality/*.ts          │
+│  16 renderers + 5 orchestrators                             │
+│  Consume dataHub.computed, use primitives                   │
+│  Compute: ai-effectiveness, defect-trend, flakiness,        │
+│  backlog-health, release-score, silent-regression,          │
+│  incident-report, impact-alert, traceability,               │
+│  ai-comparison, defect-seasonality, developer-profile,      │
+│  pipeline-cost, suite-optimization,                         │
+│  cross-squad-benchmark, requirement-score                   │
+├─────────────────────────────────────────────────────────────┤
+│  shared/data-hub/compute/                                   │
+│  9 compute modules (pure functions, no HTML)                │
+│  ai-metrics, defect-aggregation, regression-detection,      │
+│  optimization-actions, impact-alerts, incident-events,      │
+│  traceability-tree, cross-squad, coverage-gap               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Patterns
@@ -77,8 +102,132 @@ qa_tools/
 | **Quality Gate**             | `shared/quality-gate.ts`                                      | Orquestrador de quality gate — thresholds fixos, compõe health/coverage/flakiness       |
 | **Coverage Source**          | `shared/coverage-source.ts`                                   | Resolução de cobertura em camadas: Istanbul coverage-summary.json > CTRF > 0 padrão     |
 | **Quality Metrics**          | `shared/quality-metrics.ts`                                   | Coleta e persistência de métricas de qualidade: fire rates, pass rates, drift detection |
+| **Compute/Render Separation** | `shared/quality/*.ts` + `*-renderer.ts`                       | Barrel (compute + re-export) + Renderer (HTML) — padrão para todos os dashboards |
 | **Quality Suggester**        | `shared/quality-suggester.ts`                                 | Pipeline de detecção de sinais de qualidade: drift, latência, taxa de falha, benchmark  |
 | **Benchmark Metrics**        | `shared/benchmark-metrics.ts`                                 | Computação de métricas de cobertura de benchmark: critérios, partições, boundary values |
+
+### Compute/Render Separation Pattern
+
+Cada módulo de relatório/dashboard segue o padrão **barrel + renderer**:
+
+```
+módulo.ts              → compute (funções puras) + re-export barrel
+módulo-renderer.ts     → render (geração HTML) — importa do barrel
+```
+
+**Barrel (módulo.ts):**
+- Contém interfaces, tipos, constantes e funções compute
+- Re-exporta a função render do `*-renderer.ts`
+- NÃO importa `html-factory` nem `report-styles`
+
+**Renderer (módulo-renderer.ts):**
+- Contém apenas funções de geração HTML
+- Importa `buildHtmlPage`, `buildCss`, primitives
+- Importa tipos do barrel via `import type`
+- NÃO contém lógica de negócio
+
+**Benefícios:**
+- Separação clara entre dados e apresentação
+- Compute modules são testáveis sem dependência de HTML
+- Renderers podem ser substituídos (ex: SVG, PDF) sem afetar compute
+- Imports circulares impossíveis (renderer → barrel, nunca ao contrário)
+
+### 9 Quality Criteria for HTML Reports
+
+| # | Criterion | Description |
+|---|-----------|-------------|
+| 1 | **Util** | Report provides actionable information for the target audience |
+| 2 | **Correto** | Data is accurate, derived from authoritative sources (DataHub SSOT) |
+| 3 | **Adequado** | Report format matches the intended use case (PR comment vs artifact vs summary) |
+| 4 | **Completeness** | All relevant data is included; empty states are explicit |
+| 5 | **Legibilidade** | Clear structure, consistent formatting, readable without CSS |
+| 6 | **Sem poluição** | No inline styles, no unnecessary markup, no decorative elements |
+| 7 | **Arquitetura** | Compute/render separation, primitives reuse, no circular dependencies |
+| 8 | **Dados ausentes visíveis** | Missing data is explicitly shown, never silently omitted |
+| 9 | **Ação recomendada** | Every finding includes a suggested next step |
+
+### MODULE MAP — shared/
+
+```
+shared/
+├── primitives/                          # HTML primitives (reusable components)
+│   ├── badge.ts                         # Badge (status, severity)
+│   ├── card.ts                          # Card (content container)
+│   ├── chart.ts                         # Chart (bar chart)
+│   ├── empty-state.ts                   # Empty state placeholder
+│   ├── form.ts                          # Form elements
+│   ├── layout.ts                        # Layout primitives (Container, Section, Grid, FlexRow, Separator)
+│   ├── recommended-actions.ts           # Actionable recommendations
+│   ├── table.ts                         # DataTable, MetricCard, MetricGrid, CardGrid
+│   └── index.ts                         # Barrel re-export
+│
+├── data-hub/compute/                    # Compute modules (pure functions, no HTML)
+│   ├── ai-metrics.ts                    # AI effectiveness metrics
+│   ├── defect-aggregation.ts            # Defect trend aggregation
+│   ├── regression-detection.ts          # Silent regression detection
+│   ├── optimization-actions.ts          # Suite optimization suggestions
+│   ├── impact-alerts.ts                 # Impact alert computation
+│   ├── incident-events.ts               # Incident event processing
+│   ├── traceability-tree.ts             # Traceability tree building
+│   ├── cross-squad.ts                   # Cross-squad benchmark computation
+│   ├── coverage-gap.ts                  # Coverage gap analysis
+│   └── index.ts                         # Barrel re-export
+│
+├── report/                              # Renderers (HTML generation)
+│   ├── ai-effectiveness-renderer.ts     # AI effectiveness dashboard
+│   ├── ai-comparison-renderer.ts        # AI comparison dashboard
+│   ├── backlog-health-renderer.ts       # Backlog health dashboard
+│   ├── defect-seasonality-renderer.ts   # Defect seasonality dashboard
+│   ├── defect-trend-renderer.ts         # Defect trend dashboard
+│   ├── developer-profile-renderer.ts    # Developer profile dashboard
+│   ├── flakiness-renderer.ts            # Flakiness dashboard
+│   ├── impact-alert-renderer.ts         # Impact alert dashboard
+│   ├── incident-report-renderer.ts      # Incident report dashboard
+│   ├── pipeline-cost-renderer.ts        # Pipeline cost dashboard
+│   ├── release-score-renderer.ts        # Release score dashboard
+│   ├── requirement-score-renderer.ts    # Requirement score dashboard
+│   ├── silent-regression-renderer.ts    # Silent regression dashboard
+│   ├── suite-optimization-renderer.ts   # Suite optimization dashboard
+│   ├── traceability-renderer.ts         # Traceability dashboard
+│   ├── markdown-renderer.ts             # Markdown output renderer
+│   └── report-html.ts                   # Orchestrator: assembles full HTML report
+│
+├── quality/                             # Quality dashboards (barrel + renderer)
+│   ├── health-score.ts                  # Health score computation + re-export
+│   ├── quality-gate.ts                  # Quality gate orchestration
+│   ├── quality-metrics.ts               # Quality metrics collection
+│   ├── quality-suggester.ts             # Quality signal detection
+│   └── cross-squad-benchmark.ts         # Cross-squad benchmark
+│
+├── coverage/                            # Coverage analysis
+│   ├── coverage-source.ts               # Coverage data resolution
+│   └── coverage-gap-renderer.ts         # Coverage gap HTML
+│
+├── pipeline/                            # Pipeline analysis
+│   ├── pipeline-cost.ts                 # Pipeline cost computation
+│   └── pipeline-health-renderer.ts      # Pipeline health HTML
+│
+├── ci/                                  # CI integrations
+│   ├── github-check-run.ts              # GitHub Check Run API
+│   └── github-pr-comment.ts             # GitHub PR Comment API
+│
+├── pr-report-core.ts                    # PR report orchestrator (3 outputs)
+│   ├── PR Comment Markdown
+│   ├── GitHub Job Summary
+│   └── HTML Report Artifact
+│
+├── infra/                               # Infrastructure
+│   ├── store-backend.ts                 # Git/Fs store backend
+│   ├── circuit-breaker.ts               # Circuit breaker pattern
+│   └── llm-rate-limiter.ts              # LLM rate limiting
+│
+└── types/                               # Type definitions
+    ├── common.ts                        # Common types
+    ├── jira.ts                          # Jira types
+    ├── data-hub.ts                      # DataHub types
+    ├── feature-config.ts                # Feature config schema (Zod)
+    └── artifact-specs.ts                # Artifact specifications
+```
 
 ### Resilience Stack (LLM)
 
@@ -805,9 +954,9 @@ import { globSync } from 'glob'; // file globbing
 | `palette.ts`                    | Chalk abstraction (color palette)                      | `palette` object                                                                  |
 | `prompt.ts`                     | Terminal input/output facade                           | `prompt()`, `info()`, `title()`                                                   |
 | `quarantine.ts`                 | Quarantine management for flaky tests                  | `quarantineTest()`, `isQuarantined()`, `generatePipelineQuarantine()`             |
-| `defect-trend.ts`               | Defect trend dashboard HTML report                     | `aggregateDefectTrends()`, `generateDefectTrendHtml()`                            |
-| `flakiness-dashboard.ts`        | Flakiness dashboard HTML report                        | `filterHighFlakiness()`, `generateFlakinessHtml()`                                |
-| `defect-seasonality.ts`         | Defect seasonality dashboard HTML report               | `aggregateDefectSeasonality()`, `generateSeasonalityHtml()`                       |
+| `defect-trend.ts`               | Defect trend computation + barrel                      | `aggregateDefectTrends()` \| + `defect-trend-renderer.ts` \| HTML rendering \| `generateDefectTrendHtml()` |
+| `flakiness-dashboard.ts`        | Flakiness computation + barrel                         | `filterHighFlakiness()` \| + `flakiness-renderer.ts` \| HTML rendering \| `generateFlakinessHtml()` |
+| `defect-seasonality.ts`         | Seasonality computation + barrel                       | `aggregateDefectSeasonality()` \| + `defect-seasonality-renderer.ts` \| HTML rendering \| `generateSeasonalityHtml()` |
 | `markdown.ts`                   | Markdown lexer/renderer                                | `tokenize()`, `renderToHtml()`                                                    |
 | `csrf/`                         | CSV parsing/validation                                 | `CsvResource`, schemas                                                            |
 | `invariants/`                   | 13 domain + 5 structural invariant rules               | `createTestCaseValidator()`                                                       |
@@ -815,14 +964,14 @@ import { globSync } from 'glob'; // file globbing
 | `prompts/`                      | LLM prompt templates (Markdown)                        | —                                                                                 |
 | `test-utils/`                   | Test utilities (factories, mock types)                 | `MockedSafe<T>`, `mockedSafe()`                                                   |
 | `run-comparison.ts`             | Compare two MetricsRun objects via LLM                 | `compareRuns()`                                                                   |
-| `cross-squad-benchmark.ts`      | Cross-squad health score leaderboard with trends       | `computeCrossSquadBenchmark()`, `generateBenchmarkHtml()`                         |
-| `developer-profile.ts`          | Developer profile failure breakdown dashboard          | `buildDeveloperProfile()`, `generateDeveloperProfileHtml()`                       |
-| `report-*.ts`                   | Report generation (HTML, sections, tables, charts)     | `ReportGenerator`                                                                 |
-| `silent-regression.ts`          | Silent regression detector                             | `detectSilentRegression()`, `generateSilentRegressionHtml()`                      |
-| `ai-effectiveness.ts`           | AI effectiveness dashboard HTML report                 | `computeAiEffectiveness()`, `generateAiEffectivenessHtml()`                       |
-| `ai-comparison.ts`              | AI vs manual test comparison dashboard                 | `compareAiVsManual()`, `generateAiComparisonHtml()`                               |
-| `suite-optimization.ts`         | Suite optimization advisor for test duration/flakiness | `analyzeSuiteOptimization()`, `generateOptimizationHtml()`                        |
-| `backlog-health.ts`             | Backlog health analysis (stale, unassigned, untested)  | `analyzeBacklogHealth()`, `generateBacklogHealthHtml()`                           |
+| `cross-squad-benchmark.ts`      | Benchmark computation + barrel                         | `computeCrossSquadBenchmark()` \| + `cross-squad-benchmark-renderer.ts` \| HTML rendering \| `generateBenchmarkHtml()` |
+| `developer-profile.ts`          | Profile computation + barrel                           | `buildDeveloperProfile()` \| + `developer-profile-renderer.ts` \| HTML rendering \| `generateDeveloperProfileHtml()` |
+| `report-*.ts`                   | Report infrastructure (HTML factory, sections, tables, charts) | `buildHtmlPage()`, `buildCss()`, etc. |
+| `silent-regression.ts`          | Regression computation + barrel                        | `detectSilentRegression()` \| + `silent-regression-renderer.ts` \| HTML rendering \| `generateSilentRegressionHtml()` |
+| `ai-effectiveness.ts`           | AI effectiveness computation + barrel                  | `computeAiEffectiveness()` \| + `ai-effectiveness-renderer.ts` \| HTML rendering \| `generateAiEffectivenessHtml()` |
+| `ai-comparison.ts`              | AI comparison computation + barrel                     | `compareAiVsManual()` \| + `ai-comparison-renderer.ts` \| HTML rendering \| `generateAiComparisonHtml()` |
+| `suite-optimization.ts`         | Optimization computation + barrel                      | `analyzeSuiteOptimization()` \| + `suite-optimization-renderer.ts` \| HTML rendering \| `generateOptimizationHtml()` |
+| `backlog-health.ts`             | Backlog computation + barrel                           | `analyzeBacklogHealth()` \| + `backlog-health-renderer.ts` \| HTML rendering \| `generateBacklogHealthHtml()` |
 | `markdown-html.ts`              | Markdown-to-HTML converter                             | `markdownToHtml()`                                                                |
 
 ### `jira_management/` (75 files) — Jira CLI App
@@ -1140,11 +1289,11 @@ Features divergentes devem ser registradas no backlog para conformização.
 | `config/features.json`                    | Feature toggles store (Zod-validated)                              |
 | `shared/feature-config.ts`                | Feature config accessor — PR-Report-specific                       |
 | `shared/types/feature-config.ts`          | Zod schemas + TypeScript types for feature store                   |
-| `shared/developer-profile.ts`             | Developer profile failure breakdown dashboard                      |
-| `shared/suite-optimization.ts`            | Suite optimization advisor (duration/flakiness analysis)           |
-| `shared/backlog-health.ts`                | Backlog health analysis (stale/unassigned/untested)                |
-| `shared/pipeline-cost.ts`                 | Pipeline cost analytics (cost/duration per run)                    |
-| `shared/requirement-score.ts`             | Requirement quality score (AI-generated test acceptance/retention) |
+| `shared/developer-profile.ts`             | Developer profile computation + barrel                              |
+| `shared/suite-optimization.ts`            | Suite optimization computation + barrel                             |
+| `shared/backlog-health.ts`                | Backlog health computation + barrel                                 |
+| `shared/pipeline-cost.ts`                 | Pipeline cost computation + barrel                                  |
+| `shared/requirement-score.ts`             | Requirement score computation + barrel                              |
 | `shared/pr-report-core.ts`                | PR Report core library (pure; consumed by `git_triggers/main.ts pr-report`) |
 | `shared/report-html.ts`                   | HTML report generator (sections, charts, themes)                   |
 | `shared/parseArgs()`                      | CLI parser (--help, --project, unknown flag warn)                  |

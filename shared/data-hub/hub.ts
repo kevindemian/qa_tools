@@ -79,6 +79,18 @@ import {
     calcTestDurationMap,
     calcRetryFlaky,
     calcComputeCost,
+    aggregateDefectTrends,
+    aggregateDefectSeasonality,
+    detectSilentRegressions,
+    computeAiMetrics,
+    computeOptimizationActions,
+    computeImpactAlerts,
+    computeIncidentEvents,
+    computeTraceabilityTree,
+    computeCrossSquad,
+    computeCoverageGap,
+    computeSuiteBreakdown,
+    computeFailureClassifications,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -820,6 +832,42 @@ export class DataHubImpl implements DataHub {
             testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
         const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
         const framework = raw.framework ?? 'unknown';
+        // ─── Content specification computed metrics ────────────────────────────
+        const defectAggregation = aggregateDefectTrends(raw.failureClassifications ?? []);
+        const seasonalityAggregation = aggregateDefectSeasonality(raw.failureClassifications ?? []);
+        const regressionDetection = detectSilentRegressions(testDurationMap);
+        const aiMetrics = raw.aiRecords != null ? computeAiMetrics(raw.aiRecords) : undefined;
+        const optimizationActions = computeOptimizationActions(
+            testDurationMap,
+            Object.fromEntries(flakinessEntries.map((e) => [e.title, e.rate])),
+        );
+        const impactAlerts = computeImpactAlerts(raw, {
+            passRate,
+            coverage,
+            topFailingJobs,
+        } as ComputedMetrics);
+        const incidentEvents = computeIncidentEvents(raw, {
+            passRate,
+            runFailureRate,
+            regressionDetection,
+            seasonalityAggregation,
+        } as ComputedMetrics);
+        const traceabilityTree = computeTraceabilityTree(raw, {
+            metricsRuns,
+            flakyRate,
+        } as ComputedMetrics);
+        const crossSquad = computeCrossSquad(raw, {
+            passRate,
+            coverage,
+        } as ComputedMetrics);
+        // ─── Coverage gap computation ──────────────────────────────────────
+        const coverageGap =
+            raw.jiraIssues != null && raw.jiraIssues.length > 0
+                ? computeCoverageGap(raw.jiraIssues, new Map<string, string[]>())
+                : undefined;
+        // ─── Suite breakdown and failure classifications ──────────────────
+        const suiteBreakdown = metricsRuns.length > 0 ? computeSuiteBreakdown(metricsRuns) : [];
+        const failureClassifications = metricsRuns.length > 0 ? computeFailureClassifications(metricsRuns) : {};
 
         return {
             passRate,
@@ -850,6 +898,18 @@ export class DataHubImpl implements DataHub {
             runPassRate,
             retryFlaky,
             computeCost,
+            defectAggregation,
+            seasonalityAggregation,
+            regressionDetection,
+            aiMetrics,
+            optimizationActions,
+            impactAlerts,
+            incidentEvents,
+            traceabilityTree,
+            crossSquad,
+            coverageGap,
+            suiteBreakdown,
+            failureClassifications,
         };
     }
 

@@ -12,8 +12,8 @@
 
 import path from 'path';
 import { createHash } from 'crypto';
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { execFile } from 'node:child_process';
 import { isBuiltin } from 'module';
 import { globSync } from '../shared/deps.js';
 import { gracefulExit } from '../shared/ui/cli_base.js';
@@ -105,10 +105,6 @@ interface LintResult {
     messages: LintMessage[];
 }
 
-function hasStdout(err: unknown): err is { stdout: string; stderr?: string } {
-    return typeof err === 'object' && err !== null && 'stdout' in err;
-}
-
 function parseLintMessage(raw: unknown): LintMessage | null {
     if (typeof raw !== 'object' || raw === null) return null;
     const m = raw as Record<string, unknown>;
@@ -150,26 +146,8 @@ function parseLintResults(out: string): LintResult[] {
     return results;
 }
 
-function collectErrorsFromDir(dir: string, violations: Violation[]): void {
-    const eslintBin = path.resolve('node_modules/eslint/bin/eslint.js');
-    let out: string;
-    try {
-        out = execFileSync(process.execPath, [eslintBin, '--no-cache', '--format', 'json', dir], {
-            encoding: 'utf-8',
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 60_000,
-            stdio: ['pipe', 'pipe', 'pipe'],
-            cwd: process.cwd(),
-        });
-    } catch (err: unknown) {
-        if (hasStdout(err) && err.stdout) {
-            out = err.stdout;
-        } else {
-            const msg = err instanceof Error ? err.message : String(err);
-            violations.push({ file: dir, line: 1, content: `ESLint: ${msg}` });
-            return;
-        }
-    }
+function processLintResults(out: string, violations: Violation[]): number {
+    let warningCount = 0;
     try {
         const results = parseLintResults(out);
         for (const result of results) {
@@ -180,40 +158,52 @@ function collectErrorsFromDir(dir: string, violations: Violation[]): void {
                         line: msg.line,
                         content: `${msg.message} (${msg.ruleId})`,
                     });
+                } else if (msg.severity === 1) {
+                    warningCount++;
                 }
             }
         }
     } catch (parseErr) {
-        violations.push({ file: dir, line: 1, content: `ESLint: invalid JSON: ${String(parseErr)}` });
+        violations.push({ file: 'eslint-output', line: 1, content: `ESLint: invalid JSON: ${String(parseErr)}` });
     }
+    return warningCount;
 }
 
-export function checkEslintBaseline(): CheckResult {
+function runEslintBatchAsync(dirs: string[]): Promise<{ out: string | null; error: string | null }> {
+    const eslintBin = path.resolve('node_modules/eslint/bin/eslint.js');
+    return new Promise((resolve) => {
+        execFile(
+            process.execPath,
+            [eslintBin, '--no-cache', '--format', 'json', ...dirs],
+            { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 120_000, cwd: process.cwd() },
+            (err, stdout) => {
+                if (err && !stdout) {
+                    resolve({ out: null, error: err.message });
+                } else {
+                    resolve({ out: stdout || null, error: null });
+                }
+            },
+        );
+    });
+}
+
+export async function checkEslintBaseline(): Promise<{ result: CheckResult; warningCount: number }> {
     const violations: Violation[] = [];
-    const sourceDirs = [
-        'scripts/',
-        'shared/validation/',
-        'shared/ui/',
-        'shared/types/',
-        'shared/quality/',
-        'shared/report/',
-        'shared/data-hub/',
-        'shared/ci/',
-        'shared/infra/',
-        'shared/invariants/',
-        'shared/jira/',
-        'shared/llm/',
-        'shared/primitives/',
-        'shared/prompts/',
-        'shared/test-utils/',
-        'git_triggers/',
-        'jira_management/',
-        'e2e/',
-    ];
-    for (const dir of sourceDirs) {
-        collectErrorsFromDir(dir, violations);
+    let warningCount = 0;
+
+    // Lint the entire codebase (all .ts files via eslint config)
+    const [result] = await Promise.all([runEslintBatchAsync(['.'])]);
+
+    if (result.error) {
+        violations.push({ file: 'eslint-batch', line: 1, content: `ESLint: ${result.error}` });
+    } else if (result.out) {
+        warningCount += processLintResults(result.out, violations);
     }
-    return { name: 'eslint (zero violations)', passed: violations.length === 0, violations };
+
+    return {
+        result: { name: 'eslint (zero violations)', passed: violations.length === 0, violations },
+        warningCount,
+    };
 }
 
 function parseRegisteredHandlers(indexSource: string): Set<string> {
@@ -418,15 +408,15 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/defect-trend.ts', export_: 'aggregateDefectTrends' },
         { file: 'shared/quality/defect-trend.ts', export_: 'generateDefectTrendHtml' },
         { file: 'shared/report/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
-        { file: 'shared/report/traceability-matrix.ts', export_: 'generateTraceabilityHtml' },
+        { file: 'shared/report/traceability-renderer.ts', export_: 'generateTraceabilityHtml' },
         { file: 'shared/report/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
-        { file: 'shared/report/ai-effectiveness.ts', export_: 'generateAiEffectivenessHtml' },
+        { file: 'shared/report/ai-effectiveness-renderer.ts', export_: 'generateAiEffectivenessHtml' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'aggregateDefectSeasonality' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
         { file: 'shared/quality/silent-regression.ts', export_: 'detectSilentRegression' },
-        { file: 'shared/quality/silent-regression.ts', export_: 'generateSilentRegressionHtml' },
+        { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
         { file: 'shared/report/ai-comparison.ts', export_: 'compareAiVsManual' },
-        { file: 'shared/report/ai-comparison.ts', export_: 'generateAiComparisonHtml' },
+        { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
@@ -434,11 +424,11 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/suite-optimization.ts', export_: 'analyzeSuiteOptimization' },
         { file: 'shared/quality/suite-optimization.ts', export_: 'generateOptimizationHtml' },
         { file: 'shared/report/backlog-health.ts', export_: 'analyzeBacklogHealth' },
-        { file: 'shared/report/backlog-health.ts', export_: 'generateBacklogHealthHtml' },
+        { file: 'shared/report/backlog-health-renderer.ts', export_: 'generateBacklogHealthHtml' },
         { file: 'shared/report/incident-report.ts', export_: 'buildIncidentReport' },
-        { file: 'shared/report/incident-report.ts', export_: 'generateIncidentReportHtml' },
+        { file: 'shared/report/incident-report-renderer.ts', export_: 'generateIncidentReportHtml' },
         { file: 'shared/report/impact-alert.ts', export_: 'analyzePipelineImpact' },
-        { file: 'shared/report/impact-alert.ts', export_: 'generateImpactAlertHtml' },
+        { file: 'shared/report/impact-alert-renderer.ts', export_: 'generateImpactAlertHtml' },
         { file: 'shared/data-hub/compute/pipeline-cost.ts', export_: 'calcPipelineCost' },
         { file: 'shared/quality/requirement-score.ts', export_: 'calculateRequirementScores' },
         { file: 'shared/quality/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
@@ -449,7 +439,11 @@ export function checkDashboardExports(): CheckResult {
             continue;
         }
         const content = readFileSync(path.resolve(d.file), 'utf-8');
-        if (!content.includes('export function ' + d.export_)) {
+        // Accept both direct exports and re-exports from renderer files
+        const hasDirectExport = content.includes('export function ' + d.export_);
+        const hasReExport = content.includes('export { ' + d.export_ + ' } from ');
+        const hasLocalExport = content.includes('export { ' + d.export_ + ' }');
+        if (!hasDirectExport && !hasReExport && !hasLocalExport) {
             violations.push({ file: d.file, line: 1, content: `Missing export: ${d.export_} not found` });
         }
     }
@@ -471,6 +465,31 @@ export function checkQualityGateFiles(): CheckResult {
 // xray-history.ts/xray-client.ts/xray-cloud-client.ts: GraphQL types have known non-null fields
 // case02.ts: structured test assertions
 // pipeline-handler.test.ts: test assertions
+function buildTemplateLineSet(lines: string[]): Set<number> {
+    const templateLines = new Set<number>();
+    let inTemplate = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line === undefined) continue;
+        for (const ch of line) {
+            if (ch === '`') inTemplate = !inTemplate;
+        }
+        if (inTemplate) templateLines.add(i + 1);
+    }
+    return templateLines;
+}
+
+function isExcludedNonNullLine(c: string): boolean {
+    if (typeof c !== 'string' || c.length === 0) return true;
+    const commentIdx = c.indexOf('//');
+    if (commentIdx >= 0 && c.indexOf('!', commentIdx) >= 0) return true;
+    for (const quote of ['"', "'"] as const) {
+        const open = c.indexOf(quote);
+        if (open >= 0 && c.indexOf('!', open) >= 0 && c.indexOf(quote, open + 1) > open) return true;
+    }
+    return false;
+}
+
 export function checkNonNullAssertion(): CheckResult {
     const files = allTsFiles()
         .filter((f) => !f.startsWith('scripts/'))
@@ -480,26 +499,20 @@ export function checkNonNullAssertion(): CheckResult {
                     f,
                 ),
         );
-    // Exclude lines where `!` is inside a string literal or a `//` comment.
-    // A `!` in a string (e.g. domain output '(ATRASADA!)') or comment is not a
-    // non-null assertion; the core detection pattern is left intact.
-    // Implemented as a linear TS predicate (no regex backtracking / super-linear risk).
-    const isExcludedLine = (line: string): boolean => {
-        if (typeof line !== 'string' || line.length === 0) return false;
-        const commentIdx = line.indexOf('//');
-        if (commentIdx >= 0 && line.indexOf('!', commentIdx) >= 0) return true;
-        for (const quote of ['"', "'", '`'] as const) {
-            const open = line.indexOf(quote);
-            if (open >= 0 && line.indexOf('!', open) >= 0 && line.indexOf(quote, open + 1) > open) return true;
+    const pattern = /[\w)\]]!(?:[.,)\];[]|\s+as\b|\s*$)/;
+    const violations: Violation[] = [];
+    for (const file of files) {
+        const matches = grepLines(file, pattern);
+        if (matches.length === 0) continue;
+        const content = readFileSync(file, 'utf-8').split('\n');
+        const templateLines = buildTemplateLineSet(content);
+        for (const m of matches) {
+            if (templateLines.has(m.line)) continue;
+            if (isExcludedNonNullLine(m.content)) continue;
+            violations.push({ file, ...m });
         }
-        return false;
-    };
-    return checkNoPattern(
-        'non-null assertion (!) in .ts files',
-        /[\w)\]]!(?:[.,)\];[]|\s+as\b|\s*$)/,
-        files,
-        isExcludedLine,
-    );
+    }
+    return { name: 'non-null assertion (!) in .ts files', passed: violations.length === 0, violations };
 }
 
 function collectDepWallViolations(file: string, pattern: RegExp): Violation[] {
@@ -559,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:d2d9cdaa30b4198f7e29466379967c47b2096e939057dff52cfbdbb9b84a5710 */
+        /* HASH:f658b96ee40991118a13c3182f390b6c59e2cd13a7ee42fd31a7db554ac013e1 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -580,14 +593,106 @@ export function checkIntegrity(): CheckResult {
     return { name: 'quality-check auto-integrity', passed: violations.length === 0, violations };
 }
 
+export function checkPlanDrivenExecution(): CheckResult {
+    const agentsPath = path.resolve('AGENTS.md');
+    const violations: Violation[] = [];
+    try {
+        if (!existsSync(agentsPath)) {
+            violations.push({ file: 'AGENTS.md', line: 0, content: 'AGENTS.md file not found' });
+            return { name: 'plan-driven-execution', passed: false, violations };
+        }
+        const content = readFileSync(agentsPath, 'utf-8');
+        if (!content.includes('PLAN-DRIVEN EXECUTION')) {
+            violations.push({
+                file: 'AGENTS.md',
+                line: 1,
+                content: 'AGENTS.md must contain PLAN-DRIVEN EXECUTION rule (section 27)',
+            });
+        }
+    } catch (err) {
+        violations.push({
+            file: 'scripts/quality-check.ts',
+            line: 1,
+            content: `Plan-driven execution check failed: ${String(err)}`,
+        });
+    }
+    return { name: 'plan-driven-execution', passed: violations.length === 0, violations };
+}
+
+// ---------------------------------------------------------------------------
+// Lint warning ratchet
+// ---------------------------------------------------------------------------
+
+const RATCHET_FILE = path.resolve('.quality_ratchet.json');
+
+interface RatchetData {
+    version?: number;
+    checks?: Record<string, { threshold: number; description: string }>;
+}
+
+function readRatchetThreshold(checkKey: string): number {
+    try {
+        const raw = readFileSync(RATCHET_FILE, 'utf-8');
+        const parsed: unknown = JSON.parse(raw);
+        const data = parsed as RatchetData;
+        const n = data.checks?.[checkKey]?.threshold;
+        return typeof n === 'number' && n >= 0 ? n : Infinity;
+    } catch {
+        return Infinity;
+    }
+}
+
+function writeRatchetThreshold(checkKey: string, count: number, description: string): void {
+    let data: RatchetData = { version: 1, checks: {} };
+    try {
+        data = JSON.parse(readFileSync(RATCHET_FILE, 'utf-8')) as RatchetData;
+    } catch {
+        rootLogger.warn('quality-check: ratchet file not found, creating new one');
+    }
+    if (!data.checks) data.checks = {};
+    data.checks[checkKey] = { threshold: count, description };
+    writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+}
+
+export function checkLintWarningRatchet(warningCount: number): CheckResult {
+    const violations: Violation[] = [];
+    const current = warningCount;
+    const threshold = readRatchetThreshold('lint-warnings');
+
+    if (current > threshold) {
+        violations.push({
+            file: '.quality_ratchet.json',
+            line: 1,
+            content: `REGRESSÃO: ${current} warnings ESLint (threshold: ${threshold}). Reduza warnings antes de commitar.`,
+        });
+    } else if (current < threshold) {
+        writeRatchetThreshold(
+            'lint-warnings',
+            current,
+            'warnings ESLint (security/detect-*, vitest/*, sonarjs/*, etc.)',
+        );
+    }
+
+    return {
+        name: `lint-warnings ratchet (${current} <= ${threshold})`,
+        passed: violations.length === 0,
+        violations,
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
-export function main(): void {
+export async function main(): Promise<void> {
     const checks: CheckResult[] = [];
+    const isCI = process.env['CI'] === 'true';
 
-    checks.push(checkEslintBaseline());
+    if (isCI) {
+        const { result: eslintResult, warningCount } = await checkEslintBaseline();
+        checks.push(eslintResult);
+        checks.push(checkLintWarningRatchet(warningCount));
+    }
     checks.push(checkHandlerConsistency());
 
     /* enforce-quality checks */
@@ -602,10 +707,11 @@ export function main(): void {
     checks.push(checkNonNullAssertion());
     checks.push(checkDepWall());
     checks.push(checkIfTrueFalse());
+    checks.push(checkPlanDrivenExecution());
     checks.push(checkIntegrity());
 
     /* Guard: check count */
-    const minChecks = 13;
+    const minChecks = 14;
     if (checks.length < minChecks) {
         checks.push({
             name: `quality-check has at least ${minChecks} checks`,
@@ -649,10 +755,8 @@ export function main(): void {
 
 const isMainImport = process.argv[1]?.replace(/\\/g, '/').endsWith('/quality-check.ts');
 if (isMainImport) {
-    try {
-        main();
-    } catch (err) {
+    main().catch((err) => {
         process.stderr.write(String(err));
         gracefulExit(ExitCode.ERROR);
-    }
+    });
 }

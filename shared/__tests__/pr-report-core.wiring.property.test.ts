@@ -17,11 +17,8 @@ function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     } as GitProvider;
 }
 
-const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
-const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
-const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -59,11 +56,8 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../quality/health-score.js', () => mockHealthScore);
-vi.mock('../quality/quality-gate.js', () => mockQualityGate);
 vi.mock('../ci/github-check-run.js', () => mockCheckRun);
 vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
-vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -87,31 +81,8 @@ describe('TryCreateDataHub wiring — property-based', () => {
         delete process.env['GITHUB_ACTIONS'];
         delete process.env['GITHUB_TOKEN'];
 
-        mockHealthScore.calculateHealthScore.mockReturnValue({
-            score: 80,
-            grade: 'B' as const,
-            passRate: 80,
-            metrics: {
-                passRate: 80,
-                failRate: 10,
-                skipRate: 10,
-                flakyRate: 0,
-                quarantineRate: 0,
-                stability: 100,
-                trend: 0,
-                passRateScore: 80,
-                failRateScore: 90,
-                skipRateScore: 90,
-                flakyRateScore: 100,
-                quarantineRatioScore: 100,
-                stabilityScore: 100,
-                trendScore: 100,
-            },
-        });
-        mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
-        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',

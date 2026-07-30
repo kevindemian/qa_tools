@@ -1,0 +1,24 @@
+{
+  "results": {
+    "tool": {
+      "name": "vitest"
+    },
+    "summary": {
+      "tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "pending": 0,
+      "other": 0,
+      "start": 1782489889484,
+      "stop": 1782489889485,
+      "duration": 0
+    },
+    "tests": [],
+    "environment": {
+      "appName": "qa-tools",
+      "buildName": "",
+      "buildNumber": ""
+    }
+  }
+}

@@ -910,7 +910,34 @@ Every test that mocks a function MUST verify that the mock was called (or not ca
 
 ---
 
-## 27. FINAL INVARIANT
+## 27. PLAN-DRIVEN EXECUTION (MANDATORY)
+
+Implementation follows plans, not memory. Plans are the single source of truth for WHAT to implement and HOW.
+
+### 27.1 Before any task
+1. Read the plan file referenced by the user
+2. Identify the EXACT task number (e.g., "Fase 4, Tarefa 4.5")
+3. Read the task's obligations, acceptance criteria, verification, and tests
+4. Only then begin implementation
+
+### 27.2 During implementation
+- Every task completed must be verified against its acceptance criteria in the plan
+- Never mark a task done without running its verification step
+- Create test files as specified in the plan BEFORE or DURING implementation — never after
+
+### 27.3 After implementation
+- Record in the task description: plan file path + task number + verification result
+- Never proceed to the next task without validating the current one
+
+### 27.4 Prohibited
+- Starting implementation without reading the plan
+- Marking tasks "done" without running verification
+- Trusting memory about what was implemented vs what was planned
+- Creating partial implementations — every task is fully complete or not started
+
+---
+
+## 28. FINAL INVARIANT
 
 No rule may be reinterpreted, weakened, bypassed or combined to violate another rule.
 

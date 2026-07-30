@@ -7,17 +7,14 @@ import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
-import {
-    computeAiEffectiveness,
-    generateAiEffectivenessHtml,
-    convertGenerationRecordsToFeedback,
-} from '../shared/report/ai-effectiveness.js';
+import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import Config from '../shared/config-accessor.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
+import { buildHtmlPage } from '../shared/report/html-factory.js';
 import {
     mapJiraIssuesToBacklogHealth,
     analyzeBacklogHealth,
@@ -200,8 +197,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
         const backlog = analyzeBacklogHealth(backlogIssues);
 
         const aiRecords = hub.raw.aiRecords ?? null;
-        const aiStore = convertGenerationRecordsToFeedback(aiRecords ?? undefined);
-        const aiResult = computeAiEffectiveness(aiStore);
+        const aiResult = hub.computed.aiMetrics;
         const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
 
         // Fase 9: Compute real coverage gap analysis for incident/impact reports
@@ -284,34 +280,102 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             project: getCurrentProject() ?? '',
             dataHub: qgDataHub,
         });
-        sections.push('<h2>Quality Gate</h2><pre>' + formatQualityGateText(qualityGate) + '</pre>');
-        sections.push('<h2>Cross-Squad Benchmark</h2>' + generateBenchmarkHtml(benchmark));
-        sections.push('<h2>Defect Seasonality</h2>' + generateSeasonalityHtml(seasonality));
-        sections.push('<h2>Release Score</h2>' + generateReleaseScoreHtml(releaseScore));
-        sections.push('<h2>Defect Trends</h2>' + generateDefectTrendHtml(defects));
-        sections.push('<h2>Silent Regression</h2>' + generateSilentRegressionHtml(regression));
-        sections.push('<h2>Traceability Matrix</h2>' + generateTraceabilityHtml(matrix));
-        sections.push('<h2>AI Effectiveness</h2>' + generateAiEffectivenessHtml(aiResult));
-        sections.push('<h2>AI Test Comparison</h2>' + generateAiComparisonHtml(aiComparison));
-        sections.push('<h2>Developer Profile</h2>' + generateDeveloperProfileHtml(devProfile));
-        sections.push('<h2>Suite Optimization</h2>' + generateOptimizationHtml(optimization));
-        sections.push('<h2>Backlog Health</h2>' + generateBacklogHealthHtml(backlog));
-        sections.push('<h2>Incident Investigation Report</h2>' + generateIncidentReportHtml(incidentReport));
-        sections.push('<h2>Pipeline Impact Alert</h2>' + generateImpactAlertHtml(impactAlert));
-        sections.push('<h2>Pipeline Cost Analytics</h2>' + generatePipelineCostHtml(pipelineCost));
-        sections.push('<h2>Requirement Quality Score</h2>' + generateRequirementScoreHtml(requirementScores));
+        const timestamp = new Date().toISOString();
+        sections.push(
+            '<div data-section="quality-gate"><h2>Quality Gate</h2><pre>' +
+                formatQualityGateText(qualityGate) +
+                '</pre></div>',
+        );
+        sections.push(
+            '<div data-section="cross-squad-benchmark"><h2>Cross-Squad Benchmark</h2>' +
+                generateBenchmarkHtml(benchmark) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="defect-seasonality"><h2>Defect Seasonality</h2>' +
+                generateSeasonalityHtml(seasonality) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="release-score"><h2>Release Score</h2>' +
+                generateReleaseScoreHtml(releaseScore) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="defect-trends"><h2>Defect Trends</h2>' + generateDefectTrendHtml(defects) + '</div>',
+        );
+        sections.push(
+            '<div data-section="silent-regression"><h2>Silent Regression</h2>' +
+                generateSilentRegressionHtml(regression) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="traceability"><h2>Traceability Matrix</h2>' +
+                generateTraceabilityHtml(matrix) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="ai-effectiveness"><h2>AI Effectiveness</h2>' +
+                generateAiEffectivenessHtml(aiResult) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="ai-comparison"><h2>AI Test Comparison</h2>' +
+                generateAiComparisonHtml(aiComparison) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="developer-profile"><h2>Developer Profile</h2>' +
+                generateDeveloperProfileHtml(devProfile) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="suite-optimization"><h2>Suite Optimization</h2>' +
+                generateOptimizationHtml(optimization) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="backlog-health"><h2>Backlog Health</h2>' +
+                generateBacklogHealthHtml(backlog) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="incident-report"><h2>Incident Investigation Report</h2>' +
+                generateIncidentReportHtml(incidentReport) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="impact-alert"><h2>Pipeline Impact Alert</h2>' +
+                generateImpactAlertHtml(impactAlert) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="pipeline-cost"><h2>Pipeline Cost Analytics</h2>' +
+                generatePipelineCostHtml(pipelineCost) +
+                '</div>',
+        );
+        sections.push(
+            '<div data-section="requirement-score"><h2>Requirement Quality Score</h2>' +
+                generateRequirementScoreHtml(requirementScores) +
+                '</div>',
+        );
 
-        const html =
-            '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Weekly Quality Report — ' +
-            (getCurrentProject() ?? '') +
-            '</title><style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:2rem}section{border:1px solid #e5e7eb;border-radius:8px;padding:1.5rem;margin-bottom:1.5rem}</style></head><body>' +
+        const bodyContent =
             '<h1>Weekly Quality Report — ' +
             (getCurrentProject() ?? '') +
-            '</h1><p style="color:#6b7280">Generated: ' +
-            new Date().toISOString().slice(0, 10) +
-            '</p>' +
-            sections.join('') +
-            '</body></html>';
+            '</h1>' +
+            '<div data-part="timestamp" data-dashboard="weekly-quality-report">' +
+            timestamp.slice(0, 10) +
+            '</div>' +
+            sections.join('');
+
+        const html = buildHtmlPage({
+            title: 'Weekly Quality Report — ' + (getCurrentProject() ?? ''),
+            styles: '',
+            theme: 'system',
+            bodyContent,
+            footer: 'Generated by QA Tools — Weekly Quality Report',
+        });
 
         const outPath = writeReport('weekly-quality-' + (getCurrentProject() ?? '') + '.html', html);
         success('Weekly quality report saved: ' + outPath);

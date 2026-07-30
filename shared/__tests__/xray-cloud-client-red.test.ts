@@ -19,8 +19,8 @@ describe('BUG 19: GraphQL arg name testExecIssueId should be issueId', () => {
             }
         `;
 
-        // The mutation should use 'issueId' not 'testExecIssueId'
         expect(mutation).toContain('issueId: $issueId');
+
         expect(mutation).not.toContain('testExecIssueId');
     });
 
@@ -36,12 +36,14 @@ describe('BUG 19: GraphQL arg name testExecIssueId should be issueId', () => {
             }
         `;
 
-        // Verify the mutation has the correct structure
-
         expect(mutation).toContain('mutation AddTestsToTestExecution');
+
         expect(mutation).toContain('$issueId: String!');
+
         expect(mutation).toContain('$testIssueIds: [String!]!');
+
         expect(mutation).toContain('addedTests');
+
         expect(mutation).toContain('warning');
     });
 });

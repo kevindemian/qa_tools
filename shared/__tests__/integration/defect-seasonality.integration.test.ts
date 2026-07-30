@@ -160,4 +160,36 @@ describe('Integration: Defect Seasonality (FT-21)', () => {
             spy.mockRestore();
         });
     });
+
+    describe('FT-21f: data attributes', () => {
+        it('includes data-part="target" with threshold values', async () => {
+            expect.hasAssertions();
+
+            const { aggregateDefectSeasonality, generateSeasonalityHtml } =
+                await import('../../quality/defect-seasonality.js');
+            const input: FailureClassification[] = [
+                { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p1' },
+                { timestamp: '2026-06-01T11:00:00Z', testTitle: 't2', category: 'TIMEOUT', project: 'p1' },
+            ];
+            const result = aggregateDefectSeasonality(input);
+            const html = generateSeasonalityHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: N/A');
+        });
+
+        it('includes data-part="timestamp"', async () => {
+            expect.hasAssertions();
+
+            const { aggregateDefectSeasonality, generateSeasonalityHtml } =
+                await import('../../quality/defect-seasonality.js');
+            const input: FailureClassification[] = [
+                { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p1' },
+            ];
+            const result = aggregateDefectSeasonality(input);
+            const html = generateSeasonalityHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
+    });
 });

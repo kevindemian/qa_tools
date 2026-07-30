@@ -9,7 +9,7 @@
  * - DataHub path (uses real CI data)
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DataHub } from '../../types/data-hub.js';
+import type { DataHub, PerRunCost } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
 import { createTestHub } from '../test-hub.js';
 
@@ -34,8 +34,8 @@ function makeCiRun(overrides?: Partial<PipelineRun>): PipelineRun {
     };
 }
 
-function makeDataHub(runs: PipelineRun[]): DataHub {
-    const hub = createTestHub();
+function makeDataHub(runs: PipelineRun[], ssot?: PerRunCost[]): DataHub {
+    const hub = createTestHub({ perRunCosts: ssot ?? [] });
     hub.raw.runs = runs;
     return hub;
 }
@@ -50,14 +50,20 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
             expect.hasAssertions();
 
             const { calculatePipelineCost, generatePipelineCostHtml } = await import('../../quality/pipeline-cost.js');
-            const hub = makeDataHub([
-                makeCiRun({
-                    id: 1,
-                    run_started_at: '2026-06-16T00:00:00.000Z',
-                    updated_at: '2026-06-16T00:02:00.000Z', // 120s
-                    conclusion: 'failure',
-                }),
-            ]);
+            const ssot: PerRunCost[] = [
+                { runId: 1, timestamp: '2026-06-16T00:02:00.000Z', minutes: 2, cost: 0.02, branch: 'main' },
+            ];
+            const hub = makeDataHub(
+                [
+                    makeCiRun({
+                        id: 1,
+                        run_started_at: '2026-06-16T00:00:00.000Z',
+                        updated_at: '2026-06-16T00:02:00.000Z', // 120s
+                        conclusion: 'failure',
+                    }),
+                ],
+                ssot,
+            );
             const result = calculatePipelineCost(0.01, hub);
             const html = generatePipelineCostHtml(result);
 
@@ -65,7 +71,7 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                 '<!DOCTYPE html>',
                 'Pipeline Cost Analytics',
                 'Total Cost',
-                'Avg Cost / Run',
+                'Avg Cost/Run',
                 'Total Duration',
                 'Run Count',
                 '$0.02',
@@ -122,7 +128,11 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
                     updated_at: '2026-07-01T11:10:00Z', // 600s
                 }),
             ];
-            const hub = makeDataHub(ciRuns);
+            const ssot: PerRunCost[] = [
+                { runId: 1, timestamp: '2026-07-01T10:05:00Z', minutes: 5, cost: 0.05, branch: 'main' },
+                { runId: 2, timestamp: '2026-07-01T11:10:00Z', minutes: 10, cost: 0.1, branch: 'main' },
+            ];
+            const hub = makeDataHub(ciRuns, ssot);
             const result = calculatePipelineCost(0.01, hub);
 
             expect(result.runCount).toBe(2);
@@ -136,13 +146,19 @@ describe('Integration: Pipeline Cost (FT-29)', () => {
 
             const { calculatePipelineCost } = await import('../../quality/pipeline-cost.js');
             // CI run spans 1200s (20min) per timestamps.
-            const hub = makeDataHub([
-                makeCiRun({
-                    id: 1,
-                    run_started_at: '2026-07-01T10:00:00Z',
-                    updated_at: '2026-07-01T10:20:00Z',
-                }),
-            ]);
+            const ssot: PerRunCost[] = [
+                { runId: 1, timestamp: '2026-07-01T10:20:00Z', minutes: 20, cost: 0.2, branch: 'main' },
+            ];
+            const hub = makeDataHub(
+                [
+                    makeCiRun({
+                        id: 1,
+                        run_started_at: '2026-07-01T10:00:00Z',
+                        updated_at: '2026-07-01T10:20:00Z',
+                    }),
+                ],
+                ssot,
+            );
 
             const result = calculatePipelineCost(0.01, hub);
 

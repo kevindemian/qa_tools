@@ -9,6 +9,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { generateCoverageHtml, generateHtmlReport } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
+import type { ComputedMetrics } from '../types/data-hub.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -44,6 +45,40 @@ const flatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     state: fc.constantFrom('passed', 'failed', 'skipped'),
     duration: fc.integer({ min: 0, max: 60000 }),
 });
+
+function computedFor(tests: FlatTest[]): ComputedMetrics {
+    const passed = tests.filter((t) => t.state === 'passed').length;
+    const failed = tests.filter((t) => t.state === 'failed').length;
+    return {
+        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        avgDuration: 0,
+        suiteSpeedP95: 0,
+        flakyRate: [],
+        coverage: 0,
+        pipelineCost: { totalRuns: 0, totalCostUsd: 0, billableMinutes: 0 },
+        defectTrends: [],
+        branchBreakdown: {},
+        topFailingJobs: [],
+        topFailureReasons: [],
+        releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
+        quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
+        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testCounts: { passed, failed, skipped: 0, total: tests.length },
+        framework: '',
+        metricsRuns: [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'qa-tools',
+                total: tests.length,
+                passed,
+                failed,
+                skipped: 0,
+                duration: 0,
+                tests,
+            },
+        ],
+    } as unknown as ComputedMetrics;
+}
 
 describe('GenerateCoverageHtml — property-based', () => {
     it('coverage MetricCard matches global calculation', () => {
@@ -125,7 +160,9 @@ describe('GenerateHtmlReport — property-based', () => {
 
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
-                const html = generateHtmlReport(tests);
+                const html = generateHtmlReport(tests, {
+                    computed: computedFor(tests),
+                });
                 for (const t of tests) {
                     expect(html).toContain(t.title);
                 }
@@ -139,7 +176,9 @@ describe('GenerateHtmlReport — property-based', () => {
 
         fc.assert(
             fc.property(fc.array(flatTestArb, { minLength: 0, maxLength: 10 }), (tests) => {
-                const html = generateHtmlReport(tests);
+                const html = generateHtmlReport(tests, {
+                    computed: computedFor(tests),
+                });
 
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('<html');

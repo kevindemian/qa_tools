@@ -78,9 +78,7 @@ export function readFile(baseDir: string, relPath: string): string | null {
         return fs.readFileSync(path.resolve(full), 'utf8');
     } catch (err: unknown) {
         if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return null;
-        process.stderr.write(
-            `[integration-helpers] readFile("${baseDir}", "${relPath}"): ${String(err)}. Verifique se o arquivo existe e as permissões de leitura.\n`,
-        );
+        rootLogger.warn(`readFile("${baseDir}", "${relPath}"): ${String(err)}`);
         return null;
     }
 }
@@ -115,9 +113,7 @@ export function readJsonFile<T = unknown>(baseDir: string, relPath: string): T |
         return parsed as T;
     } catch (err: unknown) {
         if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return null;
-        process.stderr.write(
-            `[integration-helpers] readJsonFile("${baseDir}", "${relPath}"): ${String(err)}. Verifique permissões e integridade do arquivo.\n`,
-        );
+        rootLogger.warn(`readJsonFile("${baseDir}", "${relPath}"): ${String(err)}`);
         return null;
     }
 }

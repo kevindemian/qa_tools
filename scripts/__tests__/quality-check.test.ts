@@ -188,11 +188,6 @@ describe('Quality check integrated', () => {
         it('checkIntegrity passes with the current regenerated hash', async () => {
             expect.hasAssertions();
 
-            // Skip during mutation testing - integrity check intentionally fails on mutated code
-            if (process.env['STRYKER_ACTIVE'] === 'true') {
-                return;
-            }
-
             const { checkIntegrity } = await load();
 
             const r = checkIntegrity();
@@ -207,10 +202,11 @@ describe('Quality check integrated', () => {
 
             const { checkEslintBaseline } = await load();
 
-            const r = checkEslintBaseline();
+            const r = await checkEslintBaseline();
 
-            expect(typeof r.passed).toBe('boolean');
-            expect(Array.isArray(r.violations)).toBeTruthy();
+            expect(typeof r.result.passed).toBe('boolean');
+            expect(Array.isArray(r.result.violations)).toBeTruthy();
+            expect(typeof r.warningCount).toBe('number');
             // Full-repo ESLint pass: under a loaded CI runner this can exceed the default
             // wall without any assertion failure. The budget is operational headroom only;
             // the eslint contract (real lint + structured result) is unchanged.

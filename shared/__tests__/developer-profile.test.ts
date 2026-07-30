@@ -447,5 +447,43 @@ describe('Developer Profile', () => {
 
             expect(html).toContain('No categories');
         });
+
+        it('includes data-part="target" with threshold values', () => {
+            const result = {
+                authors: [
+                    {
+                        author: 'alice',
+                        totalFailures: 5,
+                        categories: { api: 3, ui: 2 },
+                        testsTouched: 3,
+                        failureRate: 166.67,
+                        topFailureCategory: 'api',
+                    },
+                ],
+                totalAuthors: 1,
+                totalFailures: 5,
+                topContributor: 'alice',
+                topFailureAuthor: 'alice',
+                timestamp: '2024-01-01T00:00:00.000Z',
+            };
+            const html = generateDeveloperProfileHtml(result);
+
+            expect(html).toContain('data-part="target"');
+            expect(html).toContain('target: 0');
+        });
+
+        it('includes data-part="timestamp"', () => {
+            const result = {
+                authors: [],
+                totalAuthors: 0,
+                totalFailures: 0,
+                topContributor: '',
+                topFailureAuthor: '',
+                timestamp: '2024-01-01T00:00:00.000Z',
+            };
+            const html = generateDeveloperProfileHtml(result);
+
+            expect(html).toContain('data-part="timestamp"');
+        });
     });
 });

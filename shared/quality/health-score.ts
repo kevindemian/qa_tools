@@ -74,28 +74,44 @@ export interface GateAvailability {
     suiteSpeed: boolean;
 }
 
+import {
+    FLAKY_THRESHOLD,
+    COVERAGE_TARGET,
+    EXECUTION_RATE_TARGET,
+    MIN_COVERAGE,
+    COVERAGE_FLOOR,
+    MIN_PASS_RATE_GATE,
+    MIN_EXECUTION_RATE_GATE,
+    MAX_FLAKY_GATE,
+    MAX_SUITE_SPEED_GATE,
+    GRADE_EXCELLENT,
+    GRADE_GOOD,
+    GRADE_NEEDS_ATTENTION,
+    GRADE_POOR,
+} from '../constants/thresholds.js';
+
 const DEFAULTS: HealthScoreConfig = {
     weights: { passRate: 30, flakyRate: 20, coverage: 25, executionRate: 15, suiteSpeed: 10 },
     passRateTarget: 95,
-    flakyThreshold: 3,
-    coverageTarget: 80,
-    executionRateTarget: 95,
+    flakyThreshold: FLAKY_THRESHOLD,
+    coverageTarget: COVERAGE_TARGET,
+    executionRateTarget: EXECUTION_RATE_TARGET,
     suiteSpeedTarget: 1000,
     minRuns: 10,
     windowSize: 20,
-    minCoverageGate: 70,
-    coverageFloor: 30,
-    minPassRateGate: 80,
-    minExecutionRateGate: 80,
-    maxFlakyGate: 5,
-    maxSuiteSpeedGate: 3000,
+    minCoverageGate: MIN_COVERAGE,
+    coverageFloor: COVERAGE_FLOOR,
+    minPassRateGate: MIN_PASS_RATE_GATE,
+    minExecutionRateGate: MIN_EXECUTION_RATE_GATE,
+    maxFlakyGate: MAX_FLAKY_GATE,
+    maxSuiteSpeedGate: MAX_SUITE_SPEED_GATE,
 };
 
 const DEFAULT_GRADE_BOUNDARIES: Record<HealthScoreGrade, number> = {
-    excellent: 90,
-    good: 80,
-    needs_attention: 70,
-    poor: 60,
+    excellent: GRADE_EXCELLENT,
+    good: GRADE_GOOD,
+    needs_attention: GRADE_NEEDS_ATTENTION,
+    poor: GRADE_POOR,
     critical: 0,
 };
 

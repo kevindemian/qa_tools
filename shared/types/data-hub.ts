@@ -162,6 +162,8 @@ export interface RawJiraIssue {
     resolution?: string | undefined;
     /** Data de resolução (resolutiondate) quando resolvido. */
     resolutionDate?: string | undefined;
+    /** Number of linked test executions — enriched from Xray/Jira linkage. */
+    linkedTestCount?: number | undefined;
 }
 
 /** A single Xray Cloud test run (within a test execution). */
@@ -267,6 +269,8 @@ export interface FailureRecord {
     confidence: number;
     /** Provenance source (e.g., 'check-run-annotation', 'junit', 'log'). */
     source: string;
+    /** Commit author name — enriched from PipelineRun.head_commit.author.name. */
+    author?: string | undefined;
 }
 
 /** Severity of a security finding. */
@@ -628,6 +632,19 @@ export interface MetricsStore {
 }
 
 /** All computed metrics from the hub. */
+/**
+ * Suite-level aggregation — passed/failed/skipped/duration per test suite.
+ * Computed by the hub from parsed artifact test data.
+ */
+export interface SuiteBreakdown {
+    suite: string;
+    passed: number;
+    failed: number;
+    skipped: number;
+    totalDuration: number;
+    tests: import('../result_parser.js').FlatTest[];
+}
+
 export interface ComputedMetrics {
     passRate: number;
     avgDuration: number;
@@ -677,6 +694,32 @@ export interface ComputedMetrics {
     retryFlaky?: RetryFlakyResult;
     /** LA-2 — real compute cost aggregated from run timing + GitHub billable. */
     computeCost?: ComputeCostResult;
+    // ─── Content specification computed metrics ──────────────────────────────
+    /** AI metrics: acceptance rate, version breakdown, trend, requirement scores. */
+    aiMetrics?: import('./data-hub-extensions.js').AiMetricsResult | undefined;
+    /** Defect aggregation by daily trend and top categories. */
+    defectAggregation?: import('./data-hub-extensions.js').DefectAggregationResult | undefined;
+    /** Defect seasonality by day-of-week and hour-of-day. */
+    seasonalityAggregation?: import('./data-hub-extensions.js').SeasonalityAggregationResult | undefined;
+    /** Regression detection results (z-score based). */
+    regressionDetection?: import('./data-hub-extensions.js').RegressionDetectionResult | undefined;
+    /** Suite optimization action recommendations. */
+    optimizationActions?: import('./data-hub-extensions.js').OptimizationResult | undefined;
+    /** Impact alerts: pipeline health correlated with coverage gaps and failures. */
+    impactAlerts?: import('../report/impact-alert.js').ImpactAlertResult | undefined;
+    /** Incident events: failures, regressions, coverage gaps, and seasonality. */
+    incidentEvents?: import('../report/incident-report.js').IncidentReport | undefined;
+    /** Traceability tree: epic > story > test mapping with coverage and health. */
+    traceabilityTree?: import('../report/traceability-matrix.js').TraceabilityResult | undefined;
+    /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
+    crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
+    // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────
+    /** Coverage gap analysis result. */
+    coverageGap?: import('./coverage.js').CoverageGapResult | undefined;
+    /** Suite-level aggregation: passed/failed/skipped/duration per suite. */
+    suiteBreakdown?: SuiteBreakdown[] | undefined;
+    /** Failure classification per test title (e.g., 'ASSERTION', 'TIMEOUT'). */
+    failureClassifications?: Record<string, string> | undefined;
 }
 
 /**

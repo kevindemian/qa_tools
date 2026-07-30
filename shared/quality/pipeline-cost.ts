@@ -4,13 +4,9 @@
  * @module pipeline-cost
  */
 
-import { sanitizeHtml } from '../escape.js';
-import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
-import { buildCss } from '../report/report-styles.js';
-import { MetricCard, MetricGrid, DataTable } from '../primitives/index.js';
-import type { TableColumn, TableRow } from '../primitives/index.js';
-import { rootLogger } from '../logger.js';
 import type { DataHub } from '../types/data-hub.js';
+
+export { generatePipelineCostHtml } from './pipeline-cost-renderer.js';
 
 export const DEFAULT_COST_PER_MINUTE = 0.01;
 
@@ -45,130 +41,61 @@ export function calculatePipelineCost(costPerMinute: number | undefined, dataHub
     // Rule 24 — cost rate must be a finite, non-negative number; negative/NaN rates are rejected (never produce negative/NaN costs).
     const cpm = Number.isFinite(rawCpm) && rawCpm >= 0 ? rawCpm : DEFAULT_COST_PER_MINUTE;
 
-    // SSOT: custo de pipeline vem exclusivamente do DataHub (Camadas 1–6 do CI).
-    const ciRuns = dataHub.getRuns();
-    const costByRun: PipelineCostEntry[] = ciRuns.map((r) => {
-        const durationSec =
-            r.run_started_at && r.updated_at
-                ? (new Date(r.updated_at).getTime() - new Date(r.run_started_at).getTime()) / 1000
-                : 0;
-        const safeDuration = Number.isFinite(durationSec) && durationSec >= 0 ? durationSec : 0;
+    // SSOT: consume computed.perRunCosts from DataHub when available.
+    // Duration (minutes) comes from the hub's compute layer; cost is recalculated
+    // with the barrel's cpm to keep the rate configurable at call site.
+    // Status still requires getRuns() because PerRunCost lacks a status field.
+    const ssotCosts = dataHub.computed.perRunCosts;
+
+    if (ssotCosts && ssotCosts.length > 0) {
+        const ciRuns = dataHub.getRuns();
+        const statusMap = new Map<number, string>();
+        for (const r of ciRuns) {
+            const runId = typeof r.id === 'number' ? r.id : 0;
+            statusMap.set(runId, mapConclusionToStatus(r.conclusion));
+        }
+
+        const costByRun: PipelineCostEntry[] = ssotCosts.map((c) => ({
+            timestamp: c.timestamp,
+            durationSec: c.minutes * 60,
+            cost: Math.round(c.minutes * cpm * 100) / 100,
+            status: statusMap.get(c.runId) ?? 'unknown',
+        }));
+
+        costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+        const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
+        const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
+        const sortedTimestamps = ssotCosts
+            .map((c) => c.timestamp)
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b));
+
         return {
-            timestamp: r.created_at ?? new Date().toISOString(),
-            durationSec: safeDuration,
-            cost: (safeDuration / 60) * cpm,
-            status: mapConclusionToStatus(r.conclusion),
+            totalCost,
+            avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
+            totalDurationSec,
+            costPerMinute: cpm,
+            costByRun,
+            runCount: costByRun.length,
+            period: {
+                from: sortedTimestamps[0] ?? '',
+                to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
+            },
+            timestamp: dataHub.timestamp.toISOString(),
         };
-    });
+    }
 
-    costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
-    const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
-    const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
-    const sortedTimestamps = ciRuns
-        .map((r) => r.created_at ?? '')
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
-
+    // Fallback: perRunCosts not available — return empty result instead of computing locally.
+    // DataHub always computes perRunCosts when runs exist, so this branch only triggers on empty data.
     return {
-        totalCost,
-        avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
-        totalDurationSec,
+        totalCost: 0,
+        avgCostPerRun: 0,
+        totalDurationSec: 0,
         costPerMinute: cpm,
-        costByRun,
-        runCount: ciRuns.length,
-        period: {
-            from: sortedTimestamps[0] ?? '',
-            to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
-        },
-        timestamp: new Date().toISOString(),
+        costByRun: [],
+        runCount: 0,
+        period: { from: '', to: '' },
+        timestamp: dataHub.timestamp.toISOString(),
     };
-}
-
-function formatCurrency(value: number): string {
-    return '$' + value.toFixed(2);
-}
-
-function formatDuration(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m >= 60) {
-        const h = Math.floor(m / 60);
-        const rm = m % 60;
-        return h + 'h ' + rm + 'm ' + s.toFixed(0) + 's';
-    }
-    return m + 'm ' + s.toFixed(0) + 's';
-}
-
-export function generatePipelineCostHtml(result: PipelineCostResult | null | undefined, title?: string): string {
-    try {
-        if (!result) {
-            rootLogger.error(
-                'Pipeline cost result is null or undefined. Ensure calculatePipelineCost is called before generatePipelineCostHtml.',
-            );
-            return buildErrorPage(
-                'Error generating report — no pipeline cost data found',
-                'Pipeline Cost Report Error',
-            );
-        }
-
-        const pageTitle = title || 'Pipeline Cost Analytics';
-
-        const summaryCards = MetricGrid({
-            children:
-                MetricCard({
-                    label: 'Total Cost',
-                    value: formatCurrency(result.totalCost),
-                    severity: result.totalCost > 0 ? 'info' : 'default',
-                }) +
-                MetricCard({
-                    label: 'Avg Cost / Run',
-                    value: formatCurrency(result.avgCostPerRun),
-                    severity: result.avgCostPerRun > 0 ? 'info' : 'default',
-                }) +
-                MetricCard({ label: 'Total Duration', value: formatDuration(result.totalDurationSec) }) +
-                MetricCard({ label: 'Run Count', value: String(result.runCount) }),
-        });
-
-        let tableHtml: string;
-        if (result.costByRun.length === 0) {
-            tableHtml = '<p style="color:var(--color-text-muted)">No pipeline run data available.</p>';
-        } else {
-            const columns: TableColumn[] = [
-                { key: 'date', label: 'Date', width: '25%' },
-                { key: 'duration', label: 'Duration', align: 'right' },
-                { key: 'cost', label: 'Cost', align: 'right' },
-                { key: 'status', label: 'Status' },
-            ];
-
-            const rows: TableRow[] = result.costByRun.map((e, i) => ({
-                key: String(i),
-                cells: {
-                    date: sanitizeHtml(new Date(e.timestamp).toLocaleDateString()),
-                    duration: formatDuration(e.durationSec),
-                    cost: formatCurrency(e.cost),
-                    status: sanitizeHtml(e.status),
-                },
-            }));
-
-            tableHtml = DataTable({ columns, rows, caption: 'Cost breakdown per pipeline run' });
-        }
-
-        const bodyContent = '<h1>' + sanitizeHtml(pageTitle) + '</h1>' + summaryCards + tableHtml;
-
-        return buildHtmlPage({
-            title: pageTitle,
-            styles: buildCss(),
-            theme: 'system',
-            bodyContent,
-            footer: 'Generated by QA Tools — Pipeline Cost Analytics',
-        });
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        rootLogger.error('Failed to generate pipeline cost HTML: ' + msg);
-        return buildErrorPage(
-            'Error generating report — check pipeline cost data and try again',
-            'Pipeline Cost Report Error',
-        );
-    }
 }

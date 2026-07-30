@@ -15,6 +15,7 @@
             "ignorePatterns": [
                 "scripts/quality-check.ts",
                 "scripts/validation-hook.ts",
+                "scripts/audit-mock-boundaries.ts",
                 "scripts/__tests__/quality-check.test.ts",
                 "scripts/__tests__/validation-hook*.test.ts"
             ],

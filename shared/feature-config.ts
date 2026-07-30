@@ -76,16 +76,19 @@ export function saveFeatureConfig(store: FeatureConfigStore, baseDir: string = p
 }
 
 /** Get feature config for a specific project. Returns default config when missing. */
-export function getProjectFeatureConfig(projectName: string): ProjectFeatureConfig | undefined {
-    const store = loadFeatureConfig();
+export function getProjectFeatureConfig(
+    projectName: string,
+    baseDir: string = process.cwd(),
+): ProjectFeatureConfig | undefined {
+    const store = loadFeatureConfig(baseDir);
     const entries = Object.entries(store);
     const entry = entries.find(([k]) => k === projectName);
     return entry?.[1];
 }
 
 /** Get PR Report config for a project. Returns default (disabled) when not configured. */
-export function getPrReportConfig(projectName: string): PrReportFeatureConfig {
-    const projectConfig = getProjectFeatureConfig(projectName);
+export function getPrReportConfig(projectName: string, baseDir: string = process.cwd()): PrReportFeatureConfig {
+    const projectConfig = getProjectFeatureConfig(projectName, baseDir);
     return projectConfig?.features.prReport ?? DEFAULT_PR_REPORT_CONFIG;
 }
 
@@ -115,18 +118,22 @@ export function setPrReportConfig(
 }
 
 /** Check if PR Report is enabled for a given project. */
-export function isPrReportEnabled(projectName: string): boolean {
-    return getPrReportConfig(projectName).enabled;
+export function isPrReportEnabled(projectName: string, baseDir: string = process.cwd()): boolean {
+    return getPrReportConfig(projectName, baseDir).enabled;
 }
 
 /** Resolve publish target for a project. Falls back to provider-appropriate default. */
-export function resolvePublishTarget(projectName: string, gitProvider?: string): string {
-    const config = getPrReportConfig(projectName);
+export function resolvePublishTarget(
+    projectName: string,
+    gitProvider?: string,
+    baseDir: string = process.cwd(),
+): string {
+    const config = getPrReportConfig(projectName, baseDir);
     if (config.enabled) {
         return config.publishTarget;
     }
     // Fallback: derive from project's own gitProvider or explicit hint
-    const provider = gitProvider ?? getProjectFeatureConfig(projectName)?.gitProvider;
+    const provider = gitProvider ?? getProjectFeatureConfig(projectName, baseDir)?.gitProvider;
     if (provider === 'gitlab') {
         return 'gitlab-ci';
     }
@@ -134,16 +141,16 @@ export function resolvePublishTarget(projectName: string, gitProvider?: string):
 }
 
 /** Get whether AI failure analysis is skipped for a project. Defaults to false (not skipped). */
-export function isAiSkipped(projectName: string): boolean {
-    return getPrReportConfig(projectName).skipAi ?? false;
+export function isAiSkipped(projectName: string, baseDir: string = process.cwd()): boolean {
+    return getPrReportConfig(projectName, baseDir).skipAi ?? false;
 }
 
 /** Get whether quality gate is skipped for a project. Defaults to false (not skipped). */
-export function isQualitySkipped(projectName: string): boolean {
-    return getPrReportConfig(projectName).skipQuality ?? false;
+export function isQualitySkipped(projectName: string, baseDir: string = process.cwd()): boolean {
+    return getPrReportConfig(projectName, baseDir).skipQuality ?? false;
 }
 
 /** Get whether flakiness dashboard is skipped for a project. Defaults to false (not skipped). */
-export function isFlakySkipped(projectName: string): boolean {
-    return getPrReportConfig(projectName).skipFlaky ?? false;
+export function isFlakySkipped(projectName: string, baseDir: string = process.cwd()): boolean {
+    return getPrReportConfig(projectName, baseDir).skipFlaky ?? false;
 }

@@ -11,11 +11,47 @@ import { nonNull, nullAs } from '../test-utils.js';
 import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
 import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { ComputedMetrics } from '../types/data-hub.js';
 
 const MOCK_TESTS: FlatTest[] = [
     { title: 'Login Test', state: 'passed', duration: 1.2, fullTitle: 'Auth > Login Test' },
     { title: 'Logout Test', state: 'failed', duration: 0.5, fullTitle: 'Auth > Logout Test' },
 ];
+
+function computedFor(tests: FlatTest[]): ComputedMetrics {
+    const passed = tests.filter((t) => t.state === 'passed').length;
+    const failed = tests.filter((t) => t.state === 'failed').length;
+    const skipped = tests.filter((t) => t.state === 'skipped').length;
+    return {
+        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        avgDuration: tests.length > 0 ? tests.reduce((s, t) => s + t.duration, 0) / tests.length : 0,
+        suiteSpeedP95: 0,
+        flakyRate: [],
+        coverage: 0,
+        pipelineCost: { totalRuns: 0, totalCostUsd: 0, billableMinutes: 0 },
+        defectTrends: [],
+        branchBreakdown: {},
+        topFailingJobs: [],
+        topFailureReasons: [],
+        releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
+        quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
+        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testCounts: { passed, failed, skipped, total: tests.length },
+        framework: '',
+        metricsRuns: [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'qa-tools',
+                total: tests.length,
+                passed,
+                failed,
+                skipped,
+                duration: tests.reduce((s, t) => s + t.duration, 0),
+                tests,
+            },
+        ],
+    } as unknown as ComputedMetrics;
+}
 
 const MOCK_EPICS: CoverageEpic[] = [
     {
@@ -60,26 +96,37 @@ describe('GenerateHtmlReport', () => {
     });
 
     it('returns valid HTML for basic test list', () => {
-        const html = generateHtmlReport(MOCK_TESTS);
+        const html = generateHtmlReport(MOCK_TESTS, { computed: computedFor(MOCK_TESTS) });
 
         expect(html).toContain('Login Test');
         expect(html).toContain('Logout Test');
     });
 
     it('includes quality gate when provided', () => {
-        const html = generateHtmlReport(MOCK_TESTS, { title: 'Report', qualityGate: 80 });
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'Report',
+            qualityGate: 80,
+        });
 
         expect(html).toContain('Quality Gate');
     });
 
     it('handles empty test list', () => {
-        const html = generateHtmlReport([], { title: 'Empty' });
+        const html = generateHtmlReport([], {
+            computed: computedFor([]),
+            title: 'Empty',
+        });
 
         expect(html).toContain('Empty');
     });
 
     it('includes health score section when provided', () => {
-        const html = generateHtmlReport(MOCK_TESTS, { title: 'Health', healthScore: HEALTH_SCORE });
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'Health',
+            healthScore: HEALTH_SCORE,
+        });
 
         expect(html).toContain('Test Suite Health');
         expect(html).toContain('Quality Gate: Pass');
@@ -87,6 +134,7 @@ describe('GenerateHtmlReport', () => {
 
     it('includes flakiness dashboard link when url and map provided', () => {
         const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
             title: 'Flaky',
             flakinessDashboardUrl: 'https://dash.example.com',
             flakinessMap: { 'Test 1': 3 },
@@ -97,6 +145,7 @@ describe('GenerateHtmlReport', () => {
 
     it('includes CI branch link when ciUrl and branch provided', () => {
         const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
             title: 'CI',
             branch: 'feature/test',
             ciUrl: 'https://ci.example.com/123',
@@ -107,7 +156,11 @@ describe('GenerateHtmlReport', () => {
     });
 
     it('includes branch text without link when no ciUrl', () => {
-        const html = generateHtmlReport(MOCK_TESTS, { title: 'Branch', branch: 'feature/x' });
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'Branch',
+            branch: 'feature/x',
+        });
 
         expect(html).toContain('feature/x');
     });
@@ -117,7 +170,11 @@ describe('GenerateHtmlReport', () => {
             { name: 'Chrome', tests: MOCK_TESTS },
             { name: 'Firefox', tests: [nonNull(MOCK_TESTS[0])] },
         ];
-        const html = generateHtmlReport(MOCK_TESTS, { title: 'Multi', runs });
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'Multi',
+            runs,
+        });
 
         expect(html).toContain('Chrome');
         expect(html).toContain('Firefox');
@@ -129,7 +186,10 @@ describe('GenerateHtmlReport', () => {
             { title: 'T1', state: 'passed', duration: 10, fullTitle: 'Suite > T1' },
             { title: 'T2', state: 'failed', duration: 20, fullTitle: 'Other > T2' },
         ];
-        const html = generateHtmlReport(testsWithHierarchy, { title: 'Hierarchy' });
+        const html = generateHtmlReport(testsWithHierarchy, {
+            computed: computedFor(testsWithHierarchy),
+            title: 'Hierarchy',
+        });
 
         expect(html).toContain('Suite');
         expect(html).toContain('Other');
@@ -137,6 +197,7 @@ describe('GenerateHtmlReport', () => {
 
     it('includes trend section when trends provided', () => {
         const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
             title: 'Trends',
             trends: [
                 { label: 'Mon', passRate: 90, total: 10, failed: 1 },
@@ -153,7 +214,11 @@ describe('GenerateHtmlReport', () => {
             newPasses: [{ title: 'P1', state: 'passed' as const, duration: 50 }],
             flaky: [] satisfies FlatTest[],
         };
-        const html = generateHtmlReport(MOCK_TESTS, { title: 'Diff', diffComparison });
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'Diff',
+            diffComparison,
+        });
 
         expect(html).toContain('Diff');
     });

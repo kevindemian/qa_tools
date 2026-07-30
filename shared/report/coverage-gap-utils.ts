@@ -2,6 +2,7 @@
  *  epic extraction, link parsing, and aggregate calculations. */
 import type { CoverageGapItem, CoverageGapResult, EpicCoverage } from '../types.js';
 import type { JiraIssueFields, JiraIssue } from '../types.js';
+import { COVERAGE_GATE_DEFAULT } from '../constants/thresholds.js';
 
 export const PRIORITY_WEIGHTS: Record<string, number> = {
     Blocker: 5,
@@ -135,7 +136,7 @@ export function buildEpicRollup(items: CoverageGapItem[], epicsMap: Map<string, 
 }
 
 export function getCoverageGateDefaults(): { minCoveragePct: number } {
-    return { minCoveragePct: 50 };
+    return { minCoveragePct: COVERAGE_GATE_DEFAULT };
 }
 
 export function checkQualityGate(

@@ -30,3 +30,32 @@ export { calcTestDurationMap } from './test-duration-map.js';
 export { calcRetryFlaky } from './retry-flaky.js';
 export { calcComputeCost } from './compute-cost.js';
 export type { RetryFlakyResult, ComputeCostResult } from '../../types/data-hub.js';
+export { aggregateDefectTrends, aggregateDefectSeasonality } from './defect-aggregation.js';
+export { detectSilentRegressions } from './regression-detection.js';
+export { computeAiMetrics } from './ai-metrics.js';
+export { computeOptimizationActions } from './optimization-actions.js';
+export { computeImpactAlerts } from './impact-alerts.js';
+export { computeIncidentEvents } from './incident-events.js';
+export { computeTraceabilityTree } from './traceability-tree.js';
+export { computeCrossSquad } from './cross-squad.js';
+export { computeCoverageGap } from './coverage-gap.js';
+export { computeSuiteBreakdown } from './suite-breakdown.js';
+export { computeFailureClassifications } from './failure-classifications.js';
+export { enrichFailuresWithAuthor } from '../extractors/failure-attribution.js';
+export type {
+    AiMetricsResult,
+    AiVersionMetric,
+    AiTrendPoint,
+    DefectAggregationResult,
+    SeasonalityAggregationResult,
+    DefectTrendPoint,
+    SeasonalityDay,
+    SeasonalityHour,
+    RegressionDetectionResult,
+    RegressionEntry,
+    RegressionSeverity,
+    OptimizationResult,
+    OptimizationEntry,
+    OptimizationAction,
+    OptimizationImpact,
+} from '../../types/data-hub-extensions.js';

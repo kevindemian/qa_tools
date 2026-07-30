@@ -19,9 +19,10 @@ export function calcPerRunCosts(runs: PipelineRun[], costPerMinute = 0.008): Per
     // Rule 24 — costPerMinute must be a finite, non-negative rate. Invalid values fall back to 0 (no cost fabricated).
     const safeRate = Number.isFinite(costPerMinute) && costPerMinute >= 0 ? costPerMinute : 0;
     return runs
-        .filter((r) => r.updated_at != null && r.created_at != null)
+        .filter((r) => r.updated_at != null && (r.run_started_at != null || r.created_at != null))
         .map((r) => {
-            const start = new Date(r.created_at as string).getTime();
+            const startStr = r.run_started_at ?? r.created_at;
+            const start = new Date(startStr as string).getTime();
             const end = new Date(r.updated_at as string).getTime();
             // Invalid dates yield NaN; never fabricate a duration from missing data (§25).
             const rawMinutes = Number.isFinite(start) && Number.isFinite(end) ? (end - start) / 60_000 : 0;

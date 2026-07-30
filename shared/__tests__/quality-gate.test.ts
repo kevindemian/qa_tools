@@ -4,18 +4,11 @@ vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),
 }));
 
-vi.mock('../data-hub/compute/flakiness-entries.js', () => ({
-    calcFlakinessEntries: vi.fn(),
-}));
-
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import * as flakinessModule from '../data-hub/compute/flakiness-entries.js';
 import { makeDataHubGetters } from '../test-utils/factories/data-hub-mock.js';
-
-const mockCalcFlakinessEntries = vi.mocked(flakinessModule.calcFlakinessEntries);
 
 function createMockHub(overrides: Record<string, unknown> = {}) {
     return {
@@ -76,7 +69,6 @@ describe('RunQualityGate', () => {
     });
 
     it('returns pass when all gates pass', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -123,7 +115,6 @@ describe('RunQualityGate', () => {
     });
 
     it('returns fail when pass rate is below threshold', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -169,7 +160,6 @@ describe('RunQualityGate', () => {
     });
 
     it('filters by project when project option is passed', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -211,7 +201,6 @@ describe('RunQualityGate', () => {
     });
 
     it('aGGRESIVE: branch scope uses the branch OWN metrics, not repo aggregate (Bug 16)', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -280,9 +269,6 @@ describe('RunQualityGate', () => {
     });
 
     it('fails when flaky rate exceeds threshold', () => {
-        mockCalcFlakinessEntries.mockReturnValue([
-            { title: 'flaky-test-1', project: 'test', rate: 1, passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2 },
-        ]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -335,7 +321,6 @@ describe('RunQualityGate', () => {
     });
 
     it('passes flaky rate when no flaky tests exist', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -398,7 +383,6 @@ describe('RunQualityGate', () => {
     });
 
     it('calculates score as average of check scores', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -441,7 +425,6 @@ describe('RunQualityGate', () => {
     });
 
     it('emits data-quality checks for failureRecords and coverageFiles when present and valid', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -494,7 +477,6 @@ describe('RunQualityGate', () => {
     });
 
     it('lists failureRecords and coverageFiles in incompleteItems when absent (never silent pass)', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [
@@ -537,7 +519,6 @@ describe('RunQualityGate', () => {
     });
 
     it('fails the data-quality check when failureRecords quality is invalid', () => {
-        mockCalcFlakinessEntries.mockReturnValue([]);
         const mockHub = createMockHub({
             raw: {
                 runs: [

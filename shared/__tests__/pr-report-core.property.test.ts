@@ -1,11 +1,8 @@
 import * as fc from 'fast-check';
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 
-const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
-const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
-const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 
 const mockGlobalHub = vi.hoisted(() => ({
     getDataHub: vi.fn().mockReturnValue({
@@ -58,11 +55,8 @@ vi.mock('fs', () => ({
     mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
 }));
-vi.mock('../quality/health-score.js', () => mockHealthScore);
-vi.mock('../quality/quality-gate.js', () => mockQualityGate);
 vi.mock('../ci/github-check-run.js', () => mockCheckRun);
 vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
-vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
 vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
@@ -83,37 +77,12 @@ const FlatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     duration: fc.nat({ max: 60000 }),
 });
 
-const defaultHealthScore = {
-    score: 80,
-    grade: 'B' as const,
-    passRate: 80,
-    metrics: {
-        passRate: 80,
-        failRate: 10,
-        skipRate: 10,
-        flakyRate: 0,
-        quarantineRate: 0,
-        stability: 100,
-        trend: 0,
-        passRateScore: 80,
-        failRateScore: 90,
-        skipRateScore: 90,
-        flakyRateScore: 100,
-        quarantineRatioScore: 100,
-        stabilityScore: 100,
-        trendScore: 100,
-    },
-};
-
 describe('Pr Report Core.Property', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
-        mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
-        mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
-        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
     });
 
     afterAll(() => {

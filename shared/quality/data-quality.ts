@@ -32,17 +32,17 @@ interface CategoryEvaluation {
     allValid: boolean;
 }
 
-const CATEGORY_ACCESSORS: Record<QualityCategory, (hub: DataHub) => unknown[]> = {
-    failureRecords: (h) => h.getFailureRecords() ?? [],
-    securityFindings: (h) => h.getSecurityFindings() ?? [],
-    deployments: (h) => h.getDeployments() ?? [],
-    releases: (h) => h.getReleases() ?? [],
-    pmIssues: (h) => h.getPmIssues() ?? [],
-    coverageFiles: (h) => h.getCoverageFiles() ?? [],
-    doraMetrics: (h) => singleton(h.getDoraMetrics()),
-    performanceMetrics: (h) => singleton(h.getPerformanceMetrics()),
-    pullRequests: (h) => h.getPullRequests() ?? [],
-};
+const CATEGORY_ACCESSORS = new Map<QualityCategory, (hub: DataHub) => unknown[]>([
+    ['failureRecords', (h) => h.getFailureRecords() ?? []],
+    ['securityFindings', (h) => h.getSecurityFindings() ?? []],
+    ['deployments', (h) => h.getDeployments() ?? []],
+    ['releases', (h) => h.getReleases() ?? []],
+    ['pmIssues', (h) => h.getPmIssues() ?? []],
+    ['coverageFiles', (h) => h.getCoverageFiles() ?? []],
+    ['doraMetrics', (h) => singleton(h.getDoraMetrics())],
+    ['performanceMetrics', (h) => singleton(h.getPerformanceMetrics())],
+    ['pullRequests', (h) => h.getPullRequests() ?? []],
+]);
 
 const CATEGORIES: QualityCategory[] = [
     'failureRecords',
@@ -61,13 +61,15 @@ function singleton<T>(value: T | undefined): T[] {
 }
 
 function evaluateCategories(hub: DataHub): CategoryEvaluation {
-    const categories: DataQualitySummary['categories'] = {};
+    const categories = new Map<QualityCategory, { valid: boolean; issues: string[] }>();
     const notes: string[] = [];
     let anyData = false;
     let allValid = true;
 
     for (const category of CATEGORIES) {
-        const data = CATEGORY_ACCESSORS[category](hub);
+        const accessor = CATEGORY_ACCESSORS.get(category);
+        if (!accessor) continue;
+        const data = accessor(hub);
         if (data.length === 0) continue;
 
         anyData = true;
@@ -78,10 +80,13 @@ function evaluateCategories(hub: DataHub): CategoryEvaluation {
             const detail = (report?.issues ?? []).join('; ');
             notes.push(`Dados de "${category}" com problemas de qualidade${detail ? ': ' + detail : ''}.`);
         }
-        categories[category] = { valid, issues: report?.issues ?? [] };
+        categories.set(category, { valid, issues: report?.issues ?? [] });
     }
 
-    return { categories, notes, anyData, allValid };
+    const categoriesRecord: Partial<Record<QualityCategory, { valid: boolean; issues: string[] }>> =
+        Object.fromEntries(categories);
+
+    return { categories: categoriesRecord, notes, anyData, allValid };
 }
 
 function computeMinConfidence(provenance: Map<string, DataSource> | undefined): number | null {

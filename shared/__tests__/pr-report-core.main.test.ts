@@ -1,10 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 
-const mockHealthScore = vi.hoisted(() => ({ calculateHealthScore: vi.fn() }));
-const mockQualityGate = vi.hoisted(() => ({ runQualityGate: vi.fn() }));
 const mockCheckRun = vi.hoisted(() => ({ createCheckRun: vi.fn() }));
 const mockPRComment = vi.hoisted(() => ({ postPrComment: vi.fn() }));
-const mockHtml = vi.hoisted(() => ({ generateHtmlReport: vi.fn() }));
 const mockGetConfig = vi.hoisted(() => vi.fn());
 const mockFeatureConfig = vi.hoisted(() => ({
     isAiSkipped: vi.fn(),
@@ -23,11 +20,8 @@ vi.mock('fs', () => ({
     writeFileSync: vi.fn(),
     existsSync: vi.fn(),
 }));
-vi.mock('../quality/health-score.js', () => mockHealthScore);
-vi.mock('../quality/quality-gate.js', () => mockQualityGate);
 vi.mock('../ci/github-check-run.js', () => mockCheckRun);
 vi.mock('../ci/github-pr-comment.js', () => mockPRComment);
-vi.mock('../report/report-html.js', () => mockHtml);
 vi.mock('../feature-config.js', () => ({
     getPrReportConfig: mockGetConfig,
     isAiSkipped: mockFeatureConfig.isAiSkipped,
@@ -40,37 +34,12 @@ import fs from 'node:fs';
 import { main } from '../pr-report-core.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
-const defaultHealthScore = {
-    score: 80,
-    grade: 'B' as const,
-    passRate: 80,
-    metrics: {
-        passRate: 80,
-        failRate: 10,
-        skipRate: 10,
-        flakyRate: 0,
-        quarantineRate: 0,
-        stability: 100,
-        trend: 0,
-        passRateScore: 80,
-        failRateScore: 90,
-        skipRateScore: 90,
-        flakyRateScore: 100,
-        quarantineRatioScore: 100,
-        stabilityScore: 100,
-        trendScore: 100,
-    },
-};
-
 describe('Pr Report Core.Main', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env['GITHUB_STEP_SUMMARY'];
-        mockHealthScore.calculateHealthScore.mockReturnValue(defaultHealthScore);
-        mockQualityGate.runQualityGate.mockReturnValue(null);
         mockCheckRun.createCheckRun.mockResolvedValue(undefined);
         mockPRComment.postPrComment.mockResolvedValue(undefined);
-        mockHtml.generateHtmlReport.mockReturnValue('<html>mock</html>');
         mockGetConfig.mockReturnValue({
             enabled: true,
             publishTarget: 'github-ci',
@@ -170,11 +139,6 @@ describe('Pr Report Core.Main', () => {
         it('calls generatePrReport and posts comment on success', async () => {
             expect.hasAssertions();
 
-            mockQualityGate.runQualityGate.mockReturnValue({
-                overall: 'pass' as const,
-                score: 100,
-                checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
-            });
             mockPRComment.postPrComment.mockResolvedValue({
                 html_url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
             });
@@ -186,11 +150,6 @@ describe('Pr Report Core.Main', () => {
         it('handles no comment URL gracefully', async () => {
             expect.hasAssertions();
 
-            mockQualityGate.runQualityGate.mockReturnValue({
-                overall: 'pass' as const,
-                score: 100,
-                checks: [{ name: 'Pass Rate', status: 'pass' as const, score: 100, threshold: 80 }],
-            });
             mockPRComment.postPrComment.mockResolvedValue({});
             await main();
 

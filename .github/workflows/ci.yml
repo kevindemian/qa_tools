@@ -176,9 +176,9 @@ jobs:
               run: |
                   EXIT_CODE=0
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    npx tautest run --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                    npx tautest run --config tautest.config.json --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode || EXIT_CODE=$?
                   else
-                    npx tautest run --base HEAD~1 --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                    npx tautest run --config tautest.config.json --base HEAD~1 --threshold 60 --prompt-style opencode || EXIT_CODE=$?
                   fi
                   # Exit code 2 = no production files to mutate (expected for test-only changes)
                   if [ "${EXIT_CODE}" = "2" ]; then

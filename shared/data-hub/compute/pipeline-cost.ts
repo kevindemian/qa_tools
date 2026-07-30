@@ -10,6 +10,7 @@
  */
 import type { PipelineRun } from '../../types/ci-cd.js';
 import type { CostEstimate } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
 
 /** Default cost per compute minute in USD. */
 const DEFAULT_COST_PER_MINUTE = 0.01;
@@ -28,7 +29,18 @@ const DEFAULT_COST_PER_MINUTE = 0.01;
  * ```
  */
 export function calcPipelineCost(runs: PipelineRun[], costPerMinute?: number): CostEstimate {
-    const cpm = costPerMinute ?? DEFAULT_COST_PER_MINUTE;
+    const cpm =
+        costPerMinute !== undefined && Number.isFinite(costPerMinute) && costPerMinute > 0
+            ? costPerMinute
+            : DEFAULT_COST_PER_MINUTE;
+    if (costPerMinute !== undefined && !Number.isFinite(costPerMinute)) {
+        rootLogger.warn('pipeline-cost: non-finite costPerMinute, using default', {
+            operation: 'calcPipelineCost',
+            input: costPerMinute,
+            fallback: DEFAULT_COST_PER_MINUTE,
+            remediation: 'Cost per minute must be a finite positive number.',
+        });
+    }
 
     if (runs.length === 0) {
         return { totalMinutes: 0, estimatedCost: 0 };

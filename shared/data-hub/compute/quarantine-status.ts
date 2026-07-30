@@ -8,6 +8,7 @@
 import type { FlakyResult, QuarantineStatus } from '../../types/data-hub.js';
 import type { QuarantineConfig } from './types.js';
 import { DEFAULT_QUARANTINE_CONFIG } from './types.js';
+import { rootLogger } from '../../logger.js';
 
 /**
  * Determine quarantine status for flaky tests.
@@ -22,7 +23,18 @@ export function calcQuarantineStatus(
     flakyResults: FlakyResult[],
     config: QuarantineConfig = DEFAULT_QUARANTINE_CONFIG,
 ): QuarantineStatus {
-    const quarantinedCount = flakyResults.filter((r) => r.rate >= config.quarantineThreshold).length;
+    const quarantinedCount = flakyResults.filter((r) => {
+        if (!Number.isFinite(r.rate)) {
+            rootLogger.warn('quarantine-status: non-finite flaky rate, test excluded from quarantine check', {
+                operation: 'calcQuarantineStatus',
+                testName: r.title,
+                rate: r.rate,
+                remediation: 'Non-finite rate excluded; test will not be quarantined.',
+            });
+            return false;
+        }
+        return r.rate >= config.quarantineThreshold;
+    }).length;
 
     return {
         flakyCount: flakyResults.length,

@@ -1,7 +1,7 @@
 /**
  * Chart primitives — BarChart, TrendChart, Sparkline, ProgressBar.
  *
- * SVG-based chart rendering with consistent colors from design tokens.
+ * SVG-based chart rendering using data-* attributes for CSS styling.
  *
  * @module primitives/chart
  */
@@ -28,7 +28,7 @@ export function BarChart(props: BarChartProps): string {
     const h = props.height ?? 30;
     const finiteSegments = props.segments.filter((seg) => Number.isFinite(seg.value));
     if (finiteSegments.length === 0 || props.segments.length === 0) {
-        return `<svg data-component="bar-chart" viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;height:auto"
+        return `<svg data-component="bar-chart" viewBox="0 0 ${w} ${h}" width="100%"
         role="${props.role || 'img'}" ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
         xmlns="http://www.w3.org/2000/svg"></svg>`;
     }
@@ -51,7 +51,7 @@ ${label}`;
         x += segW;
     }
 
-    return `<svg data-component="bar-chart" viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;height:auto"
+    return `<svg data-component="bar-chart" viewBox="0 0 ${w} ${h}" width="100%"
         role="${props.role || 'img'}" ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
         xmlns="http://www.w3.org/2000/svg">
         ${bars}
@@ -125,9 +125,9 @@ export function Sparkline(props: SparklineProps): string {
     const w = props.width ?? 100;
     const h = props.height ?? 8;
     if (!Number.isFinite(props.value) || !Number.isFinite(props.maxValue ?? 100) || props.maxValue === 0) {
+        const emptyAriaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
         return `<div data-component="sparkline" role="${props.role || 'img'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="display:inline-block;vertical-align:middle"></div>`;
+        ${emptyAriaAttr}></div>`;
     }
     const pct = Math.min((props.value / (props.maxValue || 100)) * 100, 100);
     let color: string;
@@ -140,8 +140,7 @@ export function Sparkline(props: SparklineProps): string {
     }
 
     const ariaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
-    return `<div data-component="sparkline" role="${props.role || 'img'}" ${ariaAttr}
-        style="display:inline-block;vertical-align:middle">
+    return `<div data-component="sparkline" role="${props.role || 'img'}" ${ariaAttr}>
         <span style="display:inline-block;width:${w}px;height:${h}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.pill}px;overflow:hidden">
             <span style="display:block;height:100%;width:${pct.toFixed(0)}px;background:${color};border-radius:${tokens.borderRadius.pill}px;transition:width 0.3s"></span>
         </span>
@@ -161,19 +160,17 @@ export interface ProgressBarProps {
 export function ProgressBar(props: ProgressBarProps): string {
     const max = props.max ?? 100;
     if (!Number.isFinite(props.value) || !Number.isFinite(max) || max <= 0) {
+        const emptyAriaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
         return `<div data-component="progress-bar" role="${props.role || 'progressbar'}"
         aria-valuenow="0" aria-valuemin="0" aria-valuemax="0"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="height:${props.height ?? 8}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.sm}px;overflow:hidden;margin:${tokens.spacing.xs}px 0"></div>`;
+        ${emptyAriaAttr}></div>`;
     }
     const pct = Math.min((props.value / max) * 100, 100);
     const color = props.color ?? tokens.color.semantic.info.light;
-    const h = props.height ?? 8;
     return `<div data-component="progress-bar" role="${props.role || 'progressbar'}"
         aria-valuenow="${props.value}" aria-valuemin="0" aria-valuemax="${max}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="height:${h}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.sm}px;overflow:hidden;margin:${tokens.spacing.xs}px 0">
-        <div style="height:100%;width:${pct.toFixed(0)}%;background:${color};border-radius:${tokens.borderRadius.sm}px;transition:width 0.3s"></div>
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
+        <div style="width:${pct.toFixed(0)}%;background:${color}"></div>
         ${props.showLabel ? `<span style="font-size:${tokens.fontSize.xs};color:var(--color-text-muted);margin-top:2px;display:block;text-align:right">${pct.toFixed(0)}%</span>` : ''}
     </div>`;
 }

@@ -7,6 +7,7 @@ import { readConfigFileSafe } from './secure-io.js';
 import { executeConfigInIsolate, logIsolateFallback } from './reporter-isolate.js';
 import { extractReportersAst, extractReportersFromJsonObject } from './reporter-ast.js';
 import { matchReporter } from './reporter-registry.js';
+import { CTRF_REPORT_PATH } from '../shared/constants/ci-paths.js';
 
 export interface DetectionResult {
     framework: Framework;
@@ -22,7 +23,7 @@ const DEFAULTS: Record<Framework, DetectionResult> = {
         framework: 'cypress',
         testCmd: 'npx cypress run --reporter ctrf',
         installCmd: 'npm ci',
-        testReportPath: 'cypress/reports/ctrf-report.json',
+        testReportPath: CTRF_REPORT_PATH,
         nodeVersion: '20',
         testReportSource: 'cli-flag',
     },

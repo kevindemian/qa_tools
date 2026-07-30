@@ -51,9 +51,9 @@ export function buildChartSection(stats: ReportStats, wantChart: boolean): strin
     if (!wantChart || stats.total === 0) return '';
     const legend =
         '<div class="legend">' +
-        `<span><span class="dot" style="background:${tokens.color.chart.pass}"></span> Passed (${stats.passed})</span>` +
-        `<span><span class="dot" style="background:${tokens.color.chart.fail}"></span> Failed (${stats.failed})</span>` +
-        `<span><span class="dot" style="background:${tokens.color.chart.skip}"></span> Skipped (${stats.skipped})</span>` +
+        `<span><span class="dot dot-pass" style="--color-chart-pass:${tokens.color.chart.pass}"></span> Passed (${stats.passed})</span>` +
+        `<span><span class="dot dot-fail" style="--color-chart-fail:${tokens.color.chart.fail}"></span> Failed (${stats.failed})</span>` +
+        `<span><span class="dot dot-skip" style="--color-chart-skip:${tokens.color.chart.skip}"></span> Skipped (${stats.skipped})</span>` +
         '</div>';
     return Card({
         title: 'Distribution',

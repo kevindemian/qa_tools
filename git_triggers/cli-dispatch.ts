@@ -17,14 +17,16 @@ import { createGitProvider } from './git-provider-factory.js';
  * Resolve and activate the multi-project context for a CLI invocation (055).
  * Priority: `--project` flag > `QA_CURRENT_PROJECT` env > no selection (interactive menu).
  * Throws if the resolved project name is invalid/unknown (fail-loud, zero silencing).
+ * @param args CLI arguments containing optional `project` name
+ * @param cwd Working directory for self-host resolution (defaults to `process.cwd()`)
  * @returns the resolved project name, or undefined when none is requested.
  */
-export function applyProjectContext(args: Pick<CliArgs, 'project'>): string | undefined {
+export function applyProjectContext(args: Pick<CliArgs, 'project'>, cwd: string = process.cwd()): string | undefined {
     const fromFlag = args.project;
     const fromEnv = process.env['QA_CURRENT_PROJECT'];
     const name = fromFlag ?? (fromEnv && fromEnv.length > 0 ? fromEnv : undefined);
     if (!name) return undefined;
-    ensureSelfHostProject(name);
+    ensureSelfHostProject(name, cwd);
     return name;
 }
 
