@@ -93,8 +93,8 @@ describe('LinkTypeManager', () => {
             vi.spyOn(fs, 'existsSync').mockReturnValue(false);
             const result = await manager.getIssueLinkTypes();
 
-            expect(result).toHaveLength(3);
-            expect(nonNull(result[0]).name).toBe('Relates');
+            expect(result).toHaveLength(4);
+            expect(nonNull(result[0]).name).toBe('Test');
         });
 
         it('logs warning when cache write throws', async () => {
@@ -119,8 +119,8 @@ describe('LinkTypeManager', () => {
             const result = await manager.getIssueLinkTypes();
 
             expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Falha ao ler cache'));
-            expect(result).toHaveLength(3);
-            expect(nonNull(result[0]).name).toBe('Relates');
+            expect(result).toHaveLength(4);
+            expect(nonNull(result[0]).name).toBe('Test');
         });
     });
 

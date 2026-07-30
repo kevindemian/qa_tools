@@ -177,13 +177,14 @@ describe('Case01.Integration', () => {
                     status: 'OK',
                     sourcePath: '/x.csv',
                     failedLinks: [],
+                    parentIssues: [],
                 },
             } as never);
 
             const ctx = makeContext();
             await case01.handler(ctx);
 
-            expect(mockOfferTE).toHaveBeenCalledWith(ctx, ['TEST-1'], expect.any(String));
+            expect(mockOfferTE).toHaveBeenCalledWith(ctx, ['TEST-1'], expect.any(String), expect.any(Array));
         });
     });
 

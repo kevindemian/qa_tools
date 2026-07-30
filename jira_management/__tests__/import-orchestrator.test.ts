@@ -94,37 +94,32 @@ describe('Import Orchestrator', () => {
 
     describe('PrepareTestRun', () => {
         it('user cancels via confirmOrCancel', async () => {
-            expect.hasAssertions();
-
             vi.mocked(confirmOrCancel).mockReturnValue(false);
-            await expect(
-                prepareTestRun({
-                    tests: makeTestCases(2),
-                    sourcePath: '/p.csv',
-                    sourceType: 'csv',
-                    project_name: 'PROJ',
-                    jiraLabels: [],
-                    onBusy,
-                    warn,
-                }),
-            ).rejects.toThrow(/cancelada/);
+            const result = await prepareTestRun({
+                tests: makeTestCases(2),
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                onBusy,
+                warn,
+            });
+            expect(result).toBeUndefined();
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
         });
 
         it('filterTests returns null', async () => {
-            expect.hasAssertions();
-
             vi.mocked(filterTests).mockReturnValue(null);
-            await expect(
-                prepareTestRun({
-                    tests: makeTestCases(2),
-                    sourcePath: '/p.csv',
-                    sourceType: 'csv',
-                    project_name: 'PROJ',
-                    jiraLabels: [],
-                    onBusy,
-                    warn,
-                }),
-            ).rejects.toThrow(/Filtragem resultou em zero testes/);
+            const result = await prepareTestRun({
+                tests: makeTestCases(2),
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                onBusy,
+                warn,
+            });
+            expect(result).toBeUndefined();
         });
 
         it('dry-run returns early', async () => {
@@ -211,6 +206,7 @@ describe('Import Orchestrator', () => {
                 failedLinks: ['cross-ref:TEST-1'],
                 inMemoryTasksId: ['T-1'],
                 inMemoryTasksText: ['Test 1'],
+                parentIssues: [],
                 sourcePath: '/p.csv',
                 sourceType: 'csv',
                 project_name: 'PROJ',

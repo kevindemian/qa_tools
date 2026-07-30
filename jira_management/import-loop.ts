@@ -5,7 +5,6 @@ import type IssueLinker from './issue-linker.js';
 import { rootLogger } from '../shared/logger.js';
 import { update as updateState } from '../shared/state.js';
 import { JiraPayloadSchema } from './csv-import-schema.js';
-import type { JiraResourceLike } from './jira-resource-types.js';
 
 interface LinkRelationsResult {
     abort: boolean;
@@ -255,7 +254,7 @@ function updateFinalState(sourceType: string, sourcePath: string, projectName: s
 /** Delete a partially-created issue on abort (Risk #3 rollback).
  *  Best-effort: logs warning on failure but does not throw. */
 async function rollbackCreatedIssue(
-    jiraResource: JiraResourceLike,
+    jiraResource: { deleteJiraResource: (url: string) => Promise<unknown> },
     issueKey: string,
     testTitle: string,
 ): Promise<void> {
