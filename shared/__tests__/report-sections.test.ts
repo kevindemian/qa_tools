@@ -9,6 +9,7 @@
 import { nonNull } from '../test-utils.js';
 import type { FlatTest } from '../result_parser.js';
 import type { TestRunTab, ReportOptions, ReportStats } from '../report/report-types.js';
+import type { SuiteBreakdown, ComputedMetrics } from '../types/data-hub.js';
 import {
     buildTabs,
     buildTabContents,
@@ -28,6 +29,28 @@ const sampleTests: FlatTest[] = [
     { title: 'TC02', state: 'failed', duration: 200 },
     { title: 'TC03', state: 'skipped', duration: 0 },
 ];
+
+function suiteBreakdownFromTests(tests: FlatTest[]): SuiteBreakdown[] {
+    const map = new Map<string, SuiteBreakdown>();
+    for (const t of tests) {
+        const suite = '(root)';
+        let agg = map.get(suite);
+        if (!agg) {
+            agg = { suite, passed: 0, failed: 0, skipped: 0, totalDuration: 0, tests: [] };
+            map.set(suite, agg);
+        }
+        if (t.state === 'passed') agg.passed++;
+        else if (t.state === 'failed') agg.failed++;
+        else agg.skipped++;
+        agg.totalDuration += t.duration;
+        agg.tests.push(t);
+    }
+    return Array.from(map.values());
+}
+
+function computedWith(tests: FlatTest[]): Partial<ComputedMetrics> {
+    return { suiteBreakdown: suiteBreakdownFromTests(tests) };
+}
 
 const sampleStats: ReportStats = { passed: 1, failed: 1, skipped: 1, total: 3, duration: 300 };
 
@@ -129,7 +152,7 @@ describe('BuildTimeline', () => {
     });
 
     it('returns timeline chart aggregated by suite', () => {
-        const html = buildTimeline(sampleTests);
+        const html = buildTimeline(sampleTests, computedWith(sampleTests) as ComputedMetrics);
 
         expect(html).toContain('Timeline');
         expect(html).toContain('timelineBody');
@@ -138,7 +161,7 @@ describe('BuildTimeline', () => {
     });
 
     it('includes suite summary badges', () => {
-        const html = buildTimeline(sampleTests);
+        const html = buildTimeline(sampleTests, computedWith(sampleTests) as ComputedMetrics);
 
         expect(html).toContain('data-component="badge"');
     });
@@ -148,14 +171,14 @@ describe('BuildTimeline', () => {
             { title: 'T1', state: 'passed', duration: 0 },
             { title: 'T2', state: 'passed', duration: 0 },
         ];
-        const html = buildTimeline(tests);
+        const html = buildTimeline(tests, computedWith(tests) as ComputedMetrics);
 
         expect(html).toContain('2 tests');
         expect(html).not.toBe('');
     });
 
     it('includes duration labels', () => {
-        const html = buildTimeline(sampleTests);
+        const html = buildTimeline(sampleTests, computedWith(sampleTests) as ComputedMetrics);
 
         expect(html).toContain('0s');
     });

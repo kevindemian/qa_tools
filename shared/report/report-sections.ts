@@ -86,36 +86,9 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
     return html;
 }
 
-interface SuiteAggregate {
-    suite: string;
-    passed: number;
-    failed: number;
-    skipped: number;
-    totalDuration: number;
-    tests: FlatTest[];
-}
-
-function aggregateBySuite(tests: FlatTest[]): SuiteAggregate[] {
-    const map = new Map<string, SuiteAggregate>();
-    for (const t of tests) {
-        const suite = extractSuite(t) || '(root)';
-        let agg = map.get(suite);
-        if (!agg) {
-            agg = { suite, passed: 0, failed: 0, skipped: 0, totalDuration: 0, tests: [] };
-            map.set(suite, agg);
-        }
-        if (t.state === 'passed') agg.passed++;
-        else if (t.state === 'failed') agg.failed++;
-        else agg.skipped++;
-        agg.totalDuration += t.duration;
-        agg.tests.push(t);
-    }
-    return Array.from(map.values());
-}
-
 export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): string {
     if (tests.length === 0) return '';
-    const suites = computed?.suiteBreakdown ?? aggregateBySuite(tests);
+    const suites = computed?.suiteBreakdown ?? [];
     let maxDur = 0;
     for (const s of suites) {
         if (s.totalDuration > maxDur) maxDur = s.totalDuration;

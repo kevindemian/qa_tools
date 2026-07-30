@@ -19,7 +19,6 @@ import {
 import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
-import { statsFromTests } from '../../shared/report/report-utils.js';
 import { analyzeFailuresWithReport, type LlmContext } from '../../shared/validation/failure-analysis.js';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/report/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
@@ -377,8 +376,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const resolvedPath = await _writeReportFile(html, c.ctx.project_name);
 
     const htmlDir = path.dirname(resolvedPath);
-    const testStats = statsFromTests(result.tests);
-    const { passed, failed, skipped } = testStats;
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    const testCounts = hub?.computed.testCounts ?? { passed: 0, failed: 0, skipped: 0, total: 0 };
+    const { passed, failed, skipped } = testCounts;
     fs.writeFileSync(
         sanitizePath(htmlDir, 'report.ctrf.json'),
         JSON.stringify(

@@ -21,7 +21,7 @@ import type { DataHub, ReportMeta, ComputedMetrics } from './types/data-hub.js';
 import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
-import { statsFromTests, statsFromMetricsRun } from './report/report-utils.js';
+import { statsFromMetricsRun } from './report/report-utils.js';
 
 interface SessionCountersItem {
     op: string;
@@ -136,7 +136,8 @@ function tryLoadFromCache(sha: string | null, store: DataHub): { result: ParseRe
             const tests = cached.tests;
             const hub = store as { computed?: ComputedMetrics };
             const firstRun = hub.computed?.metricsRuns?.[0];
-            const stats = firstRun ? statsFromMetricsRun(firstRun) : statsFromTests(tests);
+            if (!firstRun) return null;
+            const stats = statsFromMetricsRun(firstRun);
             return {
                 result: {
                     tests,
@@ -209,7 +210,7 @@ function resolveFromBranch(
     const entries = store.getBranch(branch);
     if (entries.length === 0) return null;
     const lastSha = entries[0]?.sha;
-    if (!lastSha) return null;
+    if (!lastSha || lastSha === sha) return null;
     return resolveTestDataSource(projectName, lastSha, branch, store);
 }
 

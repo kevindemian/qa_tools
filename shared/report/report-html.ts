@@ -32,7 +32,7 @@ import {
     buildTimeline,
     buildHealthSection,
 } from './report-sections.js';
-import { buildTestTable, precomputeCategories } from './report-table.js';
+import { buildTestTable } from './report-table.js';
 import { buildDiffComparisonSection } from './report-diff.js';
 import Config from '../config-accessor.js';
 import { Card, MetricCard, Badge } from '../primitives/index.js';
@@ -118,8 +118,7 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
         const passRate =
             computed.passRate || (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
         const title = options.title || DEFAULT_TITLE;
-        const categories =
-            options.testCategories || computed.failureClassifications || precomputeCategories(precomputedRun.tests);
+        const categories = options.testCategories || computed.failureClassifications || {};
         const timestamp = options.generatedAt || new Date().toISOString();
         const dashboardId = options.dashboardId || 'coverage-report';
         const trends = computed.metricsTrends ?? options.trends ?? [];

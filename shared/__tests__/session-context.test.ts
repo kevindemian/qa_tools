@@ -202,6 +202,25 @@ describe('ResolveTestDataSource', () => {
                 { title: 'T2', state: 'failed', duration: 50, error: 'fail' },
             ],
         });
+        Object.assign(store, {
+            computed: {
+                metricsRuns: [
+                    {
+                        timestamp: '2026-01-01',
+                        project: 'test',
+                        total: 2,
+                        passed: 1,
+                        failed: 1,
+                        skipped: 0,
+                        duration: 150,
+                        tests: [
+                            { title: 'T1', state: 'passed', duration: 100 },
+                            { title: 'T2', state: 'failed', duration: 50 },
+                        ],
+                    },
+                ],
+            },
+        });
 
         const result = await resolveTestDataSource('project', 'sha123', 'main', store as never);
 
@@ -285,6 +304,22 @@ describe('ResolveTestDataSource', () => {
             .mockReturnValueOnce({
                 tests: [{ title: 'T1', state: 'passed', duration: 100 }],
             });
+        Object.assign(store, {
+            computed: {
+                metricsRuns: [
+                    {
+                        timestamp: '2026-01-01',
+                        project: 'test',
+                        total: 1,
+                        passed: 1,
+                        failed: 0,
+                        skipped: 0,
+                        duration: 100,
+                        tests: [{ title: 'T1', state: 'passed', duration: 100 }],
+                    },
+                ],
+            },
+        });
 
         const result = await resolveTestDataSource('project', 'sha789', 'main', store as never);
 
