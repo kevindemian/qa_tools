@@ -18,7 +18,7 @@ import {
     checkQualityGate,
     loadEpicSummaries,
     getCoverageGateDefaults,
-} from '../../report/coverage-gap-utils.js';
+} from '../../primitives/coverage-utils.js';
 import { rootLogger } from '../../logger.js';
 
 /**

@@ -156,7 +156,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockDataProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
+            await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const metrics = [
                 {
@@ -181,7 +181,7 @@ describe('System: CI Data Hub — Full Pipeline Flow', () => {
                 },
             });
 
-            const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+            const result = buildTraceabilityMatrix(metrics, coverageResult, []);
 
             expect(result.nodes.length).toBeGreaterThan(0);
         });

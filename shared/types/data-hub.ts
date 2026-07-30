@@ -645,6 +645,52 @@ export interface SuiteBreakdown {
     tests: import('../result_parser.js').FlatTest[];
 }
 
+export type TestStatus = 'passed' | 'failed' | 'skipped';
+
+export interface TraceabilityNode {
+    epic: string;
+    coverage: number;
+    health: number;
+    flakiness: number;
+    stories: Array<{
+        key: string;
+        coverage: number;
+        health: number;
+        flakiness: number;
+        tests: Array<{
+            title: string;
+            status: TestStatus;
+            duration: number;
+            flakiness: number;
+        }>;
+    }>;
+}
+
+export interface TraceabilityResult {
+    nodes: TraceabilityNode[];
+    totalEpics: number;
+    totalTests: number;
+    overallCoverage: number;
+    timestamp: string;
+    awareness: TraceabilityAwareness;
+}
+
+export interface TraceabilityAwarenessEntity {
+    id: string;
+    confidence: number | null;
+    valid: boolean;
+}
+
+export interface TraceabilityAwarenessCategory {
+    category: string;
+    entities: TraceabilityAwarenessEntity[];
+}
+
+export interface TraceabilityAwareness {
+    categories: TraceabilityAwarenessCategory[];
+    minConfidence: number | null;
+}
+
 export interface ComputedMetrics {
     passRate: number;
     avgDuration: number;
@@ -710,7 +756,7 @@ export interface ComputedMetrics {
     /** Incident events: failures, regressions, coverage gaps, and seasonality. */
     incidentEvents?: import('../report/incident-report.js').IncidentReport | undefined;
     /** Traceability tree: epic > story > test mapping with coverage and health. */
-    traceabilityTree?: import('../report/traceability-matrix.js').TraceabilityResult | undefined;
+    traceabilityTree?: TraceabilityResult | undefined;
     /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
     crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
     // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────

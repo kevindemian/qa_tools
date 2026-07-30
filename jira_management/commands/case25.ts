@@ -15,7 +15,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     try {
         const hub = getDataHub();
-        const matrix = buildTraceabilityMatrix(hub.computed.metricsRuns ?? [], undefined, hub);
+        const matrix = buildTraceabilityMatrix(hub.computed.metricsRuns ?? [], undefined, []);
 
         const html = generateTraceabilityHtml(matrix, 'Traceability Matrix — ' + projectName);
         const filePath = writeReport('traceability-matrix-' + projectName + '.html', html);

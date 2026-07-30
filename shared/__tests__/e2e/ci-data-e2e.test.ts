@@ -156,7 +156,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
 
             const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
             const provider = createMockProvider(rawData);
-            const { hub } = await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
+            await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
 
             const metrics = [
                 {
@@ -181,7 +181,7 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
                 },
             });
 
-            const result = buildTraceabilityMatrix(metrics, coverageResult, hub);
+            const result = buildTraceabilityMatrix(metrics, coverageResult, []);
             const html = generateTraceabilityHtml(result);
 
             expect(html).toContain('<!DOCTYPE html>');

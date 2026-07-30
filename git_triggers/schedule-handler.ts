@@ -190,7 +190,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
                 : 0,
         );
         const defects = aggregateDefectTrends(failureClassifications);
-        const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, dataHub);
+        const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, []);
 
         const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
         const backlogIssues = mapJiraIssuesToBacklogHealth(rawJiraIssues);

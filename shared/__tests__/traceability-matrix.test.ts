@@ -1,12 +1,10 @@
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
-import type { MetricsRun, FlakyResult, RawData } from '../types/data-hub.js';
+import type { MetricsRun, FlakyResult } from '../types/data-hub.js';
 import type { QualityCategory, QualityReport } from '../data-hub/quality.js';
 import type { DataSource } from '../types/data-hub.js';
 import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../types/coverage.js';
 import { rootLogger } from '../logger.js';
 import { nonNull } from '../test-utils.js';
-import { createTestHub } from './test-hub.js';
-import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 /** Forma estreita histórica dos fixtures de cobertura (item.epic / byEpic estreito). */
 interface NarrowCoverageItem {
@@ -66,7 +64,11 @@ function matrix(
     flakyRate?: FlakyResult[],
 ): ReturnType<typeof buildTraceabilityMatrix> {
     const canonical = coverage ? toCanonicalCoverage(coverage) : undefined;
-    return buildTraceabilityMatrix(metrics, canonical, createTestHub({ flakyRate: flakyRate ?? [] }));
+    return buildTraceabilityMatrix(
+        metrics,
+        canonical,
+        (flakyRate ?? []).map((f) => ({ title: f.title, rate: f.rate })),
+    );
 }
 
 function emptyMetrics(): MetricsRun[] {
@@ -554,28 +556,18 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
             pmIssues: { valid: true, issues: [] },
             securityFindings: { valid: false, issues: ['f1 schema gap'] },
         };
-        const raw: RawData = {
-            runs: [],
-            jobs: new Map(),
-            artifacts: new Map(),
-            failureReasons: new Map(),
-            pmIssues: [
-                {
-                    source: 'github',
-                    id: 1,
-                    key: 'PROJ-1',
-                    title: 'story',
-                    state: 'open',
-                    labels: [],
-                    createdAt: '2026-01-01',
-                    confidence: 0.9,
-                },
-            ],
-            securityFindings: [{ tool: 'codeql', severity: 'low', title: 'f1', confidence: 0.9 }],
-        };
-        const hub = makeDataHubMock({ raw, provenance, quality });
-
-        const result = buildTraceabilityMatrix([], undefined, hub);
+        const result = buildTraceabilityMatrix(
+            [],
+            undefined,
+            [],
+            provenance,
+            quality,
+            undefined,
+            [{ key: 'PROJ-1' }],
+            undefined,
+            undefined,
+            [{ title: 'f1' }],
+        );
 
         const cats = result.awareness.categories;
 
@@ -601,10 +593,7 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
     it('omits the awareness panel when no ST-1 category is present', () => {
         expect.hasAssertions();
 
-        const hub = makeDataHubMock({
-            raw: { runs: [], jobs: new Map(), artifacts: new Map(), failureReasons: new Map() },
-        });
-        const result = buildTraceabilityMatrix([], undefined, hub);
+        const result = buildTraceabilityMatrix([], undefined, []);
 
         expect(result.awareness.categories).toHaveLength(0);
         expect(generateTraceabilityHtml(result)).not.toContain('Awareness Section');

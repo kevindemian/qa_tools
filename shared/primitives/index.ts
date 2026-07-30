@@ -48,3 +48,18 @@ export { buildHtmlPage, buildThemeScript, buildErrorPage } from './html-factory.
 export type { HtmlPageParams } from './html-factory.js';
 
 export { buildCss, buildCssVars, buildDarkVars } from './report-styles.js';
+
+export {
+    PRIORITY_WEIGHTS,
+    getCoverageWeight,
+    normalizeType,
+    extractEpicKey,
+    extractLinkedTestKeys,
+    buildCoverageItems,
+    calculateTotals,
+    buildEpicRollup,
+    getCoverageGateDefaults,
+    checkQualityGate,
+    loadEpicSummaries,
+} from './coverage-utils.js';
+export type { CoverageGapItem, CoverageGapResult, EpicCoverage } from '../types.js';

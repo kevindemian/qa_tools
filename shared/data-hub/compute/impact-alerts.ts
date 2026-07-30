@@ -1,25 +1,8 @@
-/**
- * Compute: Impact Alerts.
- *
- * Produces ImpactAlertResult from hub data by delegating to the barrel's
- * analyzePipelineImpact function. This module extracts the required data
- * from RawData + ComputedMetrics and passes it through.
- *
- * @module impact-alerts
- */
-
 import type { RawData, ComputedMetrics } from '../../types/data-hub.js';
-import type { ImpactAlertResult } from '../../report/impact-alert.js';
-import { analyzePipelineImpact } from '../../report/impact-alert.js';
+import type { ImpactAlertResult } from '../../primitives/impact-analysis.js';
+import { analyzePipelineImpact } from '../../primitives/impact-analysis.js';
 import { rootLogger } from '../../logger.js';
 
-/**
- * Compute impact alerts from hub data.
- *
- * @param _raw - Raw CI/CD data from the hub (reserved for future use).
- * @param computed - Pre-computed metrics from the hub.
- * @returns ImpactAlertResult with alerts grouped by severity.
- */
 export function computeImpactAlerts(_raw: RawData, computed: ComputedMetrics): ImpactAlertResult {
     const passRate = Number.isFinite(computed.passRate) ? computed.passRate : undefined;
     const coveragePct = Number.isFinite(computed.coverage) ? computed.coverage : undefined;

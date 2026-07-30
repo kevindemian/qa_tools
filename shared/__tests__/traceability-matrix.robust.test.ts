@@ -22,7 +22,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
-import { createTestHub } from './test-hub.js';
 import { makeCoverageGapResult } from './coverage-fixture.js';
 
 /** Fixture matching the function's consumed `CoverageGapResult` contract. */
@@ -55,7 +54,7 @@ describe('Robust: Traceability Matrix uses real coverage, honest labels (#C3/#C4
             { title: 'TC-001', state: 'passed', duration: 200 },
             { title: 'TC-002', state: 'passed', duration: 150 },
         ]);
-        const result = buildTraceabilityMatrix(runs, realCoverageFixture(), createTestHub());
+        const result = buildTraceabilityMatrix(runs, realCoverageFixture(), []);
 
         expect(result.nodes.length).toBeGreaterThan(0);
         expect(result.nodes[0]?.epic).toBe('EPIC-1');
@@ -66,7 +65,7 @@ describe('Robust: Traceability Matrix uses real coverage, honest labels (#C3/#C4
         expect.hasAssertions();
 
         const runs = runWith([{ title: 'TC-001', state: 'passed', duration: 200 }]);
-        const html = generateTraceabilityHtml(buildTraceabilityMatrix(runs, realCoverageFixture(), createTestHub()));
+        const html = generateTraceabilityHtml(buildTraceabilityMatrix(runs, realCoverageFixture(), []));
 
         expect(html).toContain('Overall Test Pass Rate');
         expect(html).not.toContain('Overall Coverage');
@@ -76,7 +75,7 @@ describe('Robust: Traceability Matrix uses real coverage, honest labels (#C3/#C4
         expect.hasAssertions();
 
         const runs = runWith([{ title: 'TC-001', state: 'passed', duration: 200 }]);
-        const result = buildTraceabilityMatrix(runs, undefined, createTestHub());
+        const result = buildTraceabilityMatrix(runs, undefined, []);
 
         expect(result.nodes).toStrictEqual([]);
         expect(result.totalEpics).toBe(0);

@@ -405,8 +405,7 @@ async function _dashboardDefectTrends(): Promise<void> {
 async function _dashboardTraceabilityMatrix(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
-    const dataHub = getDataHub();
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, dataHub);
+    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, []);
     await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
 }
 

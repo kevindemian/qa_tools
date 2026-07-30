@@ -10,18 +10,15 @@
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { MetricsRun } from '../../types/data-hub.js';
-import type { DataHub } from '../../types/data-hub.js';
-import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../../types/coverage.js';
 import { buildTraceabilityMatrix } from '../../report/traceability-matrix.js';
-import { createTestHub } from '../test-hub.js';
-import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
+import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../../types/coverage.js';
 
 vi.mock('../../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
 }));
 
 interface NarrowCoverageItem {
-    epic: string;
+    epicKey: string;
     hasTest: boolean;
     linkedTestKeys?: string[];
     issueKey?: string;
@@ -42,7 +39,7 @@ function toCanonicalCoverage(c: NarrowCoverage): CoverageGapResult {
         linkedTestKeys: it.linkedTestKeys ?? [],
         priority: 'Medium',
         coverageWeight: 1,
-        epicKey: it.epic,
+        epicKey: it.epicKey,
     }));
     const byEpic: Record<string, EpicCoverage> = {};
     for (const [key, v] of Object.entries(c.byEpic ?? {})) {
@@ -69,13 +66,9 @@ function toCanonicalCoverage(c: NarrowCoverage): CoverageGapResult {
     };
 }
 
-function matrix(
-    metrics: MetricsRun[],
-    coverage?: NarrowCoverage,
-    hub?: DataHub,
-): ReturnType<typeof buildTraceabilityMatrix> {
+function matrix(metrics: MetricsRun[], coverage?: NarrowCoverage): ReturnType<typeof buildTraceabilityMatrix> {
     const canonical = coverage ? toCanonicalCoverage(coverage) : undefined;
-    return buildTraceabilityMatrix(metrics, canonical, hub ?? createTestHub());
+    return buildTraceabilityMatrix(metrics, canonical, []);
 }
 
 describe('Traceability Matrix.Integration', () => {
@@ -112,7 +105,7 @@ describe('Traceability Matrix.Integration', () => {
                 ]);
                 const result = matrix(metrics, {
                     items: [
-                        { epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' },
+                        { epicKey: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'], issueKey: 'STORY-1' },
                     ],
                     totals: { total: 1, covered: 1 },
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
@@ -147,7 +140,7 @@ describe('Traceability Matrix.Integration', () => {
                 const result = matrix(metrics, {
                     items: [
                         {
-                            epic: 'EPIC-1',
+                            epicKey: 'EPIC-1',
                             hasTest: true,
                             linkedTestKeys: ['TC-PASS', 'TC-FAIL'],
                             issueKey: 'STORY-1',
@@ -226,47 +219,18 @@ describe('Traceability Matrix.Integration', () => {
             });
         });
 
-        describe('DataHub: uses flaky tests from CI when available', () => {
-            function makeDataHub(overrides?: {
-                computed?: Partial<DataHub['computed']>;
-                raw?: Partial<DataHub['raw']>;
-            }): DataHub {
-                return makeDataHubMock({
-                    raw: {
-                        runs: [],
-                        jobs: new Map(),
-                        failureReasons: new Map(),
-                        artifacts: new Map(),
-                        ...overrides?.raw,
-                    },
-                    computed: {
-                        passRate: 0,
-                        avgDuration: 0,
-                        suiteSpeedP95: 0,
-                        coverage: 0,
-                        testPassRate: 0,
-                        testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
-                        framework: 'unknown',
-                        ...overrides?.computed,
-                    },
-                    repo: 'o/r',
-                });
-            }
-
-            it('uses dataHub.computed.flakyRate for flakiness map when dataHub provided', () => {
+        describe('Traceability Matrix integration', () => {
+            it('renders nodes for valid metricsRuns, coverage, and flakyRate', () => {
                 expect.hasAssertions();
 
                 const metrics = singleRunMetrics([
                     { title: 'TC-FLAKY', state: 'passed', duration: 100 },
                     { title: 'TC-STABLE', state: 'passed', duration: 50 },
                 ]);
-                const hub = makeDataHub({
-                    computed: { flakyRate: [{ title: 'TC-FLAKY', rate: 50, runs: 4 }] },
-                });
                 const coverageResult = {
                     items: [
                         {
-                            epic: 'EPIC-1',
+                            epicKey: 'EPIC-1',
                             hasTest: true,
                             linkedTestKeys: ['TC-FLAKY', 'TC-STABLE'],
                             issueKey: 'STORY-1',
@@ -275,30 +239,30 @@ describe('Traceability Matrix.Integration', () => {
                     totals: { total: 1, covered: 1 },
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
+                const flakyRate = [{ title: 'TC-FLAKY', rate: 50, runs: 4 }];
 
-                const result = matrix(metrics, coverageResult, hub);
+                const result = buildTraceabilityMatrix(metrics, toCanonicalCoverage(coverageResult), flakyRate);
 
                 expect(result.nodes.length).toBeGreaterThan(0);
 
                 const story = result.nodes[0]?.stories[0];
 
                 expect(story).toBeDefined();
-                // rate 50 (0–100) normalizado para 0–1 → TC-FLAKY 0.5; média com TC-STABLE (0) → 0.25 (25%).
                 expect(story?.flakiness).toBeCloseTo(0.25, 5);
             });
 
-            it('falls back to MetricsStore when dataHub has no flaky tests', () => {
+            it('renders nodes when coverageResult has no flaky tests', () => {
                 expect.hasAssertions();
 
                 const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-                const hub = makeDataHub({ computed: { flakyRate: [] } });
                 const coverageResult = {
-                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    items: [{ epicKey: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
                     totals: { total: 1, covered: 1 },
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
+                const flakyRate: Array<{ title: string; rate: number }> = [];
 
-                const result = matrix(metrics, coverageResult, hub);
+                const result = buildTraceabilityMatrix(metrics, toCanonicalCoverage(coverageResult), flakyRate);
 
                 expect(result.nodes.length).toBeGreaterThan(0);
             });
@@ -308,14 +272,13 @@ describe('Traceability Matrix.Integration', () => {
 
                 const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-                const hub = makeDataHub();
                 const coverageResult = {
-                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    items: [{ epicKey: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
                     totals: { total: 1, covered: 1 },
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
 
-                const result = matrix(metrics, coverageResult, hub);
+                const result = buildTraceabilityMatrix(metrics, toCanonicalCoverage(coverageResult), []);
                 const html = generateTraceabilityHtml(result);
 
                 expect(html).toContain('data-part="target"');
@@ -328,14 +291,13 @@ describe('Traceability Matrix.Integration', () => {
 
                 const { generateTraceabilityHtml } = await import('../../report/traceability-matrix.js');
                 const metrics = singleRunMetrics([{ title: 'TC-001', state: 'passed', duration: 100 }]);
-                const hub = makeDataHub();
                 const coverageResult = {
-                    items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                    items: [{ epicKey: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
                     totals: { total: 1, covered: 1 },
                     byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
                 };
 
-                const result = matrix(metrics, coverageResult, hub);
+                const result = buildTraceabilityMatrix(metrics, toCanonicalCoverage(coverageResult), []);
                 const html = generateTraceabilityHtml(result);
 
                 expect(html).toContain('data-part="timestamp"');

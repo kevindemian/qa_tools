@@ -14,7 +14,6 @@ import { describe, expect, it } from 'vitest';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../report/traceability-matrix.js';
 import type { MetricsRun } from '../types/data-hub.js';
 import type { CoverageGapResult, CoverageGapItem, EpicCoverage } from '../types/coverage.js';
-import { createTestHub } from './test-hub.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -24,7 +23,7 @@ function matrix(
     metrics: MetricsRun[],
     coverage?: Parameters<typeof buildTraceabilityMatrix>[1],
 ): ReturnType<typeof buildTraceabilityMatrix> {
-    return buildTraceabilityMatrix(metrics, coverage, createTestHub());
+    return buildTraceabilityMatrix(metrics, coverage, []);
 }
 
 const TestStateArb = fc.constantFrom('passed' as const, 'failed' as const, 'skipped' as const);
