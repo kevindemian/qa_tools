@@ -1,7 +1,7 @@
 /** Test Execution creator — creates Test Execution issues and associates test results. */
 import { formatErr } from '../shared/errors.js';
 import { rootLogger } from '../shared/logger.js';
-import { success, info, withSpinner } from '../shared/ui/prompt.js';
+import { success, info, error, withSpinner } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
@@ -19,6 +19,7 @@ import type { JsonObject } from '../shared/types.js';
 interface TestExecutionResult {
     key: string;
     summary: string;
+    linkedParentCount: number;
 }
 
 export class TestExecutionCreator {
@@ -49,7 +50,11 @@ export class TestExecutionCreator {
             if (result.issues.length > 0) {
                 const issue = result.issues[0] as NonNullable<(typeof result.issues)[number]>;
                 rootLogger.info('Test Execution existente encontrado: ' + issue.key);
-                return { key: issue.key, summary: (issue.fields['summary'] as string) || summary };
+                return {
+                    key: issue.key,
+                    summary: (issue.fields['summary'] as string) || summary,
+                    linkedParentCount: 0,
+                };
             }
         } catch (err) {
             rootLogger.warn('Falha ao buscar Test Execution existente: ' + formatErr(err));
@@ -91,7 +96,7 @@ export class TestExecutionCreator {
         const created = await this.jiraResource.postJiraResource<JsonObject>('issue', payload);
         success('Test Execution criado: ' + String(created['key']) + ' — ' + summary);
         execLog.info('Test Execution criado', { key: created['key'], summary });
-        return { key: created['key'] as string, summary };
+        return { key: created['key'] as string, summary, linkedParentCount: 0 };
     }
 
     private _buildTimestampedSummary(csvName: string, titleOverride?: string): string {
@@ -331,7 +336,7 @@ export class TestExecutionCreator {
         if (failed > 0) {
             info('✓ Associados: ' + linked + ' | ✗ Falha: ' + failed);
         }
-        return { key: teKey, summary };
+        return { key: teKey, summary, linkedParentCount: 0 };
     }
 
     async createWithLinks(
@@ -357,9 +362,10 @@ export class TestExecutionCreator {
             const unique = deduplicateLinkedIssues(parentIssues);
             try {
                 await this.linkManager.linkIssues(result.key, unique);
+                result.linkedParentCount = unique.length;
                 success('TE linkada a ' + unique.length + ' issue(s) pai.');
             } catch (err) {
-                rootLogger.error('Falha ao linkar TE a issues pai: ' + formatErr(err));
+                error('Falha ao linkar TE a issues pai: ' + formatErr(err));
             }
         }
 

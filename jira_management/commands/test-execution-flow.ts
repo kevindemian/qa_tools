@@ -21,6 +21,8 @@ export interface TestExecutionAssociationResult {
     summary?: string;
     /** Whether it was created new or re-used existing. */
     mode?: 'created' | 'existing';
+    /** Number of parent issues successfully linked to the TE. */
+    linkedParentCount?: number;
 }
 
 /** Prompt the user to associate created tests with a Test Execution.
@@ -104,7 +106,13 @@ async function handleCreateNew(
             return { associated: false };
         }
         c.pushHistory('create-testexec', execResult.key, 'ok');
-        return { associated: true, key: execResult.key, summary: execResult.summary, mode: 'created' };
+        return {
+            associated: true,
+            key: execResult.key,
+            summary: execResult.summary,
+            mode: 'created',
+            linkedParentCount: execResult.linkedParentCount,
+        };
     } catch (err) {
         printError('Erro ao criar Test Execution', err);
         c.pushHistory('create-testexec', 'erro', 'error');
@@ -270,6 +278,9 @@ export async function showResults(
         info('Associados à Test Execution:');
         info('  ' + teResult.key + (teResult.summary ? ' — ' + teResult.summary : ''));
         info('  Status: ' + (teResult.mode === 'created' ? 'Nova' : 'Existente'));
+        if (teResult.linkedParentCount && teResult.linkedParentCount > 0) {
+            info('  Issues pai vinculadas: ' + teResult.linkedParentCount);
+        }
         info('');
         info('  → Importar resultados: opção 13 no menu principal');
     }

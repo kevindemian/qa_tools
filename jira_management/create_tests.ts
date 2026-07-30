@@ -194,7 +194,7 @@ interface CreateTeWithLinksOptions {
 /** Create a Test Execution and link each test case to it. */
 async function createTestExecutionWithLinks(
     opts: CreateTeWithLinksOptions,
-): Promise<{ key: string; summary: string } | null> {
+): Promise<{ key: string; summary: string; linkedParentCount: number } | null> {
     const { testExecutionCreator, projectName, testKeys, csvName, parentIssues, execOpts } = opts;
     return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, parentIssues, execOpts);
 }

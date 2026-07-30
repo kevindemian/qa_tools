@@ -74,6 +74,7 @@ describe('Test Execution Flow', () => {
                 mockCreateTestExecutionWithLinks.mockResolvedValue({
                     key: 'TEST-TE-1',
                     summary: 'Test Execution 1',
+                    linkedParentCount: 0,
                 });
                 const c = createMockContext();
                 const result = await offerTestExecutionAssociation(c, ['TEST-1'], 'src');
@@ -83,6 +84,7 @@ describe('Test Execution Flow', () => {
                     key: 'TEST-TE-1',
                     summary: 'Test Execution 1',
                     mode: 'created',
+                    linkedParentCount: 0,
                 });
                 expect(c.pushHistory).toHaveBeenCalledWith('create-testexec', 'TEST-TE-1', 'ok');
             });

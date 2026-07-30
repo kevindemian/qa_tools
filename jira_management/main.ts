@@ -145,6 +145,9 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             });
             if (teResult) {
                 info('Test Execution criada: ' + teResult.key + ' — ' + teResult.summary);
+                if (teResult.linkedParentCount > 0) {
+                    info('Issues pai vinculadas: ' + teResult.linkedParentCount);
+                }
             } else {
                 warn('Falha ao criar Test Execution');
             }
