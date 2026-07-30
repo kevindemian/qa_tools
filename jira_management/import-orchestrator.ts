@@ -10,9 +10,15 @@ import { update as updateState } from '../shared/state.js';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
-import { info, warn, isQuiet, print, printSummary, prompt } from '../shared/ui/prompt.js';
+import { info, warn, isQuiet, print, printSummary, prompt, showSelect } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import { createStepImporter, type XrayStepImporter } from './xray-client.js';
+import type { TransientErrorHandler, TransientErrorAction } from '../shared/jira/xray-cloud-client.js';
+import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
+import type { SnapshotContext } from './issue-snapshot.js';
+import type { StepFailureHandler } from '../shared/types/clean-slate.js';
+import { showStepError, buildAutoRollbackHandler } from '../shared/ui/error-report.js';
+import { deduplicateLinkedIssues, type LinkedIssue } from '../shared/issue-link-utils.js';
 
 interface CreateTestsFromTestCasesParams {
     tests: TestCase[];
@@ -32,6 +38,7 @@ interface CreateTestsFromTestCasesParams {
 export type CreateTestsFromTestCasesResult = {
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    parentIssues: LinkedIssue[];
     summary: string;
     status: string;
     sourcePath: string;
@@ -85,7 +92,9 @@ async function findExistingMatches(
 async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
     const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
-    if (validationResult === undefined) return;
+    if (validationResult === undefined) {
+        throw new Error('Validacao do CSV falhou. Verifique os erros acima e corrija o arquivo de entrada.');
+    }
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
 
     const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
@@ -94,7 +103,9 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     await showPreview(tests, jiraLabels, totalSteps, groupsCount);
 
     const filtered = filterTests(tests);
-    if (filtered === null) return;
+    if (filtered === null) {
+        throw new Error('Filtragem resultou em zero testes. Nenhum teste selecionado para importacao.');
+    }
 
     const updatePolicy = (Config.get('updatePolicy') ?? 'auto') as string;
     let targetKeys: string[] = [];
@@ -140,8 +151,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     if (dryRunResult) return dryRunResult;
 
     if (!confirmOrCancel()) {
-        warn(OPERATION_CANCELLED);
-        return;
+        throw new Error(OPERATION_CANCELLED);
     }
 
     return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog };
@@ -153,6 +163,7 @@ interface FinalizeTestCreationParams {
     linker: IssueLinker;
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    parentIssues: LinkedIssue[];
     sourcePath: string;
     sourceType: string;
     project_name: string;
@@ -167,6 +178,7 @@ interface FinalizeTestCreationParams {
 type FinalizeTestCreationResult = {
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    parentIssues: LinkedIssue[];
     summary: string;
     status: string;
     sourcePath: string;
@@ -179,6 +191,7 @@ async function finalizeTestCreation({
     linker,
     inMemoryTasksId,
     inMemoryTasksText,
+    parentIssues: parentIssuesInput,
     sourcePath,
     sourceType,
     project_name: projectName,
@@ -200,14 +213,13 @@ async function finalizeTestCreation({
         sourceType,
         linker,
         info,
-        failedLinks,
     });
 
     info('Passo 5 de 5: Finalizando...');
     printSummary(results);
 
     const okCount = results.filter((r) => r.status === 'ok').length;
-    const errored = results.some((r) => r.status === 'error') || failedLinks.length > 0;
+    const errored = results.some((r) => r.status === 'error');
     let summary = okCount + '/' + tests.length + ' testes criados';
     if (failedLinks.length > 0) {
         summary += '; ' + failedLinks.length + ' vínculo(s) perdido(s): ' + failedLinks.join(', ');
@@ -221,9 +233,15 @@ async function finalizeTestCreation({
 
     onBusy(false);
 
+    const parentIssues =
+        parentIssuesInput.length > 0
+            ? parentIssuesInput
+            : deduplicateLinkedIssues(tests.flatMap((t) => t.linkedIssues ?? []));
+
     return {
         inMemoryTasksId,
         inMemoryTasksText,
+        parentIssues,
         summary,
         status: errored ? 'error' : 'ok',
         sourcePath,
@@ -241,22 +259,10 @@ interface PostProcessCheckpointOptions {
     sourceType: string;
     linker: IssueLinker;
     info: (msg: string) => void;
-    failedLinks: string[];
 }
 
 async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promise<void> {
-    const {
-        results,
-        tests,
-        projectName,
-        inMemoryTasksId,
-        jiraLabels,
-        sourcePath,
-        sourceType,
-        linker,
-        info,
-        failedLinks,
-    } = opts;
+    const { results, tests, projectName, inMemoryTasksId, jiraLabels, sourcePath, sourceType, linker, info } = opts;
     if (results.filter((r) => r.status === 'ok').length === tests.length) {
         updateState((state) => {
             delete state['_checkpoint'];
@@ -267,7 +273,6 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
         info('Atualizando descrições com cross-references...');
         const crossRefFailed = await linker.updateCrossReferences(tests, inMemoryTasksId);
         if (crossRefFailed.length > 0) {
-            failedLinks.push(...crossRefFailed.map((k) => 'cross-ref:' + k));
             info('Aviso: ' + crossRefFailed.length + ' cross-reference(s) falharam: ' + crossRefFailed.join(', '));
         }
     }
@@ -280,15 +285,102 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
     updateFinalState(sourceType, sourcePath, projectName, jiraLabels);
 }
 
+function buildInteractiveTransientHandler(): TransientErrorHandler {
+    return async (error: Error, operation: string, attempt: number): Promise<TransientErrorAction> => {
+        warn(`[${operation}] Falha persistente após ${attempt} tentativas: ${error.message}`);
+        const choice = await showSelect(`O que desejar com "${operation}"?`, [
+            { name: 'Pular (skip) — continuar sem esta operação', value: 'skip' },
+            { name: 'Abortar — parar toda a importação', value: 'abort' },
+            { name: 'Tentar novamente (retry) — reiniciar retries automáticos', value: 'retry' },
+        ]);
+        if (choice === 'skip') return 'skip';
+        if (choice === 'abort') return 'abort';
+        return 'retry';
+    };
+}
+
+function buildInteractiveStepHandler(): StepFailureHandler {
+    return async (error: Error, stepInfo) => {
+        return showStepError(error, stepInfo);
+    };
+}
+
+function buildSnapshotContext(jiraResource: JiraResourceLike, linkManager: JiraLinkManager): SnapshotContext | null {
+    const isCloud = (() => {
+        try {
+            return Config.getDefault().get('jiraMode') === 'cloud';
+        } catch {
+            return false;
+        }
+    })();
+    if (!isCloud) return null;
+    const clientId = Config.getDefault().get('xrayClientId');
+    const clientSecret = Config.getDefault().get('xrayClientSecret');
+    if (!clientId || !clientSecret) return null;
+    const xrayCloud = new XrayCloudClient();
+    const addTestStepMutation = `
+        mutation AddTestStep($issueId: String!, $step: CreateStepInput!) {
+            addTestStep(issueId: $issueId, step: $step) { id }
+        }
+    `;
+    return {
+        jiraResource,
+        resolveNumericId: async (key: string) => {
+            const issue = await jiraResource.getJiraResource<{ id?: string }>('issue/' + key);
+            if (!issue.id) throw new Error('issue ' + key + ' has no numeric id');
+            return issue.id;
+        },
+        xrayCloud: {
+            getTestSteps: xrayCloud.getTestSteps.bind(xrayCloud),
+            getTestPreconditions: xrayCloud.getTestPreconditions.bind(xrayCloud),
+            removePreconditionsFromTest: xrayCloud.removePreconditionsFromTest.bind(xrayCloud),
+            addPreconditionsToTest: xrayCloud.addPreconditionsToTest.bind(xrayCloud),
+            removeAllTestSteps: async (id: string, cid: string, csec: string) => {
+                await xrayCloud.setTestSteps(id, [], cid, csec);
+            },
+            addTestStep: async (
+                id: string,
+                step: { action: string; data: string; result: string },
+                cid: string,
+                csec: string,
+            ) => {
+                await xrayCloud.graphqlMutation(addTestStepMutation, { issueId: id, step }, cid, csec);
+            },
+        },
+        clientId,
+        clientSecret,
+        linkOps: linkManager.linkOperations,
+    };
+}
+
 function testCreationSetup(
     jiraResource: JiraResourceLike,
     _jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
     const stepImporter = createStepImporter(jiraResource, Config.get('xrayMode'));
+    const isInteractive = !Config.get<boolean>('autoConfirm');
+    if (isInteractive && stepImporter.setTransientErrorHandler) {
+        stepImporter.setTransientErrorHandler(buildInteractiveTransientHandler());
+    }
+    if (isInteractive) {
+        linkManager.preconditionHandler.setTransientErrorHandler(buildInteractiveTransientHandler());
+    }
+    const factory = new TestCaseFactory(jiraResource, stepImporter);
+    const snapshotCtx = buildSnapshotContext(jiraResource, linkManager);
+    if (snapshotCtx) {
+        factory.setSnapshotContext(snapshotCtx);
+    }
+    // Wire interactive step failure handler for clean-slate updates
+    const isTTY = !!(process.stdout.isTTY && !Config.get<boolean>('quiet'));
+    if (isTTY) {
+        factory.setStepFailureHandler(buildInteractiveStepHandler());
+    } else {
+        factory.setStepFailureHandler(buildAutoRollbackHandler());
+    }
     return {
         stepImporter,
-        factory: new TestCaseFactory(jiraResource, stepImporter),
+        factory,
         linker: new IssueLinker(jiraResource, linkManager),
         results: [],
     };
@@ -335,6 +427,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
         linker,
         inMemoryTasksId,
         inMemoryTasksText,
+        parentIssues: [],
         sourcePath: params.sourcePath,
         sourceType: params.sourceType,
         project_name: params.project_name,
@@ -361,7 +454,15 @@ async function createTestsFromTestCases(
         warn,
         jiraResource: params.jiraResource,
     });
-    if (prepared === undefined || 'summary' in prepared) return prepared;
+    if (prepared === undefined || 'summary' in prepared) {
+        if (prepared === undefined) {
+            throw new Error(
+                'Preparacao da importacao retornou resultado inesperado (undefined). ' +
+                    'Verifique os logs anteriores para detalhes.',
+            );
+        }
+        return prepared;
+    }
     const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
 
     info('Passo 2 de 5: Preparando criação de testes...');
@@ -387,4 +488,4 @@ async function createTestsFromTestCases(
     });
 }
 
-export { createTestsFromTestCases, prepareTestRun, finalizeTestCreation, postProcessCheckpoint };
+export { createTestsFromTestCases, prepareTestRun, finalizeTestCreation, postProcessCheckpoint, testCreationSetup };

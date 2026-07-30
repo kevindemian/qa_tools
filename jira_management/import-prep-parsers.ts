@@ -51,6 +51,7 @@ export async function handleDryRun(
 ): Promise<{
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    parentIssues: Array<{ key: string; linkType: string }>;
     summary: string;
     status: string;
     sourcePath: string;
@@ -121,6 +122,7 @@ export async function handleDryRun(
     return {
         inMemoryTasksId: [],
         inMemoryTasksText: [],
+        parentIssues: [],
         summary: 'DRY-RUN: ' + summaryParts.join(', '),
         status: 'ok',
         sourcePath,

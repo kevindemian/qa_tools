@@ -97,35 +97,34 @@ describe('Import Orchestrator', () => {
             expect.hasAssertions();
 
             vi.mocked(confirmOrCancel).mockReturnValue(false);
-            const result = await prepareTestRun({
-                tests: makeTestCases(2),
-                sourcePath: '/p.csv',
-                sourceType: 'csv',
-                project_name: 'PROJ',
-                jiraLabels: [],
-                onBusy,
-                warn,
-            });
-
-            expect(result).toBeUndefined();
-            expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
+            await expect(
+                prepareTestRun({
+                    tests: makeTestCases(2),
+                    sourcePath: '/p.csv',
+                    sourceType: 'csv',
+                    project_name: 'PROJ',
+                    jiraLabels: [],
+                    onBusy,
+                    warn,
+                }),
+            ).rejects.toThrow(/cancelada/);
         });
 
         it('filterTests returns null', async () => {
             expect.hasAssertions();
 
             vi.mocked(filterTests).mockReturnValue(null);
-            const result = await prepareTestRun({
-                tests: makeTestCases(2),
-                sourcePath: '/p.csv',
-                sourceType: 'csv',
-                project_name: 'PROJ',
-                jiraLabels: [],
-                onBusy,
-                warn,
-            });
-
-            expect(result).toBeUndefined();
+            await expect(
+                prepareTestRun({
+                    tests: makeTestCases(2),
+                    sourcePath: '/p.csv',
+                    sourceType: 'csv',
+                    project_name: 'PROJ',
+                    jiraLabels: [],
+                    onBusy,
+                    warn,
+                }),
+            ).rejects.toThrow(/Filtragem resultou em zero testes/);
         });
 
         it('dry-run returns early', async () => {
@@ -134,6 +133,7 @@ describe('Import Orchestrator', () => {
             vi.mocked(handleDryRun).mockResolvedValue({
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 summary: 'DRY-RUN simulado',
                 status: 'ok',
                 sourcePath: '/p.csv',
@@ -152,6 +152,7 @@ describe('Import Orchestrator', () => {
             expect(result).toStrictEqual({
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 summary: 'DRY-RUN simulado',
                 status: 'ok',
                 sourcePath: '/p.csv',
@@ -180,6 +181,7 @@ describe('Import Orchestrator', () => {
                 failedLinks: [],
                 inMemoryTasksId: ['T-1'],
                 inMemoryTasksText: ['Test 1'],
+                parentIssues: [],
                 sourcePath: '/p.csv',
                 sourceType: 'csv',
                 project_name: 'PROJ',
@@ -210,7 +212,6 @@ describe('Import Orchestrator', () => {
                 inMemoryTasksId: ['T-1'],
                 jiraLabels: [],
                 sourcePath: '/p.csv',
-                failedLinks: [],
                 sourceType: 'csv',
                 linker,
                 info: vi.fn(),

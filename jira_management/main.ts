@@ -33,6 +33,14 @@ import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
 import { maybeRunFirstRunWizard } from '../shared/ui/first-run.js';
 import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
+import { parseLinkedIssuesString } from '../shared/issue-link-utils.js';
+
+/** Extract the value of a `--key value` argument from argv. Returns undefined if not present. */
+function getArgValue(argv: string[], key: string): string | undefined {
+    const idx = argv.indexOf(key);
+    if (idx === -1 || idx + 1 >= argv.length) return undefined;
+    return argv[idx + 1];
+}
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
 function updateStateTyped(fn: (state: StateSchema) => void): void {
@@ -115,7 +123,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             return ExitCode.ERROR;
         }
 
-        const { summary, status, failedLinks, inMemoryTasksId } = outcome.result;
+        const { summary, status, failedLinks, inMemoryTasksId, parentIssues } = outcome.result;
         if (failedLinks.length) {
             printError(summary, undefined);
         } else {
@@ -126,11 +134,14 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             info('Criando Test Execution...');
             const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
             const csvName = csvPath.split('/').pop() ?? csvPath;
+            const teParentArg = getArgValue(process.argv, '--te-parent');
+            const teParentIssues = teParentArg ? parseLinkedIssuesString(teParentArg) : parentIssues;
             const teResult = await createTests.createTestExecutionWithLinks({
                 testExecutionCreator: executor,
                 projectName: res.ctx.project_name,
                 testKeys: inMemoryTasksId,
                 csvName,
+                parentIssues: teParentIssues,
             });
             if (teResult) {
                 info('Test Execution criada: ' + teResult.key + ' — ' + teResult.summary);
@@ -595,7 +606,19 @@ async function main(): Promise<void> {
         process.stdout.write('\x1b[2J\x1b[H\x1b[3J');
     }
     const projectName = parseProjectFlag(process.argv);
-    if (projectName) setCurrentProject(projectName);
+    if (projectName) {
+        try {
+            setCurrentProject(projectName);
+        } catch (err) {
+            const csvPath = parseCsvArg(process.argv);
+            if (csvPath) {
+                rootLogger.debug('Project "' + projectName + '" not in registry; setting jiraProject for CSV import');
+                Config.set('jiraProject', projectName);
+            } else {
+                throw err;
+            }
+        }
+    }
     const envResult = validateEnv();
     ensureDirs();
     registerCleanup();

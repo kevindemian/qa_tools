@@ -164,13 +164,11 @@ describe('FilterTests', () => {
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
     });
 
-    it('matches + user declines -> warn + null', () => {
+    it('matches + user declines -> throws', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test');
         vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
-        const result = filterTests(tests);
 
-        expect(result).toBeNull();
-        expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Operação cancelada'));
+        expect(() => filterTests(tests)).toThrow(/cancelada pelo usuario/);
     });
 
     it('matches + user accepts -> filtered list', () => {

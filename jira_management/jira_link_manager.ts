@@ -46,7 +46,8 @@ class JiraLinkManager {
     async _getPreconditionFieldId() {
         return this.preconditionHandler._getPreconditionFieldId();
     }
-    async associatePrecondition(testKey: string, preconditionKey: string) {
+    async associatePrecondition(testKey: string, preconditionKey: string | string[]) {
+        const keys = Array.isArray(preconditionKey) ? preconditionKey : [preconditionKey];
         if (this.preconditionHandler.isCloud && !this.preconditionHandler.hasXrayCreds) {
             rootLogger.info(
                 'JiraLinkManager: limpando issue links Pre-Condition existentes em ' +
@@ -59,10 +60,12 @@ class JiraLinkManager {
                     'JiraLinkManager: ' + removed + ' issue link(s) Pre-Condition removido(s) de ' + testKey,
                 );
             }
-            await this.createIssueLink(testKey, preconditionKey, 'Pre-Condition');
+            for (const key of keys) {
+                await this.createIssueLink(testKey, key, 'Pre-Condition');
+            }
             return null;
         }
-        return this.preconditionHandler.associatePrecondition(testKey, preconditionKey);
+        return this.preconditionHandler.associatePrecondition(testKey, keys);
     }
     async _resolvePreconditionIssueTypeId() {
         return this.preconditionHandler._resolvePreconditionIssueTypeId();

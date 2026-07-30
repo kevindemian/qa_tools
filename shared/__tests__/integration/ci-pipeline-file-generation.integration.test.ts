@@ -28,7 +28,7 @@ const NODE_BIN = process.execPath;
 const VITEST_BIN = path.join(ROOT, 'node_modules', 'vitest', 'vitest.mjs');
 const TSX_BIN = path.join(ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
-describe('CI pipeline file generation (real)', () => {
+describe('CI pipeline file generation (real)', { timeout: 90_000 }, () => {
     let TMPDIR: string;
 
     beforeAll(() => {

@@ -80,7 +80,12 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         if (isDryRun) Config.set('dryRun', false);
         if (c.ctx.inMemoryTasksId.length > 0) {
             const csvName = state.lastCsvPath ? path.basename(state.lastCsvPath, '.csv') : 'Automated Execution';
-            const teResult = await offerTestExecutionAssociation(c, c.ctx.inMemoryTasksId, csvName);
+            const teResult = await offerTestExecutionAssociation(
+                c,
+                c.ctx.inMemoryTasksId,
+                csvName,
+                result.result.parentIssues,
+            );
             await showResults(c, c.ctx.inMemoryTasksId, teResult);
         }
     } catch (err: unknown) {

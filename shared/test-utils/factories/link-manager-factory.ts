@@ -15,6 +15,7 @@ export function createMockLinkManager(overrides?: Partial<MockProxy<JiraLinkMana
             linkIssues: vi.fn(),
             createIssueLink: vi.fn(),
             getIssueLinksByType: vi.fn().mockResolvedValue([]),
+            getAllIssueLinks: vi.fn().mockResolvedValue([]),
             removeIssueLink: vi.fn(),
         } as never,
         preconditionHandler: {} as never,

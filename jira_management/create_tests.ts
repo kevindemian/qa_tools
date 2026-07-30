@@ -13,6 +13,7 @@ import IssueLinker from './issue-linker.js';
 import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep.js';
 import { createTestsFromTestCases, type CreateTestsFromTestCasesResult } from './import-orchestrator.js';
 import { isQuiet, info, warn, printError } from '../shared/ui/prompt.js';
+import type { LinkedIssue } from '../shared/issue-link-utils.js';
 
 interface CreateFromFileParams {
     jiraResource: JiraResourceLike;
@@ -103,20 +104,26 @@ async function createTestsFromCsv({
     const read = await readCsvTests(csvResource, csvPath);
     if (!read.ok) return { ok: false, reason: read.reason, error: read.error };
 
-    const result = await createTestsFromTestCases({
-        tests: read.tests,
-        jiraResource,
-        jiraResourceXray,
-        linkManager,
-        linkManagerXray,
-        project_name,
-        base_url,
-        sessionLog,
-        onBusy,
-        sourcePath: csvPath,
-        sourceType: 'csv',
-        jiraLabels,
-    });
+    let result: CreateTestsFromTestCasesResult | undefined;
+    try {
+        result = await createTestsFromTestCases({
+            tests: read.tests,
+            jiraResource,
+            jiraResourceXray,
+            linkManager,
+            linkManagerXray,
+            project_name,
+            base_url,
+            sessionLog,
+            onBusy,
+            sourcePath: csvPath,
+            sourceType: 'csv',
+            jiraLabels,
+        });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, reason: 'read-error', error: msg };
+    }
     if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do CSV.' };
     return { ok: true, result };
 }
@@ -180,6 +187,7 @@ interface CreateTeWithLinksOptions {
     projectName: string;
     testKeys: string[];
     csvName: string;
+    parentIssues?: LinkedIssue[];
     execOpts?: { title?: string; description?: string };
 }
 
@@ -187,8 +195,8 @@ interface CreateTeWithLinksOptions {
 async function createTestExecutionWithLinks(
     opts: CreateTeWithLinksOptions,
 ): Promise<{ key: string; summary: string } | null> {
-    const { testExecutionCreator, projectName, testKeys, csvName, execOpts } = opts;
-    return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, execOpts);
+    const { testExecutionCreator, projectName, testKeys, csvName, parentIssues, execOpts } = opts;
+    return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, parentIssues, execOpts);
 }
 
 /** Validate test cases against TestCaseSchema. Returns errors and warnings separately. */

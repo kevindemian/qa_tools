@@ -4,7 +4,6 @@ import { md, mdToHtml } from '../shared/report/markdown.js';
 import { writeEphemeral } from '../shared/infra/temp-dir.js';
 import { openWithOsOrFallback } from '../shared/open.js';
 import { confirm, info, warn, print, title, divider, prompt } from '../shared/ui/prompt.js';
-import { OPERATION_CANCELLED } from './constants.js';
 import type { TestCase } from '../shared/types.js';
 
 /** Options for {@link generatePreviewMarkdown}. */
@@ -135,13 +134,18 @@ export function filterTests(tests: TestCase[]): TestCase[] | null {
     }
     info(filtered.length + '/' + tests.length + ' testes correspondem a "' + filterText.trim() + '"');
     if (!confirm('Criar apenas estes ' + filtered.length + ' testes?')) {
-        warn(OPERATION_CANCELLED);
-        return null;
+        throw new Error('Importacao cancelada pelo usuario na etapa de filtragem.');
     }
     return filtered;
 }
 
 export function confirmOrCancel(): boolean {
     if (Config.get('autoConfirm')) return true;
+    if (!process.stdin.isTTY) {
+        throw new Error(
+            'Confirmacao interativa requerida em ambiente nao-interativo. ' +
+                'Use --auto para confirmar automaticamente.',
+        );
+    }
     return confirm('Criar estes testes no Jira?');
 }

@@ -67,6 +67,7 @@ describe('Case29', () => {
             result: {
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 sourcePath: './test_steps.csv',
                 failedLinks: [],
                 summary: 'DRY-RUN: 2 testes simulados',
@@ -120,6 +121,7 @@ describe('Case29', () => {
             result: {
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 sourcePath: './test_steps.csv',
                 failedLinks: [],
                 summary: 'DRY-RUN: 0 testes simulados',
@@ -141,6 +143,7 @@ describe('Case29', () => {
             result: {
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 sourcePath: './test_steps.csv',
                 failedLinks: [],
                 summary: 'DRY-RUN: 0 testes simulados',
@@ -163,6 +166,7 @@ describe('Case29', () => {
             result: {
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 sourcePath: './test_steps.csv',
                 failedLinks: [],
                 summary: 'DRY-RUN: 1 teste simulado',
@@ -211,6 +215,7 @@ describe('Case29', () => {
             result: {
                 inMemoryTasksId: [],
                 inMemoryTasksText: [],
+                parentIssues: [],
                 sourcePath: './test_steps.csv',
                 failedLinks: [],
                 summary: 'DRY-RUN: 0 testes simulados',

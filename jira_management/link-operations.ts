@@ -58,6 +58,24 @@ export class LinkOperations {
             }));
     }
 
+    async getAllIssueLinks(sourceKey: string): Promise<Array<{ id: string; targetKey: string; linkType: string }>> {
+        let issue: { fields?: { issuelinks?: IssueLinkEntry[] } };
+        try {
+            issue = await this.jiraResource.getJiraResource<{
+                fields?: { issuelinks?: IssueLinkEntry[] };
+            }>('issue/' + sourceKey + '?fields=issuelinks');
+        } catch {
+            return [];
+        }
+        return (issue?.fields?.issuelinks ?? [])
+            .filter((link) => link.id)
+            .map((link) => ({
+                id: link.id!,
+                targetKey: link.outwardIssue?.key ?? link.inwardIssue?.key ?? '',
+                linkType: link.type?.name ?? '',
+            }));
+    }
+
     async removeIssueLink(linkId: string): Promise<void> {
         await this.jiraResource.deleteJiraResource('issueLink/' + linkId);
     }

@@ -560,6 +560,7 @@ describe('Main.ts', () => {
                         failedLinks: [],
                         inMemoryTasksId: ['TEST-1'],
                         inMemoryTasksText: ['TC01'],
+                        parentIssues: [],
                         sourcePath: csvPath,
                     },
                 });
@@ -582,6 +583,7 @@ describe('Main.ts', () => {
                         failedLinks: ['KEY-100'],
                         inMemoryTasksId: ['TEST-1'],
                         inMemoryTasksText: ['TC01'],
+                        parentIssues: [],
                         sourcePath: csvPath,
                     },
                 });

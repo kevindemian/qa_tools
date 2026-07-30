@@ -17,10 +17,9 @@ describe('BUG 1: isAtlassianCloudGateway misses *.atlassian.net', () => {
         // The fix uses resource.jiraMode === 'cloud' instead of a new function
         // This is verified by checking that jira-resource-version.ts uses jiraMode
         const fs = require('fs');
-        const content = fs.readFileSync(
-            '/home/kdemian/PROJETOS/qa_tools/qa_tools/jira_management/jira-resource-version.ts',
-            'utf-8',
-        );
+        const path = require('path');
+        const filePath = path.resolve(__dirname, '../../jira_management/jira-resource-version.ts');
+        const content = fs.readFileSync(filePath, 'utf-8');
         expect(content).toContain("resource.jiraMode === 'cloud'");
     });
 });

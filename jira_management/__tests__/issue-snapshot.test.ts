@@ -120,12 +120,17 @@ describe('issue-snapshot', () => {
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalled();
         });
 
-        it('continues when individual link removal fails', async () => {
+        it('returns failed StepResult when individual link removal fails', async () => {
             const ctx = createMockContext();
-            (ctx.linkOps.removeIssueLink as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
-            await clearIssueFields(ctx, 'PROJ-1', ['Relates']);
+            (ctx.linkOps.removeIssueLink as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Permission denied'));
+            const results = await clearIssueFields(ctx, 'PROJ-1', ['Relates']);
 
-            expect(ctx.linkOps.removeIssueLink).toHaveBeenCalled();
+            expect(results).toBeDefined();
+            expect(Array.isArray(results)).toBe(true);
+            const linksResult = results.find((r) => r.step === 'clear-links');
+            expect(linksResult).toBeDefined();
+            expect(linksResult!.ok).toBe(false);
+            expect(linksResult!.error).toContain('Permission denied');
         });
     });
 

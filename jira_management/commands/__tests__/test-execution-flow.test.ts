@@ -68,7 +68,8 @@ describe('Test Execution Flow', () => {
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1') // pagination
                     .mockResolvedValueOnce('exec-name')
-                    .mockResolvedValueOnce('exec-title');
+                    .mockResolvedValueOnce('exec-title')
+                    .mockResolvedValueOnce(''); // parent issues: Enter=pular
                 vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
                 mockCreateTestExecutionWithLinks.mockResolvedValue({
                     key: 'TEST-TE-1',
@@ -92,7 +93,8 @@ describe('Test Execution Flow', () => {
                 vi.mocked(ask)
                     .mockResolvedValueOnce('1') // pagination
                     .mockResolvedValueOnce('exec-name')
-                    .mockResolvedValueOnce('exec-title');
+                    .mockResolvedValueOnce('exec-title')
+                    .mockResolvedValueOnce(''); // parent issues: Enter=pular
                 vi.mocked(askMultiline).mockResolvedValueOnce('exec-desc');
                 mockCreateTestExecutionWithLinks.mockRejectedValue(new Error('API error'));
                 const c = createMockContext();

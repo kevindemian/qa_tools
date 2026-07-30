@@ -124,10 +124,10 @@ describe('E2E: CSV Import - Error Paths', () => {
 
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(500, { errorMessages: ['Internal error'] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-2', id: '10002' }));
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-2/steps').reply(201);
+        jira.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -188,19 +188,20 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
                 issueCount++;
                 return { key: 'TEST-' + issueCount, id: '' + (10000 + issueCount) };
             });
+        jira.get('/issue/TEST-1?fields=issuelinks').reply(200, { fields: { issuelinks: [] } });
         jira.get('/issueLinkType').reply(200, {
             issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
         });
         jira.post('/issueLink').reply(403, { errorMessages: ['Permission denied'] });
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-1/steps').reply(201);
-        xray.post('/test/TEST-2/steps').reply(201);
+        jira.post('/test/TEST-1/steps').reply(201);
+        jira.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -231,17 +232,18 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
                 issueCount++;
                 return { key: 'TEST-' + issueCount, id: '' + (10000 + issueCount) };
             });
+        jira.get('/issue/TEST-1?fields=issuelinks').reply(200, { fields: { issuelinks: [] } });
         jira.get('/issueLinkType').reply(404);
         jira.post('/issueLink').reply(201);
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-1/steps').reply(201);
-        xray.post('/test/TEST-2/steps').reply(201);
+        jira.post('/test/TEST-1/steps').reply(201);
+        jira.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -274,10 +276,8 @@ describe('E2E: CSV Import - Error Paths', () => {
                 schema: { custom: 'com.xpandit.plugins.xray:test-precondition-custom-field' },
             },
         ]);
-        jira.get('/issue/TEST-1').reply(200, { key: 'TEST-1', fields: { customfield_13708: [] } });
-        jira.put('/issue/TEST-1').times(11).reply(500);
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-1/steps').reply(201);
+        jira.put('/issue/TEST-1').times(2).reply(500);
+        jira.post('/test/TEST-1/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -310,6 +310,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         let issueCount = 0;
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
+        jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue')
             .times(2)
             .reply(201, () => {
@@ -320,9 +321,8 @@ describe('E2E: CSV Import - Error Paths', () => {
         jira.put('/issue/TEST-1').reply(403);
         jira.get('/issue/TEST-2').reply(200, { fields: { description: '' } });
         jira.put('/issue/TEST-2').reply(403);
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-1/steps').reply(201);
-        xray.post('/test/TEST-2/steps').reply(201);
+        jira.post('/test/TEST-1/steps').reply(201);
+        jira.post('/test/TEST-2/steps').reply(201);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 
@@ -345,8 +345,7 @@ describe('E2E: CSV Import - Error Paths', () => {
         const jira = nock(BASE);
         jira.get('/search').query(true).reply(200, { issues: [] });
         jira.post('/issue').reply(201, () => ({ key: 'TEST-1', id: '10001' }));
-        const xray = nock(XRAY);
-        xray.post('/test/TEST-1/steps').reply(500);
+        jira.post('/test/TEST-1/steps').reply(500);
 
         const result = unwrap(await createTestsFromCsv(makeState()));
 

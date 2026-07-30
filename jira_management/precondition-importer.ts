@@ -2,7 +2,7 @@ import { formatErr } from '../shared/errors.js';
 import { info } from '../shared/ui/prompt.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
-import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
+import { XrayCloudClient, type TransientErrorHandler } from '../shared/jira/xray-cloud-client.js';
 import type { JsonObject, PreConditionSummary, JiraResourceLike } from '../shared/types.js';
 
 interface IssueField {
@@ -43,6 +43,10 @@ export class PreconditionHandler {
     private _getXrayClient(): XrayCloudClient {
         if (!this._xrayClient) this._xrayClient = new XrayCloudClient();
         return this._xrayClient;
+    }
+
+    setTransientErrorHandler(handler: TransientErrorHandler | null): void {
+        this._getXrayClient().setTransientErrorHandler(handler);
     }
 
     /** Xray Cloud identifies issues by their numeric id (not the key). */

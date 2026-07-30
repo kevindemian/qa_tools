@@ -77,6 +77,7 @@ describe('Case01', () => {
                 result: {
                     inMemoryTasksId: ['task-1'],
                     inMemoryTasksText: ['text'],
+                    parentIssues: [],
                     sourcePath: './test_steps.csv',
                     failedLinks: [],
                     summary: '2 testes criados',
@@ -95,7 +96,7 @@ describe('Case01', () => {
                 }),
             );
             // (b) efeito colateral real: tasks surfaced ao usuário
-            expect(mockOfferAssoc).toHaveBeenCalledWith(mockContext, ['task-1'], expect.any(String));
+            expect(mockOfferAssoc).toHaveBeenCalledWith(mockContext, ['task-1'], expect.any(String), []);
             expect(mockShowResults).toHaveBeenCalledWith(mockContext, ['task-1'], expect.any(Object));
             // (c) histórico registrado com o summary real (não silenciado)
             expect(mockContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 testes criados', 'ok');

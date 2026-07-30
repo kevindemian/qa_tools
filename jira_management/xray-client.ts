@@ -3,11 +3,12 @@ import { formatErr } from '../shared/errors.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { TestStep } from '../shared/types.js';
 import Config from '../shared/config-accessor.js';
-import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
+import { XrayCloudClient, type TransientErrorHandler } from '../shared/jira/xray-cloud-client.js';
 
 export interface XrayStepImporter {
     importStep(issueKey: string, stepIndex: number, step: TestStep): Promise<void>;
     setSteps(issueKey: string, steps: TestStep[]): Promise<void>;
+    setTransientErrorHandler?(handler: TransientErrorHandler | null): void;
 }
 
 class ServerStepImporter implements XrayStepImporter {
@@ -35,6 +36,10 @@ class CloudStepImporter implements XrayStepImporter {
     constructor(jiraResource?: JiraResourceLike) {
         this.cloudClient = new XrayCloudClient();
         this.jiraResource = jiraResource;
+    }
+
+    setTransientErrorHandler(handler: TransientErrorHandler | null): void {
+        this.cloudClient.setTransientErrorHandler(handler);
     }
 
     private _getCredentials(): { clientId: string; clientSecret: string } {

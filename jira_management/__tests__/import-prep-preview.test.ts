@@ -57,8 +57,15 @@ vi.mock('fs', async () => {
 });
 
 describe('ConfirmOrCancel', () => {
+    let originalIsTTY: boolean | undefined;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        originalIsTTY = process.stdin.isTTY;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
     });
 
     it('returns true when autoConfirm is set', () => {
@@ -69,7 +76,8 @@ describe('ConfirmOrCancel', () => {
         expect(mockConfirm).not.toHaveBeenCalled();
     });
 
-    it('prompts user when autoConfirm is false and user confirms', () => {
+    it('prompts user when autoConfirm is false, isTTY is true, and user confirms', () => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         mockConfigGet.mockReturnValue(false);
         mockConfirm.mockReturnValue(true);
         const result = confirmOrCancel();
@@ -78,11 +86,20 @@ describe('ConfirmOrCancel', () => {
         expect(mockConfirm).toHaveBeenCalledWith('Criar estes testes no Jira?');
     });
 
-    it('prompts user when autoConfirm is false and user declines', () => {
+    it('prompts user when autoConfirm is false, isTTY is true, and user declines', () => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
         mockConfigGet.mockReturnValue(false);
         mockConfirm.mockReturnValue(false);
         const result = confirmOrCancel();
 
         expect(result).toBeFalsy();
+    });
+
+    it('throws when autoConfirm is false and stdin is not TTY (non-interactive)', () => {
+        Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+        mockConfigGet.mockReturnValue(false);
+
+        expect(() => confirmOrCancel()).toThrow(/nao-interativo/);
+        expect(mockConfirm).not.toHaveBeenCalled();
     });
 });

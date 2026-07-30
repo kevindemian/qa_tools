@@ -266,7 +266,12 @@ export function createThrottledClient(config: ThrottledClientConfig): AxiosInsta
 
     instance.interceptors.request.use(async (cfg) => {
         if (_throttled.has(cfg)) return cfg;
-        const host = extractHost(cfg.url || '');
+        const resolvedUrl = cfg.baseURL
+            ? cfg.url?.startsWith('http')
+                ? cfg.url
+                : new URL(cfg.url || '/', cfg.baseURL).href
+            : cfg.url || '';
+        const host = extractHost(resolvedUrl);
         rootLogger.debug(`Throttle: waiting for slot on ${host} (concurrency ${maxConcurrency})`);
         await semaphore.acquire(host);
         _throttled.set(cfg, true);
@@ -275,12 +280,18 @@ export function createThrottledClient(config: ThrottledClientConfig): AxiosInsta
 
     instance.interceptors.response.use(
         (response) => {
-            const host = extractHost(response.config.url || '');
+            const url = response.config?.url || '';
+            const base = response.config?.baseURL || '';
+            const resolvedUrl = url.startsWith('http') ? url : base ? new URL(url, base).href : url;
+            const host = extractHost(resolvedUrl);
             semaphore.release(host);
             return response;
         },
         (error) => {
-            const host = extractHost((error as { config?: { url?: string } }).config?.url || '');
+            const url = (error as { config?: { url?: string; baseURL?: string } }).config?.url || '';
+            const base = (error as { config?: { baseURL?: string } }).config?.baseURL || '';
+            const resolvedUrl = url.startsWith('http') ? url : base ? new URL(url, base).href : url;
+            const host = extractHost(resolvedUrl);
             semaphore.release(host);
             throw error;
         },

@@ -63,7 +63,7 @@ describe('TestExecutionCreator (cloud mode)', () => {
 
         mockXrayCloudGraphql();
 
-        await creator.createWithLinks('PROJ', ['TEST-1', 'TEST-2'], 'csv', { title: 'T' });
+        await creator.createWithLinks('PROJ', ['TEST-1', 'TEST-2'], 'csv', undefined, { title: 'T' });
 
         // Native Cloud association must be used (real XrayCloudClient hit the mocked external API).
         expect(lastGraphqlBody).toBeDefined();

@@ -7,6 +7,7 @@ import { rootLogger } from '../../shared/logger.js';
 import type { CommandContext } from './context.js';
 import type { TestExecutionSummary } from '../../shared/types.js';
 import TestExecutionCreator from '../test-execution-creator.js';
+import { parseLinkedIssuesString, type LinkedIssue } from '../../shared/issue-link-utils.js';
 // anti-circular (prompt -> create_tests -> session-context -> prompt)
 import createTests from '../create_tests.js';
 
@@ -44,6 +45,7 @@ export async function offerTestExecutionAssociation(
     c: CommandContext,
     testKeys: string[],
     srcName: string,
+    detectedParentIssues: LinkedIssue[] = [],
 ): Promise<TestExecutionAssociationResult> {
     if (testKeys.length === 0) return { associated: false };
 
@@ -62,7 +64,7 @@ export async function offerTestExecutionAssociation(
     const trimmedChoice = choice.trim();
 
     if (trimmedChoice === '1') {
-        return handleCreateNew(c, testKeys, project, srcName);
+        return handleCreateNew(c, testKeys, project, srcName, detectedParentIssues);
     }
 
     if (trimmedChoice === '2') {
@@ -78,11 +80,15 @@ async function handleCreateNew(
     testKeys: string[],
     project: string,
     srcName: string,
+    detectedParentIssues: LinkedIssue[] = [],
 ): Promise<TestExecutionAssociationResult> {
     const nameInput = await ask('Nome da execução', { hint: 'Enter = ' + srcName });
     const csvName = nameInput.trim() || srcName;
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
     const execDesc = await askMultiline('Descrição (opcional)');
+
+    const parentIssues = await promptForParentIssues(detectedParentIssues);
+
     try {
         const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
         const execResult = await createTests.createTestExecutionWithLinks({
@@ -90,6 +96,7 @@ async function handleCreateNew(
             projectName: project,
             testKeys,
             csvName,
+            parentIssues,
             execOpts: { title: execTitle, description: execDesc },
         });
         if (!execResult) {
@@ -105,6 +112,25 @@ async function handleCreateNew(
     }
 }
 
+/** Prompt for parent issues to link the TE to.
+ *  Pre-fills with detected issues from CSV; user can accept, edit, or skip. */
+async function promptForParentIssues(detected: LinkedIssue[]): Promise<LinkedIssue[]> {
+    const prefill = detected.map((p) => p.key + ' (' + p.linkType + ')').join(', ');
+    const hint = prefill
+        ? 'Detectado: ' + prefill + '\n  Enter=usar, digite outras, ou vazio para pular'
+        : 'KEY (tipo de ligação), ...\n  Exemplo: ECSPOL-428 (is a test for)\n  Enter para pular';
+
+    const input = await ask('🔗 Linkar TE a issues pai?', { hint });
+
+    if (!input.trim()) return detected;
+    try {
+        return parseLinkedIssuesString(input);
+    } catch (err) {
+        warn('Formato inválido: ' + (err instanceof Error ? err.message : String(err)) + '. Pulando link.');
+        return [];
+    }
+}
+
 /** Fetch the list of Test Executions for the project. */
 async function fetchTeList(
     linkManager: CommandContext['linkManager'],
@@ -113,7 +139,10 @@ async function fetchTeList(
     try {
         return await linkManager.listTestExecutions(project);
     } catch (err) {
-        rootLogger.warn('test-execution-flow: Não foi possível buscar Test Executions: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'test-execution-flow: Não foi possível buscar Test Executions: ' +
+                (err instanceof Error ? err.message : String(err)),
+        );
         warn('Não foi possível buscar Test Executions: ' + (err instanceof Error ? err.message : String(err)));
         return [];
     }

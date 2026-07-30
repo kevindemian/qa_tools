@@ -115,21 +115,21 @@ function writeValidCsv(refs: { precondition?: string; linked?: string }): string
 }
 
 describe('Import safety harness lifecycle', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        process.env['AUTO_CONFIRM'] = 'true';
-        delete process.env['DRY_RUN'];
-    });
-
-    afterEach(() => {
-        delete process.env['AUTO_CONFIRM'];
-        delete process.env['DRY_RUN'];
-    });
-
     it('exposes createTestsFromCsv as the import entry point', () => {
         expect.hasAssertions();
         expect(typeof createTestsFromCsv).toBe('function');
     });
+});
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    process.env['AUTO_CONFIRM'] = 'true';
+    delete process.env['DRY_RUN'];
+});
+
+afterEach(() => {
+    delete process.env['AUTO_CONFIRM'];
+    delete process.env['DRY_RUN'];
 });
 
 describe('D2/D3 — empty and missing CSV must surface explicit, distinguishable failure', () => {
@@ -167,11 +167,19 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
         expect.hasAssertions();
 
         const csv = writeValidCsv({ precondition: 'ECSPOL-0000' });
-        const linkManager = new JiraLinkManager(createMockJiraResource());
-        vi.spyOn(linkManager, 'associatePrecondition').mockImplementation(async (_k: string, key: string) => {
-            if (key === 'ECSPOL-0000') throw new Error('Issue ECSPOL-0000 does not exist');
-            return Promise.resolve(null);
+        const linkJiraResource = createMockJiraResource();
+        linkJiraResource.putJiraResource.mockImplementation(async (_url: string, body: unknown) => {
+            const fields = (body as { fields?: Record<string, unknown> })?.fields;
+            if (fields) {
+                for (const val of Object.values(fields)) {
+                    if (Array.isArray(val) && val.some((v: unknown) => String(v).includes('ECSPOL-0000'))) {
+                        throw new Error('Issue ECSPOL-0000 does not exist (404)');
+                    }
+                }
+            }
+            return {};
         });
+        const linkManager = new JiraLinkManager(linkJiraResource);
 
         const result = (await createTestsFromCsv(
             makeArgs({ csvPath: csv, linkManager, linkManagerXray: linkManager }),
@@ -187,13 +195,24 @@ describe('D5 — missing referenced Jira key must be reported explicitly (never 
         expect.hasAssertions();
 
         const csv = writeValidCsv({ linked: 'ECSPOL-0000 (is a test for)' });
-        const linkManager = new JiraLinkManager(createMockJiraResource());
-        vi.spyOn(linkManager, 'linkIssues').mockImplementation(
-            (_k: string, issues: Array<{ key: string; linkType: string }>): Promise<void> => {
-                if (issues.some((i) => i.key === 'ECSPOL-0000')) throw new Error('Issue ECSPOL-0000 does not exist');
-                return Promise.resolve();
-            },
-        );
+        const linkJiraResource = createMockJiraResource();
+        linkJiraResource.getJiraResource.mockImplementation(async (url: string) => {
+            if (url.includes('ECSPOL-0000')) {
+                throw new Error('Issue does not exist: ECSPOL-0000');
+            }
+            if (url.includes('fields=issuelinks')) {
+                return { fields: { issuelinks: [] } };
+            }
+            return {};
+        });
+        linkJiraResource.postJiraResource.mockImplementation(async (_url: string, payload: unknown) => {
+            const p = payload as { outwardIssue?: { key?: string } };
+            if (p?.outwardIssue?.key === 'ECSPOL-0000') {
+                throw new Error('Issue does not exist: ECSPOL-0000');
+            }
+            return {};
+        });
+        const linkManager = new JiraLinkManager(linkJiraResource);
 
         const result = (await createTestsFromCsv(
             makeArgs({ csvPath: csv, linkManager, linkManagerXray: linkManager }),

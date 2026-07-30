@@ -66,6 +66,7 @@ describe('Case15', () => {
             result: {
                 inMemoryTasksId: ['TEST-1', 'TEST-2'],
                 inMemoryTasksText: ['test 1', 'test 2'],
+                parentIssues: [],
                 summary: '2 testes importados',
                 status: 'ok',
                 sourcePath: path.join(os.tmpdir(), 'qa-resolve-abc123-12345.json'),

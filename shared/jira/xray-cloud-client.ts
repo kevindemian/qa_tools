@@ -14,19 +14,34 @@ export interface GraphqlResponse {
     errors?: Array<{ message: string }>;
 }
 
+/** User choice when a transient GraphQL mutation error occurs. */
+export type TransientErrorAction = 'skip' | 'abort' | 'retry';
+
+/** Handler signature for transient errors — called in interactive mode. */
+export type TransientErrorHandler = (error: Error, operation: string, attempt: number) => Promise<TransientErrorAction>;
+
 /** Resilient HTTP client for Xray Cloud API.
  *  Manages authentication token caching transparently.
- *  All requests go through retry/throttle/TLS via `createThrottledClient`. */
+ *  All requests go through retry/throttle/TLS via `createThrottledClient`.
+ *  Optional transient error handler for interactive skip/abort/retry. */
 export class XrayCloudClient {
     private readonly httpClient: ReturnType<typeof createThrottledClient>;
     private token: string | null = null;
     private tokenExpiresAt = 0;
     private readonly baseUrl: string;
+    private transientErrorHandler: TransientErrorHandler | null = null;
 
     constructor(baseUrl?: string) {
         this.baseUrl = baseUrl ?? Config.getDefault().get('xrayCloudUrl');
         const proxyUrl = Config.getDefault().get('proxyUrl');
         this.httpClient = createThrottledClient({ baseUrl: this.baseUrl, maxConcurrency: 3, proxyUrl });
+    }
+
+    /** Set a handler for interactive transient error decisions.
+     *  When set, transient errors prompt the user (skip/abort/retry).
+     *  When null (default/auto mode), transient errors auto-retry up to 3 times. */
+    setTransientErrorHandler(handler: TransientErrorHandler | null): void {
+        this.transientErrorHandler = handler;
     }
 
     /** Authenticate with Xray Cloud and cache the token.
@@ -76,41 +91,124 @@ export class XrayCloudClient {
                 { query, variables },
                 { headers: { Authorization: 'Bearer ' + token } },
             );
+            const errors = res.data.errors;
+            if (errors && errors.length > 0) {
+                for (const gqlErr of errors) {
+                    rootLogger.warn('GraphQL error: ' + gqlErr.message);
+                }
+            }
             return res.data.data ?? null;
         } catch (err) {
-            rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));
+            const axiosErr = err as { response?: { status?: number; data?: unknown } };
+            if (axiosErr.response) {
+                rootLogger.warn(
+                    `Xray Cloud GraphQL HTTP ${axiosErr.response.status}: ` + JSON.stringify(axiosErr.response.data),
+                );
+            } else {
+                rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));
+            }
             return null;
         }
     }
 
     /** Execute a GraphQL mutation (no return data expected).
      *  Automatically authenticates if needed.
+     *
+     *  Safeguard flow (transient network errors only):
+     *    Phase 1 — Auto-retry: up to 3 attempts with exponential backoff (1s, 2s, 4s).
+     *             Warning logged at each retry. Silent — no user interaction.
+     *    Phase 2 — If all retries exhausted and error persists AND transientErrorHandler is set:
+     *             Prompt user with [skip / abort / retry].
+     *             - retry: restarts Phase 1 (fresh 3 retries).
+     *             - skip: logs warning, returns without error.
+     *             - abort: throws, stopping the operation.
+     *    Phase 3 — If no handler (auto mode) or non-transient error: throws immediately.
+     *
      *  Throws on failure (caller must catch for write operations). */
     async graphqlMutation(
         query: string,
         variables: Record<string, unknown>,
         clientId: string,
         clientSecret: string,
+        operationLabel?: string,
     ): Promise<void> {
         const token = await this._ensureToken(clientId, clientSecret);
         if (!token) {
             throw new Error('Xray Cloud authentication failed — cannot execute mutation');
         }
-        try {
-            const res = await this.httpClient.post<GraphqlResponse>(
-                GRAPHQL_PATH,
-                { query, variables },
-                { headers: { Authorization: 'Bearer ' + token } },
-            );
-            const errors = res.data.errors;
-            if (errors && errors.length > 0) {
-                const msgs = errors.map((e) => e.message).join('; ');
-                throw new Error('Xray Cloud GraphQL mutation failed: ' + msgs);
+        const MUTATION_MAX_RETRIES = 3;
+        const MUTATION_BASE_DELAY_MS = 1000;
+        const label = operationLabel ?? 'GraphQL mutation';
+        let outerLoopGuard = 0;
+        const OUTER_LOOP_LIMIT = 10;
+        while (outerLoopGuard++ < OUTER_LOOP_LIMIT) {
+            let lastErr: unknown;
+            for (let attempt = 1; attempt <= MUTATION_MAX_RETRIES; attempt++) {
+                try {
+                    const res = await this.httpClient.post<GraphqlResponse>(
+                        GRAPHQL_PATH,
+                        { query, variables },
+                        { headers: { Authorization: 'Bearer ' + token } },
+                    );
+                    const errors = res.data.errors;
+                    if (errors && errors.length > 0) {
+                        const msgs = errors.map((e) => e.message).join('; ');
+                        throw new Error('Xray Cloud GraphQL mutation failed: ' + msgs);
+                    }
+                    return;
+                } catch (err) {
+                    lastErr = err;
+                    const isTransient =
+                        ((err as { code?: string })?.code
+                            ? ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EINVAL', 'EAI_AGAIN'].includes(
+                                  (err as { code: string }).code,
+                              )
+                            : false) ||
+                        (err instanceof Error && /read EINVAL|ECONNRESET/i.test(err.message));
+                    if (isTransient && attempt < MUTATION_MAX_RETRIES) {
+                        const delay = MUTATION_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                        rootLogger.warn(
+                            `[${label}] Transient error (attempt ${attempt}/${MUTATION_MAX_RETRIES}): ` +
+                                (err instanceof Error ? err.message : String(err)) +
+                                ` — retrying in ${delay}ms`,
+                        );
+                        await new Promise((r) => setTimeout(r, delay));
+                        continue;
+                    }
+                    if (isTransient && attempt === MUTATION_MAX_RETRIES && this.transientErrorHandler) {
+                        rootLogger.warn(`[${label}] Auto-retries exhausted. Asking user...`);
+                        const action = await this.transientErrorHandler(
+                            err instanceof Error ? err : new Error(String(err)),
+                            label,
+                            attempt,
+                        );
+                        switch (action) {
+                            case 'retry':
+                                rootLogger.info(`[${label}] User chose retry — restarting auto-retries`);
+                                lastErr = null;
+                                break;
+                            case 'skip':
+                                rootLogger.warn(`[${label}] User chose skip — skipping operation`);
+                                return;
+                            case 'abort':
+                                throw new Error(
+                                    `[${label}] Aborted by user: ` + (err instanceof Error ? err.message : String(err)),
+                                    { cause: err },
+                                );
+                        }
+                        break;
+                    }
+                    const msg = err instanceof Error ? err.message : String(err);
+                    throw new Error('Xray Cloud GraphQL mutation failed: ' + msg, { cause: err });
+                }
             }
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            throw new Error('Xray Cloud GraphQL mutation failed: ' + msg, { cause: err });
+            if (lastErr === null) continue;
+            if (lastErr !== undefined) {
+                const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+                throw new Error('Xray Cloud GraphQL mutation failed after retries: ' + msg, { cause: lastErr });
+            }
         }
+        throw new Error(`[${label}] Mutation failed — outer loop guard exceeded`);
     }
 
     /** Replace ALL steps of a test atomically.
@@ -180,13 +278,11 @@ export class XrayCloudClient {
         const query = `
             query GetTestSteps($issueId: String!) {
                 getTest(issueId: $issueId) {
-                    steps(limit: 100) {
-                        results {
-                            id
-                            action
-                            data
-                            result
-                        }
+                    steps {
+                        id
+                        action
+                        data
+                        result
                     }
                 }
             }
@@ -195,28 +291,26 @@ export class XrayCloudClient {
         if (!data) return [];
         const getTest = data['getTest'] as Record<string, unknown> | undefined;
         if (!getTest) return [];
-        const steps = getTest['steps'] as Record<string, unknown> | undefined;
-        if (!steps) return [];
-        const results = steps['results'] as
+        const steps = getTest['steps'] as
             | Array<{ id: string; action: string; data: string; result: string }>
             | undefined;
-        return results ?? [];
+        return steps ?? [];
     }
 
     /** Read precondition issue ids associated with a Test via Xray Cloud GraphQL. */
     async getTestPreconditions(testIssueId: string, clientId: string, clientSecret: string): Promise<string[]> {
         if (!testIssueId) throw new Error('getTestPreconditions requires a test issue id');
         const query = `
-            query GetTestPreconditions($issueId: String!, $limit: Int!) {
+            query GetTestPreconditions($issueId: String!) {
                 getTest(issueId: $issueId) {
-                    preconditions(limit: $limit) {
+                    preconditions(limit: 100) {
                         total
                         results { issueId }
                     }
                 }
             }
         `;
-        const data = await this.graphql(query, { issueId: testIssueId, limit: 100 }, clientId, clientSecret);
+        const data = await this.graphql(query, { issueId: testIssueId }, clientId, clientSecret);
         if (!data) return [];
         const getTest = data['getTest'] as Record<string, unknown> | undefined;
         if (!getTest) return [];

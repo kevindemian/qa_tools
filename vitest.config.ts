@@ -43,6 +43,7 @@ export default defineConfig({
         testTimeout: 15000,
         hookTimeout: 30000,
         teardownTimeout: 5000,
+        fileParallelism: false,
         coverage: {
             provider: 'v8',
             exclude: [

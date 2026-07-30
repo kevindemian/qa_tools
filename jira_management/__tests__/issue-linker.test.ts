@@ -67,7 +67,7 @@ describe('IssueLinker', () => {
             const result = await linker.associatePrecondition(test, 'TEST-1', opLog);
 
             expect(result).toBeNull();
-            expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', 'PREC-001');
+            expect(mockLinkManager['associatePrecondition']).toHaveBeenCalledWith('TEST-1', ['PREC-001']);
         });
 
         it('calls success when not quiet', async () => {

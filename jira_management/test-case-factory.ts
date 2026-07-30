@@ -7,6 +7,7 @@ import type { TestStep } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
 import { cleanSlateUpdate, type SnapshotContext, type LinkSnapshot } from './issue-snapshot.js';
+import type { StepFailureHandler } from '../shared/types/clean-slate.js';
 
 interface CreateIssueResult {
     key?: string | null;
@@ -31,12 +32,15 @@ interface CreateIssueParams {
     opLog: { info: (msg: string, meta?: LogContext) => void };
     skipExisting?: boolean;
     checkOnly?: boolean;
+    /** TestCase with steps, preconditions, linkedIssues — used for clean-slate rebuild. */
+    test?: TestCase;
 }
 
 class TestCaseFactory {
     jiraResource: JiraResourceLike;
     stepImporter: XrayStepImporter;
     private _snapshotCtx: SnapshotContext | null = null;
+    private _stepFailureHandler: StepFailureHandler | null = null;
 
     constructor(jiraResource: JiraResourceLike, stepImporter: XrayStepImporter) {
         this.jiraResource = jiraResource;
@@ -47,6 +51,12 @@ class TestCaseFactory {
      *  When set, _attemptUpdateByKey uses snapshot+rollback instead of plain PUT. */
     setSnapshotContext(ctx: SnapshotContext): void {
         this._snapshotCtx = ctx;
+    }
+
+    /** Set the interactive step failure handler for clean-slate updates.
+     *  When set, each step failure prompts the user for skip/abort/retry/rollback. */
+    setStepFailureHandler(handler: StepFailureHandler): void {
+        this._stepFailureHandler = handler;
     }
 
     private _getTargetKeys(): string[] {
@@ -61,22 +71,41 @@ class TestCaseFactory {
         testTitle: string,
         opLog: { info: (msg: string, meta?: LogContext) => void },
         label: string,
+        test?: TestCase,
     ): Promise<CreateIssueResult> {
         if (this._snapshotCtx) {
             const fields = (testData as Record<string, unknown>)['fields'] as Record<string, unknown>;
             const linkTypeNames = (testData as Record<string, unknown>)['linkedIssueTypes'] as string[] | undefined;
+
+            // Use test object data for clean-slate rebuild (steps, preconditions, linkedIssues)
+            // Fall back to testData extraction for backwards compatibility
+            const steps = test?.steps ?? ((testData as Record<string, unknown>)['steps'] as TestStep[]) ?? [];
+            const preconditions =
+                test?.precondition?.filter((p) => p.type === 'reference').map((p) => p.value) ??
+                ((testData as Record<string, unknown>)['preconditions'] as string[]) ??
+                [];
+            const linkedIssues: LinkSnapshot[] =
+                test?.linkedIssues?.map((li) => ({
+                    id: '',
+                    targetKey: li.key,
+                    linkType: li.linkType,
+                })) ??
+                ((testData as Record<string, unknown>)['linkedIssues'] as LinkSnapshot[]) ??
+                [];
+
             const result = await cleanSlateUpdate(
                 this._snapshotCtx,
                 key,
                 fields,
                 {
                     description: (fields['description'] as string) ?? null,
-                    steps: ((testData as Record<string, unknown>)['steps'] as TestStep[]) ?? [],
-                    preconditions: ((testData as Record<string, unknown>)['preconditions'] as string[]) ?? [],
-                    linkedIssues: ((testData as Record<string, unknown>)['linkedIssues'] as LinkSnapshot[]) ?? [],
+                    steps,
+                    preconditions,
+                    linkedIssues,
                 },
                 {
                     linkTypeNames: linkTypeNames ?? ['Relates', 'Blocks', 'is blocked by'],
+                    ...(this._stepFailureHandler ? { onStepFailure: this._stepFailureHandler } : {}),
                 },
             );
             if (result.success) {
@@ -138,7 +167,7 @@ class TestCaseFactory {
                     if (!choice) return null;
                 }
 
-                return this._doUpdate(key, testData, testTitle, opLog, 'auto');
+                return this._doUpdate(key, testData, testTitle, opLog, 'auto', params.test);
             }
 
             if (!isQuiet()) {
@@ -159,7 +188,7 @@ class TestCaseFactory {
                 const idx = parseInt(answer, 10);
                 if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
                     const chosenKey = matches[idx - 1]!.key;
-                    return this._doUpdate(chosenKey, testData, testTitle, opLog, 'prompt');
+                    return this._doUpdate(chosenKey, testData, testTitle, opLog, 'prompt', params.test);
                 }
             }
             if (!isQuiet()) warn('Nenhuma atualizada.');
@@ -184,7 +213,7 @@ class TestCaseFactory {
                 opLog.info('Target key nao encontrada', { key: targetKey, title: testTitle });
                 return { key: targetKey, skipped: true };
             }
-            return this._doUpdate(issue.key, testData, testTitle, opLog, 'ordenado');
+            return this._doUpdate(issue.key, testData, testTitle, opLog, 'ordenado', params.test);
         } catch (err) {
             const msg =
                 'target key ' +

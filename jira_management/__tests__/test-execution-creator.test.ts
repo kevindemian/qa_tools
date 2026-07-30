@@ -311,7 +311,7 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
 
-            await creator.createWithLinks(projectName, testKeys, csvName, { title: 'Custom Title' });
+            await creator.createWithLinks(projectName, testKeys, csvName, undefined, { title: 'Custom Title' });
 
             const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
 

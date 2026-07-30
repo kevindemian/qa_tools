@@ -6,6 +6,8 @@ import Config from '../shared/config-accessor.js';
 import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';
+import type { LinkedIssue } from '../shared/issue-link-utils.js';
+import { deduplicateLinkedIssues } from '../shared/issue-link-utils.js';
 import {
     ISSUE_TYPE_NOT_FOUND,
     CUSTOM_FIELD_NOT_FOUND,
@@ -336,6 +338,7 @@ export class TestExecutionCreator {
         projectName: string,
         testKeys: string[],
         csvName: string,
+        parentIssues?: LinkedIssue[],
         execOpts?: { title?: string; description?: string },
     ): Promise<TestExecutionResult | null> {
         const title = execOpts?.title || '';
@@ -347,6 +350,16 @@ export class TestExecutionCreator {
                 await this._linkTestsToExecution(result.key, testKeys);
             } catch (err) {
                 rootLogger.error('Erro ao vincular testes: ' + formatErr(err));
+            }
+        }
+
+        if (parentIssues && parentIssues.length > 0) {
+            const unique = deduplicateLinkedIssues(parentIssues);
+            try {
+                await this.linkManager.linkIssues(result.key, unique);
+                success('TE linkada a ' + unique.length + ' issue(s) pai.');
+            } catch (err) {
+                rootLogger.error('Falha ao linkar TE a issues pai: ' + formatErr(err));
             }
         }
 

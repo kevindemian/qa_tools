@@ -120,47 +120,55 @@ class IssueLinker {
         if (!test.precondition || test.precondition.length === 0) return null;
         const references = test.precondition.filter((p) => p.type === 'reference');
         if (references.length === 0) return null;
-        let result: ActionResult | null = null;
-        for (const p of references) {
-            try {
-                await this.linkManager.associatePrecondition(issueKey, p.value);
-                if (!isQuiet()) success('  Pre-condition ' + p.value + ' associada');
-            } catch (err) {
-                if (isMissingKeyError(err)) {
+        const keys = references.map((p) => p.value);
+        try {
+            await this.linkManager.associatePrecondition(issueKey, keys);
+            for (const key of keys) {
+                if (!isQuiet()) success('  Pre-condition ' + key + ' associada');
+            }
+            return null;
+        } catch (err) {
+            if (isMissingKeyError(err)) {
+                const missingKeys = keys.filter((k) => {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    return msg.includes(k);
+                });
+                if (missingKeys.length > 0) {
                     rootLogger.warn(
-                        'Pre-condition key "' + p.value + '" não encontrada no Jira (404) — pulando: ' + formatErr(err),
+                        'Pre-condition key(s) "' +
+                            missingKeys.join('", "') +
+                            '" não encontrada(s) no Jira (404) — pulando: ' +
+                            formatErr(err),
                     );
                     if (!isQuiet()) print(applyPalette('yellow')('w'));
-                    result = { action: 'skip', missingKey: p.value };
-                    continue;
-                }
-                if (!result) {
-                    result = {
-                        action: onError('  Pre-condition de "' + test.title + '" (' + p.value + ')', err, {
-                            details: true,
-                        }),
-                    };
+                    return { action: 'skip', missingKey: missingKeys.join(', ') };
                 }
             }
+            return {
+                action: onError('  Pre-conditions de "' + test.title + '"', err, {
+                    details: true,
+                }),
+            };
         }
-        return result;
     }
 
     async linkIssues(issueKey: string, test: TestCase): Promise<ActionResult | null> {
         if (!test.linkedIssues || test.linkedIssues.length === 0) return null;
+        const existingLinks = await this.linkManager.linkOperations.getAllIssueLinks(issueKey);
+        const typesToClear = new Set(existingLinks.map((l) => l.linkType));
         for (const li of test.linkedIssues) {
+            typesToClear.add(li.linkType);
+        }
+        for (const type of typesToClear) {
+            if (!type) continue;
             try {
                 rootLogger.info(
-                    'Limpando issue links de tipo "' +
-                        li.linkType +
-                        '" existentes em ' +
-                        issueKey +
-                        ' antes de linkar...',
+                    'Limpando issue links de tipo "' + type + '" existentes em ' + issueKey + ' antes de linkar...',
                 );
-                await this.linkManager.linkOperations.clearIssueLinksByType(issueKey, li.linkType);
+                await this.linkManager.linkOperations.clearIssueLinksByType(issueKey, type);
             } catch (err) {
                 rootLogger.warn(
-                    'Falha ao limpar issue links de tipo "' + li.linkType + '" em ' + issueKey + ': ' + formatErr(err),
+                    'Falha ao limpar issue links de tipo "' + type + '" em ' + issueKey + ': ' + formatErr(err),
                 );
             }
         }

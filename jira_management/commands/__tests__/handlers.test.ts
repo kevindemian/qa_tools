@@ -52,6 +52,7 @@ vi.mock('../../../shared/config-accessor.js', () => {
 interface CreateTestsResult {
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    parentIssues: Array<{ key: string; linkType: string }>;
     summary: string;
     status: string;
     sourcePath: string;
@@ -804,6 +805,7 @@ describe('Handlers', () => {
                 result: {
                     inMemoryTasksId: ['TEST-10', 'TEST-11'],
                     inMemoryTasksText: ['JSON test 1', 'JSON test 2'],
+                    parentIssues: [],
                     summary: '',
                     status: '',
                     sourcePath: '/fake/tests.json',
@@ -943,6 +945,7 @@ describe('Handlers', () => {
                 result: {
                     inMemoryTasksId: ['TEST-1', 'TEST-2'],
                     inMemoryTasksText: ['First test', 'Second test'],
+                    parentIssues: [],
                     summary: '2 tests created from CSV',
                     status: 'ok',
                     sourcePath: '',
@@ -973,6 +976,7 @@ describe('Handlers', () => {
                         result: {
                             inMemoryTasksId: ['TEST-1'],
                             inMemoryTasksText: ['Test'],
+                            parentIssues: [],
                             summary: '1 test',
                             status: 'ok',
                             sourcePath: '',
@@ -1001,6 +1005,7 @@ describe('Handlers', () => {
                 result: {
                     inMemoryTasksId: ['TEST-1', 'TEST-2'],
                     inMemoryTasksText: ['Test 1', 'Test 2'],
+                    parentIssues: [],
                     summary: '2 tests',
                     status: 'ok',
                     sourcePath: '',
@@ -1015,7 +1020,12 @@ describe('Handlers', () => {
             const mod = case01;
             await mod.handler(baseContext);
 
-            expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], 'test');
+            expect(flow.offerTestExecutionAssociation).toHaveBeenCalledWith(
+                baseContext,
+                ['TEST-1', 'TEST-2'],
+                'test',
+                [],
+            );
             expect(flow.showResults).toHaveBeenCalledWith(baseContext, ['TEST-1', 'TEST-2'], {
                 associated: true,
                 key: 'TE-1',
@@ -1033,6 +1043,7 @@ describe('Handlers', () => {
                 result: {
                     inMemoryTasksId: ['TEST-10', 'TEST-11'],
                     inMemoryTasksText: ['JSON test 2b', 'JSON test 2c'],
+                    parentIssues: [],
                     summary: 'success',
                     status: '',
                     sourcePath: '',

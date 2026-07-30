@@ -7,6 +7,7 @@ import { rootLogger } from '../shared/logger.js';
 import { normalizeFieldName, sanitizeCellValue } from '../shared/field-names.js';
 import type { TestCase } from '../shared/types.js';
 import { parseQuotedValue, PRECONDITION_KEY_PATTERN } from '../shared/quoted-string.js';
+import { parseLinkedIssuesString } from '../shared/issue-link-utils.js';
 import { CsvRowSchema } from './csv-import-schema.js';
 import type { CsvRow } from './csv-import-schema.js';
 
@@ -79,18 +80,7 @@ class CsvResource {
         const value = line.replace('Linked Issues:', '').trim();
         if (!value) return [];
 
-        const LINKED_ISSUE_RE = /^([A-Z]+-\d+)\s*\((.+)\)$/;
-        const results: Array<{ key: string; linkType: string }> = [];
-        const parts = value.split(/,\s*/);
-        for (const part of parts) {
-            const trimmed = part.trim();
-            const m = LINKED_ISSUE_RE.exec(trimmed);
-            if (m && m[1] && m[2]) {
-                results.push({ key: m[1], linkType: m[2].trim() });
-            }
-        }
-
-        return results;
+        return parseLinkedIssuesString(value);
     }
 
     private _parseBulkCsvDescription(
