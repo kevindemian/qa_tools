@@ -632,6 +632,19 @@ export interface MetricsStore {
 }
 
 /** All computed metrics from the hub. */
+/**
+ * Suite-level aggregation — passed/failed/skipped/duration per test suite.
+ * Computed by the hub from parsed artifact test data.
+ */
+export interface SuiteBreakdown {
+    suite: string;
+    passed: number;
+    failed: number;
+    skipped: number;
+    totalDuration: number;
+    tests: import('../result_parser.js').FlatTest[];
+}
+
 export interface ComputedMetrics {
     passRate: number;
     avgDuration: number;
@@ -700,6 +713,13 @@ export interface ComputedMetrics {
     traceabilityTree?: import('../report/traceability-matrix.js').TraceabilityResult | undefined;
     /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
     crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
+    // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────
+    /** Coverage gap analysis result. */
+    coverageGap?: import('./coverage.js').CoverageGapResult | undefined;
+    /** Suite-level aggregation: passed/failed/skipped/duration per suite. */
+    suiteBreakdown?: SuiteBreakdown[] | undefined;
+    /** Failure classification per test title (e.g., 'ASSERTION', 'TIMEOUT'). */
+    failureClassifications?: Record<string, string> | undefined;
 }
 
 /**

@@ -45,16 +45,8 @@ export const TEST_CREDENTIALS = {
 } as const;
 
 // === Versões de Ações (CI/CD) ===
-/** Versões de ações do GitHub Actions */
-export const ACTION_VERSIONS = {
-    CHECKOUT: 'actions/checkout@v5',
-    SETUP_NODE: 'actions/setup-node@v6',
-    UPLOAD_ARTIFACT: 'actions/upload-artifact@v7',
-    DOWNLOAD_ARTIFACT: 'actions/download-artifact@v8',
-    CODEQL_INIT: 'github/codeql-action/init@v3',
-    CODEQL_AUTOBUILD: 'github/codeql-action/autobuild@v3',
-    CODEQL_ANALYZE: 'github/codeql-action/analyze@v3',
-} as const;
+/** Versões de ações do GitHub Actions — re-exportado de shared/constants/ci-versions.ts */
+export { ACTION_VERSIONS } from '../constants/ci-versions.js';
 
 // === Configurações de Paginação ===
 /** Configurações padrão de paginação para APIs */

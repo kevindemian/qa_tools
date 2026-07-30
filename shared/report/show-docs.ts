@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { rootLogger } from '../logger.js';
 import { printError, warn, info, divider } from '../ui/prompt.js';
+import { tokens } from '../ui/theme-tokens.js';
 import { openWithFallback, getDocsOutputDir } from '../open.js';
 import { mdToHtml } from './markdown.js';
 import { buildHtmlPage } from './html-factory.js';
@@ -42,8 +43,7 @@ function _buildIndexHtml(docs: Array<{ label: string; file: string }>): string {
                 '</a></li>',
         )
         .join('\n');
-    const css =
-        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;line-height:1.6;color:#1a1a1a;background:#fafafa}h1{color:#111;border-bottom:2px solid #1a73e8;padding-bottom:.5rem}ul{list-style:none;padding:0}li{padding:.5rem 0;border-bottom:1px solid #eee}li:last-child{border-bottom:none}a{color:#1a73e8;text-decoration:none;font-size:1.1rem}a:hover{text-decoration:underline}.subtitle{color:#555;margin-top:-.5rem}";
+    const css = `body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;line-height:1.6;color:${tokens.color.text.primary.light};background:${tokens.color.surface.page.light}}h1{color:${tokens.color.text.primary.light};border-bottom:2px solid ${tokens.color.semantic.info.light};padding-bottom:.5rem}ul{list-style:none;padding:0}li{padding:.5rem 0;border-bottom:1px solid ${tokens.color.border.subtle.light}}li:last-child{border-bottom:none}a{color:${tokens.color.semantic.info.light};text-decoration:none;font-size:1.1rem}a:hover{text-decoration:underline}.subtitle{color:${tokens.color.text.secondary.light};margin-top:-.5rem}`;
     const bodyContent =
         '<h1>QA Tools — Documentação</h1><p class="subtitle">' +
         docs.length +

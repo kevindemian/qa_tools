@@ -9,6 +9,7 @@
  */
 import type { PipelineRun } from '../../types/ci-cd.js';
 import type { WorkflowRunTiming } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
 
 /**
  * Calculate average pipeline duration in seconds.
@@ -49,6 +50,15 @@ function extractFromTiming(run: PipelineRun, timing?: Map<number, WorkflowRunTim
     if (runId == null) return undefined;
     const timingData = timing.get(typeof runId === 'string' ? parseInt(runId, 10) : runId);
     if (timingData == null) return undefined;
+    if (!Number.isFinite(timingData.run_duration_ms) || timingData.run_duration_ms < 0) {
+        rootLogger.warn('avg-duration: invalid run_duration_ms skipped', {
+            operation: 'calcAvgDuration',
+            runId: String(runId),
+            value: timingData.run_duration_ms,
+            remediation: 'Duration ignored; fallback to timestamp-based calculation.',
+        });
+        return undefined;
+    }
     return timingData.run_duration_ms / 1000;
 }
 

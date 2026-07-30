@@ -11,6 +11,7 @@
 import type { RawData, ComputedMetrics } from '../../types/data-hub.js';
 import type { IncidentReport } from '../../report/incident-report.js';
 import { buildIncidentReport } from '../../report/incident-report.js';
+import { rootLogger } from '../../logger.js';
 
 /**
  * Compute incident events from hub data.
@@ -20,8 +21,22 @@ import { buildIncidentReport } from '../../report/incident-report.js';
  * @returns IncidentReport with events categorized by type and severity.
  */
 export function computeIncidentEvents(_raw: RawData, computed: ComputedMetrics): IncidentReport {
-    const passRate = computed.passRate;
-    const runFailureRate = computed.runFailureRate ?? 0;
+    const passRate = Number.isFinite(computed.passRate) ? computed.passRate : undefined;
+    const runFailureRate = Number.isFinite(computed.runFailureRate) ? computed.runFailureRate : 0;
+    if (!Number.isFinite(computed.passRate)) {
+        rootLogger.warn('incident-events: non-finite passRate treated as undefined', {
+            operation: 'computeIncidentEvents',
+            input: computed.passRate,
+            remediation: 'Pass rate ignored; incident report will lack pass-rate-based classification.',
+        });
+    }
+    if (!Number.isFinite(computed.runFailureRate)) {
+        rootLogger.warn('incident-events: non-finite runFailureRate treated as 0', {
+            operation: 'computeIncidentEvents',
+            input: computed.runFailureRate,
+            remediation: 'Failure rate replaced with 0 to prevent NaN propagation.',
+        });
+    }
     const regressionDetection = computed.regressionDetection;
     const regressionCount = regressionDetection?.regressions.length ?? 0;
     const seasonalityAggregation = computed.seasonalityAggregation;

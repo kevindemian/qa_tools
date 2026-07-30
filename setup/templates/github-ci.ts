@@ -11,7 +11,7 @@
  * 3. Keep ci.yml focused on testing only
  */
 import { WorkflowBuilder, type JobConfig, type StepConfig } from '../builder/workflow-builder.js';
-import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
+import { ACTION_VERSIONS } from '../../shared/constants/ci-versions.js';
 import type { SetupContext } from '../context.js';
 
 function generateQaPostProcessActionYaml(): string {

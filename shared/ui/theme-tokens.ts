@@ -50,6 +50,7 @@ export interface TextColors {
     primary: ColorPair;
     secondary: ColorPair;
     muted: ColorPair;
+    inverse: ColorPair;
 }
 
 export interface BorderColors {
@@ -129,6 +130,14 @@ export interface DesignTokens {
             critical: ColorPair;
         };
         chart: ChartColors;
+        tooltip: {
+            bg: ColorPair;
+            text: ColorPair;
+        };
+        code: {
+            bg: ColorPair;
+            text: ColorPair;
+        };
     };
     spacing: SpacingScale;
     borderRadius: BorderRadiusScale;

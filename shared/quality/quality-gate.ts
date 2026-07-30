@@ -19,12 +19,20 @@ import { humanizeError } from '../ui/prompt-errors.js';
 
 /* ── Fixed thresholds — never overridable ─────────────────────────────── */
 
+import {
+    MIN_PASS_RATE,
+    MAX_FLAKY_PCT,
+    MIN_COVERAGE,
+    MAX_SUITE_SPEED,
+    MIN_HEALTH_SCORE,
+} from '../constants/thresholds.js';
+
 const THRESHOLDS = {
-    minPassRate: 80,
-    maxFlakyPct: 30,
-    minCoverage: 70,
-    maxSuiteSpeed: 8,
-    minHealthScore: 70,
+    minPassRate: MIN_PASS_RATE,
+    maxFlakyPct: MAX_FLAKY_PCT,
+    minCoverage: MIN_COVERAGE,
+    maxSuiteSpeed: MAX_SUITE_SPEED,
+    minHealthScore: MIN_HEALTH_SCORE,
 } as const;
 
 export type QualityGateStatus = 'pass' | 'fail' | 'unknown';

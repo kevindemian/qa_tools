@@ -24,10 +24,11 @@ import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import { icon } from '../icons.js';
 import type { CrossSquadResult } from './cross-squad-benchmark.js';
+import { SCORE_QUALITY_GATE, GRADE_POOR } from '../constants/thresholds.js';
 
-const BOTTOM_SQUAD_SCORE_ERROR = 60;
+const BOTTOM_SQUAD_SCORE_ERROR = GRADE_POOR;
 const STD_DEV_WARN = 20;
-const TOP_SQUAD_SCORE_INFO = 80;
+const TOP_SQUAD_SCORE_INFO = SCORE_QUALITY_GATE;
 
 const _gradeVariant: Record<string, 'pass' | 'fail' | 'skip' | 'info' | 'warn'> = {
     A: 'pass',

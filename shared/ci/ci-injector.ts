@@ -14,11 +14,11 @@
  * - `setup/main.ts` (full setup wizard)
  * - `pr-report-setup-handler.ts` (PR Report config wizard)
  */
-import { ACTION_VERSIONS } from '../test-utils/constants.js';
+import { ACTION_VERSIONS } from '../constants/ci-versions.js';
+import { DEFAULT_TEST_REPORT_PATH } from '../constants/ci-paths.js';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
-const DEFAULT_TEST_REPORT_PATH = 'reports/';
 const DEFAULT_ARTIFACT_NAME = 'test-report';
 const NODE_DEFAULT = '22';
 const INSTALL_DEFAULT = 'npm ci';
@@ -97,7 +97,7 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         `              uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
         '              with:',
         '                  name: pr-report-html',
-        '                  path: reports/pr-report.html',
+        `                  path: ${DEFAULT_TEST_REPORT_PATH}pr-report.html`,
         '                  if-no-files-found: warn',
     ].join('\n');
 }

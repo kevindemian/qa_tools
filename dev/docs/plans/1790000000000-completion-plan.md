@@ -27,26 +27,34 @@ Auditoria de codigo real executada em 25/Jul/2026. Pesquisa cross-platform short
 | C.5 — release-score null guard | `result: ... | null | undefined` + EmptyState presentes |
 | 16 renderers extraidos + timestamp | Todos os 16 com `data-part="timestamp"` |
 
-### Pendente ou incorreto (gaps confirmados)
+### Pendente ou incorreto (gaps confirmados — atualizado 30/Jul/2026)
 
-| # | Gap | Evidencia |
-|---|-----|-----------|
-| 1 | pipeline-cost NAO consome `computed.perRunCosts` | `pipeline-cost.ts` ainda recalcula de `dataHub.getRuns()` |
-| 2 | Fase 2 inteira — 4 compute modules ausentes | impact-alerts, incident-events, traceability-tree, cross-squad NAO existem em `compute/` |
-| 3 | Fase 4 inteira — renderers nao consomem `computed.*` novos e 0 thresholds visíveis | Nenhum `computed.aiMetrics` consumido; grep `"target:"` = 0 resultados |
-| 4 | Fase 5 parcial — inline styles redundantes restantes | card.ts (`display:grid`, `display:flex`, `color:`), table.ts (`cursor:pointer`) |
-| 5 | C.4.1 — incident-report usa SeverityBanner manual | Funcao local linha 87, nao usa SeverityBadge primitive |
-| 6 | 3.6.1 parcial — traceability mantem classes legadas | `.story-node`/`.epic-node` coexistem com data-* |
-| 7 | C.2 — duplicacao markdown pass rate | buildSummaryTable e buildQualityGateSection sem renderQualityGateTable compartilhado |
-| 8 | C.6 — mocks internos nos testes PR-report | health-score, quality-gate, report-html ainda mockados |
-| 9 | Fase 6 — HTML-CSS-HOOKS-AUDIT.md nao existe | Só existe HTML-CSS-HOOKS.md |
-| 10 | Fase 8 — documentacao incompleta | TECHDOC sem camada primitives, sem seção de criterios |
-| 11 | Fase 9 — auditoria final nunca executada | — |
-| 12 | Item 17 (WORK doc) — coverage-gap mistura compute+HTML | generate-coverage-gap-html.ts possui compute + HTML mistos |
-| 13 | report-html.ts (FT-17) nao coberto no plano R2 | Orchestrator principal de HTML nao tem tasks de conteudo SSOT |
-| 14 | pipeline-health.ts nao coberto no plano R2 | git_triggers HTML generator sem cobertura |
-| 15 | schedule-handler.ts nao coberto no plano R2 | weekly report HTML sem cobertura |
-| 16 | interactive-mode.ts nao coberto no plano R2 | interactive dashboard HTML sem cobertura |
+| # | Gap | Evidencia | Status |
+|---|-----|-----------|--------|
+| 1 | pipeline-cost NAO consome `computed.perRunCosts` | `pipeline-cost.ts` ainda recalcula de `dataHub.getRuns()` | ✅ RESOLVIDO (R0.2) |
+| 2 | Fase 2 inteira — 4 compute modules ausentes | impact-alerts, incident-events, traceability-tree, cross-squad | ✅ RESOLVIDO (R1) |
+| 3 | Fase 4 inteira — renderers nao consomem `computed.*` | Nenhum `computed.aiMetrics` consumido | ⚠ PARCIAL — renderers SSOT OK, orchestrators parciais |
+| 4 | Fase 5 parcial — inline styles redundantes restantes | card.ts, table.ts | ✅ RESOLVIDO (R3/R5) |
+| 5 | C.4.1 — incident-report usa SeverityBanner manual | Funcao local linha 87 | ⚠ PENDENTE |
+| 6 | 3.6.1 parcial — traceability mantem classes legadas | `.story-node`/`.epic-node` | ⚠ PENDENTE |
+| 7 | C.2 — duplicacao markdown pass rate | buildSummaryTable vs buildQualityGateSection | ⚠ PENDENTE |
+| 8 | C.6 — mocks internos nos testes PR-report | 6 de 7 test files com mocks internos | ⚠ PENDENTE |
+| 9 | Fase 6 — HTML-CSS-HOOKS-AUDIT.md | ✅ RESOLVIDO | ✅ RESOLVIDO (R5) |
+| 10 | Fase 8 — documentacao incompleta | TECHDOC sem primitives | ✅ RESOLVIDO (R6) |
+| 11 | Fase 9 — auditoria final nunca executada | — | ⚠ PENDENTE |
+| 12 | coverage-gap mistura compute+HTML | generate-coverage-gap-html.ts | ✅ RESOLVIDO (compute extraído) |
+| 13 | report-html.ts nao coberto no plano R2 | Orchestrator principal | ⚠ PENDENTE |
+| 14 | pipeline-health.ts nao coberto no plano R2 | git_triggers HTML | ⚠ PENDENTE |
+| 15 | schedule-handler.ts nao coberto no plano R2 | weekly report HTML | ⚠ PENDENTE |
+| 16 | interactive-mode.ts nao coberto no plano R2 | interactive dashboard HTML | ⚠ PENDENTE |
+| **G27** | **NaN guards ausentes em 8 compute modules** | **Regra 24 — silêncio de NaN em pipeline-cost, suite-breakdown, avg-duration, suite-speed, metrics-runs, impact-alerts, incident-events, quarantine-status** | 🔴 NOVO — CRÍTICO |
+| **G28** | **test-utils em código de produção** | **traceability-tree.ts:14 importa `makeDataHubMock` (vitest); ci-injector.ts:17, github-ci.ts:14, qa-post-process-workflow.ts:7 importam `ACTION_VERSIONS` de test-utils** | 🔴 NOVO — CRÍTICO |
+| **G29** | **Cross-import violation: quality → report** | **10 arquivos quality/*-renderer.ts importam de report/html-factory.ts e report/report-styles.ts** | 🟡 NOVO — ARQUITETURAL |
+| **G30** | **eslint-disable em código de produção** | **traceability-matrix.ts:116 — `eslint-disable-next-line security/detect-object-injection`** | 🟡 NOVO — PROIBIDO |
+| **G31** | **SuiteAggregate duplica SuiteBreakdown** | **report-sections.ts:88-95 — interface idêntica a data-hub.ts:639-646** | 🔵 NOVO — DRY |
+| **G32** | **exports desnecessários em coverage-gap-utils.ts** | **PRIORITY_WEIGHTS, normalizeType, extractEpicKey, extractLinkedTestKeys — exportados mas só usados internamente** | 🔵 NOVO — LIMPEZA |
+| **G33** | **statsFromTests() em session-context.ts:137** | **Fallback local quando DataHub pode estar disponível** | 🟡 NOVO — SSOT |
+| **G34** | **Hardcoded CI paths** | **ci-injector.ts `reports/` e detector.ts `cypress/reports/ctrf-report.json` — paths hardcoded em vez de constantes** | 🔵 NOVO — LIMPEZA |
 
 **Posicao atual na ordem obrigatoria do crisp-circuit:** parado entre Fase 1 (com 1 tarefa regredida) e Fase 2.
 
@@ -1827,3 +1835,753 @@ Mock counts: main.test.ts (6), property.test.ts (6), wiring.property.test.ts (10
 | R6 | ✅ 100% | Documentação completa |
 | R7 | ✅ 100% | Build/lint/vitest/audit passam |
 | R8 | ⚠ Superficial | Specs validadas internamente; output real não comparado |
+
+---
+
+## Mapeamento de Gaps e Thresholds Detalhados (Codebase-Only) — 29/Jul/2026
+
+Após auditoria detalhada diretamente na base de código (sem inferências de documentos de planejamento pré-existentes), foram catalogados **26 gaps estruturais, lógicos e de design tokens**, organizados por níveis de prioridade absoluta.
+
+### 🔴 ALTA PRIORIDADE (Computação Local & Violação de SSOT)
+
+| # | Gap | Evidência | Arquivo:Linha |
+|---|-----|-----------|---------------|
+| **G1** | Helpers computam local | `tests.filter/some` em 4 funções, ZERO referências a `computed` | `report-sections.ts:233`, `report-table.ts:161-171,306-308` |
+| **G2** | `aggregateBySuite()` — reagrupa do zero | 17 linhas de compute em `report-sections.ts:90-107` | `report-sections.ts:90` |
+| **G3** | `precomputeCategories()` — regex local | `report-table.ts:19-27` — `categorizeFailure()` duplica lógica do hub | `report-table.ts:19` |
+| **G4** | `partitionTests()` — reparticiona do zero | `report-table.ts:161-171` — 3 arrays criados localmente | `report-table.ts:161` |
+
+### 🟡 MÉDIA PRIORIDADE (Thresholds e Métricas Hardcoded)
+
+| # | Gap | Evidência | Arquivo:Linha |
+|---|-----|-----------|---------------|
+| **G5** | `?? 80` hardcoded — 15 locais | Duplicação entre `report-sections.ts:150`, `report-html.ts:231`, `pr-report-core.ts:575`, `quality-gate.ts:23`, `health-score.ts:88` | 5 arquivos |
+| **G6** | `healthScore` thresholds hardcoded | `coverageTarget: 80`, `minPassRateGate: 80`, `minCoverageGate: 70` — não lidos de config | `health-score.ts:81-89` |
+| **G7** | `DEFAULT_GRADE_BOUNDARIES` hardcoded | `excellent: 90`, `good: 80`, `needs_attention: 70`, `poor: 60` | `health-score.ts:94-99` |
+| **G8** | `COVERAGE_THRESHOLD = 50` hardcoded | `generate-coverage-gap-html.ts:30` — não lido de config | `generate-coverage-gap-html.ts:30` |
+| **G9** | `getCoverageGateDefaults()` retorna `{minCoveragePct: 50}` | Hardcoded, não lido de hub/config | `coverage-gap-utils.ts:137-139` |
+| **G10** | `coverageGap` NÃO existe em `ComputedMetrics` | Hub não compute coverage gap — `generate-coverage-gap-html.ts` faz compute+render misturados | `data-hub.ts:635-703` |
+| **G11** | `computed.aiMetrics` não consumido por renderers | Hub calcula mas `shared/report/*.ts` e `shared/quality/*-renderer.ts` não consomem | 0 refs em report/ |
+| **G12** | `quality-gate.ts:22` — `THRESHOLDS` hardcoded | `minPassRate: 80`, `maxFlakyPct: 30`, `minCoverage: 70` — não exportado | `quality-gate.ts:22-28` |
+| **G13** | `health-score.ts:DEFAULT_THRESHOLDS` hardcoded | 15 thresholds não exportados nem compartilhados | `health-score.ts:78-89` |
+| **G14** | renderers hardcoded thresholds | `cross-squad-benchmark-renderer.ts:30`, `release-score-renderer.ts:18`, `defect-trend-renderer.ts:67` — `80`/`90` hardcoded | 3+ arquivos |
+| **G15** | `session-context.ts:137` — usa `statsFromTests()` | Fallback local em vez de `statsFromMetricsRun()` | `session-context.ts:137` |
+| **G16** | `pr-report-core.ts:575` — `?? 80` | Default hardcoded, não lido de config | `pr-report-core.ts:575` |
+
+### 🔵 BAIXA PRIORIDADE (Redundâncias, Mocks e Utilitários Órfãos)
+
+| # | Gap | Evidência | Arquivo:Linha |
+|---|-----|-----------|---------------|
+| **G17** | `pr-report.html` — `<html>mock report</html>` | Teste mocka `fs.writeFileSync` para NÃO gerar | `reports/pr-report.html` |
+| **G18** | `markdown-html.ts` — 11 hardcoded hex | Cores hardcoded, não usa tokens | `markdown-html.ts:84-100` |
+| **G19** | `show-docs.ts` — 1 hardcoded hex | Cor hardcoded | `show-docs.ts:46` |
+| **G20** | `coverage-gap-utils.ts` — não consumido | Funções `calculateTotals`, `buildEpicRollup` não são importadas por ninguém | `coverage-gap-utils.ts` |
+| **G21** | `generate-coverage-gap-html.ts` — 9 funções misturadas | Compute + render no mesmo arquivo | `generate-coverage-gap-html.ts` |
+| **G22** | `report-chart.ts:34-36` — `height: 100`, `refLine: 90` hardcoded | Magic numbers no chart | `report-chart.ts:34-36` |
+| **G23** | `report-table.ts:92` — `120` hardcoded | Truncation limit hardcoded | `report-table.ts:92` |
+| **G24** | `pr-report-core.ts:152,325` — `1000`, `100` hardcoded | Duration/length limits | `pr-report-core.ts:152,325` |
+| **G25** | `TECHDOC.md` — sem menção a primitives | 0 refs a Badge/Card/MetricCard/MetricGrid | `TECHDOC.md` |
+| **G26** | `R5.3 checklist` — 2 refs a orchestrators | Incompleto para report-sections/diff | `HTML-CSS-HOOKS-AUDIT.md` |
+
+### 🔴 Threshold Duplication (Impacto Transversal)
+
+O valor `80` aparece duplicado de forma isolada em **15 locais distintos** em 5 arquivos diferentes:
+- `quality-gate.ts:23` → `minPassRate: 80`
+- `health-score.ts:88` → `minPassRateGate: 80`
+- `health-score.ts:81` → `coverageTarget: 80`
+- `health-score.ts:96` → `good: 80`
+- `report-sections.ts:150` → `passRateThreshold ?? 80`
+- `report-html.ts:231` → `coverageThreshold ?? 80`
+- `pr-report-core.ts:575` → `qualityGateThreshold ?? 80`
+- `cross-squad-benchmark-renderer.ts:30` → `TOP_SQUAD_SCORE_INFO = 80`
+- `release-score-renderer.ts:18` → `SCORE_QUALITY_GATE = 80`
+
+Nenhum desses lê da configuração centralizada — todos dependem de constantes mágicas ou de coalescência nula local, ferindo o princípio de segurança e manutenibilidade técnica.
+
+---
+
+## Auditoria Completa — 30/Jul/2026 (Codebase-Only)
+
+### Status dos 26 Gaps Originais
+
+| Gap | Descrição | Status |
+|-----|-----------|--------|
+| G1 | Helpers computam local (tests.filter/some) | 🔴 ABERTO — 11+ sites de compute local |
+| G2 | `aggregateBySuite()` existe | 🔴 ABERTO — report-sections.ts:90-107 |
+| G3 | `precomputeCategories()` existe | 🔴 ABERTO — report-table.ts:19-27 |
+| G4 | `partitionTests()` existe | ✅ RESOLVIDO — é helper de apresentação, não violação SSOT |
+| G5-G9, G12-G14, G16 | Thresholds hardcoded | ✅ RESOLVIDO — constants/thresholds.ts existe, 10 arquivos importam |
+| G10 | `coverageGap` em ComputedMetrics | ✅ RESOLVIDO — campo existe, compute existe, wired em hub.ts |
+| G11 | `aiMetrics` não consumido por renderers | ⚠ VERIFICADO — renderers recebem parâmetros tipados (padrão válido) |
+| G15 | `session-context.ts:137` usa `statsFromTests()` | 🔴 ABERTO — fallback local |
+| G17 | `pr-report.html` é mock | 🔴 ABERTO — `<html>mock report</html>` |
+| G18 | `markdown-html.ts` — 14 hex hardcoded | 🔴 ABERTO — 14 cores não usam design tokens |
+| G19 | `show-docs.ts` — 6 hex hardcoded | 🔴 ABERTO — 6 cores não usam design tokens |
+| G20 | `coverage-gap-utils.ts` consumido por compute | ✅ RESOLVIDO — 6 funções importadas por compute/coverage-gap.ts |
+| G21 | `generate-coverage-gap-html.ts` mistura compute+render | ✅ RESOLVIDO — agora é pure renderer |
+| G22 | `report-chart.ts` — height/refLine magic numbers | 🔴 ABERTO — height:100, refLine:90 |
+| G23 | `report-table.ts:92` — 120 hardcoded | 🔴 ABERTO — truncation limit |
+| G24 | `pr-report-core.ts:326` — 100 hardcoded | 🔴 ABERTO — diff error truncation |
+| G25 | `TECHDOC.md` sem primitives | ✅ RESOLVIDO — primitives documentadas |
+| G26 | `HTML-CSS-HOOKS-AUDIT.md` orchestrators | ✅ RESOLVIDO — 5 orchestrators listados |
+
+### Novos Gaps Descobertos (Codebase-Wide Audit)
+
+| Gap | Descrição | Severidade | Arquivo:Linha |
+|-----|-----------|------------|---------------|
+| **G27** | NaN/Infinity guards ausentes — 8 compute modules | 🔴 CRÍTICO (Rule 24) | avg-duration.ts:52, suite-speed.ts:45, pipeline-cost.ts:31, metrics-runs.ts:30-33, suite-breakdown.ts:43/47, impact-alerts.ts:23-24, incident-events.ts:23-24, quarantine-status.ts:25 |
+| **G28** | test-utils em código de produção (Rule 6 SRP) | 🔴 CRÍTICO | traceability-tree.ts:14 (makeDataHubMock + vitest), ci-injector.ts:17, github-ci.ts:14, qa-post-process-workflow.ts:7 (ACTION_VERSIONS) |
+| **G29** | Cross-import violation: quality → report | 🟡 ARQUITETURAL | 10 quality/*-renderer.ts → report/html-factory.ts + report-styles.ts |
+| **G30** | eslint-disable em código de produção | 🟡 PROIBIDO | traceability-matrix.ts:116 |
+| **G31** | SuiteAggregate duplica SuiteBreakdown | 🔵 DRY | report-sections.ts:88-95 vs data-hub.ts:639-646 |
+| **G32** | exports desnecessários | 🔵 LIMPEZA | coverage-gap-utils.ts:7/21/29/39 |
+| **G33** | `statsFromTests()` em session-context.ts:137 | 🟡 SSOT | session-context.ts:137 |
+| **G34** | Hardcoded CI paths | 🔵 LIMPEZA | ci-injector.ts `reports/`, detector.ts `cypress/reports/ctrf-report.json` |
+
+---
+
+## Plano de Correção Completo — Todas as Fases
+
+### Ordem de Execução (dependências)
+
+```
+Fase 1 (NaN guards)           → sem dependências, início imediato
+Fase 2 (test-utils em prod)   → sem dependências, início imediato
+Fase 3 (SSOT violations)      → depende da Fase 1 (suite-breakdown NaN fix)
+Fase 4 (session-context)      → depende da Fase 1 (statsFromMetricsRun)
+Fase 5 (eslint-disable)       → sem dependências
+Fase 6 (hardcoded hex)        → sem dependências
+Fase 7 (magic numbers)        → sem dependências
+Fase 8 (DRY type)             → depende da Fase 3 (aggregateBySuite refactor)
+Fase 9 (pr-report.html)       → sem dependências
+Fase 10 (cross-import)        → sem dependências
+Fase 11 (orphaned exports)    → sem dependências
+Fase 12 (verificação final)   → depende de todas as anteriores
+```
+
+---
+
+### FASE 1 — NaN/Infinity Guards (Rule 24 — CRÍTICO)
+
+Cada correção adiciona `Number.isFinite()` antes de operações numéricas ou substitui `??` por validação explícita.
+
+#### Fase 1.1 — avg-duration.ts:52
+
+**Arquivo:** `shared/data-hub/compute/avg-duration.ts`
+
+**Mudança:** Adicionar guard `Number.isFinite()` em `extractFromTiming()`:
+```typescript
+// ANTES:
+return timingData.run_duration_ms / 1000;
+
+// DEPOIS:
+if (!Number.isFinite(timingData.run_duration_ms) || timingData.run_duration_ms < 0) {
+    rootLogger.warn('avg-duration: invalid run_duration_ms', { runId, value: timingData.run_duration_ms });
+    return undefined;
+}
+return timingData.run_duration_ms / 1000;
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/avg-duration.test.ts` — PASS
+- Teste negativo: entrada com `run_duration_ms: NaN` retorna `undefined`, não NaN
+
+**Comando de Verificação:**
+```bash
+npx tsc --noEmit && npx vitest run shared/data-hub/compute/avg-duration.test.ts
+```
+
+---
+
+#### Fase 1.2 — suite-speed.ts:45
+
+**Arquivo:** `shared/data-hub/compute/suite-speed.ts`
+
+**Mudança:** Adicionar guard em `collectFromTiming()`:
+```typescript
+// ANTES:
+const perJobMs = timingData.run_duration_ms / jobs.length;
+
+// DEPOIS:
+if (!Number.isFinite(timingData.run_duration_ms) || timingData.run_duration_ms < 0) {
+    rootLogger.warn('suite-speed: invalid run_duration_ms', { runId, value: timingData.run_duration_ms });
+    continue;
+}
+const perJobMs = timingData.run_duration_ms / jobs.length;
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/suite-speed.test.ts` — PASS
+- Teste negativo: entrada com `NaN` resulta em skip, não propagação
+
+---
+
+#### Fase 1.3 — pipeline-cost.ts:31
+
+**Arquivo:** `shared/data-hub/compute/pipeline-cost.ts`
+
+**Mudança:** Substituir `??` por validação finita:
+```typescript
+// ANTES:
+const cpm = costPerMinute ?? DEFAULT_COST_PER_MINUTE;
+
+// DEPOIS:
+const cpm = Number.isFinite(costPerMinute) && costPerMinute! > 0
+    ? costPerMinute!
+    : DEFAULT_COST_PER_MINUTE;
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/pipeline-cost.test.ts` — PASS
+- Teste negativo: `costPerMinute: NaN` usa `DEFAULT_COST_PER_MINUTE`
+
+---
+
+#### Fase 1.4 — metrics-runs.ts:30-33
+
+**Arquivo:** `shared/data-hub/compute/metrics-runs.ts`
+
+**Mudança:** Adicionar guards na acumulação:
+```typescript
+// ANTES:
+totalPassed += artifact.data.stats.passed;
+totalFailed += artifact.data.stats.failed;
+totalSkipped += artifact.data.stats.skipped;
+totalDuration += artifact.data.stats.duration;
+
+// DEPOIS:
+const { passed, failed, skipped, duration } = artifact.data.stats;
+totalPassed += Number.isFinite(passed) ? passed : 0;
+totalFailed += Number.isFinite(failed) ? failed : 0;
+totalSkipped += Number.isFinite(skipped) ? skipped : 0;
+totalDuration += Number.isFinite(duration) ? duration : 0;
+if (!Number.isFinite(passed) || !Number.isFinite(failed) || !Number.isFinite(skipped) || !Number.isFinite(duration)) {
+    rootLogger.warn('metrics-runs: non-finite stats in artifact', { stats: artifact.data.stats });
+}
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/metrics-runs.test.ts` — PASS
+- Teste negativo: artifact com stats NaN resulta em totais 0 + warning
+
+---
+
+#### Fase 1.5 — suite-breakdown.ts:43,47
+
+**Arquivo:** `shared/data-hub/compute/suite-breakdown.ts`
+
+**Mudança:** Substituir `??` por validação finita:
+```typescript
+// ANTES:
+agg.totalDuration += test.duration ?? 0;
+// ...
+duration: test.duration ?? 0,
+
+// DEPOIS:
+const safeDuration = Number.isFinite(test.duration) && test.duration! >= 0 ? test.duration! : 0;
+agg.totalDuration += safeDuration;
+// ...
+duration: safeDuration,
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/suite-breakdown.test.ts` — PASS
+- Teste negativo: `duration: NaN` resulta em `0` + warning
+
+---
+
+#### Fase 1.6 — impact-alerts.ts:23-24
+
+**Arquivo:** `shared/data-hub/compute/impact-alerts.ts`
+
+**Mudança:** Adicionar guards de defesa:
+```typescript
+const passRate = Number.isFinite(computed.passRate) ? computed.passRate : undefined;
+const coveragePct = Number.isFinite(computed.coverage) ? computed.coverage : undefined;
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/impact-alerts.test.ts` — PASS
+
+---
+
+#### Fase 1.7 — incident-events.ts:23-24
+
+**Arquivo:** `shared/data-hub/compute/incident-events.ts`
+
+**Mudança:** Adicionar guards:
+```typescript
+const passRate = Number.isFinite(computed.passRate) ? computed.passRate : undefined;
+const runFailureRate = Number.isFinite(computed.runFailureRate) ? computed.runFailureRate : 0;
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/incident-events.test.ts` — PASS
+
+---
+
+#### Fase 1.8 — quarantine-status.ts:25
+
+**Arquivo:** `shared/data-hub/compute/quarantine-status.ts`
+
+**Mudança:** Adicionar guard explícito:
+```typescript
+// ANTES:
+.filter((r) => r.rate >= config.quarantineThreshold)
+
+// DEPOIS:
+.filter((r) => {
+    if (!Number.isFinite(r.rate)) {
+        rootLogger.warn('quarantine-status: non-finite rate', { name: r.name, rate: r.rate });
+        return false;
+    }
+    return r.rate >= config.quarantineThreshold;
+})
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/data-hub/compute/quarantine-status.test.ts` — PASS
+
+---
+
+### FASE 2 — test-utils em Código de Produção (SRP)
+
+#### Fase 2.1 — traceability-tree.ts:14 — CRÍTICO
+
+**Arquivo:** `shared/data-hub/compute/traceability-tree.ts`
+
+**Mudança:** Criar interface `HubLike` em `shared/types/data-hub.ts` que corresponda ao que `buildTraceabilityMatrix` precisa. Substituir `makeDataHubMock` por objeto plano conformando a `HubLike`. Remover import de test-utils.
+
+```typescript
+// Novo em shared/types/data-hub.ts:
+export interface HubLike {
+    raw: RawData;
+    computed: {
+        flakyRate?: unknown;
+        metricsRuns?: MetricsRun[];
+    };
+}
+
+// Em traceability-tree.ts:
+import type { HubLike } from '../../types/data-hub.js';
+// REMOVER: import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js'
+
+const hubLike: HubLike = {
+    raw: _raw,
+    computed: { flakyRate: computed.flakyRate, metricsRuns },
+};
+return buildTraceabilityMatrix(metricsRuns, undefined, hubLike);
+```
+
+**Critério de Aceitação:**
+- `grep -r "test-utils" shared/data-hub/` retorna 0 resultados
+- `npx vitest run shared/data-hub/compute/traceability-tree.test.ts` — PASS
+- `npx tsc --noEmit` — 0 erros
+
+---
+
+#### Fase 2.2 — Mover ACTION_VERSIONS para shared/constants/
+
+**Arquivos:**
+- `shared/test-utils/constants.ts` → extrair `ACTION_VERSIONS` para `shared/constants/ci-versions.ts`
+- `shared/ci/ci-injector.ts:17` → atualizar import
+- `setup/templates/github-ci.ts:14` → atualizar import
+- `setup/templates/qa-post-process-workflow.ts:7` → atualizar import
+
+**Mudança:**
+```typescript
+// Novo: shared/constants/ci-versions.ts
+export const ACTION_VERSIONS = { /* ... */ } as const;
+
+// shared/test-utils/constants.ts: re-export para backward compat
+export { ACTION_VERSIONS } from '../constants/ci-versions.js';
+```
+
+**Critério de Aceitação:**
+- `grep -r "test-utils/constants" shared/ci/ setup/templates/` retorna 0 resultados
+- `npx vitest run` — todos os testes passam
+
+---
+
+### FASE 3 — DataHub SSOT Violations
+
+#### Fase 3.1 — Refatorar buildTimeline() para consumir computed.suiteBreakdown
+
+**Arquivo:** `shared/report/report-sections.ts`
+
+**Mudança:**
+1. Importar `SuiteBreakdown` de `../types/data-hub.js`
+2. Deletar interface `SuiteAggregate` (linhas 88-95) — usar `SuiteBreakdown`
+3. Alterar assinatura de `buildTimeline(tests: FlatTest[])` para `buildTimeline(tests: FlatTest[], computed?: ComputedMetrics)`
+4. No corpo: `const suites = computed?.suiteBreakdown ?? aggregateBySuite(tests);`
+5. Manter `aggregateBySuite()` como fallback privado
+
+**Critério de Aceitação:**
+- `grep -c "SuiteAggregate" shared/report/report-sections.ts` retorna 0
+- `npx vitest run shared/report/` — todos os testes passam
+
+---
+
+#### Fase 3.2 — Refatorar report-html.ts para preferir computed.failureClassifications
+
+**Arquivo:** `shared/report/report-html.ts:116`
+
+**Mudança:**
+```typescript
+// ANTES:
+const categories = options?.testCategories || precomputeCategories(precomputedRun.tests);
+
+// DEPOIS:
+const categories = options?.testCategories
+    || options?.computed?.failureClassifications
+    || precomputeCategories(precomputedRun.tests);
+```
+
+**Critério de Aceitação:**
+- `npx vitest run shared/report/report-html.test.ts` — PASS
+
+---
+
+### FASE 4 — session-context.ts Fallback
+
+#### Fase 4.1 — Usar statsFromMetricsRun quando DataHub disponível
+
+**Arquivo:** `shared/session-context.ts:137`
+
+**Mudança:**
+```typescript
+// ANTES:
+const stats = statsFromTests(tests);
+
+// DEPOIS:
+let stats: ReportStats;
+if (isDataHubInitialized()) {
+    const hub = getDataHub();
+    const firstRun = hub.computed?.metricsRuns?.[0];
+    stats = firstRun ? statsFromMetricsRun(firstRun) : statsFromTests(tests);
+} else {
+    stats = statsFromTests(tests);
+}
+```
+
+Adicionar import de `statsFromMetricsRun` de `./report/report-utils.js`.
+
+**Critério de Aceitação:**
+- `grep -c "statsFromTests" shared/session-context.ts` retorna 1 (definição do fallback)
+- `npx tsc --noEmit` — 0 erros
+
+---
+
+### FASE 5 — eslint-disable
+
+#### Fase 5.1 — Eliminar eslint-disable em traceability-matrix.ts:116
+
+**Arquivo:** `shared/report/traceability-matrix.ts`
+
+**Mudança:** Refatorar para acesso tipado em vez de bracket notation:
+```typescript
+// ANTES:
+// eslint-disable-next-line security/detect-object-injection
+if (typeof dataHub[method] !== 'function') {
+
+// DEPOIS:
+const accessor = dataHub[method as keyof DataHub];
+if (typeof accessor !== 'function') {
+```
+
+**Critério de Aceitação:**
+- `grep -c "eslint-disable" shared/report/traceability-matrix.ts` retorna 0
+- `npm run lint` — 0 novos warnings
+
+---
+
+### FASE 6 — Hardcoded Hex → Design Tokens
+
+#### Fase 6.1 — markdown-html.ts: 14 hex → CSS vars
+
+**Arquivo:** `shared/report/markdown-html.ts`
+
+**Mudança:** Substituir 14 cores hardcoded por CSS custom properties:
+| Hex | Token CSS |
+|-----|-----------|
+| `#1a1a1a` | `var(--color-text-primary)` |
+| `#fafafa` | `var(--color-surface-page)` |
+| `#111` | `var(--color-text-primary)` |
+| `#e8e8e8` | `var(--color-surface-input)` |
+| `#1e1e1e` | `var(--color-surface-card)` |
+| `#d4d4d4` | `var(--color-text-secondary)` |
+| `#ccc` | `var(--color-border-default)` |
+| `#555` | `var(--color-text-muted)` |
+| `#d0d0d0` | `var(--color-border-subtle)` |
+| `#eee` | `var(--color-surface-page)` |
+| `#1a73e8` | `var(--color-info)` |
+| `#ddd` | `var(--color-border-subtle)` |
+
+Verificar se `theme-tokens.ts` já define `--color-info` e `--color-text-muted`. Se não, adicionar.
+
+**Critério de Aceitação:**
+- `grep -c "#[0-9a-fA-F]\{3,6\}" shared/report/markdown-html.ts` retorna 0
+- `npx vitest run shared/report/markdown-html.test.ts` — PASS
+
+---
+
+#### Fase 6.2 — show-docs.ts: 6 hex → CSS vars
+
+**Arquivo:** `shared/report/show-docs.ts:46`
+
+**Mudança:** Mesma substituição para as 6 cores na string CSS inline.
+
+**Critério de Aceitação:**
+- `grep -c "#[0-9a-fA-F]\{3,6\}" shared/report/show-docs.ts` retorna 0
+- `npx vitest run shared/report/show-docs.test.ts` — PASS
+
+---
+
+### FASE 7 — Magic Numbers → Constants
+
+#### Fase 7.1 — Novos constantes em thresholds.ts
+
+**Arquivo:** `shared/constants/thresholds.ts`
+
+**Mudança:** Adicionar:
+```typescript
+export const CHART_HEIGHT = 100;
+export const CHART_REF_LINE = 90;
+export const MAX_ERROR_DISPLAY_LENGTH = 120;
+export const MAX_DIFF_ERROR_LENGTH = 100;
+```
+
+#### Fase 7.2 — Atualizar consumidores
+
+| Arquivo | Linha | Substituição |
+|---------|-------|--------------|
+| `report-chart.ts:34` | `height: 100` | `height: CHART_HEIGHT` |
+| `report-chart.ts:35` | `refLine: 90` | `refLine: CHART_REF_LINE` |
+| `report-table.ts:92-93` | `120` | `MAX_ERROR_DISPLAY_LENGTH` |
+| `pr-report-core.ts:326` | `100` | `MAX_DIFF_ERROR_LENGTH` |
+
+**Critério de Aceitação:**
+- `grep -c "120" shared/report/report-table.ts` retorna 0 para magic numbers
+- `npx vitest run` — todos os testes passam
+
+---
+
+### FASE 8 — DRY Type Duplication
+
+#### Fase 8.1 — Remover SuiteAggregate, usar SuiteBreakdown
+
+**Arquivo:** `shared/report/report-sections.ts`
+
+**Mudança:** Após Fase 3.1, deletar interface `SuiteAggregate` completamente. Já substituída por `SuiteBreakdown`.
+
+**Critério de Aceitação:**
+- `grep -c "SuiteAggregate" shared/report/report-sections.ts` retorna 0
+- `npx tsc --noEmit` — 0 erros
+
+---
+
+### FASE 9 — pr-report.html Mock
+
+#### Fase 9.1 — Verificar e limpar
+
+**Arquivo:** `reports/pr-report.html`
+
+**Mudança:** Verificar se algum teste referencia este arquivo. Se não, deletar. Se sim, atualizar referência.
+
+**Critério de Aceitação:**
+- `grep -r "pr-report.html" --include="*.ts" --include="*.test.ts"` — 0 resultados (ou referências atualizadas)
+
+---
+
+### FASE 10 — Cross-Import (quality → report)
+
+**Solução: Mover html-factory.ts e report-styles.ts para shared/primitives/**
+
+**Por que é tecnicamente superior:**
+1. Zero lógica de domínio em ambos os arquivos — são infraestrutura HTML genérica
+2. `shared/primitives/` já existe como camada compartilhada
+3. Elimina falsa reivindicação de propriedade por `shared/report/`
+4. Segue SRP (infraestrutura HTML não é específica de report)
+5. Segue DIP (ambas as camadas dependem de infraestrutura compartilhada)
+
+**Arquivos a mover:**
+- `shared/report/html-factory.ts` → `shared/primitives/html-factory.ts`
+- `shared/report/report-styles.ts` → `shared/primitives/report-styles.ts`
+
+**Arquivos a atualizar (19 import sites em quality/):**
+- 9 `quality/*-renderer.ts` → `../primitives/html-factory.js`
+- 8 `quality/*-renderer.ts` → `../primitives/report-styles.js`
+- 1 `quality/benchmark-validators.ts` → permanece em report/ (report-validator.ts é específico de report)
+
+**Barrel update:**
+- `shared/primitives/index.ts` → adicionar re-exports de `html-factory` e `report-styles`
+- `shared/report/` → manter re-exports para backward compat (deprecated)
+
+**Critério de Aceitação:**
+- `grep -r "from.*report/html-factory" shared/quality/` retorna 0 resultados
+- `grep -r "from.*report/report-styles" shared/quality/` retorna 0 resultados
+- `npx tsc --noEmit` — 0 erros
+- `npx vitest run` — todos os testes passam
+
+---
+
+### FASE 11 — Exports Desnecessários + Hardcoded Paths
+
+#### Fase 11.1 — Remover exports internos em coverage-gap-utils.ts
+
+**Arquivo:** `shared/report/coverage-gap-utils.ts`
+
+**Mudança:** Remover `export` de `PRIORITY_WEIGHTS`, `normalizeType`, `extractEpicKey`, `extractLinkedTestKeys` — são helpers internos usados apenas dentro do próprio arquivo.
+
+**Critério de Aceitação:**
+- `npx tsc --noEmit` — 0 erros (nenhum consumidor externo)
+- `npx vitest run` — todos os testes passam
+
+---
+
+#### Fase 11.2 — Hardcoded CI Paths → Configurável
+
+**Arquivos:**
+- `shared/ci/ci-injector.ts` — `DEFAULT_TEST_REPORT_PATH = 'reports/'` hardcoded
+- `setup/detector.ts:25` — `cypress/reports/ctrf-report.json` hardcoded
+
+**Mudança:** Extrair paths para constantes centralizadas ou configuração:
+```typescript
+// shared/constants/ci-paths.ts (novo)
+export const DEFAULT_TEST_REPORT_PATH = 'reports/';
+export const CTRF_REPORT_PATH = 'cypress/reports/ctrf-report.json';
+```
+
+Atualizar `ci-injector.ts` e `detector.ts` para importar das constantes.
+
+**Critério de Aceitação:**
+- `grep -rn "'reports/'" shared/ci/ setup/` retorna 0 resultados para hardcoded
+- `npx tsc --noEmit` — 0 erros
+- `npx vitest run` — todos os testes passam
+
+---
+
+### FASE 12 — Verificação Final
+
+```bash
+npx tsc --noEmit                    # TypeScript compilation
+npm run lint                        # Lint (threshold ≤755)
+npx vitest run                      # Full test suite (533 files, 7359 tests)
+npm run quality:gates               # Quality gates
+```
+
+Todos devem passar com 0 erros antes de qualquer commit.
+
+---
+
+## Resumo do Inventário Final — 73 Instâncias Individuais
+
+Contagem por instância individual (cada linha = 1 gap a corrigir).
+
+| # | Categoria | Instâncias | Severidade | Fase |
+|---|-----------|-----------|------------|------|
+| 1 | NaN/Infinity guards — avg-duration.ts:52 | 1 | 🔴 CRÍTICO | 1.1 |
+| 2 | NaN/Infinity guards — suite-speed.ts:45 | 1 | 🔴 CRÍTICO | 1.2 |
+| 3 | NaN/Infinity guards — pipeline-cost.ts:31 | 1 | 🔴 CRÍTICO | 1.3 |
+| 4 | NaN/Infinity guards — metrics-runs.ts:30 (passed) | 1 | 🔴 CRÍTICO | 1.4 |
+| 5 | NaN/Infinity guards — metrics-runs.ts:31 (failed) | 1 | 🔴 CRÍTICO | 1.4 |
+| 6 | NaN/Infinity guards — metrics-runs.ts:32 (skipped) | 1 | 🔴 CRÍTICO | 1.4 |
+| 7 | NaN/Infinity guards — metrics-runs.ts:33 (duration) | 1 | 🔴 CRÍTICO | 1.4 |
+| 8 | NaN/Infinity guards — suite-breakdown.ts:43 (totalDuration) | 1 | 🔴 CRÍTICO | 1.5 |
+| 9 | NaN/Infinity guards — suite-breakdown.ts:47 (duration field) | 1 | 🔴 CRÍTICO | 1.5 |
+| 10 | NaN/Infinity guards — impact-alerts.ts:23 (passRate) | 1 | 🔴 CRÍTICO | 1.6 |
+| 11 | NaN/Infinity guards — impact-alerts.ts:24 (coverage) | 1 | 🔴 CRÍTICO | 1.6 |
+| 12 | NaN/Infinity guards — incident-events.ts:23 (passRate) | 1 | 🔴 CRÍTICO | 1.7 |
+| 13 | NaN/Infinity guards — incident-events.ts:24 (runFailureRate) | 1 | 🔴 CRÍTICO | 1.7 |
+| 14 | NaN/Infinity guards — quarantine-status.ts:25 (rate) | 1 | 🔴 CRÍTICO | 1.8 |
+| 15 | test-utils em produção — traceability-tree.ts:14 (makeDataHubMock) | 1 | 🔴 CRÍTICO | 2.1 |
+| 16 | test-utils em produção — ci-injector.ts:17 (ACTION_VERSIONS) | 1 | 🔴 CRÍTICO | 2.2 |
+| 17 | test-utils em produção — github-ci.ts:14 (ACTION_VERSIONS) | 1 | 🔴 CRÍTICO | 2.2 |
+| 18 | test-utils em produção — qa-post-process-workflow.ts:7 (ACTION_VERSIONS) | 1 | 🔴 CRÍTICO | 2.2 |
+| 19 | SSOT — aggregateBySuite() report-sections.ts:90 | 1 | 🔴 ALTO | 3.1 |
+| 20 | SSOT — precomputeCategories fallback report-html.ts:116 | 1 | 🔴 ALTO | 3.2 |
+| 21 | SSOT — statsFromTests session-context.ts:137 | 1 | 🟡 MÉDIO | 4.1 |
+| 22 | eslint-disable — traceability-matrix.ts:116 | 1 | 🟡 PROIBIDO | 5.1 |
+| 23 | Hex hardcoded — markdown-html.ts:84 `#1a1a1a` | 1 | 🟡 MÉDIO | 6.1 |
+| 24 | Hex hardcoded — markdown-html.ts:84 `#fafafa` | 1 | 🟡 MÉDIO | 6.1 |
+| 25 | Hex hardcoded — markdown-html.ts:85 `#111` | 1 | 🟡 MÉDIO | 6.1 |
+| 26 | Hex hardcoded — markdown-html.ts:86 `#e8e8e8` | 1 | 🟡 MÉDIO | 6.1 |
+| 27 | Hex hardcoded — markdown-html.ts:87 `#1e1e1e` | 1 | 🟡 MÉDIO | 6.1 |
+| 28 | Hex hardcoded — markdown-html.ts:87 `#d4d4d4` | 1 | 🟡 MÉDIO | 6.1 |
+| 29 | Hex hardcoded — markdown-html.ts:89 `#ccc` | 1 | 🟡 MÉDIO | 6.1 |
+| 30 | Hex hardcoded — markdown-html.ts:89 `#555` | 1 | 🟡 MÉDIO | 6.1 |
+| 31 | Hex hardcoded — markdown-html.ts:91 `#d0d0d0` | 1 | 🟡 MÉDIO | 6.1 |
+| 32 | Hex hardcoded — markdown-html.ts:92 `#eee` | 1 | 🟡 MÉDIO | 6.1 |
+| 33 | Hex hardcoded — markdown-html.ts:93 `#1a73e8` | 1 | 🟡 MÉDIO | 6.1 |
+| 34 | Hex hardcoded — markdown-html.ts:94 `#ddd` | 1 | 🟡 MÉDIO | 6.1 |
+| 35 | Hex hardcoded — markdown-html.ts:99 `#ddd` | 1 | 🟡 MÉDIO | 6.1 |
+| 36 | Hex hardcoded — markdown-html.ts:100 `#1a73e8` | 1 | 🟡 MÉDIO | 6.1 |
+| 37 | Hex hardcoded — show-docs.ts:46 `#1a1a1a` | 1 | 🟡 MÉDIO | 6.2 |
+| 38 | Hex hardcoded — show-docs.ts:46 `#fafafa` | 1 | 🟡 MÉDIO | 6.2 |
+| 39 | Hex hardcoded — show-docs.ts:46 `#111` | 1 | 🟡 MÉDIO | 6.2 |
+| 40 | Hex hardcoded — show-docs.ts:46 `#1a73e8` | 1 | 🟡 MÉDIO | 6.2 |
+| 41 | Hex hardcoded — show-docs.ts:46 `#eee` | 1 | 🟡 MÉDIO | 6.2 |
+| 42 | Hex hardcoded — show-docs.ts:46 `#555` | 1 | 🟡 MÉDIO | 6.2 |
+| 43 | Magic number — report-chart.ts:34 `height:100` | 1 | 🔵 MÉDIO | 7.1 |
+| 44 | Magic number — report-chart.ts:35 `refLine:90` | 1 | 🔵 MÉDIO | 7.1 |
+| 45 | Magic number — report-table.ts:92 `120` | 1 | 🔵 MÉDIO | 7.2 |
+| 46 | Magic number — report-table.ts:93 `120` | 1 | 🔵 MÉDIO | 7.2 |
+| 47 | Magic number — pr-report-core.ts:326 `100` | 1 | 🔵 MÉDIO | 7.3 |
+| 48 | DRY — SuiteAggregate duplica SuiteBreakdown report-sections.ts:88-95 | 1 | 🔵 MÉDIO | 8.1 |
+| 49 | Mock — pr-report.html placeholder | 1 | 🔵 BAIXO | 9.1 |
+| 50 | Cross-import — cross-squad-benchmark-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 51 | Cross-import — cross-squad-benchmark-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 52 | Cross-import — developer-profile-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 53 | Cross-import — developer-profile-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 54 | Cross-import — requirement-score-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 55 | Cross-import — requirement-score-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 56 | Cross-import — pipeline-cost-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 57 | Cross-import — pipeline-cost-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 58 | Cross-import — release-score-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 59 | Cross-import — release-score-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 60 | Cross-import — suite-optimization-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 61 | Cross-import — suite-optimization-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 62 | Cross-import — defect-seasonality-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 63 | Cross-import — defect-seasonality-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 64 | Cross-import — defect-trend-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 65 | Cross-import — defect-trend-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 66 | Cross-import — silent-regression-renderer.ts → html-factory | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 67 | Cross-import — silent-regression-renderer.ts → report-styles | 1 | 🟡 ARQUITETURAL | 10.1 |
+| 68 | Export desnecessário — coverage-gap-utils.ts `PRIORITY_WEIGHTS` | 1 | 🔵 BAIXO | 11.1 |
+| 69 | Export desnecessário — coverage-gap-utils.ts `normalizeType` | 1 | 🔵 BAIXO | 11.1 |
+| 70 | Export desnecessário — coverage-gap-utils.ts `extractEpicKey` | 1 | 🔵 BAIXO | 11.1 |
+| 71 | Export desnecessário — coverage-gap-utils.ts `extractLinkedTestKeys` | 1 | 🔵 BAIXO | 11.1 |
+| 72 | Hardcoded path — ci-injector.ts `reports/` | 1 | 🔵 BAIXO | 11.2 |
+| 73 | Hardcoded path — detector.ts `cypress/reports/ctrf-report.json` | 1 | 🔵 BAIXO | 11.2 |
+| | **TOTAL** | **73** | | |
+
+### Contagem por Severidade
+
+| Severidade | Instâncias |
+|------------|-----------|
+| 🔴 CRÍTICO (NaN guards + test-utils) | 18 |
+| 🔴 ALTO (SSOT violations) | 2 |
+| 🟡 PROIBIDO (eslint-disable) | 1 |
+| 🟡 ARQUITETURAL (cross-import) | 18 |
+| 🟡 MÉDIO (hex + session-context) | 21 |
+| 🔵 MÉDIO (magic numbers + DRY) | 7 |
+| 🔵 BAIXO (mock + exports + paths) | 6 |
+| **TOTAL** | **73** |
+
+### Contagem por Fase de Correção
+
+| Fase | Instâncias | Descrição |
+|------|-----------|-----------|
+| Fase 1 | 14 | NaN/Infinity guards |
+| Fase 2 | 4 | test-utils em produção |
+| Fase 3 | 2 | DataHub SSOT violations |
+| Fase 4 | 1 | session-context fallback |
+| Fase 5 | 1 | eslint-disable |
+| Fase 6 | 20 | Hardcoded hex → design tokens |
+| Fase 7 | 5 | Magic numbers → constants |
+| Fase 8 | 1 | DRY type duplication |
+| Fase 9 | 1 | pr-report.html mock |
+| Fase 10 | 18 | Cross-import → shared primitives |
+| Fase 11 | 6 | Exports + hardcoded paths |
+| Fase 12 | — | Verificação final |
+| **TOTAL** | **73** | |

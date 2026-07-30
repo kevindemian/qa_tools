@@ -88,6 +88,9 @@ import {
     computeIncidentEvents,
     computeTraceabilityTree,
     computeCrossSquad,
+    computeCoverageGap,
+    computeSuiteBreakdown,
+    computeFailureClassifications,
 } from './compute/index.js';
 
 /** Options for creating a DataHub. */
@@ -857,6 +860,14 @@ export class DataHubImpl implements DataHub {
             passRate,
             coverage,
         } as ComputedMetrics);
+        // ─── Coverage gap computation ──────────────────────────────────────
+        const coverageGap =
+            raw.jiraIssues != null && raw.jiraIssues.length > 0
+                ? computeCoverageGap(raw.jiraIssues, new Map<string, string[]>())
+                : undefined;
+        // ─── Suite breakdown and failure classifications ──────────────────
+        const suiteBreakdown = metricsRuns.length > 0 ? computeSuiteBreakdown(metricsRuns) : [];
+        const failureClassifications = metricsRuns.length > 0 ? computeFailureClassifications(metricsRuns) : {};
 
         return {
             passRate,
@@ -896,6 +907,9 @@ export class DataHubImpl implements DataHub {
             incidentEvents,
             traceabilityTree,
             crossSquad,
+            coverageGap,
+            suiteBreakdown,
+            failureClassifications,
         };
     }
 

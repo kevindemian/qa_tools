@@ -8,6 +8,7 @@
  */
 import type { PipelineJob } from '../../types/ci-cd.js';
 import type { WorkflowRunTiming } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
 
 /**
  * Calculate P95 of pipeline job durations in milliseconds (CI-level).
@@ -42,6 +43,15 @@ function collectFromTiming(jobsMap: Map<number, PipelineJob[]>, timing: Map<numb
     for (const [runId, timingData] of timing) {
         const jobs = jobsMap.get(runId);
         if (jobs == null || jobs.length === 0) continue;
+        if (!Number.isFinite(timingData.run_duration_ms) || timingData.run_duration_ms < 0) {
+            rootLogger.warn('suite-speed: invalid run_duration_ms skipped', {
+                operation: 'calcSuiteSpeedP95',
+                runId: String(runId),
+                value: timingData.run_duration_ms,
+                remediation: 'Run duration ignored; falling back to job.duration field.',
+            });
+            continue;
+        }
         const perJobMs = timingData.run_duration_ms / jobs.length;
         for (const job of jobs) {
             if (job.status === 'success' || job.status === 'failure') {

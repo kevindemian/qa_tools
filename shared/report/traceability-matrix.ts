@@ -113,8 +113,8 @@ function validateDataHub(dataHub: DataHub): void {
         'getQuality',
     ];
     for (const method of requiredMethods) {
-        // eslint-disable-next-line security/detect-object-injection -- requiredMethods is hardcoded to DataHub keys
-        if (typeof dataHub[method] !== 'function') {
+        const accessor = dataHub[method];
+        if (typeof accessor !== 'function') {
             const msg = `validateDataHub: dataHub.${method} is not a function. Required accessor method missing from DataHub.`;
             rootLogger.error(`validateDataHub: Missing required accessor method`, {
                 operation: 'validateDataHub',

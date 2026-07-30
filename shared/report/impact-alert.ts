@@ -8,6 +8,7 @@
  */
 
 import type { CoverageGapResult } from '../types/coverage.js';
+import { MIN_PASS_RATE, MIN_COVERAGE, COVERAGE_TARGET, PASS_RATE_CRITICAL } from '../constants/thresholds.js';
 
 export { generateImpactAlertHtml } from './impact-alert-renderer.js';
 
@@ -16,8 +17,8 @@ export { generateImpactAlertHtml } from './impact-alert-renderer.js';
  */
 export const IMPACT_ALERT_PROVENANCE = {
     thresholds: {
-        low: { value: 70, source: 'Quality gate minimum threshold', standard: 'Internal' },
-        high: { value: 80, source: 'Quality gate target threshold', standard: 'Internal' },
+        low: { value: PASS_RATE_CRITICAL, source: 'Critical pass rate threshold', standard: 'Internal' },
+        high: { value: MIN_PASS_RATE, source: 'Quality gate target threshold', standard: 'Internal' },
     },
 } as const;
 
@@ -39,10 +40,10 @@ export interface ImpactAlertResult {
     timestamp: string;
 }
 
-const PASS_RATE_THRESHOLD_LOW = 70;
-const COVERAGE_THRESHOLD_LOW = 70;
-const PASS_RATE_THRESHOLD_HIGH = 80;
-const COVERAGE_THRESHOLD_HIGH = 80;
+const PASS_RATE_THRESHOLD_LOW = PASS_RATE_CRITICAL;
+const COVERAGE_THRESHOLD_LOW = MIN_COVERAGE;
+const PASS_RATE_THRESHOLD_HIGH = MIN_PASS_RATE;
+const COVERAGE_THRESHOLD_HIGH = COVERAGE_TARGET;
 const TOP_FAILURES_DISPLAY_LIMIT = 3;
 
 const DEFAULT_RESULT: ImpactAlertResult = {

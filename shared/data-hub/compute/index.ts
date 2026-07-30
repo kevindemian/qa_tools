@@ -38,6 +38,9 @@ export { computeImpactAlerts } from './impact-alerts.js';
 export { computeIncidentEvents } from './incident-events.js';
 export { computeTraceabilityTree } from './traceability-tree.js';
 export { computeCrossSquad } from './cross-squad.js';
+export { computeCoverageGap } from './coverage-gap.js';
+export { computeSuiteBreakdown } from './suite-breakdown.js';
+export { computeFailureClassifications } from './failure-classifications.js';
 export { enrichFailuresWithAuthor } from '../extractors/failure-attribution.js';
 export type {
     AiMetricsResult,

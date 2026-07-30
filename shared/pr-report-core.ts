@@ -45,6 +45,7 @@ import { createDataHubFromParseResult } from './data-hub/factory.js';
 import { DataHubImpl } from './data-hub/hub.js';
 import { summarizeDataQuality } from './quality/data-quality.js';
 import type { DataQualitySummary } from './quality/data-quality.js';
+import { MIN_PASS_RATE, MAX_DIFF_ERROR_LENGTH } from './constants/thresholds.js';
 
 /**
  * Read CI-injected environment variables with typed fallbacks.
@@ -322,7 +323,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
         '| Test | Duration | Error |',
         10,
         (t) => {
-            const error = t.error ? t.error.replace(/\n/g, ' ').slice(0, 100) : '';
+            const error = t.error ? t.error.replace(/\n/g, ' ').slice(0, MAX_DIFF_ERROR_LENGTH) : '';
             return `| ${t.title.replace(/\|/g, '\\|')} | ${t.duration}ms | ${error.replace(/\|/g, '\\|')} |`;
         },
     );
@@ -572,7 +573,7 @@ function generateHtmlReportFile(
             includeChart: true,
             coverageSource,
             dashboardId: 'pr-report-html',
-            passRateThreshold: options.qualityGateThreshold ?? 80,
+            passRateThreshold: options.qualityGateThreshold ?? MIN_PASS_RATE,
             ...(workflowUrl ? { ciUrl: workflowUrl } : {}),
             ...(ghBranch ? { branch: ghBranch } : {}),
             ...(Object.keys(flakinessMap).length > 0 ? { flakinessMap } : {}),

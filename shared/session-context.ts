@@ -16,12 +16,12 @@ function getErrorMessage(err: unknown): string {
 }
 import { withSpinner } from './ui/prompt.js';
 import { getHeadSha, getCurrentBranch } from './ci/git-sha.js';
-import type { DataHub, ReportMeta } from './types/data-hub.js';
+import type { DataHub, ReportMeta, ComputedMetrics } from './types/data-hub.js';
 // ci-test-downloader removed — DataHub.raw.parsedArtifacts is SSOT (Invariant 6)
 import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
-import { statsFromTests } from './report/report-utils.js';
+import { statsFromTests, statsFromMetricsRun } from './report/report-utils.js';
 
 interface SessionCountersItem {
     op: string;
@@ -134,7 +134,9 @@ function tryLoadFromCache(sha: string | null, store: DataHub): { result: ParseRe
         const cached = store.loadReport(sha);
         if (cached && Array.isArray(cached.tests) && cached.tests.length > 0) {
             const tests = cached.tests;
-            const stats = statsFromTests(tests);
+            const hub = store as { computed?: ComputedMetrics };
+            const firstRun = hub.computed?.metricsRuns?.[0];
+            const stats = firstRun ? statsFromMetricsRun(firstRun) : statsFromTests(tests);
             return {
                 result: {
                     tests,

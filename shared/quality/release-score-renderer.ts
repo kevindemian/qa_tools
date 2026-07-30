@@ -13,9 +13,7 @@ import { sanitizeHtml } from '../escape.js';
 import { Badge, MetricCard, MetricGrid, Section, RecommendedActions, EmptyState } from '../primitives/index.js';
 import type { ReleaseScoreResult } from './release-score.js';
 import { icon } from '../icons.js';
-
-const SCORE_CRITICAL = 50;
-const SCORE_QUALITY_GATE = 80;
+import { SCORE_CRITICAL, SCORE_QUALITY_GATE } from '../constants/thresholds.js';
 
 export function generateReleaseScoreHtml(result: ReleaseScoreResult | null | undefined): string {
     if (!result) {

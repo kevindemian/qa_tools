@@ -4,7 +4,7 @@
  * Called by ci.yml after tests complete. Runs git_triggers/main.ts pr-report on the
  * test report uploaded by the test job and uploads the resulting HTML.
  */
-import { ACTION_VERSIONS } from '../../shared/test-utils/constants.js';
+import { ACTION_VERSIONS } from '../../shared/constants/ci-versions.js';
 import type { SetupContext } from '../context.js';
 
 export function generateQaPostProcessWorkflow(ctx: SetupContext): string {

@@ -18,6 +18,7 @@ import { buildCss } from './report-styles.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildToggleScript } from './report-scripts.js';
 import { buildChartSection, buildTrendSection } from './report-chart.js';
+import { COVERAGE_TARGET } from '../constants/thresholds.js';
 
 import {
     buildSummaryCards,
@@ -102,7 +103,12 @@ function _buildTestTableSection(
 export function generateReportWithFallback(_tests: FlatTest[], options?: ReportOptions): string {
     try {
         const computed = options?.computed;
-        const precomputedRun = computed?.metricsRuns?.[0];
+        if (!computed) {
+            const msg = 'DataHub precomputed data (computed) is required for HTML report generation.';
+            rootLogger.error(msg);
+            return buildErrorPage('Error generating report', msg);
+        }
+        const precomputedRun = computed.metricsRuns?.[0];
         if (!precomputedRun) {
             const msg = 'DataHub precomputed data (metricsRuns) is required for HTML report generation.';
             rootLogger.error(msg);
@@ -110,36 +116,37 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
         }
         const stats = statsFromMetricsRun(precomputedRun);
         const passRate =
-            computed?.passRate ?? (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
-        const title = options?.title || DEFAULT_TITLE;
-        const categories = options?.testCategories || precomputeCategories(precomputedRun.tests);
-        const timestamp = options?.generatedAt || new Date().toISOString();
-        const dashboardId = options?.dashboardId || 'coverage-report';
-        const trends = computed.metricsTrends ?? options?.trends ?? [];
+            computed.passRate || (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
+        const title = options.title || DEFAULT_TITLE;
+        const categories =
+            options.testCategories || computed.failureClassifications || precomputeCategories(precomputedRun.tests);
+        const timestamp = options.generatedAt || new Date().toISOString();
+        const dashboardId = options.dashboardId || 'coverage-report';
+        const trends = computed.metricsTrends ?? options.trends ?? [];
 
         let bodyContent = '<h1>' + title + '</h1>';
         bodyContent += `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>`;
         bodyContent += `<div data-section="summary">`;
-        bodyContent += buildSummaryCards(stats, passRate, options?.passRateThreshold);
+        bodyContent += buildSummaryCards(stats, passRate, options.passRateThreshold);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="failed-summary">`;
         bodyContent += buildFailedSummary(precomputedRun.tests, stats);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="llm-analysis">`;
-        bodyContent += buildLlmSection(options || { title: '', includeChart: true });
+        bodyContent += buildLlmSection(options);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="charts">`;
-        bodyContent += buildChartSection(stats, options?.includeChart !== false);
+        bodyContent += buildChartSection(stats, options.includeChart !== false);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="trends">`;
         bodyContent += buildTrendSection(trends);
         bodyContent += `</div>`;
-        if (options?.qualityGate !== undefined) {
+        if (options.qualityGate !== undefined) {
             bodyContent += `<div data-section="quality-gate">`;
             bodyContent += buildQualityGate(passRate, options.qualityGate);
             bodyContent += `</div>`;
         }
-        if (options?.healthScore) {
+        if (options.healthScore) {
             bodyContent += `<div data-section="health">`;
             bodyContent += buildHealthSection(options.healthScore);
             bodyContent += `</div>`;
@@ -148,22 +155,22 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
         bodyContent += `<div data-section="test-table">`;
         bodyContent += _buildTestTableSection(precomputedRun.tests, categories, options);
         bodyContent += `</div>`;
-        if (options?.diffComparison) {
+        if (options.diffComparison) {
             bodyContent += `<div data-section="diff-comparison">`;
             bodyContent += buildDiffComparisonSection(options.diffComparison);
             bodyContent += `</div>`;
         }
         bodyContent += `<div data-section="flakiness-link">`;
-        bodyContent += _buildFlakinessLink(options || { title: '', includeChart: true });
+        bodyContent += _buildFlakinessLink(options);
         bodyContent += `</div>`;
         bodyContent += `<div data-section="timeline">`;
-        bodyContent += buildTimeline(precomputedRun.tests);
+        bodyContent += buildTimeline(precomputedRun.tests, computed);
         bodyContent += `</div>`;
 
         return buildHtmlPage({
             title,
             styles: buildCss(),
-            theme: options?.theme || 'system',
+            theme: options.theme || 'system',
             headExtra: _buildProjectMeta(),
             bodyContent,
             footer: _buildReportFooter(options),
@@ -228,7 +235,8 @@ export function generateCoverageHtml(
         const reportTitle = typeof options === 'string' ? options : options?.title || 'Coverage Report';
         const dashboardId =
             typeof options === 'object' ? (options.dashboardId ?? 'coverage-report') : 'coverage-report';
-        const coverageThreshold = typeof options === 'object' ? (options.coverageThreshold ?? 80) : 80;
+        const coverageThreshold =
+            typeof options === 'object' ? (options.coverageThreshold ?? COVERAGE_TARGET) : COVERAGE_TARGET;
         const epicThreshold = typeof options === 'object' ? (options.epicThreshold ?? 100) : 100;
 
         const totalIssues = epics.reduce((sum, e) => sum + e.issues.length, 0);

@@ -13,6 +13,7 @@ import type { FlatTest } from '../result_parser.js';
 import type { TestHistoryRun } from './report-types.js';
 import { Badge } from '../primitives/index.js';
 import { Tr, Td } from '../primitives/index.js';
+import { MAX_ERROR_DISPLAY_LENGTH } from '../constants/thresholds.js';
 import { tokens } from '../ui/theme-tokens.js';
 import { icon } from '../icons.js';
 
@@ -89,8 +90,9 @@ export function buildDetailRow(t: FlatTest, index: number, colspan: number): str
 
 export function buildErrorCell(t: FlatTest): string {
     if (t.state === 'failed' && t.error) {
-        const truncated = t.error.length > 120 ? t.error.slice(0, 120) + '...' : t.error;
-        const isTruncated = t.error.length > 120;
+        const truncated =
+            t.error.length > MAX_ERROR_DISPLAY_LENGTH ? t.error.slice(0, MAX_ERROR_DISPLAY_LENGTH) + '...' : t.error;
+        const isTruncated = t.error.length > MAX_ERROR_DISPLAY_LENGTH;
         const cls = isTruncated ? 'error-cell error-truncated' : 'error-cell';
         const attrs = isTruncated ? ' data-full="' + escapeHtml(t.error) + '"' : ' title="' + escapeHtml(t.error) + '"';
         return '<span class="' + cls + '"' + attrs + '>' + escapeHtml(truncated) + '</span>';

@@ -13,10 +13,18 @@ import { extractSuite } from './report-types.js';
 import type { FlatTest } from '../result_parser.js';
 import type { HealthScoreResult, HealthScoreProvenance } from '../types.js';
 import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './report-types.js';
+import type { ComputedMetrics } from '../types/data-hub.js';
 import { buildTestTable } from './report-table.js';
 import { MetricCard, MetricGrid, Card, Badge } from '../primitives/index.js';
 import { FilterBar, SearchInput, Button } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
+import {
+    MIN_PASS_RATE,
+    HEALTH_SCORE_GOOD,
+    HEALTH_SCORE_WARN,
+    SCORE_QUALITY_GATE,
+    SCORE_CRITICAL,
+} from '../constants/thresholds.js';
 
 export function buildTabs(runs: TestRunTab[]): string {
     if (runs.length <= 1) return '';
@@ -105,9 +113,9 @@ function aggregateBySuite(tests: FlatTest[]): SuiteAggregate[] {
     return Array.from(map.values());
 }
 
-export function buildTimeline(tests: FlatTest[]): string {
+export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): string {
     if (tests.length === 0) return '';
-    const suites = aggregateBySuite(tests);
+    const suites = computed?.suiteBreakdown ?? aggregateBySuite(tests);
     let maxDur = 0;
     for (const s of suites) {
         if (s.totalDuration > maxDur) maxDur = s.totalDuration;
@@ -147,7 +155,7 @@ export function buildTimeline(tests: FlatTest[]): string {
 }
 
 export function buildSummaryCards(stats: ReportStats, passRate: number, passRateThreshold?: number): string {
-    const threshold = passRateThreshold ?? 80;
+    const threshold = passRateThreshold ?? MIN_PASS_RATE;
     const sampleWarning =
         stats.total < 30 ? `Only ${stats.total} tests — results may not be statistically significant` : undefined;
     return MetricGrid({
@@ -263,9 +271,9 @@ export function buildReleaseSection(
     recommendation: string,
 ): string {
     let scoreColor: string;
-    if (score >= 80) {
+    if (score >= SCORE_QUALITY_GATE) {
         scoreColor = 'var(--color-success)';
-    } else if (score >= 50) {
+    } else if (score >= SCORE_CRITICAL) {
         scoreColor = 'var(--color-warn)';
     } else {
         scoreColor = 'var(--color-error)';
@@ -321,14 +329,14 @@ export function buildReleaseSection(
 }
 
 function healthColor(score: number): string {
-    if (score >= 80) return tokens.color.chart.pass;
-    if (score >= 50) return tokens.color.semantic.warn.light;
+    if (score >= HEALTH_SCORE_GOOD) return tokens.color.chart.pass;
+    if (score >= HEALTH_SCORE_WARN) return tokens.color.semantic.warn.light;
     return tokens.color.chart.fail;
 }
 
 function healthBg(score: number): string {
-    if (score >= 80) return 'var(--color-bg-healthy)';
-    if (score >= 50) return 'var(--color-bg-warning)';
+    if (score >= HEALTH_SCORE_GOOD) return 'var(--color-bg-healthy)';
+    if (score >= HEALTH_SCORE_WARN) return 'var(--color-bg-warning)';
     return 'var(--color-bg-critical)';
 }
 
