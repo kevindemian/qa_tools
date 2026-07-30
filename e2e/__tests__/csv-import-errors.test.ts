@@ -275,7 +275,7 @@ describe('E2E: CSV Import - Error Paths', () => {
             },
         ]);
         jira.get('/issue/TEST-1').reply(200, { key: 'TEST-1', fields: { customfield_13708: [] } });
-        jira.put('/issue/TEST-1').reply(500);
+        jira.put('/issue/TEST-1').times(11).reply(500);
         const xray = nock(XRAY);
         xray.post('/test/TEST-1/steps').reply(201);
 
