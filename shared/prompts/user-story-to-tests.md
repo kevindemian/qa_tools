@@ -89,10 +89,23 @@ Good example:
         "steps": ["Navigate to /login", "Enter valid email", "Enter correct password", "Click Sign In"],
         "expectedResult": "User is redirected to /dashboard and sees 'Welcome'",
         "preConditions": [{ "type": "create", "description": "User must be registered with valid credentials" }],
-        "coverage": [{ "criterionId": "C-1", "criterionText": "User can log in with valid credentials" }]
+        "coverage": [{ "criterionId": "C-1", "criterionText": "User can log in with valid credentials" }],
+        "environment": "staging",
+        "components": ["API", "Frontend"],
+        "priority": "High"
     }
 ]
 ```
+
+## OPTIONAL BATCH FIELDS
+
+Each test case JSON object MAY include these optional batch-level Jira fields:
+
+- `environment` (string): execution environment (e.g. "staging", "production"). Only when the context specifies it — never hallucinate.
+- `components` (array of strings): Jira component names. Only when the context specifies them.
+- `priority` (string): Jira priority name (e.g. "High", "Medium", "Low"). Only when the context specifies it.
+
+When the input does not specify these, OMIT the fields entirely. Never invent values.
 
 Return ONLY a valid JSON array. No markdown wrapping, no explanation.
 

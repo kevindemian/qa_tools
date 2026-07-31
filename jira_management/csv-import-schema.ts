@@ -41,6 +41,9 @@ export const TestCaseSchema = z.object({
             }),
         )
         .optional(),
+    environment: z.string().optional(),
+    components: z.array(z.string()).optional(),
+    priority: z.string().optional(),
 });
 
 const ImportJsonStepSchema = z.object({
@@ -62,9 +65,26 @@ export const ImportJsonItemSchema = z.object({
     linkedIssues: z
         .array(z.union([z.string(), z.object({ key: z.string(), linkType: z.string().optional() })]))
         .optional(),
+    environment: z.string().optional(),
+    components: z.array(z.string()).optional(),
+    priority: z.string().optional(),
 });
 
-export const ImportJsonSchema = z.array(ImportJsonItemSchema).min(1, 'JSON deve conter pelo menos um caso de teste');
+export const ImportJsonRootSchema = z.object({
+    tests: z.array(ImportJsonItemSchema).min(1, 'JSON deve conter pelo menos um caso de teste'),
+    environment: z.string().optional(),
+    components: z.array(z.string()).optional(),
+    priority: z.string().optional(),
+    testExecution: z
+        .object({
+            title: z.string().optional(),
+            description: z.string().optional(),
+            labels: z.array(z.string()).optional(),
+        })
+        .optional(),
+});
+
+export const ImportJsonSchema = z.union([z.array(ImportJsonItemSchema).min(1), ImportJsonRootSchema]);
 
 export const JiraPayloadSchema = z.object({
     fields: z.object({
@@ -73,5 +93,8 @@ export const JiraPayloadSchema = z.object({
         description: z.string(),
         issuetype: z.object({ name: z.literal('Test') }),
         labels: z.array(z.string()).optional(),
+        environment: z.string().optional(),
+        components: z.array(z.object({ name: z.string().min(1) })).optional(),
+        priority: z.object({ name: z.string().min(1) }).optional(),
     }),
 });

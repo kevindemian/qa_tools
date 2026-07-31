@@ -8,6 +8,7 @@ import { showSelect } from './prompt-input-inquirer.js';
 import { Output } from './output.js';
 import { isQuiet } from './prompt-ui.js';
 import { rootLogger } from '../logger.js';
+import Config from '../config-accessor.js';
 
 // ─────────────────────────────────────────────────────────────────
 // SHOW STEP ERROR
@@ -117,5 +118,26 @@ export function buildAutoRollbackHandler(): StepFailureHandler {
         );
         retryCount = 0;
         return 'rollback';
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AUTO CONFIRM HANDLER (AUTO_CONFIRM=true, no prompt)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Handler for `AUTO_CONFIRM=true` mode.
+ * Resolves the failure decision from the `ON_ERROR` config, mirroring the
+ * legacy `handleAutoConfirm` behavior: 'abort' → abort, 'skip'/'continue' → skip.
+ * No retry and no interactive prompt: the configured action is authoritative. */
+export function buildAutoConfirmHandler(): StepFailureHandler {
+    return async (error: Error, stepInfo: StepInfo) => {
+        const autoAction = Config.get('onError');
+        if (autoAction === 'skip' || autoAction === 'continue') {
+            rootLogger.warn(`[auto] ${stepInfo.step}: pulando (ON_ERROR=${autoAction}) — ${error.message}`);
+            return 'skip';
+        }
+        rootLogger.warn(`[auto] ${stepInfo.step}: abortando (ON_ERROR=${autoAction ?? 'abort'}) — ${error.message}`);
+        return 'abort';
     };
 }

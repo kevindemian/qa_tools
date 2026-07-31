@@ -3,4 +3,14 @@ export { generatePreviewMarkdown, showPreview, filterTests, confirmOrCancel } fr
 
 export { _checkResumeCheckpoint, validateImportBatch } from './import-prep-validation.js';
 
-export { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath, parseJsonTests } from './import-prep-parsers.js';
+export {
+    handleDryRun,
+    resolveCsvPath,
+    resolveLabels,
+    resolveCsvBatchFields,
+    resolveJsonBatchFields,
+    resolveJsonPath,
+    parseJsonTests,
+    parseJsonFile,
+} from './import-prep-parsers.js';
+export type { ParsedImportFile } from './import-prep-parsers.js';

@@ -102,6 +102,68 @@ describe('Case01', () => {
             expect(mockContext.pushHistory).toHaveBeenCalledWith('csv-import', '2 testes criados', 'ok');
         });
 
+        it('auto-creates Test Execution when declared in file', async () => {
+            expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({ lastCsvPath: '', lastLabels: '' });
+            mockCreateTests.mockResolvedValue({
+                ok: true,
+                testExecution: { title: 'TE-Smoke', description: 'desc', labels: ['smoke'] },
+                result: {
+                    inMemoryTasksId: ['task-1'],
+                    inMemoryTasksText: ['text'],
+                    parentIssues: [],
+                    sourcePath: './test_steps.csv',
+                    failedLinks: [],
+                    summary: '1 teste criado',
+                    status: 'ok',
+                },
+            });
+            const createTeWithLinks = vi.mocked(createTestsModule.default.createTestExecutionWithLinks);
+            createTeWithLinks.mockResolvedValue({
+                key: 'TE-1',
+                summary: 'TE-Smoke',
+                linkedParentCount: 0,
+            });
+
+            await case01.handler(mockContext);
+
+            expect(createTeWithLinks).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    testKeys: ['task-1'],
+                    execOpts: { title: 'TE-Smoke', description: 'desc', labels: ['smoke'] },
+                }),
+            );
+            expect(mockOfferAssoc).not.toHaveBeenCalled();
+            expect(mockShowResults).toHaveBeenCalledWith(mockContext, ['task-1'], expect.any(Object));
+        });
+
+        it('reports associated:false and surfaces results when TE creation returns null', async () => {
+            expect.hasAssertions();
+
+            mockLoadTypedState.mockReturnValue({ lastCsvPath: '', lastLabels: '' });
+            mockCreateTests.mockResolvedValue({
+                ok: true,
+                testExecution: { title: 'TE-Fail' },
+                result: {
+                    inMemoryTasksId: ['task-1'],
+                    inMemoryTasksText: ['text'],
+                    parentIssues: [],
+                    sourcePath: './test_steps.csv',
+                    failedLinks: [],
+                    summary: '1 teste criado',
+                    status: 'ok',
+                },
+            });
+            const createTeWithLinks = vi.mocked(createTestsModule.default.createTestExecutionWithLinks);
+            createTeWithLinks.mockResolvedValue(null);
+
+            await case01.handler(mockContext);
+
+            expect(mockOfferAssoc).not.toHaveBeenCalled();
+            expect(mockShowResults).toHaveBeenCalledWith(mockContext, ['task-1'], { associated: false });
+        });
+
         it('warns and records history when CSV import fails', async () => {
             expect.hasAssertions();
 

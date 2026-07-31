@@ -149,11 +149,10 @@ describe('IssueLinker', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('  1 linked issue(s) criados');
         });
 
-        it('returns action on error', async () => {
+        it('returns abort action when no handler and link fails', async () => {
             expect.hasAssertions();
 
             mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockReturnValue('retry');
             const test: TestCase = {
                 title: 'Test',
                 steps: [],
@@ -161,7 +160,37 @@ describe('IssueLinker', () => {
             };
             const result = await linker.linkIssues('TEST-1', test);
 
-            expect(result).toStrictEqual({ action: 'retry' });
+            expect(result).toStrictEqual({ action: 'abort' });
+        });
+
+        it('returns abort action when handler returns abort', async () => {
+            expect.hasAssertions();
+
+            linker.setStepFailureHandler(async () => 'abort');
+            mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            const result = await linker.linkIssues('TEST-1', test);
+
+            expect(result).toStrictEqual({ action: 'abort' });
+        });
+
+        it('returns skip action when handler returns skip', async () => {
+            expect.hasAssertions();
+
+            linker.setStepFailureHandler(async () => 'skip');
+            mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            const result = await linker.linkIssues('TEST-1', test);
+
+            expect(result).toStrictEqual({ action: 'skip', missingKey: 'BUG-1' });
         });
     });
 
@@ -237,7 +266,6 @@ describe('IssueLinker', () => {
             const failed = await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
 
             expect(mockJiraResource['putJiraResource']).not.toHaveBeenCalled();
-            expect(mockPrompt.onError).toHaveBeenCalled();
             expect(failed).toContain('TEST-1');
         });
 
@@ -255,7 +283,6 @@ describe('IssueLinker', () => {
             const failed = await linker.updateCrossReferences(tests, ['TEST-1', 'TEST-2']);
 
             expect(mockJiraResource['putJiraResource']).toHaveBeenCalledTimes(2);
-            expect(mockPrompt.onError).toHaveBeenCalled();
             expect(failed).toContain('TEST-1');
             expect(failed).toContain('TEST-2');
         });

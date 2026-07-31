@@ -10,6 +10,7 @@ import { parseQuotedValue, PRECONDITION_KEY_PATTERN } from '../shared/quoted-str
 import { parseLinkedIssuesString } from '../shared/issue-link-utils.js';
 import { CsvRowSchema } from './csv-import-schema.js';
 import type { CsvRow } from './csv-import-schema.js';
+import type { BatchFields, TestExecutionDeclaration } from '../shared/types.js';
 
 class CsvResource {
     /** Detect CSV separator: prefers `;` when first line has `;` and no `,`.
@@ -257,7 +258,66 @@ class CsvResource {
         }
     }
 
-    async readBulkCsv(filePath: string): Promise<TestCase[]> {
+    /** Detect a CSV configuration block (batch fields + optional Test Execution declaration).
+     *  Returns null when the block is a test block (has Title or no config markers). */
+    private _parseBulkCsvConfigBlock(
+        lines: string[],
+    ): { batchFields?: BatchFields; testExecution?: TestExecutionDeclaration } | null {
+        const hasTitle = lines.some((l) => l.startsWith('Title:'));
+        if (hasTitle) return null;
+
+        const environment = this._parseConfigValue(lines, 'Environment:');
+        const components = this._parseConfigList(lines, 'Components:');
+        const priority = this._parseConfigValue(lines, 'Priority:');
+        const teTitle = this._parseConfigValue(lines, 'Test Execution:');
+        const teDescription = this._parseConfigValue(lines, 'TE Description:');
+        const teLabels = this._parseConfigList(lines, 'TE Labels:');
+
+        const batchFields: BatchFields = {
+            ...(environment ? { environment } : {}),
+            ...(components ? { components } : {}),
+            ...(priority ? { priority } : {}),
+        };
+        const testExecution: TestExecutionDeclaration = {
+            ...(teTitle ? { title: teTitle } : {}),
+            ...(teDescription ? { description: teDescription } : {}),
+            ...(teLabels ? { labels: teLabels } : {}),
+        };
+
+        if (!environment && !components && !priority && !teTitle && !teDescription && !teLabels) {
+            return null;
+        }
+        return {
+            ...(Object.keys(batchFields).length > 0 ? { batchFields } : {}),
+            ...(Object.keys(testExecution).length > 0 ? { testExecution } : {}),
+        };
+    }
+
+    private _parseConfigValue(lines: string[], prefix: string): string | undefined {
+        const line = lines.find((l) => l.startsWith(prefix));
+        if (!line) return undefined;
+        const raw = line.slice(prefix.length).trim();
+        if (!raw) return undefined;
+        const parsed = parseQuotedValue(raw, lines, 0);
+        const value = parsed.value.trim();
+        return value || undefined;
+    }
+
+    private _parseConfigList(lines: string[], prefix: string): string[] | undefined {
+        const value = this._parseConfigValue(lines, prefix);
+        if (!value) return undefined;
+        return value
+            .split(',')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+    }
+
+    /** Read a bulk CSV and return the parsed tests plus batch fields and optional Test Execution declaration. */
+    async readBulkCsvWithMeta(filePath: string): Promise<{
+        tests: TestCase[];
+        batchFields?: BatchFields;
+        testExecution?: TestExecutionDeclaration;
+    }> {
         let raw = await fs.promises.readFile(path.resolve(filePath), 'utf-8');
         raw = raw.replace(/^\uFEFF/, ''); /* strip BOM */
         raw = raw.replace(/\r\n/g, '\n'); /* normalize CRLF → LF for block splitting */
@@ -268,12 +328,34 @@ class CsvResource {
             .filter((b) => b.length > 0);
 
         const results: TestCase[] = [];
+        let batchFields: BatchFields | undefined;
+        let testExecution: TestExecutionDeclaration | undefined;
 
         for (const block of blocks) {
+            const lines = block.split('\n').map((l) => l.trim());
+            const config = this._parseBulkCsvConfigBlock(lines);
+            if (config) {
+                if (config.batchFields) {
+                    batchFields = { ...batchFields, ...config.batchFields };
+                }
+                if (config.testExecution) {
+                    testExecution = { ...testExecution, ...config.testExecution };
+                }
+                continue;
+            }
             await this._processBulkCsvBlock(block, results);
         }
 
-        return results;
+        return {
+            tests: results,
+            ...(batchFields ? { batchFields } : {}),
+            ...(testExecution ? { testExecution } : {}),
+        };
+    }
+
+    async readBulkCsv(filePath: string): Promise<TestCase[]> {
+        const parsed = await this.readBulkCsvWithMeta(filePath);
+        return parsed.tests;
     }
 }
 

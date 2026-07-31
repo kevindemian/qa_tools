@@ -6,13 +6,21 @@ import Config from '../shared/config-accessor.js';
 import { rootLogger } from '../shared/logger.js';
 import { load as loadState } from '../shared/state.js';
 import { isPreconditionKey } from '../shared/quoted-string.js';
-import { ImportJsonSchema, ImportJsonItemSchema } from './csv-import-schema.js';
+import { ImportJsonSchema, ImportJsonItemSchema, ImportJsonRootSchema } from './csv-import-schema.js';
 import { warn, prompt, info, printSummary, askFilePath } from '../shared/ui/prompt.js';
-import type { TestCase } from '../shared/types.js';
+import type { TestCase, BatchFields, TestExecutionDeclaration } from '../shared/types.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import { z } from '../shared/validation/validation.js';
 
 type JsonTestItem = z.infer<typeof ImportJsonItemSchema>;
+type JsonImportRoot = z.infer<typeof ImportJsonRootSchema>;
+
+/** Result of parsing an import file: tests plus any batch fields and optional Test Execution declaration. */
+export interface ParsedImportFile {
+    tests: TestCase[];
+    batchFields?: BatchFields;
+    testExecution?: TestExecutionDeclaration;
+}
 
 type PreconditionItem = { type: 'reference' | 'inline'; value: string };
 
@@ -158,6 +166,58 @@ export function resolveLabels(jiraLabelsInput: string[] | undefined, configKey: 
         .filter((l) => l.length > 0);
 }
 
+function _splitList(value: string | undefined): string[] {
+    return (value ?? '')
+        .split(',')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+}
+
+function _resolveBatchString(
+    configKey: 'csvEnvironment' | 'jsonEnvironment' | 'csvPriority' | 'jsonPriority',
+    fileValue: string | undefined,
+): string | undefined {
+    const trimmed = (fileValue ?? '').trim();
+    if (trimmed) return trimmed;
+    const configValue = Config.get(configKey);
+    const trimmedConfig = (configValue ?? '').trim();
+    return trimmedConfig || undefined;
+}
+
+function _resolveBatchList(
+    configKey: 'csvComponents' | 'jsonComponents',
+    fileValue: string[] | undefined,
+): string[] | undefined {
+    const fromFile = _splitList((fileValue ?? []).join(','));
+    if (fromFile.length > 0) return fromFile;
+    const fromConfig = _splitList(Config.get(configKey));
+    return fromConfig.length > 0 ? fromConfig : undefined;
+}
+
+/** Resolve batch fields for a CSV import, merging file-level declarations with config. */
+export function resolveCsvBatchFields(fileFields: BatchFields | undefined): BatchFields {
+    const environment = _resolveBatchString('csvEnvironment', fileFields?.environment);
+    const components = _resolveBatchList('csvComponents', fileFields?.components);
+    const priority = _resolveBatchString('csvPriority', fileFields?.priority);
+    return {
+        ...(environment ? { environment } : {}),
+        ...(components ? { components } : {}),
+        ...(priority ? { priority } : {}),
+    };
+}
+
+/** Resolve batch fields for a JSON import, merging file-level declarations with config. */
+export function resolveJsonBatchFields(fileFields: BatchFields | undefined): BatchFields {
+    const environment = _resolveBatchString('jsonEnvironment', fileFields?.environment);
+    const components = _resolveBatchList('jsonComponents', fileFields?.components);
+    const priority = _resolveBatchString('jsonPriority', fileFields?.priority);
+    return {
+        ...(environment ? { environment } : {}),
+        ...(components ? { components } : {}),
+        ...(priority ? { priority } : {}),
+    };
+}
+
 export async function resolveJsonPath(jsonPathInput: string | undefined): Promise<string | undefined> {
     const rawPath =
         jsonPathInput ||
@@ -175,40 +235,15 @@ export async function resolveJsonPath(jsonPathInput: string | undefined): Promis
     return jsonPath;
 }
 
-export function parseJsonTests(jsonPath: string): TestCase[] {
-    let raw: string;
-    try {
-        raw = fs.readFileSync(jsonPath, 'utf8');
-    } catch (err) {
-        rootLogger.error(`Falha ao ler arquivo JSON: ${jsonPath} — ${formatErr(err)}`);
-        warn(`Não foi possível ler o arquivo: ${jsonPath}. Operação cancelada.`);
-        return [];
-    }
-    let parsed: Array<Record<string, unknown>>;
-    try {
-        parsed = JSON.parse(raw) as Array<Record<string, unknown>>;
-    } catch (err) {
-        rootLogger.error(`JSON malformado em ${jsonPath}: ${formatErr(err)}`);
-        warn(`Arquivo JSON inválido: ${jsonPath}. Verifique o formato. Operação cancelada.`);
-        return [];
-    }
-    let validated: JsonTestItem[];
-    try {
-        validated = ImportJsonSchema.parse(parsed);
-    } catch (err) {
-        rootLogger.error(`Schema JSON inválido em ${jsonPath}: ${formatErr(err)}`);
-        warn(`Formato JSON não corresponde ao schema esperado: ${jsonPath}. Operação cancelada.`);
-        return [];
-    }
-    let aliasWarned = false;
+function _mapJsonItems(validated: JsonTestItem[], aliasWarnedRef: { value: boolean }): TestCase[] {
     return validated.map(
         (item: JsonTestItem): TestCase => ({
             title: item.title,
             description: item.description || '',
             steps: item.steps.map((s) => {
                 const expectedResult = s['Expected Result'] ?? s.ExpectedResult ?? '';
-                if (!aliasWarned && s.ExpectedResult && !s['Expected Result']) {
-                    aliasWarned = true;
+                if (!aliasWarnedRef.value && s.ExpectedResult && !s['Expected Result']) {
+                    aliasWarnedRef.value = true;
                     rootLogger.warn(
                         'JSON step usa "ExpectedResult" (junto, sem espaço) em vez de "Expected Result" (com espaço). ' +
                             'Causa: template JSON desatualizado (test_cases_template.json / test_steps_template.json). ' +
@@ -232,6 +267,65 @@ export function parseJsonTests(jsonPath: string): TestCase[] {
                       return { key: li.key, linkType: li.linkType || 'Tests' };
                   })
                 : [],
+            ...(item.environment ? { environment: item.environment } : {}),
+            ...(item.components ? { components: item.components } : {}),
+            ...(item.priority ? { priority: item.priority } : {}),
         }),
     );
+}
+
+/** Parse and validate a JSON import file (array form or object form). Returns tests, batch fields, and TE declaration. */
+export function parseJsonFile(jsonPath: string): ParsedImportFile {
+    let raw: string;
+    try {
+        raw = fs.readFileSync(jsonPath, 'utf8');
+    } catch (err) {
+        rootLogger.error(`Falha ao ler arquivo JSON: ${jsonPath} — ${formatErr(err)}`);
+        warn(`Não foi possível ler o arquivo: ${jsonPath}. Operação cancelada.`);
+        return { tests: [] };
+    }
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (err) {
+        rootLogger.error(`JSON malformado em ${jsonPath}: ${formatErr(err)}`);
+        warn(`Arquivo JSON inválido: ${jsonPath}. Verifique o formato. Operação cancelada.`);
+        return { tests: [] };
+    }
+    let validated: z.infer<typeof ImportJsonSchema>;
+    try {
+        validated = ImportJsonSchema.parse(parsed);
+    } catch (err) {
+        rootLogger.error(`Schema JSON inválido em ${jsonPath}: ${formatErr(err)}`);
+        warn(`Formato JSON não corresponde ao schema esperado: ${jsonPath}. Operação cancelada.`);
+        return { tests: [] };
+    }
+    const aliasWarnedRef = { value: false };
+    if (Array.isArray(validated)) {
+        return { tests: _mapJsonItems(validated, aliasWarnedRef) };
+    }
+    const root = validated as JsonImportRoot;
+    const tests = _mapJsonItems(root.tests, aliasWarnedRef);
+    const batchFields: BatchFields = {
+        ...(root.environment ? { environment: root.environment } : {}),
+        ...(root.components ? { components: root.components } : {}),
+        ...(root.priority ? { priority: root.priority } : {}),
+    };
+    const hasBatch = Object.keys(batchFields).length > 0;
+    const testExecution: TestExecutionDeclaration | undefined = root.testExecution
+        ? {
+              ...(root.testExecution.title ? { title: root.testExecution.title } : {}),
+              ...(root.testExecution.description ? { description: root.testExecution.description } : {}),
+              ...(root.testExecution.labels ? { labels: root.testExecution.labels } : {}),
+          }
+        : undefined;
+    return {
+        tests,
+        ...(hasBatch ? { batchFields } : {}),
+        ...(testExecution ? { testExecution } : {}),
+    };
+}
+
+export function parseJsonTests(jsonPath: string): TestCase[] {
+    return parseJsonFile(jsonPath).tests;
 }

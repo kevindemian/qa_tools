@@ -1,5 +1,5 @@
 /** Test-case factory — creates test issues in Jira via Xray REST API. */
-import { success, warn, info, onError, isQuiet, ProgressBar, confirm, prompt } from '../shared/ui/prompt.js';
+import { success, warn, info, isQuiet, ProgressBar, confirm, prompt } from '../shared/ui/prompt.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
 import type { JsonObject, LogContext, TestCase } from '../shared/types.js';
@@ -7,7 +7,8 @@ import type { TestStep } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
 import { cleanSlateUpdate, type SnapshotContext, type LinkSnapshot } from './issue-snapshot.js';
-import type { StepFailureHandler } from '../shared/types/clean-slate.js';
+import { executeOperation } from '../shared/ui/operation-executor.js';
+import type { StepFailureHandler, StepResult } from '../shared/types/clean-slate.js';
 
 interface CreateIssueResult {
     key?: string | null;
@@ -19,7 +20,9 @@ interface CreateIssueResult {
 }
 
 interface StepsResult {
-    action?: string;
+    action?: 'abort' | 'rollback';
+    failedSteps: number;
+    totalSteps: number;
 }
 
 type UpdatePolicy = 'auto' | 'skip' | 'prompt';
@@ -258,49 +261,93 @@ class TestCaseFactory {
             }
         }
 
-        try {
-            const issue = await this.jiraResource.postJiraResource<JsonObject>('issue', testData);
-            if (!isQuiet()) success('Issue criada: ' + String(issue['key']));
-            opLog.info('Issue criada', { key: issue['key'] });
-            return { key: issue['key'] as string };
-        } catch (err) {
-            const action = onError('[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"', err, {
-                retry: true,
-                details: true,
-            });
-            return { action };
-        }
+        const outcome = await executeOperation({
+            run: async () => {
+                const issue = await this.jiraResource.postJiraResource<JsonObject>('issue', testData);
+                if (!isQuiet()) success('Issue criada: ' + String(issue['key']));
+                opLog.info('Issue criada', { key: issue['key'] });
+                return issue;
+            },
+            ctx: {
+                label: '[' + (testIdx + 1) + '/' + totalTests + '] Criar issue "' + testTitle + '"',
+                step: 'create-issue',
+                totalSteps: 1,
+                completedSteps: [],
+                currentInput: testData,
+            },
+            ...(this._stepFailureHandler ? { onFailure: this._stepFailureHandler } : {}),
+        });
+        if (outcome.ok) return { key: (outcome.result?.['key'] as string) ?? null };
+        if (outcome.decision === 'abort') return { action: 'abort' };
+        if (outcome.decision === 'skip') return { action: 'skip' };
+        return { action: 'rollback' };
     }
 
     private async _replaceSteps(issueKey: string, test: TestCase): Promise<StepsResult | null> {
-        try {
-            await this.stepImporter.setSteps(issueKey, test.steps);
-            return null;
-        } catch (err) {
-            const action = onError('  Steps de "' + test.title + '"', err, { details: true });
-            return action === 'abort' ? { action: 'abort' } : null;
-        }
+        const totalSteps = test.steps.length;
+        const outcome = await executeOperation({
+            run: async () => {
+                await this.stepImporter.setSteps(issueKey, test.steps);
+            },
+            ctx: {
+                label: '  Steps de "' + test.title + '"',
+                step: 'replace-steps',
+                totalSteps,
+                completedSteps: [],
+                currentInput: test.steps,
+            },
+            ...(this._stepFailureHandler ? { onFailure: this._stepFailureHandler } : {}),
+        });
+        if (outcome.ok) return null;
+        if (outcome.decision === 'abort') return { action: 'abort', failedSteps: totalSteps, totalSteps };
+        if (outcome.decision === 'rollback') return { action: 'rollback', failedSteps: totalSteps, totalSteps };
+        return { failedSteps: totalSteps, totalSteps };
     }
 
     private async _importStepsIndividually(issueKey: string, test: TestCase): Promise<StepsResult | null> {
         const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
-        let abortSteps = false;
-        for (let i = 0; i < test.steps.length; i++) {
-            try {
-                await this.stepImporter.importStep(issueKey, i + 1, Reflect.get(test.steps, i));
-                if (stepBar) stepBar.update(i + 1);
-            } catch (err) {
-                const action = onError('  Step ' + (i + 1) + ' de "' + test.title + '"', err, {
-                    details: true,
-                });
-                if (action === 'abort') {
-                    abortSteps = true;
-                    break;
-                }
+        const totalSteps = test.steps.length;
+        const completedSteps: StepResult[] = [];
+        let failedSteps = 0;
+        for (let i = 0; i < totalSteps; i++) {
+            const stepIndex = i + 1;
+            const stepInput = Reflect.get(test.steps, i);
+            const outcome = await executeOperation({
+                run: async () => {
+                    await this.stepImporter.importStep(issueKey, stepIndex, stepInput);
+                },
+                ctx: {
+                    label: '  Step ' + stepIndex + ' de "' + test.title + '"',
+                    step: 'step-' + stepIndex,
+                    totalSteps,
+                    completedSteps,
+                    currentInput: stepInput,
+                },
+                ...(this._stepFailureHandler ? { onFailure: this._stepFailureHandler } : {}),
+                onSkip: () => {
+                    failedSteps++;
+                },
+            });
+            if (outcome.ok) {
+                if (stepBar) stepBar.update(stepIndex);
+                continue;
             }
+            if (outcome.decision === 'abort') {
+                failedSteps++;
+                if (stepBar) stepBar.stop();
+                return { action: 'abort', failedSteps, totalSteps };
+            }
+            if (outcome.decision === 'rollback') {
+                failedSteps++;
+                if (stepBar) stepBar.stop();
+                return { action: 'rollback', failedSteps, totalSteps };
+            }
+            // skip: onSkip already counted the failure — continue with next step
+            if (stepBar) stepBar.update(stepIndex);
         }
         if (stepBar) stepBar.stop();
-        return abortSteps ? { action: 'abort' } : null;
+        if (failedSteps > 0) return { failedSteps, totalSteps };
+        return null;
     }
 
     async postSteps(

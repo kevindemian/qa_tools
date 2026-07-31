@@ -3,13 +3,14 @@
  * falling back to manual file path when no automated data source is available. */
 import path from 'path';
 import Config from '../../shared/config-accessor.js';
-import { ask, warn, success } from '../../shared/ui/prompt.js';
+import { ask, warn, success, info } from '../../shared/ui/prompt.js';
 import { writeEphemeral } from '../../shared/infra/temp-dir.js';
 import { resolveTestDataSource, resolveSessionContext } from '../../shared/session-context.js';
 import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
+import type { TestExecutionAssociationResult } from './test-execution-flow.js';
 
 /** Human-readable message for each distinguishable JSON read failure (never generic). */
 function describeJsonFailure(reason: 'empty' | 'missing' | 'read-error'): string {
@@ -132,7 +133,27 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     const keys = imported.inMemoryTasksId;
     const srcName = imported.sourcePath ? path.basename(imported.sourcePath, '.json') : 'json-import';
-    const teResult = await offerTestExecutionAssociation(c, keys, srcName);
+    let teResult: TestExecutionAssociationResult;
+    if (result.testExecution) {
+        info('Test Execution declarada no arquivo — criando automaticamente...');
+        const { default: TestExecutionCreator } = await import('../test-execution-creator.js');
+        const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
+        const te = await createTests.createTestExecutionWithLinks({
+            testExecutionCreator: executor,
+            projectName: projectName,
+            testKeys: keys,
+            csvName: srcName,
+            parentIssues: result.result.parentIssues,
+            execOpts: {
+                ...(result.testExecution.title ? { title: result.testExecution.title } : {}),
+                ...(result.testExecution.description ? { description: result.testExecution.description } : {}),
+                ...(result.testExecution.labels ? { labels: result.testExecution.labels } : {}),
+            },
+        });
+        teResult = te ? { associated: true, key: te.key, summary: te.summary, mode: 'created' } : { associated: false };
+    } else {
+        teResult = await offerTestExecutionAssociation(c, keys, srcName);
+    }
     await showResults(c, keys, teResult);
 }
 

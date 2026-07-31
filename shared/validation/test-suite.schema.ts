@@ -21,6 +21,9 @@ export const TestCaseSchema = z.object({
     expectedResult: z.string().min(10, 'expectedResult must be at least 10 characters'),
     coverage: z.array(CoverageRefSchema).min(1, 'at least one coverage reference required'),
     evidence: z.array(z.string()).optional(),
+    environment: z.string().optional(),
+    components: z.array(z.string()).optional(),
+    priority: z.string().optional(),
 });
 
 export type TestCase = z.infer<typeof TestCaseSchema>;

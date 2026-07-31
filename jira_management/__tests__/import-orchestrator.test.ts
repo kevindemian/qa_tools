@@ -44,7 +44,8 @@ vi.mock('../import-loop', () => ({
 
 import { createMockLogger } from '../../shared/test-utils.js';
 import { createMockLinkManager } from '../../shared/test-utils/factories/index.js';
-import type IssueLinker from '../issue-linker.js';
+import IssueLinker from '../issue-linker.js';
+import type { JiraResourceLike } from '../../shared/types.js';
 import { prepareTestRun, finalizeTestCreation, postProcessCheckpoint } from '../import-orchestrator.js';
 import { validateImportBatch, filterTests, confirmOrCancel, handleDryRun } from '../import-prep.js';
 import * as STATE from '../../shared/state.js';
@@ -61,22 +62,21 @@ const warn = vi.fn();
 function linkerMock(
     overrides: Partial<Pick<IssueLinker, 'associatePrecondition' | 'linkIssues' | 'updateCrossReferences'>> = {},
 ): IssueLinker {
-    return {
-        jiraResource: {
-            getJiraResource: vi.fn(),
-            postJiraResource: vi.fn(),
-            putJiraResource: vi.fn(),
-            deleteJiraResource: vi.fn(),
-            searchJiraIssues: vi.fn(),
-            getTransitionsForIssue: vi.fn(),
-            transitionIssue: vi.fn(),
-        },
-        linkManager: createMockLinkManager(),
-        associatePrecondition: vi.fn(),
-        linkIssues: vi.fn(),
-        updateCrossReferences: vi.fn().mockResolvedValue(undefined),
-        ...overrides,
+    const jiraResource: JiraResourceLike = {
+        getJiraResource: vi.fn(),
+        postJiraResource: vi.fn(),
+        putJiraResource: vi.fn(),
+        deleteJiraResource: vi.fn(),
+        searchJiraIssues: vi.fn(),
+        getTransitionsForIssue: vi.fn(),
+        transitionIssue: vi.fn(),
     };
+    const linker = vi.mocked(new IssueLinker(jiraResource, createMockLinkManager()));
+    linker.associatePrecondition = vi.fn();
+    linker.linkIssues = vi.fn();
+    linker.updateCrossReferences = vi.fn().mockResolvedValue(undefined);
+    Object.assign(linker, overrides);
+    return linker;
 }
 
 describe('Import Orchestrator', () => {

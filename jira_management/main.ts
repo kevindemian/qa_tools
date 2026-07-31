@@ -128,7 +128,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             info(summary);
         }
 
-        if (process.argv.includes('--create-te') && inMemoryTasksId.length > 0) {
+        if ((process.argv.includes('--create-te') || outcome.testExecution) && inMemoryTasksId.length > 0) {
             info('Criando Test Execution...');
             const { default: TestExecutionCreator } = await import('./test-execution-creator.js');
             const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
@@ -141,6 +141,17 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
                 testKeys: inMemoryTasksId,
                 csvName,
                 parentIssues: teParentIssues,
+                ...(outcome.testExecution
+                    ? {
+                          execOpts: {
+                              ...(outcome.testExecution.title ? { title: outcome.testExecution.title } : {}),
+                              ...(outcome.testExecution.description
+                                  ? { description: outcome.testExecution.description }
+                                  : {}),
+                              ...(outcome.testExecution.labels ? { labels: outcome.testExecution.labels } : {}),
+                          },
+                      }
+                    : {}),
             });
             if (teResult) {
                 info('Test Execution criada: ' + teResult.key + ' — ' + teResult.summary);

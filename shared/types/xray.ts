@@ -61,6 +61,32 @@ export interface TestCase {
         key: string;
         linkType: string;
     }>;
+    /** Execution environment (e.g. staging, production). */
+    environment?: string;
+    /** Jira component names (batch field). */
+    components?: string[];
+    /** Jira priority name (batch field). */
+    priority?: string;
+}
+
+/** Batch-level Jira fields applied to every test in a single import. */
+export interface BatchFields {
+    /** Jira component names to apply to created issues. */
+    components?: string[];
+    /** Jira priority name to apply to created issues. */
+    priority?: string;
+    /** Execution environment to apply to created issues. */
+    environment?: string;
+}
+
+/** Test Execution declared inside an import file (CSV header block / JSON root). */
+export interface TestExecutionDeclaration {
+    /** TE title. Falls back to the source file basename when absent. */
+    title?: string;
+    /** TE description (optional). */
+    description?: string;
+    /** TE labels (optional). */
+    labels?: string[];
 }
 
 /** A single test run entry from Xray Cloud GraphQL. */

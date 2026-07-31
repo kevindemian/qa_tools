@@ -705,5 +705,46 @@ describe('Case18', () => {
             expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Falha ao buscar issue'));
             expect(baseContext.pushHistory).toHaveBeenCalledWith('ai-generate-tests', expect.any(String), 'ok');
         });
+
+        it('propagates environment/components/priority into converted test cases', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const fs = vi.mocked(fsModule);
+            const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+
+            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            fs.readFileSync.mockReturnValue('You are a QA engineer.');
+            listPrecondSpy.mockResolvedValue([]);
+
+            llm.llmPrompt.mockResolvedValue([
+                {
+                    title: 'Test with batch fields',
+                    steps: ['Step 1', 'Step 2', 'Step 3'],
+                    expectedResult: 'Expected result text here',
+                    environment: 'staging',
+                    components: ['API', 'Frontend'],
+                    priority: 'High',
+                },
+            ]);
+
+            const mod = case18Module;
+            await mod.handler(baseContext);
+
+            const writeCall = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
+                (call) => typeof call[0] === 'string' && call[0].endsWith('llm-generated-tests.json'),
+            );
+            expect(writeCall).toBeDefined();
+
+            const content = (writeCall ? writeCall[1] : '') as string;
+            const written = JSON.parse(content) as Array<Record<string, unknown>>;
+            const converted = written.find((t) => t['title'] === 'Test with batch fields');
+
+            expect(converted?.['environment']).toBe('staging');
+            expect(converted?.['components']).toStrictEqual(['API', 'Frontend']);
+            expect(converted?.['priority']).toBe('High');
+        });
     });
 });

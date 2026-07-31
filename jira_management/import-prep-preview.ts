@@ -4,7 +4,7 @@ import { md, mdToHtml } from '../shared/report/markdown.js';
 import { writeEphemeral } from '../shared/infra/temp-dir.js';
 import { openWithOsOrFallback } from '../shared/open.js';
 import { confirm, info, warn, print, title, divider, prompt } from '../shared/ui/prompt.js';
-import type { TestCase } from '../shared/types.js';
+import type { TestCase, BatchFields, TestExecutionDeclaration } from '../shared/types.js';
 
 /** Options for {@link generatePreviewMarkdown}. */
 export interface PreviewMdOptions {
@@ -14,6 +14,8 @@ export interface PreviewMdOptions {
     labels?: string[];
     totalSteps?: number;
     groupsCount?: number;
+    batchFields?: BatchFields;
+    testExecution?: TestExecutionDeclaration;
 }
 
 function _renderTestHeader(t: TestCase, index: number, keys?: string[]): string {
@@ -71,6 +73,21 @@ export function generatePreviewMarkdown(tests: TestCase[], options?: PreviewMdOp
                 : options.labels.slice(0, MAX).join(', ') + ' +' + (options.labels.length - MAX);
         summaryParts.push('**Labels:** ' + text);
     }
+    if (options?.batchFields) {
+        if (options.batchFields.environment) summaryParts.push('**Environment:** ' + options.batchFields.environment);
+        if (options.batchFields.components && options.batchFields.components.length > 0) {
+            summaryParts.push('**Components:** ' + options.batchFields.components.join(', '));
+        }
+        if (options.batchFields.priority) summaryParts.push('**Priority:** ' + options.batchFields.priority);
+    }
+    if (options?.testExecution) {
+        const teTitle = options.testExecution.title || '(titulo do arquivo)';
+        summaryParts.push('**Test Execution:** ' + teTitle);
+        if (options.testExecution.description) summaryParts.push('  Descrição: ' + options.testExecution.description);
+        if (options.testExecution.labels && options.testExecution.labels.length > 0) {
+            summaryParts.push('  Labels TE: ' + options.testExecution.labels.join(', '));
+        }
+    }
     if (summaryParts.length > 0) parts.push(summaryParts.join('  \n') + '\n\n---\n\n');
 
     for (let i = 0; i < tests.length; i++) {
@@ -95,6 +112,8 @@ export async function showPreview(
     totalSteps: number,
     groupsCount: number,
     openFn: (path: string) => Promise<boolean> = openWithOsOrFallback,
+    batchFields?: BatchFields,
+    testExecution?: TestExecutionDeclaration,
 ): Promise<void> {
     title('Preview dos testes a serem criados');
 
@@ -102,6 +121,8 @@ export async function showPreview(
         labels: jiraLabels,
         totalSteps,
         groupsCount,
+        ...(batchFields ? { batchFields } : {}),
+        ...(testExecution ? { testExecution } : {}),
     });
 
     const mdPath = writeEphemeral('previews', 'qa-preview.md', mdContent);

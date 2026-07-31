@@ -68,9 +68,10 @@ describe('ImportJsonSchema', () => {
         ];
         const result = ImportJsonSchema.parse(data);
 
-        expect(result).toHaveLength(1);
-        expect(result[0]?.title).toBe('TC1');
-        expect(result[0]?.steps).toHaveLength(1);
+        const items = Array.isArray(result) ? result : result.tests;
+        expect(items).toHaveLength(1);
+        expect(items[0]?.title).toBe('TC1');
+        expect(items[0]?.steps).toHaveLength(1);
     });
 
     it('rejects empty array', () => {
@@ -91,7 +92,8 @@ describe('ImportJsonSchema', () => {
         ];
         const result = ImportJsonSchema.parse(data);
 
-        expect(result[0]?.linkedIssues).toHaveLength(2);
+        const items = Array.isArray(result) ? result : result.tests;
+        expect(items[0]?.linkedIssues).toHaveLength(2);
     });
 });
 

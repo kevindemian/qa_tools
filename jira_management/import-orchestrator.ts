@@ -1,7 +1,7 @@
 /** Import orchestrator: coordinates CSV parsing, test-case creation, issue linking, and result reporting. */
 import type { JiraResourceLike } from '../shared/types.js';
 import JiraLinkManager from './jira_link_manager.js';
-import type { TestCase, TestResult } from '../shared/types.js';
+import type { TestCase, TestResult, BatchFields } from '../shared/types.js';
 import TestCaseFactory from './test-case-factory.js';
 import IssueLinker from './issue-linker.js';
 import MappingFileGenerator from './mapping-file-generator.js';
@@ -17,7 +17,7 @@ import type { TransientErrorHandler, TransientErrorAction } from '../shared/jira
 import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 import type { SnapshotContext } from './issue-snapshot.js';
 import type { StepFailureHandler } from '../shared/types/clean-slate.js';
-import { showStepError, buildAutoRollbackHandler } from '../shared/ui/error-report.js';
+import { showStepError, buildAutoRollbackHandler, buildAutoConfirmHandler } from '../shared/ui/error-report.js';
 import { deduplicateLinkedIssues, type LinkedIssue } from '../shared/issue-link-utils.js';
 
 interface CreateTestsFromTestCasesParams {
@@ -33,6 +33,7 @@ interface CreateTestsFromTestCasesParams {
     sourcePath: string;
     sourceType: string;
     jiraLabels: string[];
+    batchFields?: BatchFields;
 }
 
 export type CreateTestsFromTestCasesResult = {
@@ -62,6 +63,7 @@ interface PrepareTestRunOptions {
     sourceType: string;
     project_name: string;
     jiraLabels: string[];
+    batchFields?: BatchFields;
     onBusy: (busy: boolean) => void;
     warn: (msg: string) => void;
     jiraResource?: JiraResourceLike;
@@ -134,14 +136,14 @@ async function resolveTargetKeys(
 }
 
 async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
-    const { tests, sourcePath, sourceType, project_name, jiraLabels, onBusy, warn, jiraResource } = opts;
+    const { tests, sourcePath, sourceType, project_name, jiraLabels, batchFields, onBusy, warn, jiraResource } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
     if (validationResult === undefined) return;
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
 
     const totalSteps = tests.reduce((sum, t) => sum + t.steps.length, 0);
     const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
-    await showPreview(tests, jiraLabels, totalSteps, groupsCount);
+    await showPreview(tests, jiraLabels, totalSteps, groupsCount, undefined, batchFields);
 
     const filtered = filterTests(tests);
     if (filtered === null) return;
@@ -383,17 +385,21 @@ function testCreationSetup(
     if (snapshotCtx) {
         factory.setSnapshotContext(snapshotCtx);
     }
-    // Wire interactive step failure handler for clean-slate updates
+    // Wire step failure handler. AUTO_CONFIRM=true resolves via ON_ERROR config
+    // (legacy handleAutoConfirm behavior); otherwise interactive when TTY,
+    // auto-retry/rollback in CI (no TTY).
+    const autoConfirm = Config.get<boolean>('autoConfirm');
     const isTTY = !!(process.stdout.isTTY && !Config.get<boolean>('quiet'));
-    if (isTTY) {
-        factory.setStepFailureHandler(buildInteractiveStepHandler());
-    } else {
-        factory.setStepFailureHandler(buildAutoRollbackHandler());
-    }
+    const stepFailureHandler = autoConfirm
+        ? buildAutoConfirmHandler()
+        : isTTY
+          ? buildInteractiveStepHandler()
+          : buildAutoRollbackHandler();
+    factory.setStepFailureHandler(stepFailureHandler);
     return {
         stepImporter,
         factory,
-        linker: new IssueLinker(jiraResource, linkManager),
+        linker: new IssueLinker(jiraResource, linkManager, stepFailureHandler),
         results: [],
     };
 }
@@ -419,6 +425,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
         linker,
         projectName: params.project_name,
         jiraLabels: params.jiraLabels,
+        ...(params.batchFields ? { batchFields: params.batchFields } : {}),
         baseUrl: params.base_url,
         opLog,
         sourcePath: params.sourcePath,
@@ -462,6 +469,7 @@ async function createTestsFromTestCases(
         sourceType: params.sourceType,
         project_name: params.project_name,
         jiraLabels: params.jiraLabels,
+        ...(params.batchFields ? { batchFields: params.batchFields } : {}),
         onBusy: params.onBusy,
         warn,
         jiraResource: params.jiraResource,

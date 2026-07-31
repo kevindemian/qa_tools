@@ -1,5 +1,5 @@
 /** Import loop — iterates over test cases, creates/fetches issues, and updates state. */
-import type { JsonObject, TestCase, TestResult } from '../shared/types.js';
+import type { JsonObject, TestCase, TestResult, BatchFields } from '../shared/types.js';
 import type TestCaseFactory from './test-case-factory.js';
 import type IssueLinker from './issue-linker.js';
 import { rootLogger } from '../shared/logger.js';
@@ -45,6 +45,7 @@ interface CreateIssueOptions {
     testTitle: string;
     projectName: string;
     jiraLabels: string[];
+    batchFields?: BatchFields;
     t: number;
     total: number;
     opLog: ReturnType<typeof rootLogger.child>;
@@ -55,45 +56,64 @@ interface CreateIssueOptions {
 async function createIssueForTest(
     opts: CreateIssueOptions,
 ): Promise<
-    { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean } | 'abort' | 'continue' | null
+    { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean } | 'abort' | 'continue'
 > {
-    const { factory, test, testTitle, projectName, jiraLabels, t, total, opLog, results, checkOnly } = opts;
-    const testData = buildTestData(test, projectName, jiraLabels);
-    const issueResult = await factory.createIssue({
-        testData,
-        testTitle,
-        testIdx: t,
-        totalTests: total,
-        opLog,
-        skipExisting: true,
-        test,
-        ...(checkOnly !== undefined ? { checkOnly } : {}),
-    });
+    const { factory, test, testTitle, projectName, jiraLabels, batchFields, t, total, opLog, results, checkOnly } =
+        opts;
+    const testData = buildTestData(test, projectName, jiraLabels, batchFields);
+    const MAX_ISSUE_CREATE_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_ISSUE_CREATE_RETRIES; attempt++) {
+        const issueResult = await factory.createIssue({
+            testData,
+            testTitle,
+            testIdx: t,
+            totalTests: total,
+            opLog,
+            skipExisting: true,
+            test,
+            ...(checkOnly !== undefined ? { checkOnly } : {}),
+        });
 
-    if (issueResult.updated) {
-        return {
-            key: issueResult.key ?? null,
-            skipped: false,
-            updated: true,
-            ...(issueResult.cleanSlateUsed ? { cleanSlateUsed: true } : {}),
-        };
-    }
-
-    if (issueResult.skipped) {
-        return { key: issueResult.key ?? null, skipped: true };
-    }
-
-    if ('action' in issueResult) {
-        if (issueResult.action === 'abort') {
-            opLog.warn('Usuario abortou apos falha na criação da issue');
-            results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
-            return 'abort';
+        if (issueResult.updated) {
+            return {
+                key: issueResult.key ?? null,
+                skipped: false,
+                updated: true,
+                ...(issueResult.cleanSlateUsed ? { cleanSlateUsed: true } : {}),
+            };
         }
-        if (issueResult.action === 'retry') return null;
-        results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
-        return 'continue';
+
+        if (issueResult.skipped) {
+            return { key: issueResult.key ?? null, skipped: true };
+        }
+
+        if ('action' in issueResult) {
+            if (issueResult.action === 'abort') {
+                opLog.warn('Usuario abortou apos falha na criação da issue');
+                results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
+                return 'abort';
+            }
+            if (issueResult.action === 'retry') {
+                if (attempt < MAX_ISSUE_CREATE_RETRIES) {
+                    opLog.warn(`Retry ${attempt}/${MAX_ISSUE_CREATE_RETRIES} na criação da issue "${testTitle}"`);
+                    continue;
+                }
+                opLog.error(`Retries esgotados (${MAX_ISSUE_CREATE_RETRIES}) na criação da issue "${testTitle}"`);
+                results.push({
+                    status: 'error',
+                    label: testTitle,
+                    message: `Falha na criação da issue (${MAX_ISSUE_CREATE_RETRIES} tentativas)`,
+                });
+                return 'continue';
+            }
+            results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
+            return 'continue';
+        }
+        return { key: issueResult.key ?? null, skipped: false };
     }
-    return { key: issueResult.key ?? null, skipped: false };
+    // Unreachable — loop always returns.
+    results.push({ status: 'error', label: testTitle, message: 'Falha na criação da issue' });
+    return 'continue';
 }
 
 interface LinkTestRelationsOptions {
@@ -120,9 +140,17 @@ async function linkTestRelations(opts: LinkTestRelationsOptions): Promise<LinkRe
     }
 
     const stepsResult = await factory.postSteps(createdTestIssue.key, test, opLog, replaceSteps);
-    if (stepsResult && stepsResult.action === 'abort') {
+    if (stepsResult && (stepsResult.action === 'abort' || stepsResult.action === 'rollback')) {
         results.push({ status: 'error', label: testTitle, message: 'Falha ao criar steps' });
         return { abort: true, errored: true, failedLinkKeys };
+    }
+    if (stepsResult && stepsResult.failedSteps > 0) {
+        errored = true;
+        results.push({
+            status: 'error',
+            label: testTitle,
+            message: `Issue criada sem ${stepsResult.failedSteps}/${stepsResult.totalSteps} steps`,
+        });
     }
 
     const linkOutcome = await _linkReferencedIssues(linker, test, createdTestIssue.key, testTitle, results);
@@ -191,7 +219,12 @@ async function _linkReferencedIssues(
     return { abort: false, keys: linkKeys };
 }
 
-function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]): TestDataPayload {
+function buildTestData(
+    test: TestCase,
+    projectName: string,
+    jiraLabels: string[],
+    batchFields?: BatchFields,
+): TestDataPayload {
     let description = test.description || '';
     if (test.precondition && test.precondition.length > 0) {
         const inline = test.precondition.filter((p) => p.type === 'inline').map((p) => p.value);
@@ -200,15 +233,23 @@ function buildTestData(test: TestCase, projectName: string, jiraLabels: string[]
         }
     }
 
-    return JiraPayloadSchema.parse({
-        fields: {
-            project: { key: projectName },
-            summary: test.title,
-            description,
-            issuetype: { name: 'Test' as const },
-            labels: jiraLabels,
-        },
-    }) as TestDataPayload;
+    const fields: TestDataPayload['fields'] = {
+        project: { key: projectName },
+        summary: test.title,
+        description,
+        issuetype: { name: 'Test' as const },
+        labels: jiraLabels,
+    };
+    const environment = test.environment ?? batchFields?.environment;
+    const components = test.components ?? batchFields?.components;
+    const priority = test.priority ?? batchFields?.priority;
+    if (environment) fields['environment'] = environment;
+    if (components && components.length > 0) {
+        fields['components'] = components.map((name) => ({ name }));
+    }
+    if (priority) fields['priority'] = { name: priority };
+
+    return JiraPayloadSchema.parse({ fields }) as TestDataPayload;
 }
 
 interface SaveCheckpointOptions {
@@ -275,6 +316,7 @@ export interface TestCreationLoopOptions {
     linker: IssueLinker;
     projectName: string;
     jiraLabels: string[];
+    batchFields?: BatchFields;
     baseUrl: string;
     opLog: ReturnType<typeof rootLogger.child>;
     sourcePath: string;
@@ -308,6 +350,7 @@ interface ProcessOneTestOptions {
     factory: TestCaseFactory;
     projectName: string;
     jiraLabels: string[];
+    batchFields?: BatchFields;
     opLog: ReturnType<typeof rootLogger.child>;
     results: TestResult[];
     linker: IssueLinker;
@@ -408,13 +451,15 @@ async function _finalizeAfterIssueCreation(
 }
 
 async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
-    const { test, testTitle, factory, projectName, jiraLabels, t, total, opLog, results, isCheckpoint } = opts;
+    const { test, testTitle, factory, projectName, jiraLabels, batchFields, t, total, opLog, results, isCheckpoint } =
+        opts;
     const issueResult = await createIssueForTest({
         factory,
         test,
         testTitle,
         projectName,
         jiraLabels,
+        ...(batchFields ? { batchFields } : {}),
         t,
         total,
         opLog,
@@ -446,6 +491,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
         linker,
         projectName,
         jiraLabels,
+        batchFields,
         baseUrl,
         opLog,
         sourcePath,
@@ -473,6 +519,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
             factory,
             projectName,
             jiraLabels,
+            ...(batchFields ? { batchFields } : {}),
             opLog,
             results,
             linker,

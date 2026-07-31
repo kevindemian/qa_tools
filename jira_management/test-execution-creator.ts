@@ -67,6 +67,7 @@ export class TestExecutionCreator {
         testKeys: string[],
         csvName: string,
         titleOverride?: string,
+        execOpts?: { description?: string; labels?: string[] },
     ): Promise<TestExecutionResult | null> {
         const summary = this._buildTimestampedSummary(csvName, titleOverride);
         const execLog = rootLogger.child({ operation: 'create-testexec' });
@@ -88,6 +89,10 @@ export class TestExecutionCreator {
             summary,
             issuetype: { id: issueType.id },
         };
+        if (execOpts?.description) fields['description'] = execOpts.description;
+        if (execOpts?.labels && execOpts.labels.length > 0) {
+            fields['labels'] = execOpts.labels;
+        }
         if (testField) {
             fields[testField.id] = testKeys;
         }
@@ -344,10 +349,13 @@ export class TestExecutionCreator {
         testKeys: string[],
         csvName: string,
         parentIssues?: LinkedIssue[],
-        execOpts?: { title?: string; description?: string },
+        execOpts?: { title?: string; description?: string; labels?: string[] },
     ): Promise<TestExecutionResult | null> {
         const title = execOpts?.title || '';
-        const result = await this.create(projectName, testKeys, csvName, title);
+        const result = await this.create(projectName, testKeys, csvName, title, {
+            ...(execOpts?.description ? { description: execOpts.description } : {}),
+            ...(execOpts?.labels ? { labels: execOpts.labels } : {}),
+        });
         if (!result) return null;
 
         if (testKeys.length > 0) {

@@ -1,5 +1,14 @@
 import { nonNull } from '../../shared/test-utils.js';
-import { handleDryRun, resolveCsvPath, resolveLabels, resolveJsonPath } from '../import-prep-parsers.js';
+import { writeFileSync } from 'node:fs';
+import {
+    handleDryRun,
+    parseJsonFile,
+    resolveCsvBatchFields,
+    resolveCsvPath,
+    resolveJsonBatchFields,
+    resolveLabels,
+    resolveJsonPath,
+} from '../import-prep-parsers.js';
 import type { JiraResourceLike } from '../../shared/types.js';
 
 vi.mock('../../shared/config-accessor.js', () => ({ default: { get: vi.fn() } }));
@@ -376,5 +385,149 @@ describe('ResolveJsonPath', () => {
 
         expect(result).toBeUndefined();
         expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('vazio'));
+    });
+});
+
+describe('ResolveCsvBatchFields', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
+    });
+
+    it('returns file fields when provided', () => {
+        const result = resolveCsvBatchFields({ environment: 'staging', components: ['API'], priority: 'High' });
+
+        expect(result).toStrictEqual({ environment: 'staging', components: ['API'], priority: 'High' });
+    });
+
+    it('falls back to config when file fields absent', () => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
+            if (key === 'csvEnvironment') return 'production';
+            if (key === 'csvComponents') return 'DB, Frontend';
+            if (key === 'csvPriority') return 'Medium';
+            return undefined;
+        });
+
+        const result = resolveCsvBatchFields(undefined);
+
+        expect(result).toStrictEqual({ environment: 'production', components: ['DB', 'Frontend'], priority: 'Medium' });
+    });
+
+    it('returns empty object when nothing is set', () => {
+        const result = resolveCsvBatchFields(undefined);
+
+        expect(result).toStrictEqual({});
+    });
+
+    it('file fields override config', () => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
+            if (key === 'csvEnvironment') return 'production';
+            return undefined;
+        });
+
+        const result = resolveCsvBatchFields({ environment: 'staging' });
+
+        expect(result).toStrictEqual({ environment: 'staging' });
+    });
+});
+
+describe('ResolveJsonBatchFields', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(CONFIG.default, 'get').mockReturnValue(undefined);
+    });
+
+    it('returns file fields when provided', () => {
+        const result = resolveJsonBatchFields({ environment: 'staging', components: ['API'], priority: 'High' });
+
+        expect(result).toStrictEqual({ environment: 'staging', components: ['API'], priority: 'High' });
+    });
+
+    it('falls back to config when file fields absent', () => {
+        vi.spyOn(CONFIG.default, 'get').mockImplementation((key: string) => {
+            if (key === 'jsonEnvironment') return 'production';
+            if (key === 'jsonComponents') return 'DB, Frontend';
+            if (key === 'jsonPriority') return 'Medium';
+            return undefined;
+        });
+
+        const result = resolveJsonBatchFields(undefined);
+
+        expect(result).toStrictEqual({ environment: 'production', components: ['DB', 'Frontend'], priority: 'Medium' });
+    });
+
+    it('returns empty object when nothing is set', () => {
+        const result = resolveJsonBatchFields(undefined);
+
+        expect(result).toStrictEqual({});
+    });
+});
+
+describe('ParseJsonFile', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('parses legacy array form', () => {
+        const tmp = '/tmp/opencode/import-prep-parsers-legacy.json';
+        writeFileSync(tmp, JSON.stringify([{ title: 'TC1', steps: [{ Action: 'Click', 'Expected Result': 'Done' }] }]));
+        const result = parseJsonFile(tmp);
+
+        expect(result.tests).toHaveLength(1);
+        expect(result.tests[0]?.title).toBe('TC1');
+        expect(result.batchFields).toBeUndefined();
+        expect(result.testExecution).toBeUndefined();
+    });
+
+    it('parses object form with batch fields and test execution', () => {
+        const tmp = '/tmp/opencode/import-prep-parsers-object.json';
+        writeFileSync(
+            tmp,
+            JSON.stringify({
+                environment: 'staging',
+                components: ['API', 'Frontend'],
+                priority: 'High',
+                testExecution: { title: 'TE-1', description: 'desc', labels: ['smoke'] },
+                tests: [{ title: 'TC1', steps: [{ Action: 'Click', 'Expected Result': 'Done' }] }],
+            }),
+        );
+        const result = parseJsonFile(tmp);
+
+        expect(result.tests).toHaveLength(1);
+        expect(result.batchFields).toStrictEqual({
+            environment: 'staging',
+            components: ['API', 'Frontend'],
+            priority: 'High',
+        });
+        expect(result.testExecution).toStrictEqual({ title: 'TE-1', description: 'desc', labels: ['smoke'] });
+    });
+
+    it('propagates per-item batch fields into tests', () => {
+        const tmp = '/tmp/opencode/import-prep-parsers-items.json';
+        writeFileSync(
+            tmp,
+            JSON.stringify([
+                {
+                    title: 'TC1',
+                    steps: [{ Action: 'Click', 'Expected Result': 'Done' }],
+                    environment: 'staging',
+                    components: ['API'],
+                    priority: 'Low',
+                },
+            ]),
+        );
+        const result = parseJsonFile(tmp);
+
+        expect(result.tests[0]?.environment).toBe('staging');
+        expect(result.tests[0]?.components).toStrictEqual(['API']);
+        expect(result.tests[0]?.priority).toBe('Low');
+    });
+
+    it('returns empty tests on malformed JSON', () => {
+        const tmp = '/tmp/opencode/import-prep-parsers-bad.json';
+        writeFileSync(tmp, 'not-json{{{');
+        const result = parseJsonFile(tmp);
+
+        expect(result.tests).toStrictEqual([]);
     });
 });

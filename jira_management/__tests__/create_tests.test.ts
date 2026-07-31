@@ -422,6 +422,31 @@ describe('CreateTestExecutionWithLinks', () => {
 
         expect(nonNull(result).key).toBe('EXEC-1');
     });
+
+    it('passes description and labels via execOpts to created TE', async () => {
+        expect.hasAssertions();
+
+        jiraResource.getJiraResource.mockImplementation((url: string) => {
+            if (url === 'issuetype') return Promise.resolve(MOCK_ISSUE_TYPES);
+            if (url === 'field') return Promise.resolve(MOCK_FIELDS);
+            if (url === 'issue/EXEC-1') return Promise.resolve({ fields: { issuelinks: [] } });
+            return Promise.reject(new Error('unexpected: ' + url));
+        });
+        jiraResource.postJiraResource.mockResolvedValue({ key: 'EXEC-1' });
+        linkJiraRes.postJiraResource.mockResolvedValue({});
+
+        await createTestExecutionWithLinks({
+            testExecutionCreator,
+            projectName: PROJECT,
+            testKeys: ['TEST-1'],
+            csvName: '',
+            execOpts: { description: 'Smoke suite', labels: ['smoke'] },
+        });
+
+        const tePostCall = jiraResource.postJiraResource.mock.calls.find((c) => c[0] === 'issue');
+        expect(tePostCall?.[1]).toHaveProperty('fields.description', 'Smoke suite');
+        expect(tePostCall?.[1]).toHaveProperty('fields.labels', ['smoke']);
+    });
 });
 
 describe('GenerateMappingFiles', async () => {
@@ -738,6 +763,30 @@ describe('CreateTestsFromJson', () => {
 
         expect(expectOk(result).summary).toContain('1');
     });
+
+    it('parseia formato objeto com batch fields e test execution', async () => {
+        expect.hasAssertions();
+
+        process.env['AUTO_CONFIRM'] = 'true';
+        process.env['DRY_RUN'] = 'true';
+        vi.spyOn(PROMPT, 'ask').mockResolvedValue('/fake/path.json');
+        FS.readFileSync.mockReturnValue(
+            JSON.stringify({
+                environment: 'staging',
+                components: ['API'],
+                priority: 'High',
+                testExecution: { title: 'TE-Smoke', description: 'desc', labels: ['smoke'] },
+                tests: [{ title: 'TC1', steps: [{ Action: 'Click' }] }],
+            }),
+        );
+        const result = await createTestsFromJson(BASE_PARAMS());
+
+        expect(expectOk(result).summary).toContain('1');
+        expect(result).toHaveProperty('testExecution');
+        const te = (result as { testExecution?: { title: string; description: string; labels: string[] } })
+            .testExecution;
+        expect(te).toStrictEqual({ title: 'TE-Smoke', description: 'desc', labels: ['smoke'] });
+    });
 });
 
 describe('ReadCsvTests (via createTestsFromCsv)', () => {
@@ -767,13 +816,13 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         csvResource = vi.mocked(new CsvResource());
-        vi.spyOn(csvResource, 'readBulkCsv');
+        vi.spyOn(csvResource, 'readBulkCsvWithMeta');
     });
 
     it('empty CSV -> explicit failure (not undefined)', async () => {
         expect.hasAssertions();
 
-        csvResource.readBulkCsv.mockResolvedValue([]);
+        csvResource.readBulkCsvWithMeta.mockResolvedValue({ tests: [] });
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/empty.csv' }));
 
         expect(result).toBeDefined();
@@ -788,7 +837,7 @@ describe('ReadCsvTests (via createTestsFromCsv)', () => {
     it('cSV read error -> explicit failure (distinguishable from empty)', async () => {
         expect.hasAssertions();
 
-        csvResource.readBulkCsv.mockRejectedValue(new Error('file not found'));
+        csvResource.readBulkCsvWithMeta.mockRejectedValue(new Error('file not found'));
         const result = await createTestsFromCsv(makeCsvArgs({ csvPath: '/bad.csv' }));
 
         expect(result).toBeDefined();
@@ -808,18 +857,15 @@ describe('UpdateCrossReferences', () => {
         const updateCrossRefSpy = vi
             .fn<(...args: [tests: TestCase[], keys: string[]]) => Promise<string[]>>()
             .mockResolvedValue([]);
-        const linker: IssueLinker = {
-            jiraResource: createMockJiraResource(),
-            linkManager: createMockLinkManager(),
-            associatePrecondition:
-                vi.fn<
-                    (
-                        ...args: [tc: TestCase, key: string, opts?: { info: (msg: string) => void }]
-                    ) => Promise<{ action?: string } | null>
-                >(),
-            linkIssues: vi.fn<(...args: [key: string, tc: TestCase]) => Promise<{ action?: string } | null>>(),
-            updateCrossReferences: updateCrossRefSpy,
-        };
+        const linker: IssueLinker = vi.mocked(new IssueLinker(createMockJiraResource(), createMockLinkManager()));
+        linker.associatePrecondition =
+            vi.fn<
+                (
+                    ...args: [tc: TestCase, key: string, opts?: { info: (msg: string) => void }]
+                ) => Promise<{ action?: string } | null>
+            >();
+        linker.linkIssues = vi.fn<(...args: [key: string, tc: TestCase]) => Promise<{ action?: string } | null>>();
+        linker.updateCrossReferences = updateCrossRefSpy;
         const tests: TestCase[] = [{ title: 'T1', steps: [], group: 'g1' }];
         await updateCrossReferences(linker, tests, ['T-1']);
 
@@ -849,7 +895,7 @@ describe('CreateTestsFromCsv', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         csvResource = vi.mocked(new CsvResource());
-        vi.spyOn(csvResource, 'readBulkCsv');
+        vi.spyOn(csvResource, 'readBulkCsvWithMeta');
     });
 
     it('success path with valid CSV -> creates tests', async () => {
@@ -859,7 +905,9 @@ describe('CreateTestsFromCsv', () => {
         vi.spyOn(PROMPT, 'prompt').mockReturnValue('');
         process.env['AUTO_CONFIRM'] = 'true';
         process.env['DRY_RUN'] = 'true';
-        csvResource.readBulkCsv.mockResolvedValue([{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }]);
+        csvResource.readBulkCsvWithMeta.mockResolvedValue({
+            tests: [{ title: 'TC1', steps: [{ fields: { Action: 'Click' } }] }],
+        });
         const result = await createTestsFromCsv(makeFullArgs());
 
         expect(expectOk(result).summary).toContain('1');

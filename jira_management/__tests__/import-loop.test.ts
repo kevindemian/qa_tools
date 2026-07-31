@@ -14,7 +14,7 @@ vi.mock('../../shared/logger', () => ({
 
 import type { TestCase, TestResult } from '../../shared/types.js';
 import type { Mocked } from 'vitest';
-import type IssueLinker from '../issue-linker.js';
+import IssueLinker from '../issue-linker.js';
 import type TestCaseFactory from '../test-case-factory.js';
 import type { JiraResourceLike } from '../../shared/types.js';
 import type { XrayStepImporter } from '../xray-client.js';
@@ -41,13 +41,11 @@ const makeLinker = (): Mocked<IssueLinker> => {
     const mockLinkMgr = vi.mocked(realLinkMgr);
     mockLinkMgr.associatePrecondition = vi.fn();
     mockLinkMgr.linkIssues = vi.fn();
-    return {
-        associatePrecondition: vi.fn(),
-        linkIssues: vi.fn(),
-        updateCrossReferences: vi.fn(),
-        jiraResource: mockJiraResource,
-        linkManager: mockLinkMgr,
-    };
+    const linker = vi.mocked(new IssueLinker(mockJiraResource, mockLinkMgr));
+    linker.associatePrecondition = vi.fn();
+    linker.linkIssues = vi.fn();
+    linker.updateCrossReferences = vi.fn();
+    return linker;
 };
 
 const makeFactory = (): Mocked<TestCaseFactory> => {
@@ -172,6 +170,43 @@ describe('Import Loop', () => {
 
             expect((result.fields as Record<string, unknown>)['description']).toContain('Pre-condition: must login');
         });
+
+        it('applies batch environment/components/priority', () => {
+            const test: TestCase = { ...testBase };
+            const result = buildTestData(test, 'PROJ', [], {
+                environment: 'staging',
+                components: ['API', 'Frontend'],
+                priority: 'High',
+            });
+
+            expect(result.fields).toMatchObject({
+                environment: 'staging',
+                components: [{ name: 'API' }, { name: 'Frontend' }],
+                priority: { name: 'High' },
+            });
+        });
+
+        it('omits batch fields when not provided', () => {
+            const test: TestCase = { ...testBase };
+            const result = buildTestData(test, 'PROJ', []);
+
+            expect(result.fields).not.toHaveProperty('environment');
+            expect(result.fields).not.toHaveProperty('components');
+            expect(result.fields).not.toHaveProperty('priority');
+        });
+
+        it('per-test fields override batch fields', () => {
+            const test: TestCase = { ...testBase, environment: 'production', priority: 'Low' };
+            const result = buildTestData(test, 'PROJ', [], {
+                environment: 'staging',
+                priority: 'High',
+            });
+
+            expect(result.fields).toMatchObject({
+                environment: 'production',
+                priority: { name: 'Low' },
+            });
+        });
     });
 
     describe('SaveCheckpoint', () => {
@@ -227,7 +262,7 @@ describe('Import Loop', () => {
             expect(result).toBe('abort');
         });
 
-        it('retry branch returns null', async () => {
+        it('retries issue creation then continues with error when retries exhausted', async () => {
             expect.hasAssertions();
 
             const factory = makeFactory();
@@ -244,7 +279,34 @@ describe('Import Loop', () => {
                 results: resultSink,
             });
 
-            expect(result).toBeNull();
+            expect(factory.createIssue).toHaveBeenCalledTimes(3);
+            expect(result).toBe('continue');
+            expect(nonNull(resultSink[0]).status).toBe('error');
+            expect(nonNull(resultSink[0]).message).toContain('3 tentativas');
+        });
+
+        it('retry succeeds on second attempt', async () => {
+            expect.hasAssertions();
+
+            const factory = makeFactory();
+            factory.createIssue
+                .mockResolvedValueOnce({ action: 'retry' })
+                .mockResolvedValueOnce({ key: 'T-1', skipped: false });
+            const result = await createIssueForTest({
+                factory,
+                test: testBase,
+                testTitle: 'My Test',
+                projectName: 'PROJ',
+                jiraLabels: [],
+                t: 0,
+                total: 3,
+                opLog,
+                results: resultSink,
+            });
+
+            expect(factory.createIssue).toHaveBeenCalledTimes(2);
+            expect(result).toStrictEqual({ key: 'T-1', skipped: false });
+            expect(resultSink.length).toBe(0);
         });
 
         it('continue branch', async () => {
@@ -334,7 +396,7 @@ describe('Import Loop', () => {
             const linker = makeLinker();
             factory.createIssue.mockResolvedValue({ key: 'T-PARTIAL' });
             linker.associatePrecondition.mockResolvedValue(null);
-            factory.postSteps.mockResolvedValue({ action: 'abort' });
+            factory.postSteps.mockResolvedValue({ action: 'abort', failedSteps: 1, totalSteps: 1 });
 
             const tests = [testBase];
             const inMemoryTasksId: string[] = [];

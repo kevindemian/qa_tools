@@ -12,6 +12,9 @@ export const TestCaseDataSchema = z.object({
     steps: z.array(z.string()).min(1, 'steps array must not be empty'),
     expectedResult: z.string().min(10, 'expectedResult must be at least 10 characters'),
     preConditions: z.array(PreConditionInputSchema).optional(),
+    environment: z.string().optional(),
+    components: z.array(z.string()).optional(),
+    priority: z.string().optional(),
 });
 
 export const TestCaseArraySchema = z.array(TestCaseDataSchema).min(1, 'test cases array must not be empty');

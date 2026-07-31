@@ -182,6 +182,26 @@ describe('TestExecutionCreator', () => {
             expect(callArgs?.[0]).toBe('issue');
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Automated Execution - 23/05/2026 10:30');
         });
+
+        it('applies description from execOpts', async () => {
+            expect.hasAssertions();
+
+            setupHappyPath();
+            await creator.create(projectName, testKeys, csvName, undefined, { description: 'Smoke suite' });
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
+            expect(callArgs?.[1]).toHaveProperty('fields.description', 'Smoke suite');
+        });
+
+        it('applies labels from execOpts', async () => {
+            expect.hasAssertions();
+
+            setupHappyPath();
+            await creator.create(projectName, testKeys, csvName, undefined, { labels: ['smoke', 'automacao'] });
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
+            expect(callArgs?.[1]).toHaveProperty('fields.labels', ['smoke', 'automacao']);
+        });
     });
 
     describe('CreateWithLinks()', () => {
@@ -325,6 +345,23 @@ describe('TestExecutionCreator', () => {
 
             expect(callArgs?.[0]).toBe('issue');
             expect(callArgs?.[1]).toHaveProperty('fields.summary', 'Custom Title');
+        });
+
+        it('passes description and labels through to create()', async () => {
+            expect.hasAssertions();
+
+            setupCreate('TE-1');
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: {} });
+
+            await creator.createWithLinks(projectName, testKeys, csvName, undefined, {
+                description: 'Smoke suite',
+                labels: ['smoke'],
+            });
+
+            const callArgs = mockJiraResource.postJiraResource.mock.calls[0];
+
+            expect(callArgs?.[1]).toHaveProperty('fields.description', 'Smoke suite');
+            expect(callArgs?.[1]).toHaveProperty('fields.labels', ['smoke']);
         });
     });
 

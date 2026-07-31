@@ -1,6 +1,6 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
 import Config from '../../shared/config-accessor.js';
-import { ask, askFilePath, printError, warn } from '../../shared/ui/prompt.js';
+import { ask, askFilePath, printError, warn, info } from '../../shared/ui/prompt.js';
 import { loadTypedState } from '../../shared/state.js';
 import { rootLogger } from '../../shared/logger.js';
 import path from 'path';
@@ -8,6 +8,7 @@ import type { CommandContext } from './context.js';
 // anti-circular (prompt → create_tests → session-context → prompt)
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
+import type { TestExecutionAssociationResult } from './test-execution-flow.js';
 
 /** Human-readable message for each distinguishable CSV read failure (never generic). */
 function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath: string): string {
@@ -80,12 +81,34 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         if (isDryRun) Config.set('dryRun', false);
         if (c.ctx.inMemoryTasksId.length > 0) {
             const csvName = state.lastCsvPath ? path.basename(state.lastCsvPath, '.csv') : 'Automated Execution';
-            const teResult = await offerTestExecutionAssociation(
-                c,
-                c.ctx.inMemoryTasksId,
-                csvName,
-                result.result.parentIssues,
-            );
+            let teResult: TestExecutionAssociationResult;
+            if (result.testExecution) {
+                info('Test Execution declarada no arquivo — criando automaticamente...');
+                const { default: TestExecutionCreator } = await import('../test-execution-creator.js');
+                const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
+                const te = await createTests.createTestExecutionWithLinks({
+                    testExecutionCreator: executor,
+                    projectName: c.ctx.project_name,
+                    testKeys: c.ctx.inMemoryTasksId,
+                    csvName,
+                    parentIssues: result.result.parentIssues,
+                    execOpts: {
+                        ...(result.testExecution.title ? { title: result.testExecution.title } : {}),
+                        ...(result.testExecution.description ? { description: result.testExecution.description } : {}),
+                        ...(result.testExecution.labels ? { labels: result.testExecution.labels } : {}),
+                    },
+                });
+                teResult = te
+                    ? { associated: true, key: te.key, summary: te.summary, mode: 'created' }
+                    : { associated: false };
+            } else {
+                teResult = await offerTestExecutionAssociation(
+                    c,
+                    c.ctx.inMemoryTasksId,
+                    csvName,
+                    result.result.parentIssues,
+                );
+            }
             await showResults(c, c.ctx.inMemoryTasksId, teResult);
         }
     } catch (err: unknown) {

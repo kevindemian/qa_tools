@@ -10,10 +10,18 @@ import type TestExecutionCreator from './test-execution-creator.js';
 import MappingFileGenerator from './mapping-file-generator.js';
 import { rootLogger } from '../shared/logger.js';
 import IssueLinker from './issue-linker.js';
-import { resolveCsvPath, resolveJsonPath, resolveLabels, parseJsonTests } from './import-prep.js';
 import { createTestsFromTestCases, type CreateTestsFromTestCasesResult } from './import-orchestrator.js';
 import { isQuiet, info, warn, printError } from '../shared/ui/prompt.js';
 import type { LinkedIssue } from '../shared/issue-link-utils.js';
+import type { BatchFields, TestExecutionDeclaration } from '../shared/types.js';
+import {
+    resolveCsvPath,
+    resolveJsonPath,
+    resolveLabels,
+    parseJsonFile,
+    resolveCsvBatchFields,
+    resolveJsonBatchFields,
+} from './import-prep.js';
 
 interface CreateFromFileParams {
     jiraResource: JiraResourceLike;
@@ -31,11 +39,18 @@ interface CreateFromFileParams {
 /** Why a CSV/JSON read did not yield tests. Empty and missing must stay distinguishable (AGENTS.md §25). */
 type ReadFailure = 'empty' | 'missing' | 'read-error';
 
-type ReadTestsResult = { ok: true; tests: TestCase[] } | { ok: false; reason: ReadFailure; error?: string | undefined };
+type ReadTestsResult =
+    | {
+          ok: true;
+          tests: TestCase[];
+          batchFields?: BatchFields;
+          testExecution?: TestExecutionDeclaration;
+      }
+    | { ok: false; reason: ReadFailure; error?: string | undefined };
 
 /** Outcome of a full import: either the created issues, or an explicit, distinguishable failure. */
 type CsvImportOutcome =
-    | { ok: true; result: CreateTestsFromTestCasesResult }
+    | { ok: true; result: CreateTestsFromTestCasesResult; testExecution?: TestExecutionDeclaration }
     | { ok: false; reason: ReadFailure; error?: string | undefined };
 
 function _isMissingFile(err: unknown): boolean {
@@ -46,12 +61,17 @@ function _isMissingFile(err: unknown): boolean {
 async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<ReadTestsResult> {
     if (!isQuiet()) info('Lendo CSV...');
     try {
-        const tests = await csvResource.readBulkCsv(csvPath);
-        if (tests.length === 0) {
+        const parsed = await csvResource.readBulkCsvWithMeta(csvPath);
+        if (parsed.tests.length === 0) {
             warn('Nenhum teste encontrado no CSV.');
             return { ok: false, reason: 'empty' };
         }
-        return { ok: true, tests };
+        return {
+            ok: true,
+            tests: parsed.tests,
+            ...(parsed.batchFields ? { batchFields: parsed.batchFields } : {}),
+            ...(parsed.testExecution ? { testExecution: parsed.testExecution } : {}),
+        };
     } catch (err) {
         printError('Erro ao ler CSV', err);
         return {
@@ -66,12 +86,17 @@ async function readCsvTests(csvResource: CsvResource, csvPath: string): Promise<
 function readJsonTests(jsonPath: string): ReadTestsResult {
     if (!isQuiet()) info('Lendo JSON...');
     try {
-        const tests = parseJsonTests(jsonPath);
-        if (tests.length === 0) {
+        const parsed = parseJsonFile(jsonPath);
+        if (parsed.tests.length === 0) {
             warn('Nenhum teste encontrado no JSON.');
             return { ok: false, reason: 'empty' };
         }
-        return { ok: true, tests };
+        return {
+            ok: true,
+            tests: parsed.tests,
+            ...(parsed.batchFields ? { batchFields: parsed.batchFields } : {}),
+            ...(parsed.testExecution ? { testExecution: parsed.testExecution } : {}),
+        };
     } catch (err) {
         printError('Erro ao ler JSON', err);
         return {
@@ -104,6 +129,8 @@ async function createTestsFromCsv({
     const read = await readCsvTests(csvResource, csvPath);
     if (!read.ok) return { ok: false, reason: read.reason, error: read.error };
 
+    const batchFields = resolveCsvBatchFields(read.batchFields);
+
     let result: CreateTestsFromTestCasesResult | undefined;
     try {
         result = await createTestsFromTestCases({
@@ -119,13 +146,18 @@ async function createTestsFromCsv({
             sourcePath: csvPath,
             sourceType: 'csv',
             jiraLabels,
+            ...(batchFields ? { batchFields } : {}),
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return { ok: false, reason: 'read-error', error: msg };
     }
     if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do CSV.' };
-    return { ok: true, result };
+    return {
+        ok: true,
+        result,
+        ...(read.testExecution ? { testExecution: read.testExecution } : {}),
+    };
 }
 
 /** Full JSON import flow: read, validate, create issues, link, and optionally create test execution. */
@@ -150,6 +182,8 @@ async function createTestsFromJson({
     const read = readJsonTests(jsonPath);
     if (!read.ok) return { ok: false, reason: read.reason, error: read.error };
 
+    const batchFields = resolveJsonBatchFields(read.batchFields);
+
     const result = await createTestsFromTestCases({
         tests: read.tests,
         jiraResource,
@@ -163,9 +197,14 @@ async function createTestsFromJson({
         sourcePath: jsonPath,
         sourceType: 'json',
         jiraLabels,
+        ...(batchFields ? { batchFields } : {}),
     });
     if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do JSON.' };
-    return { ok: true, result };
+    return {
+        ok: true,
+        result,
+        ...(read.testExecution ? { testExecution: read.testExecution } : {}),
+    };
 }
 
 interface CreateTeOptions {
@@ -188,7 +227,7 @@ interface CreateTeWithLinksOptions {
     testKeys: string[];
     csvName: string;
     parentIssues?: LinkedIssue[];
-    execOpts?: { title?: string; description?: string };
+    execOpts?: { title?: string; description?: string; labels?: string[] };
 }
 
 /** Create a Test Execution and link each test case to it. */

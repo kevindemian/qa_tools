@@ -8,6 +8,8 @@ import { classifyFailure, crossReferenceFailures } from '../validation/failure-a
 import { llmPrompt } from '../llm/llm-client.js';
 import { AiBugReportSchema } from '../validation/bug-report.schema.js';
 import Config from '../config-accessor.js';
+import { executeOperation } from '../ui/operation-executor.js';
+import { showStepError } from '../ui/error-report.js';
 import type { BugReport, JiraLinkManagerLike, JiraResourceLike, LLMEnrichment, TestResult } from '../types.js';
 import type { ParseResult } from '../result_parser.js';
 import type { DataHub } from '../types/data-hub.js';
@@ -355,9 +357,32 @@ export async function fileToJira(
     if (report.severity === 'critical') fields['priority'] = { name: 'Highest' };
     else if (report.severity === 'major') fields['priority'] = { name: 'High' };
     if (report.component) fields['components'] = [{ name: report.component }];
+    if (report.environment) fields['environment'] = report.environment;
 
-    const result = await jiraResource.postJiraResource<{ key: string }>('issue', { fields });
-    return result.key;
+    const result = await executeOperation({
+        run: async () => {
+            const created = await jiraResource.postJiraResource<{ key: string }>('issue', { fields });
+            return created;
+        },
+        ctx: {
+            label: 'Criar bug no Jira',
+            step: 'create-bug',
+            totalSteps: 1,
+            completedSteps: [],
+            currentInput: { fields },
+        },
+        ...(isTTY() ? { onFailure: showStepError } : {}),
+    });
+    if (!result.ok) {
+        const err = result.error ?? new Error('Falha ao criar bug no Jira');
+        printError('Falha ao criar bug no Jira', err);
+        throw err;
+    }
+    return result.result?.key as string;
+}
+
+function isTTY(): boolean {
+    return !!(process.stdout.isTTY && !Config.get<boolean>('quiet'));
 }
 
 export async function interactiveBugReportFlow(

@@ -628,4 +628,119 @@ describe('CsvResource', () => {
             unlinkSync(path.resolve(tmp));
         });
     });
+
+    describe('ReadBulkCsvWithMeta', () => {
+        it('parses batch fields from config block', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-batch.csv');
+            const content = [
+                'Environment: staging',
+                'Components: API, Frontend',
+                'Priority: High',
+                '---',
+                'Title: TC1',
+                'Action,Data,Expected Result',
+                'a,d,r',
+            ].join('\n');
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.tests).toHaveLength(1);
+            expect(result.batchFields).toStrictEqual({
+                environment: 'staging',
+                components: ['API', 'Frontend'],
+                priority: 'High',
+            });
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('parses test execution declaration from config block', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-te.csv');
+            const content = [
+                'Test Execution: TE-Smoke',
+                'TE Description: "Smoke suite"',
+                'TE Labels: smoke, automacao',
+                '---',
+                'Title: TC1',
+                'Action,Data,Expected Result',
+                'a,d,r',
+            ].join('\n');
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.testExecution).toStrictEqual({
+                title: 'TE-Smoke',
+                description: 'Smoke suite',
+                labels: ['smoke', 'automacao'],
+            });
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('returns no meta when no config block present', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-none.csv');
+            const content = ['Title: TC1', 'Action,Data,Expected Result', 'a,d,r'].join('\n');
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.tests).toHaveLength(1);
+            expect(result.batchFields).toBeUndefined();
+            expect(result.testExecution).toBeUndefined();
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('merges config blocks across multiple occurrences', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-merge.csv');
+            const content = [
+                'Environment: staging',
+                '---',
+                'Title: TC1',
+                'Action,Data,Expected Result',
+                'a,d,r',
+                '---',
+                'Priority: Medium',
+                '---',
+                'Title: TC2',
+                'Action,Data,Expected Result',
+                'a2,d2,r2',
+            ].join('\n');
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.tests).toHaveLength(2);
+            expect(result.batchFields).toStrictEqual({ environment: 'staging', priority: 'Medium' });
+
+            unlinkSync(path.resolve(tmp));
+        });
+
+        it('ignores malformed config block without recognized prefixes', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-ignored.csv');
+            const content = ['Foo: bar', 'Baz: qux', '---', 'Title: TC1', 'Action,Data,Expected Result', 'a,d,r'].join(
+                '\n',
+            );
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.tests).toHaveLength(1);
+            expect(result.batchFields).toBeUndefined();
+
+            unlinkSync(path.resolve(tmp));
+        });
+    });
 });

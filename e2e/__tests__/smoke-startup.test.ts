@@ -5,7 +5,9 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
 const TSX_BIN = path.join(ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
-const MAX_STARTUP_TIME = 30000;
+// Cold start (tsx + full static import graph of jira_management/main.ts) takes ~11s idle.
+// Under parallel full-suite load it exceeds 30s. 90s gives margin while keeping fast failure on real breakage.
+const MAX_STARTUP_TIME = 90000;
 
 function spawnClean(args: string[], testEnv: Record<string, string>) {
     const { VITEST: _, NODE_ENV: _2, NODE_OPTIONS: _3, ...base } = process.env;
@@ -76,7 +78,7 @@ describe('Smoke-startup', () => {
 
         expect(output).toContain('QA Tools');
         expect(output).not.toContain('Erro inesperado');
-    }, 45000);
+    }, 120000);
 
     it('entry-menu não crasha com JIRA/XRAY vars vazias', async () => {
         expect.hasAssertions();
@@ -93,5 +95,5 @@ describe('Smoke-startup', () => {
         const { output } = await waitForOutput(child, '', MAX_STARTUP_TIME);
 
         expect(output).not.toContain('Erro inesperado');
-    }, 45000);
+    }, 120000);
 });

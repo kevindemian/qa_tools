@@ -121,8 +121,14 @@ export interface ConfigOverrides {
     onError?: string;
     csvPath?: string;
     csvLabels?: string;
+    csvEnvironment?: string;
+    csvComponents?: string;
+    csvPriority?: string;
     jsonPath?: string;
     jsonLabels?: string;
+    jsonEnvironment?: string;
+    jsonComponents?: string;
+    jsonPriority?: string;
     logLevel?: string;
     logFile?: string | boolean;
     logDir?: string;

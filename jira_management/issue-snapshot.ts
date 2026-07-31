@@ -9,11 +9,11 @@
  *  cleanSlateUpdate orchestrates with optional StepFailureHandler for interactive error handling. */
 import { rootLogger } from '../shared/logger.js';
 import { formatErr } from '../shared/errors.js';
+import { executeOperation } from '../shared/ui/operation-executor.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { TestStep } from '../shared/types.js';
 import type {
     StepResult,
-    StepInfo,
     StepFailureHandler,
     IssueFieldSnapshot,
     LinkSnapshot,
@@ -602,87 +602,87 @@ export async function cleanSlateUpdate(
     const allResults: StepResult[] = [];
     let aborted = false;
 
-    // Helper: handle step failure with retry/skip/rollback logic
-    async function handleStepFailure(
-        result: StepResult,
+    // Helper: run one clean-slate step through the unified operation executor.
+    // Step functions return StepResult (no throw); executeOperation expects run()
+    // to throw on failure, so we adapt. Maps executor outcome back to StepResult
+    // pushes + phase control (aborted/stop).
+    async function runCleanSlateStep(
+        phase: 'clear' | 'rebuild',
+        stepName: string,
+        stepFn: () => Promise<StepResult>,
         stepInput: unknown,
         completedSteps: StepResult[],
-    ): Promise<'skip' | 'abort' | 'retry' | 'rollback'> {
-        if (!onStepFailure) {
-            // No handler: default to rollback
-            return 'rollback';
+    ): Promise<{ push: StepResult[]; aborted: boolean; stopPhase: boolean }> {
+        let lastStepResult: StepResult | undefined;
+        let rollbackResult: StepResult | undefined;
+
+        const outcome = await executeOperation({
+            run: async () => {
+                const r = await stepFn();
+                lastStepResult = r;
+                if (!r.ok) throw new Error(r.error ?? r.detail);
+                return r;
+            },
+            ctx: {
+                label: `clean-slate ${phase}`,
+                step: stepName,
+                totalSteps: 8,
+                completedSteps,
+                currentInput: stepInput,
+            },
+            ...(onStepFailure ? { onFailure: onStepFailure } : {}),
+            // Step functions already retry transient errors inside the client layer
+            // (xray-cloud-client MUTATION/QUERY_MAX_RETRIES) — no extra layer here (§3).
+            maxTransientRetries: 1,
+            onRollback: async () => {
+                rollbackResult = await restoreStepSnapshot(ctx, issueKey, phase, snapshot);
+            },
+        });
+
+        if (outcome.ok) {
+            const result = lastStepResult as StepResult;
+            if ((outcome.manualRetries ?? 0) > 0) {
+                return { push: [{ ...result, decision: 'retry' }], aborted: false, stopPhase: false };
+            }
+            return { push: [result], aborted: false, stopPhase: false };
         }
 
-        const stepInfo: StepInfo = {
-            step: result.step,
-            totalSteps: 8,
-            completedSteps,
-            currentInput: stepInput,
-        };
+        const failedResult: StepResult =
+            lastStepResult ?? makeStepResult(false, stepName, outcome.error?.message ?? 'unknown failure', Date.now());
 
-        const error = new Error(result.error ?? result.detail);
-        return onStepFailure(error, stepInfo);
+        if (outcome.decision === 'skip') {
+            return { push: [{ ...failedResult, decision: 'skip' }], aborted: false, stopPhase: false };
+        }
+        if (outcome.decision === 'abort') {
+            return { push: [{ ...failedResult, decision: 'abort' }], aborted: true, stopPhase: true };
+        }
+        // rollback (handler decision or no-handler default)
+        const push: StepResult[] = [];
+        if (onStepFailure) {
+            push.push({ ...failedResult, decision: 'rollback' });
+        } else {
+            push.push(failedResult);
+        }
+        if (rollbackResult) push.push(rollbackResult);
+        return { push, aborted: false, stopPhase: true };
     }
 
     // 2. Clear phase (4 steps)
-    const clearStepFns = [
-        () => clearDescription(ctx.jiraResource, issueKey),
-        () => clearSteps(ctx, issueKey),
-        () => clearPreconditions(ctx, issueKey),
-        () => clearLinks(ctx, issueKey, activeLinkTypes),
+    const clearStepFns: Array<[string, () => Promise<StepResult>, unknown]> = [
+        ['clear-description', () => clearDescription(ctx.jiraResource, issueKey), activeLinkTypes],
+        ['clear-steps', () => clearSteps(ctx, issueKey), activeLinkTypes],
+        ['clear-preconditions', () => clearPreconditions(ctx, issueKey), activeLinkTypes],
+        ['clear-links', () => clearLinks(ctx, issueKey, activeLinkTypes), activeLinkTypes],
     ];
 
-    for (const stepFn of clearStepFns) {
-        const tempResult = await stepFn();
-        const completedSoFar = [...allResults];
-
-        if (!tempResult.ok && onStepFailure) {
-            // Failed — ask user what to do
-            let maxRetries = 3;
-            let decision: 'skip' | 'abort' | 'retry' | 'rollback' = 'rollback';
-
-            while (maxRetries > 0) {
-                decision = await handleStepFailure(tempResult, activeLinkTypes, completedSoFar);
-
-                if (decision === 'retry') {
-                    maxRetries--;
-                    const retryResult = await stepFn();
-                    if (retryResult.ok) {
-                        allResults.push({ ...retryResult, decision: 'retry' });
-                        break;
-                    }
-                    continue;
-                }
-                break;
-            }
-
-            if (decision === 'abort') {
-                allResults.push({ ...tempResult, decision: 'abort' });
-                aborted = true;
-                break;
-            }
-
-            if (decision === 'rollback') {
-                // Restore snapshot for this clear phase
-                const rollbackResult = await restoreStepSnapshot(ctx, issueKey, 'clear', snapshot);
-                allResults.push({ ...tempResult, decision: 'rollback' });
-                allResults.push(rollbackResult);
-                break; // Stop clear phase, proceed to rebuild with restored state
-            }
-
-            if (decision === 'skip') {
-                allResults.push({ ...tempResult, decision: 'skip' });
-                continue;
-            }
-        } else if (!tempResult.ok) {
-            // Failed without handler — default to global rollback
-            allResults.push(tempResult);
-            const rollbackResult = await restoreStepSnapshot(ctx, issueKey, 'clear', snapshot);
-            allResults.push(rollbackResult);
+    for (const [stepName, stepFn, stepInput] of clearStepFns) {
+        const step = await runCleanSlateStep('clear', stepName, stepFn, stepInput, [...allResults]);
+        allResults.push(...step.push);
+        if (step.aborted) {
+            aborted = true;
             break;
-        } else {
-            allResults.push(tempResult);
         }
+        if (step.stopPhase) break;
     }
 
     // 3. PUT basic fields (if not aborted)
@@ -707,62 +707,29 @@ export async function cleanSlateUpdate(
             linkedIssues: optsWithDefaults.includeLinks ? rebuildData.linkedIssues : [],
         };
 
-        const rebuildFns = [
-            () => rebuildDescription(ctx.jiraResource, issueKey, filteredRebuild.description),
-            () => rebuildSteps(ctx, issueKey, filteredRebuild.steps),
-            () => rebuildPreconditions(ctx, issueKey, filteredRebuild.preconditions),
-            () => rebuildLinks(ctx, issueKey, filteredRebuild.linkedIssues),
+        const rebuildFns: Array<[string, () => Promise<StepResult>, unknown]> = [
+            [
+                'rebuild-description',
+                () => rebuildDescription(ctx.jiraResource, issueKey, filteredRebuild.description),
+                filteredRebuild,
+            ],
+            ['rebuild-steps', () => rebuildSteps(ctx, issueKey, filteredRebuild.steps), filteredRebuild],
+            [
+                'rebuild-preconditions',
+                () => rebuildPreconditions(ctx, issueKey, filteredRebuild.preconditions),
+                filteredRebuild,
+            ],
+            ['rebuild-links', () => rebuildLinks(ctx, issueKey, filteredRebuild.linkedIssues), filteredRebuild],
         ];
 
-        for (const stepFn of rebuildFns) {
-            const tempResult = await stepFn();
-            const completedSoFar = [...allResults];
-
-            if (!tempResult.ok && onStepFailure) {
-                let maxRetries = 3;
-                let decision: 'skip' | 'abort' | 'retry' | 'rollback' = 'rollback';
-
-                while (maxRetries > 0) {
-                    decision = await handleStepFailure(tempResult, filteredRebuild, completedSoFar);
-
-                    if (decision === 'retry') {
-                        maxRetries--;
-                        const retryResult = await stepFn();
-                        if (retryResult.ok) {
-                            allResults.push({ ...retryResult, decision: 'retry' });
-                            break;
-                        }
-                        continue;
-                    }
-                    break;
-                }
-
-                if (decision === 'abort') {
-                    allResults.push({ ...tempResult, decision: 'abort' });
-                    aborted = true;
-                    break;
-                }
-
-                if (decision === 'rollback') {
-                    const rollbackResult = await restoreStepSnapshot(ctx, issueKey, 'rebuild', snapshot);
-                    allResults.push({ ...tempResult, decision: 'rollback' });
-                    allResults.push(rollbackResult);
-                    break;
-                }
-
-                if (decision === 'skip') {
-                    allResults.push({ ...tempResult, decision: 'skip' });
-                    continue;
-                }
-            } else if (!tempResult.ok) {
-                // Failed without handler — default to global rollback
-                allResults.push(tempResult);
-                const rollbackResult = await restoreStepSnapshot(ctx, issueKey, 'rebuild', snapshot);
-                allResults.push(rollbackResult);
+        for (const [stepName, stepFn, stepInput] of rebuildFns) {
+            const step = await runCleanSlateStep('rebuild', stepName, stepFn, stepInput, [...allResults]);
+            allResults.push(...step.push);
+            if (step.aborted) {
+                aborted = true;
                 break;
-            } else {
-                allResults.push(tempResult);
             }
+            if (step.stopPhase) break;
         }
     }
 

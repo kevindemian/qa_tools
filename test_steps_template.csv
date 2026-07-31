@@ -12,6 +12,23 @@
 #   • Alternativa JSON: veja test_cases_template.json (opção 15 do menu)
 # =============================================================================
 
+# ── Bloco config (opcional): campos batch + Test Execution ──────────────────
+# Um bloco SEM "Title:" e com qualquer um destes prefixos é tratado como
+# declaração de lote. Aplicado a todos os blocos de teste seguintes.
+# Environment: environment de execução (aplicado como campo do Jira)
+# Components: lista de componentes (separados por vírgula)
+# Priority: prioridade (aplicada como campo do Jira)
+# Test Execution: título da Test Execution a ser criada automaticamente
+# TE Description: descrição da Test Execution
+# TE Labels: labels da Test Execution (separados por vírgula)
+Environment: staging
+Components: API, Frontend
+Priority: High
+Test Execution: TE-Smoke-Login
+TE Description: "Smoke suite automatizado do fluxo de login."
+TE Labels: smoke, automacao
+---
+
 # ── Bloco 1: Teste com todos os campos opcionais ─────────────────────────────
 Title: ECSPOL-TC01 - Login com credenciais validas
 Description: "Verifica o fluxo feliz de login do administrador no sistema."

@@ -292,6 +292,9 @@ interface TestCaseData {
     steps: string[];
     expectedResult: string;
     preConditions?: Array<{ type: string; key?: string | undefined; summary?: string | undefined }> | undefined;
+    environment?: string | undefined;
+    components?: string[] | undefined;
+    priority?: string | undefined;
 }
 
 interface TestCasePreCondition {
@@ -318,6 +321,9 @@ function convertTestCases(
             description: '',
             steps,
             ...(precondition.length > 0 ? { precondition } : {}),
+            ...(item.environment ? { environment: item.environment } : {}),
+            ...(item.components ? { components: item.components } : {}),
+            ...(item.priority ? { priority: item.priority } : {}),
         };
     });
 }

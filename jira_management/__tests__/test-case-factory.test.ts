@@ -75,27 +75,11 @@ describe('TestCaseFactory', () => {
             expect(mockPrompt.success).toHaveBeenCalledWith('Issue criada: TEST-123');
         });
 
-        it('returns retry action on error with onError returning retry', async () => {
+        it('returns abort action on error when handler returns abort', async () => {
             expect.hasAssertions();
 
             mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockReturnValue('retry');
-            const result = await factory.createIssue({
-                testData,
-                testTitle: 'Test Title',
-                testIdx: 0,
-                totalTests: 5,
-                opLog,
-            });
-
-            expect(result).toStrictEqual({ action: 'retry' });
-        });
-
-        it('returns abort action on error with onError returning abort', async () => {
-            expect.hasAssertions();
-
-            mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
-            mockPrompt.onError.mockReturnValue('abort');
+            factory.setStepFailureHandler(async () => 'abort');
             const result = await factory.createIssue({
                 testData,
                 testTitle: 'Test Title',
@@ -105,6 +89,56 @@ describe('TestCaseFactory', () => {
             });
 
             expect(result).toStrictEqual({ action: 'abort' });
+        });
+
+        it('returns skip action on error when handler returns skip', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
+            factory.setStepFailureHandler(async () => 'skip');
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Test Title',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+            });
+
+            expect(result).toStrictEqual({ action: 'skip' });
+        });
+
+        it('returns rollback action on error without handler', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.postJiraResource.mockRejectedValue(new Error('API error'));
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Test Title',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+            });
+
+            expect(result).toStrictEqual({ action: 'rollback' });
+        });
+
+        it('retries POST when handler returns retry then succeeds', async () => {
+            expect.hasAssertions();
+
+            mockJiraResource.postJiraResource
+                .mockRejectedValueOnce(new Error('API error'))
+                .mockResolvedValueOnce({ key: 'TEST-123' });
+            factory.setStepFailureHandler(async () => 'retry');
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Test Title',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+            });
+
+            expect(result).toStrictEqual({ key: 'TEST-123' });
+            expect(mockJiraResource['postJiraResource']).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -464,18 +498,18 @@ describe('TestCaseFactory', () => {
             expect(stop).toHaveBeenCalledWith();
         });
 
-        it('aborts on step error when onError returns abort', async () => {
+        it('aborts on step error when handler returns abort', async () => {
             expect.hasAssertions();
 
             mockImporter.importStep.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Step error'));
-            mockPrompt.onError.mockReturnValue('abort');
+            factory.setStepFailureHandler(vi.fn().mockResolvedValue('abort'));
             const result = await factory.postSteps(issueKey, test, opLog);
 
-            expect(result).toStrictEqual({ action: 'abort' });
+            expect(result).toStrictEqual({ action: 'abort', failedSteps: 1, totalSteps: 2 });
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
-        it('continues after step error when onError does not return abort', async () => {
+        it('records failed steps when handler returns skip', async () => {
             expect.hasAssertions();
 
             const test3 = {
@@ -490,11 +524,21 @@ describe('TestCaseFactory', () => {
                 .mockResolvedValueOnce({})
                 .mockRejectedValueOnce(new Error('Step error'))
                 .mockResolvedValueOnce({});
-            mockPrompt.onError.mockReturnValue('continue');
+            factory.setStepFailureHandler(vi.fn().mockResolvedValue('skip'));
             const result = await factory.postSteps(issueKey, test3, opLog);
 
-            expect(result).toBeNull();
+            expect(result).toStrictEqual({ failedSteps: 1, totalSteps: 3 });
             expect(mockImporter.importStep).toHaveBeenCalledTimes(3);
+        });
+
+        it('returns rollback action when handler returns rollback', async () => {
+            expect.hasAssertions();
+
+            mockImporter.importStep.mockRejectedValueOnce(new Error('Step error'));
+            factory.setStepFailureHandler(vi.fn().mockResolvedValue('rollback'));
+            const result = await factory.postSteps(issueKey, test, opLog);
+
+            expect(result).toStrictEqual({ action: 'rollback', failedSteps: 1, totalSteps: 2 });
         });
     });
 });
