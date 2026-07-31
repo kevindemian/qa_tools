@@ -23,10 +23,11 @@ describe('Card primitives', () => {
             expect(html).toContain('data-part="title"');
         });
 
-        it('renders with severity accent', () => {
+        it('renders with severity accent hook and no inline style', () => {
             const html = Card({ children: '', severity: 'error' });
 
-            expect(html).toContain('border-left:4px solid var(--color-error)');
+            expect(html).toContain('data-severity="error"');
+            expect(html).not.toContain('style="');
         });
 
         it('renders with icon', () => {
@@ -42,10 +43,11 @@ describe('Card primitives', () => {
             expect(html).toContain('data-variant="elevated"');
         });
 
-        it('renders bordered variant', () => {
+        it('renders bordered variant with CSS hook and no inline style', () => {
             const html = Card({ children: '', variant: 'bordered' });
 
-            expect(html).toContain('border:1px solid var(--color-border-default)');
+            expect(html).toContain('data-variant="bordered"');
+            expect(html).not.toContain('style="');
         });
     });
 
@@ -58,11 +60,11 @@ describe('Card primitives', () => {
             expect(html).toContain('42');
         });
 
-        it('renders with severity color', () => {
+        it('renders with severity color hook and no inline style', () => {
             const html = MetricCard({ label: 'x', value: '5', severity: 'success' });
 
             expect(html).toContain('data-severity="success"');
-            expect(html).toContain('var(--color-success)');
+            expect(html).not.toContain('style="');
         });
 
         it('renders trend indicator', () => {

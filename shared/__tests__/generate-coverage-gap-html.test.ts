@@ -131,6 +131,37 @@ describe('GenerateCoverageGapHtml', () => {
         expect(html).toContain('tree-node');
     });
 
+    it('uses chevron-right svg toggle instead of unicode arrows', () => {
+        const fixture = makeFixture();
+        fixture.hierarchy = [
+            {
+                key: 'EPIC-1',
+                summary: 'Authentication Module',
+                type: 'Epic',
+                totalIssues: 2,
+                coveredIssues: 1,
+                coveragePct: 50,
+                children: [
+                    {
+                        key: 'STORY-1',
+                        summary: 'Login',
+                        type: 'Story',
+                        totalIssues: 1,
+                        coveredIssues: 0,
+                        coveragePct: 0,
+                        children: [],
+                    },
+                ],
+            },
+        ];
+        const html = generateCoverageGapHtml(fixture);
+
+        expect(html).toContain('data-icon="chevron-right"');
+        expect(html).toContain('tree-toggle-open');
+        expect(html).not.toContain('▶');
+        expect(html).not.toContain('▼');
+    });
+
     it('renders gaps table for uncovered items', () => {
         const html = generateCoverageGapHtml(makeFixture());
 
@@ -182,6 +213,14 @@ describe('GenerateCoverageGapHtml', () => {
 
         expect(html).toContain('function filterGaps()');
         expect(html).toContain('gapSearchInput');
+    });
+
+    it('wires theme toggle button to the global _toggleTheme function', () => {
+        const html = generateCoverageGapHtml(makeFixture());
+
+        expect(html).toContain('data-icon="moon"');
+        expect(html).toContain('onclick="_toggleTheme()"');
+        expect(html).not.toContain('onclick="toggleTheme()"');
     });
 
     it('includes collapsible tree toggle', () => {

@@ -141,8 +141,8 @@ export function Sparkline(props: SparklineProps): string {
 
     const ariaAttr = props.ariaLabel ? `aria-label="${props.ariaLabel}"` : '';
     return `<div data-component="sparkline" role="${props.role || 'img'}" ${ariaAttr}>
-        <span style="display:inline-block;width:${w}px;height:${h}px;background:var(--color-border-subtle);border-radius:${tokens.borderRadius.pill}px;overflow:hidden">
-            <span style="display:block;height:100%;width:${pct.toFixed(0)}px;background:${color};border-radius:${tokens.borderRadius.pill}px;transition:width 0.3s"></span>
+        <span data-part="track" style="width:${w}px;height:${h}px">
+            <span data-part="fill" style="width:${pct.toFixed(0)}px;background:${color}"></span>
         </span>
     </div>`;
 }
@@ -170,7 +170,7 @@ export function ProgressBar(props: ProgressBarProps): string {
     return `<div data-component="progress-bar" role="${props.role || 'progressbar'}"
         aria-valuenow="${props.value}" aria-valuemin="0" aria-valuemax="${max}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
-        <div style="width:${pct.toFixed(0)}%;background:${color}"></div>
-        ${props.showLabel ? `<span style="font-size:${tokens.fontSize.xs};color:var(--color-text-muted);margin-top:2px;display:block;text-align:right">${pct.toFixed(0)}%</span>` : ''}
+        <div data-part="fill" style="width:${pct.toFixed(0)}%;background:${color}"></div>
+        ${props.showLabel ? `<span data-part="label">${pct.toFixed(0)}%</span>` : ''}
     </div>`;
 }

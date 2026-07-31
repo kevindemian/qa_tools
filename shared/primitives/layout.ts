@@ -18,10 +18,8 @@ export interface ContainerProps {
 
 export function Container(props: ContainerProps): string {
     const ds = props.variant || 'page';
-    const style = ds === 'card' ? 'background:var(--color-surface-card)' : '';
     return `<div data-component="container" data-variant="${ds}"
         role="${props.role || 'region'}"
-        ${style ? `style="${style}"` : ''}
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
@@ -41,10 +39,8 @@ export interface SectionProps {
 export function Section(props: SectionProps): string {
     const ds = props.dataSection ? ` data-section="${props.dataSection}"` : '';
     const variant = props.variant || 'card';
-    const style = variant === 'card' ? 'box-shadow:0 1px 3px rgba(0,0,0,0.1)' : '';
     return `<div data-component="section" data-variant="${variant}"${ds}
         role="${props.role || 'region'}"
-        ${style ? `style="${style}"` : ''}
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.title ? `<div data-part="section-title">${props.title}</div>` : ''}
         ${props.children}
@@ -60,8 +56,22 @@ export interface GridProps {
     ariaLabel?: string;
 }
 
+const DEFAULT_GAP = 16;
+const TOKEN_GAPS = new Set<number>([4, 8, 12, 16, 20, 24, 32]);
+
+function gapAttr(gap: number | undefined): string {
+    const g = gap ?? DEFAULT_GAP;
+    if (!Number.isFinite(g) || g < 0) {
+        throw new Error(`layout: gap must be a finite non-negative number (got ${gap})`);
+    }
+    if (g === DEFAULT_GAP) return '';
+    if (!TOKEN_GAPS.has(g)) {
+        throw new Error(`layout: gap ${g} is not in the design-token scale (4, 8, 12, 16, 20, 24, 32)`);
+    }
+    return ` data-gap="${g}"`;
+}
+
 export function Grid(props: GridProps): string {
-    const gap = props.gap ?? 16;
     const cols = props.columns ?? 0;
     const minWidth = props.minColumnWidth ?? 0;
     let template: string;
@@ -72,10 +82,11 @@ export function Grid(props: GridProps): string {
     } else {
         template = `repeat(auto-fill,minmax(280px,1fr))`;
     }
-    return `<div data-component="grid"
+    const gap = gapAttr(props.gap);
+    return `<div data-component="grid"${gap}
         role="${props.role || 'group'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="display:grid;grid-template-columns:${template};gap:${gap}px">
+        style="grid-template-columns:${template}">
         ${props.children}
     </div>`;
 }
@@ -90,12 +101,13 @@ export interface FlexRowProps {
 }
 
 export function FlexRow(props: FlexRowProps): string {
-    const gap = props.gap ?? 16;
     const align = props.align ?? 'center';
-    return `<div data-component="flex-row"
+    const gap = gapAttr(props.gap);
+    const alignAttr = align !== 'center' ? ` data-align="${align}"` : '';
+    const wrapAttr = props.wrap === false ? ' data-wrap="false"' : '';
+    return `<div data-component="flex-row"${gap}${alignAttr}${wrapAttr}
         role="${props.role || 'group'}"
-        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        style="display:flex;gap:${gap}px;align-items:${align};${props.wrap !== false ? 'flex-wrap:wrap' : ''}">
+        ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}>
         ${props.children}
     </div>`;
 }

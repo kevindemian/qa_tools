@@ -56,18 +56,18 @@ describe('Form primitives', () => {
             expect(html).toContain('role="button"');
         });
 
-        it('renders primary variant', () => {
+        it('renders primary variant with CSS hook and no inline style', () => {
             const html = Button({ children: 'Save', variant: 'primary' });
 
             expect(html).toContain('data-variant="primary"');
-            expect(html).toContain('var(--color-info)');
+            expect(html).not.toContain('style="');
         });
 
-        it('renders ghost variant', () => {
+        it('renders ghost variant with CSS hook and no inline style', () => {
             const html = Button({ children: 'X', variant: 'ghost' });
 
             expect(html).toContain('data-variant="ghost"');
-            expect(html).toContain('border:none');
+            expect(html).not.toContain('style="');
         });
 
         it('renders with onClick', () => {
@@ -76,11 +76,11 @@ describe('Form primitives', () => {
             expect(html).toContain('onclick="submit()"');
         });
 
-        it('renders disabled', () => {
+        it('renders disabled without inline style', () => {
             const html = Button({ children: 'X', disabled: true });
 
             expect(html).toContain('disabled');
-            expect(html).toContain('opacity');
+            expect(html).not.toContain('style="');
         });
     });
 

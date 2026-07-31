@@ -29,6 +29,9 @@ import {
     Package,
     SkipForward,
     Circle,
+    Moon,
+    ChevronRight,
+    ArrowUpDown,
 } from 'lucide';
 
 /** Lucide icon path data: array of [tagName, attributes] tuples. */
@@ -57,6 +60,9 @@ const ICON_MAP: Record<string, IconPaths> = {
     package: Package as unknown as IconPaths,
     'skip-forward': SkipForward as unknown as IconPaths,
     circle: Circle as unknown as IconPaths,
+    moon: Moon as unknown as IconPaths,
+    'chevron-right': ChevronRight as unknown as IconPaths,
+    'arrow-up-down': ArrowUpDown as unknown as IconPaths,
 };
 
 export type IconName = keyof typeof ICON_MAP;

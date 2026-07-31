@@ -16,32 +16,32 @@ describe('Badge primitives', () => {
             expect(html).toContain('role="status"');
         });
 
-        it('renders pass variant', () => {
+        it('renders pass variant with CSS hook and no inline style', () => {
             const html = Badge({ variant: 'pass', children: 'passed' });
 
             expect(html).toContain('data-variant="pass"');
-            expect(html).toContain('var(--color-badge-pass-bg)');
+            expect(html).not.toContain('style="');
         });
 
-        it('renders fail variant', () => {
+        it('renders fail variant with CSS hook and no inline style', () => {
             const html = Badge({ variant: 'fail', children: 'failed' });
 
             expect(html).toContain('data-variant="fail"');
-            expect(html).toContain('var(--color-badge-fail-bg)');
+            expect(html).not.toContain('style="');
         });
 
-        it('renders skip variant', () => {
+        it('renders skip variant with CSS hook and no inline style', () => {
             const html = Badge({ variant: 'skip', children: 'skipped' });
 
             expect(html).toContain('data-variant="skip"');
-            expect(html).toContain('var(--color-badge-skip-bg)');
+            expect(html).not.toContain('style="');
         });
 
-        it('renders info variant', () => {
+        it('renders info variant with CSS hook and no inline style', () => {
             const html = Badge({ variant: 'info', children: 'info' });
 
             expect(html).toContain('data-variant="info"');
-            expect(html).toContain('var(--color-info)');
+            expect(html).not.toContain('style="');
         });
 
         it('renders with title', () => {

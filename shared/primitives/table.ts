@@ -7,6 +7,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { icon } from '../icons.js';
 
 export type TableAlign = 'left' | 'center' | 'right';
 
@@ -41,11 +42,11 @@ function renderTableHeader(columns: TableColumn[]): string {
     for (const col of columns) {
         const sortAttr = col.sortable ? ' data-sortable="true"' : '';
         const widthAttr = col.width ? ` style="width:${col.width}"` : '';
-        const alignAttr = col.align ? ` style="text-align:${col.align}"` : '';
-        html += `<th data-column="${sanitizeHtml(col.key)}"${sortAttr}${widthAttr || alignAttr}
+        const alignAttr = col.align ? ` data-align="${col.align}"` : '';
+        html += `<th data-column="${sanitizeHtml(col.key)}"${sortAttr}${alignAttr}${widthAttr}
             scope="col">
             ${col.label}
-            ${col.sortable ? '<span data-part="sort-indicator">↕</span>' : ''}
+            ${col.sortable ? `<span data-part="sort-indicator">${icon('arrow-up-down', 12)}</span>` : ''}
         </th>`;
     }
     html += '</tr></thead>';
@@ -59,7 +60,7 @@ function renderTableRows(rows: TableRow[], columns: TableColumn[]): string {
         html += `<tr data-row="${sanitizeHtml(row.key)}"${cls}${row.attrs || ''}>`;
         for (const col of columns) {
             const cell = row.cells[col.key] ?? '';
-            const alignAttr = col.align ? ` style="text-align:${col.align}"` : '';
+            const alignAttr = col.align ? ` data-align="${col.align}"` : '';
             html += `<td${alignAttr}>${cell}</td>`;
         }
         html += '</tr>';
@@ -134,7 +135,7 @@ export interface TdProps {
 export function Td(props: TdProps): string {
     const colspan = props.colSpan ? ` colspan="${props.colSpan}"` : '';
     const title = props.title ? ` title="${props.title}"` : '';
-    const alignAttr = props.align ? ` style="text-align:${props.align}"` : '';
+    const alignAttr = props.align ? ` data-align="${props.align}"` : '';
     return `<td${colspan}${title}${alignAttr}
         role="${props.role || 'cell'}"
         class="${props.class || ''}">
@@ -151,7 +152,7 @@ export interface ThProps {
 
 export function Th(props: ThProps): string {
     const sortAttr = props.sortable ? ' data-sortable="true"' : '';
-    const alignAttr = props.align ? ` style="text-align:${props.align}"` : '';
+    const alignAttr = props.align ? ` data-align="${props.align}"` : '';
     return `<th scope="${props.scope || 'col'}"${sortAttr}${alignAttr}>
         ${props.children}
     </th>`;

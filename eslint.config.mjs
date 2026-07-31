@@ -333,6 +333,7 @@ export default defineConfig(
             '.stryker-tmp/',
             '.shared/',
             'scripts/validation-hook.ts',
+            'scripts/artifact-validation-harness.ts',
         ],
     },
     prettier,

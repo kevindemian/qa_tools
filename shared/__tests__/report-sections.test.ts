@@ -240,6 +240,17 @@ describe('BuildLlmSection', () => {
         expect(html).toContain('high');
     });
 
+    it('uses svg icons for confidence levels instead of emoji codepoints', () => {
+        expect.hasAssertions();
+
+        for (const level of ['high', 'medium', 'low'] as const) {
+            const html = buildLlmSection({ llmAnalysis: 'analysis', llmConfidence: level });
+
+            expect(html).toContain('data-icon="circle"');
+            expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+        }
+    });
+
     it('escapes HTML content in analysis text', () => {
         const opts: ReportOptions = { llmAnalysis: '<script>alert(1)</script>' };
         const html = buildLlmSection(opts);
@@ -281,6 +292,14 @@ describe('BuildFilterBar', () => {
         expect(html).toContain('exportCsv');
         expect(html).toContain('window.print');
         expect(html).toContain('_toggleTheme');
+    });
+
+    it('wires theme toggle button to the global _toggleTheme function', () => {
+        const html = buildFilterBar();
+
+        expect(html).toContain('data-icon="moon"');
+        expect(html).toContain('onclick="_toggleTheme()"');
+        expect(html).not.toContain('onclick="toggleTheme()"');
     });
 });
 

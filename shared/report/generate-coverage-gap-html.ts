@@ -108,7 +108,7 @@ function buildHierarchyHtml(nodes: CoverageHierarchyNode[], depth = 0): string {
         const hasChildren = node.children.length > 0;
         html += '<div class="tree-node">';
         if (hasChildren) {
-            html += '<span class="tree-toggle" onclick="toggleTree(this)">▶</span>';
+            html += '<span class="tree-toggle" onclick="toggleTree(this)">' + icon('chevron-right', 14) + '</span>';
         }
         html +=
             '<strong>' +
@@ -143,7 +143,7 @@ function buildGapsTable(result: CoverageGapResult): string {
     let html = FilterBar({
         children:
             SearchInput({ placeholder: 'Filter gaps...', onInput: 'filterGaps()', id: 'gapSearchInput' }) +
-            Button({ children: icon('moon', 16), onClick: 'toggleTheme()', variant: 'ghost' }),
+            Button({ children: icon('moon', 16), onClick: '_toggleTheme()', variant: 'ghost' }),
     });
     html +=
         '<div class="gaps-table-wrapper"><table><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Weight</th><th>Epic</th><th>Action</th></tr></thead><tbody>';
@@ -169,9 +169,8 @@ function toggleTree(el) {
     if (!parent) return;
     var children = parent.querySelector('.tree-children');
     if (children) {
-        var hidden = children.classList.contains('tree-children-hidden');
         children.classList.toggle('tree-children-hidden');
-        el.textContent = hidden ? '▼' : '▶';
+        el.classList.toggle('tree-toggle-open');
     }
 }
 function filterGaps() {

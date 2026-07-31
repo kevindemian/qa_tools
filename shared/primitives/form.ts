@@ -51,17 +51,8 @@ export interface ButtonProps {
     disabled?: boolean;
 }
 
-const _buttonStyles = new Map([
-    ['primary', 'background:var(--color-info);color:white'],
-    ['ghost', 'border:none;background:transparent'],
-    ['default', ''],
-]);
-
 export function Button(props: ButtonProps): string {
     const v = props.variant || 'default';
-    const baseStyle = _buttonStyles.get(v) || '';
-    const disabledStyle = props.disabled ? 'opacity:0.5;cursor:not-allowed' : '';
-    const style = [baseStyle, disabledStyle].filter(Boolean).join(';');
     return `<button data-component="button" data-variant="${v}"
         type="button"
         ${props.id ? `id="${props.id}"` : ''}
@@ -69,7 +60,6 @@ export function Button(props: ButtonProps): string {
         ${props.title ? `title="${props.title}"` : ''}
         role="${props.role || 'button'}"
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
-        ${style ? `style="${style}"` : ''}
         ${props.disabled ? 'disabled' : ''}>
         ${props.children}
     </button>`;

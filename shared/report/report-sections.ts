@@ -174,11 +174,11 @@ export function buildLlmSection(options: ReportOptions): string {
             ' AI Analysis unavailable — displaying template report.</p>';
     } else if (options.llmConfidence) {
         const CONFIDENCE_BADGES: Record<string, string> = {
-            high: '\ud83d\udfe2',
-            medium: '\ud83d\udfe1',
-            low: '\ud83d\udd34',
+            high: '<span data-tone="confidence-high">' + icon('circle', 14) + '</span>',
+            medium: '<span data-tone="confidence-medium">' + icon('circle', 14) + '</span>',
+            low: '<span data-tone="confidence-low">' + icon('circle', 14) + '</span>',
         };
-        const badge = CONFIDENCE_BADGES[options.llmConfidence] || '\ud83d\udd34';
+        const badge = CONFIDENCE_BADGES[options.llmConfidence] || CONFIDENCE_BADGES['low'];
         content += '<p class="llm-confidence">Confian\u00e7a: ' + badge + ' ' + options.llmConfidence + '</p>';
     }
     content += '<pre class="llm-content">' + escapeHtml(options.llmAnalysis) + '</pre>';
@@ -205,7 +205,7 @@ export function buildFilterBar(): string {
             SearchInput({ placeholder: 'Filter tests...' }) +
             Button({ children: 'Export CSV', onClick: 'exportCsv()' }) +
             Button({ children: 'PDF', onClick: 'window.print()' }) +
-            Button({ children: '\ud83c\udf13', onClick: '_toggleTheme()', variant: 'ghost' }),
+            Button({ children: icon('moon', 16), onClick: '_toggleTheme()', variant: 'ghost' }),
     });
 }
 

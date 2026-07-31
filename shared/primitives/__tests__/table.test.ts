@@ -40,12 +40,28 @@ describe('Table primitives', () => {
             expect(html).toContain('class="highlight"');
         });
 
-        it('renders sortable columns', () => {
+        it('renders sortable columns with svg indicator', () => {
             const sortCols = [{ key: 'name', label: 'Name', sortable: true }];
             const html = DataTable({ columns: sortCols, rows: [] });
 
             expect(html).toContain('data-sortable="true"');
-            expect(html).toContain('↕');
+            expect(html).toContain('data-part="sort-indicator"');
+            expect(html).not.toContain('↕');
+        });
+
+        it('renders column alignment via data attribute', () => {
+            const html = DataTable({ columns, rows });
+
+            expect(html).toContain('data-align="right"');
+        });
+
+        it('keeps dynamic column width inline but not static alignment', () => {
+            const html = DataTable({
+                columns: [{ key: 'name', label: 'Name', width: '40px' }],
+                rows: [],
+            });
+
+            expect(html).toContain('style="width:40px"');
         });
 
         it('renders caption', () => {

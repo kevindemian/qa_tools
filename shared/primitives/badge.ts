@@ -14,21 +14,10 @@ export interface BadgeProps {
     ariaLabel?: string | undefined;
 }
 
-const _variantStyles = new Map([
-    ['pass', 'background:var(--color-badge-pass-bg);color:var(--color-badge-pass-fg)'],
-    ['fail', 'background:var(--color-badge-fail-bg);color:var(--color-badge-fail-fg)'],
-    ['skip', 'background:var(--color-badge-skip-bg);color:var(--color-badge-skip-fg)'],
-    ['info', 'background:var(--color-info);color:white'],
-    ['warn', 'background:var(--color-badge-warn-bg);color:var(--color-badge-warn-fg)'],
-    ['default', ''],
-]);
-
 export function Badge(props: BadgeProps): string {
     const v = props.variant || 'default';
-    const style = _variantStyles.get(v) || '';
     return `<span data-component="badge" data-variant="${v}"
         role="${props.role || 'status'}"
-        ${style ? `style="${style}"` : ''}
         ${props.ariaLabel ? `aria-label="${props.ariaLabel}"` : ''}
         ${props.title ? `title="${props.title}"` : ''}>
         ${props.children}

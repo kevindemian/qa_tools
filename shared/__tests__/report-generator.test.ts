@@ -123,7 +123,8 @@ describe('GenerateHtmlReport', () => {
 
         const html = generateHtmlReport(tests, { computed: computedFor(tests), includeChart: false });
 
-        expect(html).not.toContain('<svg');
+        expect(html).not.toContain('data-component="bar-chart"');
+        expect(html).not.toContain('data-component="trend-chart"');
     });
 
     it('uses custom title when provided', () => {
@@ -196,7 +197,8 @@ describe('GenerateHtmlReport', () => {
     it('skips chart when tests array is empty', () => {
         const html = generateHtmlReport([], { computed: computedFor([]) });
 
-        expect(html).not.toContain('<svg');
+        expect(html).not.toContain('data-component="bar-chart"');
+        expect(html).not.toContain('data-component="trend-chart"');
     });
 
     it('includes LLM analysis section when provided', () => {
@@ -319,7 +321,7 @@ describe('GenerateHtmlReport', () => {
         const html = generateHtmlReport([], { computed: computedFor([]) });
 
         expect(html).toContain('toggleTheme()');
-        expect(html).toContain('🌓');
+        expect(html).toContain('data-icon="moon"');
     });
 
     it('shows dash for skipped test duration', () => {
