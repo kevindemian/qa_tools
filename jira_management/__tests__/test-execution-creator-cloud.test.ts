@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import { nock } from '../../shared/deps.js';
+import nock from 'nock';
 
 const XRAY_CLOUD = 'http://localhost:1999';
 const XRAY_CLOUD_PATH = '/xray';

@@ -1,13 +1,9 @@
 import Config from '../shared/config-accessor.js';
-import JiraResource from './jira_resource.js';
-import JiraLinkManager from './jira_link_manager.js';
-import CsvResource from './csv_resource.js';
-import TestExecutionCreator from './test-execution-creator.js';
-import PackageVersionManager from './package_version_manager.js';
+import type JiraResource from './jira_resource.js';
+import type JiraLinkManager from './jira_link_manager.js';
+import type CsvResource from './csv_resource.js';
 import { showSplash } from '../shared/ui/splash.js';
 import type { JiraMode } from '../shared/jira/jira-auth.js';
-import { calculateHealthScore } from '../shared/quality/health-score.js';
-import pkg from '../package.json';
 import { info, title, prompt, printError, warn } from '../shared/ui/prompt.js';
 import { withSpinner } from '../shared/ui/spinner.js';
 import {
@@ -23,17 +19,15 @@ import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/ui/br
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
 import { getDataHub } from '../shared/data-hub/global-hub.js';
 import { palette, applyPalette } from '../shared/ui/palette.js';
-import { SessionContext } from '../shared/session-context.js';
+import type { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
 import type { CommandContext } from './commands/context.js';
-import createTests from './create_tests.js';
 import { ensureDirs, registerCleanup } from '../shared/infra/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
 import { maybeRunFirstRunWizard } from '../shared/ui/first-run.js';
 import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
-import { parseLinkedIssuesString } from '../shared/issue-link-utils.js';
 
 /** Extract the value of a `--key value` argument from argv. Returns undefined if not present. */
 function getArgValue(argv: string[], key: string): string | undefined {
@@ -103,6 +97,10 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
         res.ctx.isBusy = busy;
     };
     try {
+        const [{ default: createTests }, { parseLinkedIssuesString }] = await Promise.all([
+            import('./create_tests.js'),
+            import('../shared/issue-link-utils.js'),
+        ]);
         const outcome = await createTests.createTestsFromCsv({
             jiraResource: res.jiraResource,
             jiraResourceXray: res.jiraResourceXray,
@@ -132,6 +130,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
 
         if (process.argv.includes('--create-te') && inMemoryTasksId.length > 0) {
             info('Criando Test Execution...');
+            const { default: TestExecutionCreator } = await import('./test-execution-creator.js');
             const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
             const csvName = csvPath.split('/').pop() ?? csvPath;
             const teParentArg = getArgValue(process.argv, '--te-parent');
@@ -217,6 +216,7 @@ export async function runAssociateTe(res: RuntimeResources, teKey: string, testK
 
     // ── Associate ────────────────────────────────────────────────────────
     try {
+        const { default: TestExecutionCreator } = await import('./test-execution-creator.js');
         const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
         const result = await executor.addTestsToExistingExecution(teKey, validKeys);
         if (!result) {
@@ -350,12 +350,21 @@ async function initializeSession() {
         info('ℹ Jira não configurado. Comandos que dependem de Jira exibirão orientação de configuração.');
     }
 
+    const [{ default: JiraResource }, { default: JiraLinkManager }, { default: CsvResource }, { SessionContext }] =
+        await Promise.all([
+            import('./jira_resource.js'),
+            import('./jira_link_manager.js'),
+            import('./csv_resource.js'),
+            import('../shared/session-context.js'),
+        ]);
+
     const jiraResource = new JiraResource(personal_token, base_url, jira_mode);
     const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
     const linkManager = new JiraLinkManager(jiraResource);
     const linkManagerXray = new JiraLinkManager(jiraResourceXray);
     const csvResource = new CsvResource();
     const ctx = new SessionContext();
+    const { default: PackageVersionManager } = await import('./package_version_manager.js');
     ctx.createPackageManager = (dir: string) => new PackageVersionManager(dir);
 
     const state = loadTypedState();
@@ -499,7 +508,13 @@ async function runMainLoop(res: RuntimeResources): Promise<void> {
             info('Voltando ao menu principal...');
             continue;
         }
-        if (classified.action === 'skip') continue;
+        if (classified.action === 'skip') {
+            if (!process.stdin.isTTY) {
+                printSessionSummary();
+                return;
+            }
+            continue;
+        }
 
         if (classified.action === 'category' && classified.category) {
             const catTitle: unknown = Reflect.get(CATEGORY_TITLES, classified.category);
@@ -638,6 +653,7 @@ async function initStartup(): Promise<void> {
     let healthScore: { score: number; grade: string } | undefined;
     try {
         const hub = getDataHub();
+        const { calculateHealthScore } = await import('../shared/quality/health-score.js');
         const health = calculateHealthScore({ dataHub: hub });
         healthScore = { score: health.overall, grade: health.grade };
     } catch (err) {
@@ -664,6 +680,9 @@ async function main(): Promise<void> {
         return;
     }
     if (process.argv.includes('--version')) {
+        const { readFileSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'));
         rootLogger.info(pkg.version);
         gracefulExit(ExitCode.OK);
         return;

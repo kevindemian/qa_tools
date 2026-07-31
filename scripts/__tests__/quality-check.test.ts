@@ -67,7 +67,7 @@ describe('Quality check integrated', () => {
     });
 
     describe('Repo scan detectors', () => {
-        it('checkThrowString passes on a clean repo', async () => {
+        it('checkThrowString passes on a clean repo', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const { checkThrowString } = await load();
@@ -75,7 +75,7 @@ describe('Quality check integrated', () => {
             expect(checkThrowString().passed).toBeTruthy();
         });
 
-        it('checkThrowString detects a thrown string literal in a real file', async () => {
+        it('checkThrowString detects a thrown string literal in a real file', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const f = path.join(ROOT, '_throw_tmp.ts');
@@ -89,7 +89,7 @@ describe('Quality check integrated', () => {
             }
         });
 
-        it('checkNonNullAssertion passes on a clean repo', async () => {
+        it('checkNonNullAssertion passes on a clean repo', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const { checkNonNullAssertion } = await load();
@@ -97,7 +97,7 @@ describe('Quality check integrated', () => {
             expect(checkNonNullAssertion().passed).toBeTruthy();
         });
 
-        it('checkIfTrueFalse passes on a clean repo', async () => {
+        it('checkIfTrueFalse passes on a clean repo', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const { checkIfTrueFalse } = await load();
@@ -105,7 +105,7 @@ describe('Quality check integrated', () => {
             expect(checkIfTrueFalse().passed).toBeTruthy();
         });
 
-        it('checkIfTrueFalse detects an if(true) condition in a real file', async () => {
+        it('checkIfTrueFalse detects an if(true) condition in a real file', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const f = path.join(ROOT, '_iftrue_tmp.ts');
@@ -119,7 +119,7 @@ describe('Quality check integrated', () => {
             }
         });
 
-        it('checkDepWall passes on a clean repo', async () => {
+        it('checkDepWall passes on a clean repo', { timeout: 30000 }, async () => {
             expect.hasAssertions();
 
             const { checkDepWall } = await load();

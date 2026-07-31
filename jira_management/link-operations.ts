@@ -53,7 +53,7 @@ export class LinkOperations {
         return (issue.fields?.issuelinks ?? [])
             .filter((link) => link.type?.name === linkTypeName && link.id)
             .map((link) => ({
-                id: link.id!,
+                id: link.id ?? '',
                 targetKey: link.outwardIssue?.key ?? link.inwardIssue?.key ?? '',
             }));
     }
@@ -70,7 +70,7 @@ export class LinkOperations {
         return (issue?.fields?.issuelinks ?? [])
             .filter((link) => link.id)
             .map((link) => ({
-                id: link.id!,
+                id: link.id ?? '',
                 targetKey: link.outwardIssue?.key ?? link.inwardIssue?.key ?? '',
                 linkType: link.type?.name ?? '',
             }));

@@ -42,7 +42,7 @@ describe('getTestSteps — steps is plain list, not connection', () => {
 
         await client.getTestSteps('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.query).toMatch(/steps\s*\{/);
         expect(body.query).not.toMatch(/steps\s*\{[^}]*results\s*\{/);
@@ -54,7 +54,7 @@ describe('getTestSteps — steps is plain list, not connection', () => {
 
         await client.getTestSteps('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.query).not.toMatch(/steps\s*\(/);
     });
@@ -65,7 +65,7 @@ describe('getTestSteps — steps is plain list, not connection', () => {
 
         await client.getTestSteps('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.variables).toHaveProperty('issueId', 'ISSUE-1');
         expect(body.variables).not.toHaveProperty('limit');
@@ -92,7 +92,7 @@ describe('getTestSteps — steps is plain list, not connection', () => {
         const steps = await client.getTestSteps('ISSUE-1', 'cid', 'csec');
 
         expect(steps).toHaveLength(2);
-        expect(steps[0]!.id).toBe('s1');
+        expect(steps[0]?.id).toBe('s1');
     });
 
     it('returns empty array when getTest returns null', async () => {
@@ -134,7 +134,7 @@ describe('getTestPreconditions — connection requires limit', () => {
 
         await client.getTestPreconditions('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.query).toMatch(/preconditions\s*\(\s*limit\s*:\s*100\s*\)/);
     });
@@ -145,7 +145,7 @@ describe('getTestPreconditions — connection requires limit', () => {
 
         await client.getTestPreconditions('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.query).toMatch(/preconditions\(limit:\s*100\)\s*\{[^}]*total[^}]*results\s*\{\s*issueId\s*\}/s);
     });
@@ -156,7 +156,7 @@ describe('getTestPreconditions — connection requires limit', () => {
 
         await client.getTestPreconditions('ISSUE-1', 'cid', 'csec');
 
-        const body = mockPost.mock.calls[1]![1] as { query: string; variables: Record<string, unknown> };
+        const body = (mockPost.mock.calls[1] ?? [])[1] as { query: string; variables: Record<string, unknown> };
 
         expect(body.variables).toHaveProperty('issueId', 'ISSUE-1');
         expect(body.variables).not.toHaveProperty('limit');

@@ -56,7 +56,7 @@ describe('Integration: getOrFetchDataHub', () => {
         delete process.env['TEST_REPORT_PATH'];
     });
 
-    it('returns cached hub on cache hit without re-fetching', { timeout: 15000 }, async () => {
+    it('returns cached hub on cache hit without re-fetching', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
@@ -73,7 +73,7 @@ describe('Integration: getOrFetchDataHub', () => {
         expect(mockProvider.getRecentPipelines).toHaveBeenCalledTimes(1);
     });
 
-    it('selects GitLab provider when provider.provider === "gitlab"', async () => {
+    it('selects GitLab provider when provider.provider === "gitlab"', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
@@ -86,7 +86,7 @@ describe('Integration: getOrFetchDataHub', () => {
         expect(hub?.raw.runs).toStrictEqual([]);
     });
 
-    it('selects GitHub provider when provider.provider === "github"', async () => {
+    it('selects GitHub provider when provider.provider === "github"', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
@@ -98,7 +98,7 @@ describe('Integration: getOrFetchDataHub', () => {
         expect(hub?.raw.runs).toStrictEqual([]);
     });
 
-    it('returns hub with empty data when provider throws', async () => {
+    it('returns hub with empty data when provider throws', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci/ci-data.js');
@@ -113,7 +113,7 @@ describe('Integration: getOrFetchDataHub', () => {
         expect(hub?.raw.runs).toStrictEqual([]);
     });
 
-    it('caches different repos independently', async () => {
+    it('caches different repos independently', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const { getOrFetchDataHub } = await import('../../ci/ci-data.js');

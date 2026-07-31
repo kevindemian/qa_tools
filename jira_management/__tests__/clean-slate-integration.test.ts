@@ -76,7 +76,7 @@ describe('clean-slate integration: full pipeline', () => {
     it('single step fails: rolls back and returns success=false', async () => {
         // Make addTestStep fail only on rebuild (callCount > 0 from clear phase)
         let addTestStepCalls = 0;
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
             addTestStepCalls++;
             // Allow restore calls (after first fail) to succeed
             if (addTestStepCalls > 1) return Promise.resolve();
@@ -100,13 +100,15 @@ describe('clean-slate integration: full pipeline', () => {
         expect(result.restored).toBe(true);
         const failedStep = result.stepResults.find((r) => !r.ok && !r.step.includes(':rollback'));
         expect(failedStep).toBeDefined();
-        expect(failedStep!.error).toContain('API timeout');
+        expect((failedStep ?? {}).error).toContain('API timeout');
     });
 
     it('multiple steps fail: only first failure triggers rollback', async () => {
         // Make both addTestStep and addPreconditionsToTest fail
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
-        (ctx.xrayCloud!.addPreconditionsToTest as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('prec fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
+        ((ctx.xrayCloud ?? {}).addPreconditionsToTest as ReturnType<typeof vi.fn>).mockRejectedValue(
+            new Error('prec fail'),
+        );
 
         const result = await cleanSlateUpdate(
             ctx,
@@ -129,7 +131,7 @@ describe('clean-slate integration: full pipeline', () => {
 
     it('rollback fails: returns success=false, restored=false', async () => {
         // Make both rebuild AND restore fail
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('rebuild fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('rebuild fail'));
         (ctx.jiraResource.putJiraResource as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('restore fail'));
 
         const result = await cleanSlateUpdate(
@@ -151,7 +153,7 @@ describe('clean-slate integration: full pipeline', () => {
 
     it('with onStepFailure handler: handler is called on failure', async () => {
         const handler = vi.fn().mockResolvedValue('skip' as const);
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
 
         const result = await cleanSlateUpdate(
             ctx,
@@ -174,7 +176,7 @@ describe('clean-slate integration: full pipeline', () => {
 
     it('with onStepFailure handler returning abort: stops immediately', async () => {
         const handler = vi.fn().mockResolvedValue('abort' as const);
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('step fail'));
 
         const result = await cleanSlateUpdate(
             ctx,

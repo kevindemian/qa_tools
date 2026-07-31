@@ -1,4 +1,4 @@
-import { chalk } from './deps.js';
+import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import Config from './config-accessor.js';

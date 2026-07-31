@@ -248,7 +248,7 @@ describe('ECSPOL-960 baseline', () => {
     it('all tests have coverage', () => {
         for (const tc of ECSPOL960_BASELINE) {
             expect(tc.coverage).toBeDefined();
-            expect(tc.coverage!.length).toBeGreaterThan(0);
+            expect((tc.coverage ?? []).length).toBeGreaterThan(0);
         }
     });
 });

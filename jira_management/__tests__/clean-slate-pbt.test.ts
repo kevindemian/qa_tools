@@ -102,7 +102,7 @@ describe('PBT: StepResult invariants', () => {
                 if (!r.ok) {
                     expect(r.error).toBeDefined();
                     expect(typeof r.error).toBe('string');
-                    expect(r.error!.length).toBeGreaterThan(0);
+                    expect((r.error ?? '').length).toBeGreaterThan(0);
                 }
             }
 
@@ -167,8 +167,9 @@ describe('PBT: Snapshot consistency', () => {
         // Invariant: 'clear' snapshot exists
         expect(snapshots.has('clear')).toBe(true);
 
-        const snap = snapshots.get('clear')!;
+        const snap = snapshots.get('clear') as IssueFieldSnapshot | undefined;
         expect(snap).toBeDefined();
+        if (!snap) return;
         expect(typeof snap.description).toBe('string');
         expect(Array.isArray(snap.steps)).toBe(true);
         expect(Array.isArray(snap.preconditions)).toBe(true);
@@ -196,7 +197,7 @@ describe('PBT: Snapshot consistency', () => {
 
         // Make rebuild fail, but allow restore to succeed
         let addTestStepCalls = 0;
-        (ctxWithSnapshots.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        ((ctxWithSnapshots.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
             addTestStepCalls++;
             if (addTestStepCalls > 1) return Promise.resolve();
             return Promise.reject(new Error('fail'));
@@ -236,7 +237,7 @@ describe('PBT: Handler behavior invariants', () => {
 
     it('handler decision is recorded in StepResult', async () => {
         const handler = vi.fn().mockResolvedValue('skip' as const);
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
 
         const result = await cleanSlateUpdate(
             ctx,
@@ -262,7 +263,7 @@ describe('PBT: Handler behavior invariants', () => {
     });
 
     it('no handler: default rollback behavior', async () => {
-        (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
+        ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
 
         const result = await cleanSlateUpdate(
             ctx,

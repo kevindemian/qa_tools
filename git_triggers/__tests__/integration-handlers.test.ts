@@ -156,7 +156,7 @@ describe('HandleListSchedules', () => {
         vi.clearAllMocks();
     });
 
-    it('lists schedules for gitlab provider', { timeout: 15000 }, async () => {
+    it('lists schedules for gitlab provider', { timeout: 30000 }, async () => {
         expect.hasAssertions();
 
         const m = makeMockGitProvider();

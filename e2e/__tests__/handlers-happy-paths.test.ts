@@ -68,6 +68,7 @@ import nock from 'nock';
 import JiraResource from '../../jira_management/jira_resource.js';
 import JiraLinkManager from '../../jira_management/jira_link_manager.js';
 import CsvResource from '../../jira_management/csv_resource.js';
+import Config from '../../shared/config-accessor.js';
 import { rootLogger } from '../../shared/logger.js';
 import { SessionContext } from '../../shared/session-context.js';
 import { setDataHub } from '../../shared/data-hub/global-hub.js';
@@ -634,6 +635,7 @@ describe('Handlers Happy Paths', () => {
     describe('Case15 — import JSON tests', () => {
         it('happy path: creates test from JSON then Test Execution', async () => {
             expect.hasAssertions();
+            Config.setAutoConfirm(true);
 
             const { api, xray } = freshScope();
             // createTestsFromJson creates 1 test from JSON fixture:
@@ -646,8 +648,6 @@ describe('Handlers Happy Paths', () => {
             xray.post('/test/TEST-1/steps').reply(201);
             // Then TE creation (confirm=true):
             // findExistingTe in TestExecutionCreator.create() → GET /search
-            api.get('/search').query(true).reply(200, { issues: [], total: 0 });
-            // 2nd GET /search: findExistingTe inside create()
             api.get('/search').query(true).reply(200, { issues: [], total: 0 });
             api.get('/issuetype').reply(200, [
                 { id: '11200', name: 'Epic' },

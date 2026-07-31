@@ -154,7 +154,7 @@ class TestCaseFactory {
             const policy: UpdatePolicy = (Config.get('updatePolicy') ?? 'auto') as UpdatePolicy;
 
             if (matches.length === 1) {
-                const key = matches[0]!.key;
+                const key = matches[0]?.key ?? '';
                 if (policy === 'skip') {
                     if (!isQuiet()) warn('Issue existente pulada: ' + key);
                     opLog.info('Issue existente pulada', { key, title: testTitle });
@@ -187,7 +187,7 @@ class TestCaseFactory {
                 const answer = prompt('Selecione a issue para atualizar (1-' + matches.length + ', Enter = pular): ');
                 const idx = parseInt(answer, 10);
                 if (!isNaN(idx) && idx >= 1 && idx <= matches.length) {
-                    const chosenKey = matches[idx - 1]!.key;
+                    const chosenKey = matches[idx - 1]?.key ?? '';
                     return this._doUpdate(chosenKey, testData, testTitle, opLog, 'prompt', params.test);
                 }
             }
@@ -238,23 +238,23 @@ class TestCaseFactory {
                 if (result.updated) return result;
                 if (result.ambiguous || params.checkOnly) return { skipped: true };
                 if (hasTargetKey) {
-                    warn('Target key ' + targetKeys![testIdx] + ' falhou — issue NAO pode ser criada');
+                    warn('Target key ' + (targetKeys?.[testIdx] ?? '') + ' falhou — issue NAO pode ser criada');
                     opLog.info('Target key update falhou, criacao bloqueada', {
-                        key: targetKeys![testIdx],
+                        key: targetKeys?.[testIdx],
                         title: testTitle,
                     });
-                    return { key: targetKeys![testIdx] ?? null, skipped: true };
+                    return { key: targetKeys?.[testIdx] ?? null, skipped: true };
                 }
                 return result;
             }
             if (params.checkOnly) return { skipped: true };
             if (hasTargetKey) {
-                warn('Target key ' + targetKeys![testIdx] + ' nao encontrada — issue NAO pode ser criada');
+                warn('Target key ' + (targetKeys?.[testIdx] ?? '') + ' nao encontrada — issue NAO pode ser criada');
                 opLog.info('Target key nao encontrada, criacao bloqueada', {
-                    key: targetKeys![testIdx],
+                    key: targetKeys?.[testIdx],
                     title: testTitle,
                 });
-                return { key: targetKeys![testIdx] ?? null, skipped: true };
+                return { key: targetKeys?.[testIdx] ?? null, skipped: true };
             }
         }
 

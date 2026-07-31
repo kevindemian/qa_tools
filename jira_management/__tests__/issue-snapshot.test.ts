@@ -103,8 +103,8 @@ describe('issue-snapshot', () => {
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalledWith('issue/PROJ-1', {
                 fields: { description: null },
             });
-            expect(ctx.xrayCloud!.removeAllTestSteps).toHaveBeenCalledWith('12345', 'cid', 'csec');
-            expect(ctx.xrayCloud!.removePreconditionsFromTest).toHaveBeenCalledWith(
+            expect((ctx.xrayCloud ?? {}).removeAllTestSteps).toHaveBeenCalledWith('12345', 'cid', 'csec');
+            expect((ctx.xrayCloud ?? {}).removePreconditionsFromTest).toHaveBeenCalledWith(
                 '12345',
                 ['p1', 'p2'],
                 'cid',
@@ -129,8 +129,8 @@ describe('issue-snapshot', () => {
             expect(Array.isArray(results)).toBe(true);
             const linksResult = results.find((r) => r.step === 'clear-links');
             expect(linksResult).toBeDefined();
-            expect(linksResult!.ok).toBe(false);
-            expect(linksResult!.error).toContain('Permission denied');
+            expect((linksResult ?? {}).ok).toBe(false);
+            expect((linksResult ?? {}).error).toContain('Permission denied');
         });
     });
 
@@ -147,13 +147,13 @@ describe('issue-snapshot', () => {
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalledWith('issue/PROJ-1', {
                 fields: { description: 'new desc' },
             });
-            expect(ctx.xrayCloud!.addTestStep).toHaveBeenCalledWith(
+            expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalledWith(
                 '12345',
                 { action: 'do Y', data: 'd', result: 'r' },
                 'cid',
                 'csec',
             );
-            expect(ctx.xrayCloud!.addPreconditionsToTest).toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
             expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
         });
 
@@ -167,7 +167,7 @@ describe('issue-snapshot', () => {
             });
 
             expect(ctx.jiraResource.putJiraResource).not.toHaveBeenCalled();
-            expect(ctx.xrayCloud!.addTestStep).not.toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).addTestStep).not.toHaveBeenCalled();
         });
     });
 
@@ -185,8 +185,8 @@ describe('issue-snapshot', () => {
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalledWith('issue/PROJ-1', {
                 fields: { description: 'restored desc' },
             });
-            expect(ctx.xrayCloud!.addTestStep).toHaveBeenCalled();
-            expect(ctx.xrayCloud!.addPreconditionsToTest).toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
             expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
         });
     });
@@ -212,18 +212,18 @@ describe('issue-snapshot', () => {
             // Snapshot was called
             expect(ctx.jiraResource.getJiraResource).toHaveBeenCalled();
             // Clear was called
-            expect(ctx.xrayCloud!.removeAllTestSteps).toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).removeAllTestSteps).toHaveBeenCalled();
             // PUT was called
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalled();
             // Rebuild was called
-            expect(ctx.xrayCloud!.addTestStep).toHaveBeenCalled();
+            expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalled();
         });
 
         it('rolls back on rebuild failure', async () => {
             const ctx = createMockContext();
             // Make addTestStep fail during rebuild
             let callCount = 0;
-            (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
+            ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockImplementation(() => {
                 callCount++;
                 if (callCount === 1) throw new Error('rebuild fail');
                 return Promise.resolve();
@@ -249,7 +249,9 @@ describe('issue-snapshot', () => {
         it('returns {success:false, restored:false} when rollback also fails', async () => {
             const ctx = createMockContext();
             // Make both rebuild AND restore fail
-            (ctx.xrayCloud!.addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('rebuild fail'));
+            ((ctx.xrayCloud ?? {}).addTestStep as ReturnType<typeof vi.fn>).mockRejectedValue(
+                new Error('rebuild fail'),
+            );
             (ctx.jiraResource.putJiraResource as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('restore fail'));
 
             const result = await cleanSlateUpdate(

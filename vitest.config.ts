@@ -44,8 +44,8 @@ export default defineConfig({
         hookTimeout: 30000,
         teardownTimeout: 5000,
         fileParallelism: true,
-        pool: 'threads',
-        maxConcurrency: 8,
+        pool: 'forks',
+        maxConcurrency: 2,
         coverage: {
             provider: 'v8',
             exclude: [

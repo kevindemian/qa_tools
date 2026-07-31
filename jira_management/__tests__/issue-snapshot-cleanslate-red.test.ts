@@ -89,10 +89,10 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
         expect(result.success).toBe(true);
 
         // Step 1: removeAllTestSteps was called (clear)
-        expect(ctx.xrayCloud!.removeAllTestSteps).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).removeAllTestSteps).toHaveBeenCalled();
 
         // Step 2: addTestStep was called with the new step data (rebuild)
-        expect(ctx.xrayCloud!.addTestStep).toHaveBeenCalledWith(
+        expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalledWith(
             '12345',
             { action: 'Open page', data: 'url', result: 'Page opens' },
             'cid',
@@ -117,10 +117,10 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
         expect(result.success).toBe(true);
 
         // Step 1: removePreconditionsFromTest was called (clear)
-        expect(ctx.xrayCloud!.removePreconditionsFromTest).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).removePreconditionsFromTest).toHaveBeenCalled();
 
         // Step 2: addPreconditionsToTest was called with resolved IDs (rebuild)
-        expect(ctx.xrayCloud!.addPreconditionsToTest).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
     });
 
     it('red: rebuilds linkedIssues when rebuildData.linkedIssues is non-empty', async () => {
@@ -164,18 +164,18 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
         expect(result.restored).toBe(false);
 
         // Clear phase
-        expect(ctx.xrayCloud!.removeAllTestSteps).toHaveBeenCalled();
-        expect(ctx.xrayCloud!.removePreconditionsFromTest).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).removeAllTestSteps).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).removePreconditionsFromTest).toHaveBeenCalled();
         expect(ctx.linkOps.removeIssueLink).toHaveBeenCalled();
 
         // Rebuild phase
-        expect(ctx.xrayCloud!.addTestStep).toHaveBeenCalledWith(
+        expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalledWith(
             '12345',
             { action: 'New action', data: '', result: 'New result' },
             'cid',
             'csec',
         );
-        expect(ctx.xrayCloud!.addPreconditionsToTest).toHaveBeenCalled();
+        expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
         expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
     });
 });

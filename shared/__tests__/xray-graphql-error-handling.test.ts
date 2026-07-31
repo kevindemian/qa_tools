@@ -51,7 +51,7 @@ describe('BUG: Xray graphql() does not check res.data.errors', () => {
             (c) => typeof c[0] === 'string' && c[0].startsWith('GraphQL error:'),
         );
         expect(gqlWarnCalls.length).toBe(2);
-        expect(gqlWarnCalls[0]![0] as string).toContain('Cannot query field "steps"');
+        expect((gqlWarnCalls[0] ?? [])[0] as string).toContain('Cannot query field "steps"');
 
         warnSpy.mockRestore();
     });
@@ -211,7 +211,7 @@ describe('graphql() transient error retry', () => {
             (c) => typeof c[0] === 'string' && c[0].includes('[graphql] Transient error'),
         );
         expect(retryWarns.length).toBe(1);
-        expect(retryWarns[0]![0] as string).toContain('attempt 1/3');
+        expect((retryWarns[0] ?? [])[0] as string).toContain('attempt 1/3');
         warnSpy.mockRestore();
     });
 });

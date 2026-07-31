@@ -133,7 +133,7 @@ describe('clearLinks: must clear ALL link types, not just default list', () => {
         const results = await clearIssueFields(ctx, 'PROJ-1', ['Relates']);
         const linksResult = results.find((r) => r.step === 'clear-links');
         expect(linksResult).toBeDefined();
-        expect(linksResult!.ok).toBe(false);
-        expect(linksResult!.error).toContain('Permission denied');
+        expect((linksResult ?? {}).ok).toBe(false);
+        expect((linksResult ?? {}).error).toContain('Permission denied');
     });
 });

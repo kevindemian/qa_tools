@@ -62,8 +62,8 @@ describe('clean-slate edge cases', () => {
 
         const descResult = result.stepResults.find((r) => r.step === 'rebuild-description');
         expect(descResult).toBeDefined();
-        expect(descResult!.ok).toBe(true);
-        expect(descResult!.detail).toContain('skipped');
+        expect((descResult ?? {}).ok).toBe(true);
+        expect((descResult ?? {}).detail).toContain('skipped');
     });
 
     it('undefined description: rebuild-description skipped', async () => {
@@ -77,7 +77,7 @@ describe('clean-slate edge cases', () => {
 
         const descResult = result.stepResults.find((r) => r.step === 'rebuild-description');
         expect(descResult).toBeDefined();
-        expect(descResult!.ok).toBe(true);
+        expect((descResult ?? {}).ok).toBe(true);
     });
 
     it('xrayCloud is null: Xray steps return ok with skipped', async () => {
@@ -98,8 +98,8 @@ describe('clean-slate edge cases', () => {
 
         const stepsResult = result.stepResults.find((r) => r.step === 'clear-steps');
         expect(stepsResult).toBeDefined();
-        expect(stepsResult!.ok).toBe(true);
-        expect(stepsResult!.detail).toContain('skipped');
+        expect((stepsResult ?? {}).ok).toBe(true);
+        expect((stepsResult ?? {}).detail).toContain('skipped');
     });
 
     it('single linked issue: correctly linked', async () => {

@@ -83,7 +83,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
         });
 
         expect(mockCleanSlateUpdate).toHaveBeenCalled();
-        const rebuildData = mockCleanSlateUpdate.mock.calls[0]![3];
+        const rebuildData = (mockCleanSlateUpdate.mock.calls[0] ?? [])[3];
 
         // GREEN: steps should come from test.steps
         expect(rebuildData.steps).toHaveLength(1);
@@ -132,7 +132,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
         });
 
         expect(mockCleanSlateUpdate).toHaveBeenCalled();
-        const rebuildData = mockCleanSlateUpdate.mock.calls[0]![3];
+        const rebuildData = (mockCleanSlateUpdate.mock.calls[0] ?? [])[3];
 
         // GREEN: preconditions should be ['PREC-1', 'PREC-2'] from test.precondition
         expect(rebuildData.preconditions).toEqual(['PREC-1', 'PREC-2']);
@@ -177,7 +177,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
         });
 
         expect(mockCleanSlateUpdate).toHaveBeenCalled();
-        const rebuildData = mockCleanSlateUpdate.mock.calls[0]![3];
+        const rebuildData = (mockCleanSlateUpdate.mock.calls[0] ?? [])[3];
 
         // GREEN: linkedIssues should come from test.linkedIssues
         expect(rebuildData.linkedIssues).toHaveLength(1);
