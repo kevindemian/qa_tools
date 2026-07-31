@@ -174,12 +174,27 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  EXIT_CODE=0
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    npx tautest run --config tautest.config.json --base ${{ github.base_ref }} --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                    TAUTEST_BASE=${{ github.base_ref }}
                   else
-                    npx tautest run --config tautest.config.json --base HEAD~1 --threshold 60 --prompt-style opencode || EXIT_CODE=$?
+                    TAUTEST_BASE=HEAD~1
                   fi
+                  # Inspect the mutate scope up front so we can skip when there is
+                  # nothing to mutate: no production files changed (tautest exit 2)
+                  # or files changed but no added lines (deletion-only commits, which
+                  # would otherwise make the real run exit 1 for an empty scope).
+                  DRY_RUN_EXIT=0
+                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode --dry-run > /tmp/tautest-scope.log || DRY_RUN_EXIT=$?
+                  if [ "${DRY_RUN_EXIT}" = "2" ]; then
+                    echo "No production files changed — skipping mutation testing"
+                    exit 0
+                  fi
+                  if grep -q "Estimated mutation scope: none" /tmp/tautest-scope.log; then
+                    echo "No mutations possible (no added lines) — skipping mutation testing"
+                    exit 0
+                  fi
+                  EXIT_CODE=0
+                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode || EXIT_CODE=$?
                   # Exit code 2 = no production files to mutate (expected for test-only changes)
                   if [ "${EXIT_CODE}" = "2" ]; then
                     echo "No production files changed — skipping mutation testing"
