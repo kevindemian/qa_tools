@@ -104,18 +104,20 @@ describe('RenderPipelineHealthHtml', () => {
         expect(html).toContain('test');
     });
 
-    it('contains failure intelligence section', () => {
+    it.each([
+        { label: 'failure intelligence section', expected: ['Failure Intelligence', 'Module not found'] },
+        { label: 'branch breakdown', expected: ['Branch Breakdown', 'main'] },
+        { label: 'design tokens', expected: ['--color-surface-page', '--color-text-primary', '--color-text-muted'] },
+        { label: 'theme toggle script', expected: ['qa-report-theme', 'prefers-color-scheme'] },
+        { label: 'dark mode CSS', expected: ['html.dark'] },
+    ])('contains $label', ({ expected }) => {
+        expect.hasAssertions();
+
         const html = renderPipelineHealthHtml(sampleHealthData);
 
-        expect(html).toContain('Failure Intelligence');
-        expect(html).toContain('Module not found');
-    });
-
-    it('contains branch breakdown', () => {
-        const html = renderPipelineHealthHtml(sampleHealthData);
-
-        expect(html).toContain('Branch Breakdown');
-        expect(html).toContain('main');
+        for (const token of expected) {
+            expect(html).toContain(token);
+        }
     });
 
     it('is valid HTML document', () => {
@@ -123,27 +125,6 @@ describe('RenderPipelineHealthHtml', () => {
 
         expect(html).toMatch(/^<!DOCTYPE html>/);
         expect(html).toContain('</html>');
-    });
-
-    it('uses buildCss design tokens', () => {
-        const html = renderPipelineHealthHtml(sampleHealthData);
-
-        expect(html).toContain('--color-surface-page');
-        expect(html).toContain('--color-text-primary');
-        expect(html).toContain('--color-text-muted');
-    });
-
-    it('includes theme toggle script', () => {
-        const html = renderPipelineHealthHtml(sampleHealthData);
-
-        expect(html).toContain('qa-report-theme');
-        expect(html).toContain('prefers-color-scheme');
-    });
-
-    it('includes dark mode CSS', () => {
-        const html = renderPipelineHealthHtml(sampleHealthData);
-
-        expect(html).toContain('html.dark');
     });
 
     it('includes footer', () => {
