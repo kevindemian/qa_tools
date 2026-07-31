@@ -36,102 +36,93 @@ const MOCK_CTX_WITH_FEATURES: SetupContext = {
     },
 };
 
+const MOCK_CTX_NO_AI: SetupContext = {
+    ...MOCK_CTX_WITH_FEATURES,
+    features: { ...MOCK_CTX_WITH_FEATURES.features, aiFailureAnalysis: false },
+};
+
+const MOCK_CTX_NO_FLAKY: SetupContext = {
+    ...MOCK_CTX_WITH_FEATURES,
+    features: { ...MOCK_CTX_WITH_FEATURES.features, flakinessDashboard: false },
+};
+
+const MOCK_CTX_NO_QUALITY: SetupContext = {
+    ...MOCK_CTX_WITH_FEATURES,
+    features: { ...MOCK_CTX_WITH_FEATURES.features, qualityGate: false },
+};
+
 describe('GenerateGitLabCI', () => {
-    it('returns YAML string with stage test', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_BASIC);
+    it.each([
+        { label: 'returns YAML string with stage test', ctx: MOCK_CTX_BASIC, expected: ['test'], absent: [] },
+        { label: 'includes node image with correct version', ctx: MOCK_CTX_BASIC, expected: ['node:20'], absent: [] },
+        {
+            label: 'includes install and test commands',
+            ctx: MOCK_CTX_BASIC,
+            expected: ['npm ci', 'npx vitest run --reporter ctrf'],
+            absent: [],
+        },
+        { label: 'includes artifact paths', ctx: MOCK_CTX_BASIC, expected: ['reports/ctrf-report.json'], absent: [] },
+        {
+            label: 'adds post-processing step when prReport enabled',
+            ctx: MOCK_CTX_WITH_FEATURES,
+            expected: ['git_triggers/main.ts pr-report'],
+            absent: [],
+        },
+        {
+            label: 'passes --project with the client project name (not hardcoded)',
+            ctx: MOCK_CTX_WITH_FEATURES,
+            expected: ['pr-report --project test-proj'],
+            absent: ['pr-report --project qa_tools'],
+        },
+        {
+            label: 'does not add post-processing when prReport disabled',
+            ctx: MOCK_CTX_BASIC,
+            expected: [],
+            absent: ['shared/pr-report-core.ts'],
+        },
+        {
+            label: 'includes --no-ai flag when aiFailureAnalysis disabled',
+            ctx: MOCK_CTX_NO_AI,
+            expected: ['--no-ai'],
+            absent: [],
+        },
+        {
+            label: 'includes --no-flaky flag when flakinessDashboard disabled',
+            ctx: MOCK_CTX_NO_FLAKY,
+            expected: ['--no-flaky'],
+            absent: [],
+        },
+        {
+            label: 'includes --no-quality flag when qualityGate disabled',
+            ctx: MOCK_CTX_NO_QUALITY,
+            expected: ['--no-quality'],
+            absent: [],
+        },
+    ])('$label', ({ ctx, expected, absent }) => {
+        expect.hasAssertions();
 
-        expect(yaml).toContain('test');
-    });
-
-    it('includes node image with correct version', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_BASIC);
-
-        expect(yaml).toContain('node:20');
-    });
-
-    it('includes install and test commands', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_BASIC);
-
-        expect(yaml).toContain('npm ci');
-        expect(yaml).toContain('npx vitest run --reporter ctrf');
-    });
-
-    it('includes artifact paths', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_BASIC);
-
-        expect(yaml).toContain('reports/ctrf-report.json');
-    });
-
-    it('adds post-processing step when prReport enabled', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-
-        expect(yaml).toContain('git_triggers/main.ts pr-report');
-    });
-
-    it('passes --project with the client project name (not hardcoded)', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-
-        expect(yaml).toContain('pr-report --project test-proj');
-        expect(yaml).not.toContain('pr-report --project qa_tools');
-    });
-
-    it('does not add post-processing when prReport disabled', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_BASIC);
-
-        expect(yaml).not.toContain('shared/pr-report-core.ts');
-    });
-
-    it('includes --no-ai flag when aiFailureAnalysis disabled', () => {
-        const ctx = {
-            ...MOCK_CTX_WITH_FEATURES,
-            features: { ...MOCK_CTX_WITH_FEATURES.features, aiFailureAnalysis: false },
-        };
         const yaml = generateGitLabCI(ctx);
 
-        expect(yaml).toContain('--no-ai');
+        for (const token of expected) {
+            expect(yaml).toContain(token);
+        }
+        for (const token of absent) {
+            expect(yaml).not.toContain(token);
+        }
     });
 
-    it('includes --no-flaky flag when flakinessDashboard disabled', () => {
-        const ctx = {
-            ...MOCK_CTX_WITH_FEATURES,
-            features: { ...MOCK_CTX_WITH_FEATURES.features, flakinessDashboard: false },
-        };
-        const yaml = generateGitLabCI(ctx);
+    it.each([
+        { label: 'does not include --ctrf flag (removed in Phase 3)', absent: ['--ctrf'] },
+        { label: 'omits --no-ai when aiFailureAnalysis enabled', absent: ['--no-ai'] },
+        { label: 'omits --no-flaky when flakinessDashboard enabled', absent: ['--no-flaky'] },
+        { label: 'omits --no-quality when qualityGate enabled', absent: ['--no-quality'] },
+    ])('$label', ({ absent }) => {
+        expect.hasAssertions();
 
-        expect(yaml).toContain('--no-flaky');
-    });
-
-    it('includes --no-quality flag when qualityGate disabled', () => {
-        const ctx = {
-            ...MOCK_CTX_WITH_FEATURES,
-            features: { ...MOCK_CTX_WITH_FEATURES.features, qualityGate: false },
-        };
-        const yaml = generateGitLabCI(ctx);
-
-        expect(yaml).toContain('--no-quality');
-    });
-
-    it('does not include --ctrf flag (removed in Phase 3)', () => {
         const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
 
-        expect(yaml).not.toContain('--ctrf');
-    });
-
-    it('omits --no-ai when aiFailureAnalysis enabled', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-
-        expect(yaml).not.toContain('--no-ai');
-    });
-
-    it('omits --no-flaky when flakinessDashboard enabled', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-
-        expect(yaml).not.toContain('--no-flaky');
-    });
-
-    it('omits --no-quality when qualityGate enabled', () => {
-        const yaml = generateGitLabCI(MOCK_CTX_WITH_FEATURES);
-
-        expect(yaml).not.toContain('--no-quality');
+        for (const token of absent) {
+            expect(yaml).not.toContain(token);
+        }
     });
 });

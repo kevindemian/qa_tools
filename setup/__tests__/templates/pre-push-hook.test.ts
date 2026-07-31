@@ -25,30 +25,18 @@ const MOCK_CTX: SetupContext = {
 };
 
 describe('GeneratePrePushHook', () => {
-    it('returns shell script with project name', () => {
+    it.each([
+        { label: 'shell script with project name', expected: ['#!/bin/sh', 'test-proj'] },
+        { label: 'batch mode call', expected: ['git_triggers/main.ts', '--batch'] },
+        { label: 'exit code check', expected: ['EXIT_CODE', 'exit 1'] },
+        { label: 'skip message', expected: ['git push --no-verify'] },
+    ])('includes $label', ({ expected }) => {
+        expect.hasAssertions();
+
         const script = generatePrePushHook(MOCK_CTX);
 
-        expect(script).toContain('#!/bin/sh');
-        expect(script).toContain('test-proj');
-    });
-
-    it('includes batch mode call', () => {
-        const script = generatePrePushHook(MOCK_CTX);
-
-        expect(script).toContain('git_triggers/main.ts');
-        expect(script).toContain('--batch');
-    });
-
-    it('includes exit code check', () => {
-        const script = generatePrePushHook(MOCK_CTX);
-
-        expect(script).toContain('EXIT_CODE');
-        expect(script).toContain('exit 1');
-    });
-
-    it('includes skip message', () => {
-        const script = generatePrePushHook(MOCK_CTX);
-
-        expect(script).toContain('git push --no-verify');
+        for (const token of expected) {
+            expect(script).toContain(token);
+        }
     });
 });

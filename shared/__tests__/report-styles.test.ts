@@ -52,52 +52,22 @@ describe('Report-styles', () => {
             expect(css.length).toBeGreaterThan(100);
         });
 
-        it('contains CSS variables', () => {
+        it.each([
+            { label: 'CSS variables', expected: ['--color-success', '--color-surface-card'] },
+            { label: 'common CSS classes', expected: ['.card', 'body', '.footer'] },
+            { label: 'chart styles', expected: ['.chart-box', '.legend'] },
+            { label: 'dark mode queries', expected: ['html.dark'] },
+            { label: 'print media query', expected: ['@media print'] },
+            { label: 'responsive breakpoints', expected: ['@media(max-width:768px)', '@media(max-width:640px)'] },
+            { label: 'tab styles', expected: ['.tab-btn', '.tab-content'] },
+        ])('contains $label', ({ expected }) => {
+            expect.hasAssertions();
+
             const css = buildCss();
 
-            expect(css).toContain('--color-success');
-            expect(css).toContain('--color-surface-card');
-        });
-
-        it('contains common CSS classes', () => {
-            const css = buildCss();
-
-            expect(css).toContain('.card');
-            expect(css).toContain('body');
-            expect(css).toContain('.footer');
-        });
-
-        it('contains chart styles', () => {
-            const css = buildCss();
-
-            expect(css).toContain('.chart-box');
-            expect(css).toContain('.legend');
-        });
-
-        it('contains dark mode queries', () => {
-            const css = buildCss();
-
-            expect(css).toContain('html.dark');
-        });
-
-        it('contains print media query', () => {
-            const css = buildCss();
-
-            expect(css).toContain('@media print');
-        });
-
-        it('contains responsive breakpoints', () => {
-            const css = buildCss();
-
-            expect(css).toContain('@media(max-width:768px)');
-            expect(css).toContain('@media(max-width:640px)');
-        });
-
-        it('contains tab styles', () => {
-            const css = buildCss();
-
-            expect(css).toContain('.tab-btn');
-            expect(css).toContain('.tab-content');
+            for (const token of expected) {
+                expect(css).toContain(token);
+            }
         });
     });
 });

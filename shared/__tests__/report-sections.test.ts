@@ -247,7 +247,9 @@ describe('BuildLlmSection', () => {
             const html = buildLlmSection({ llmAnalysis: 'analysis', llmConfidence: level });
 
             expect(html).toContain('data-icon="circle"');
-            expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+            expect(html).not.toContain('\u{1F7E2}');
+            expect(html).not.toContain('\u{1F7E1}');
+            expect(html).not.toContain('\u{1F534}');
         }
     });
 

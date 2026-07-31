@@ -16,58 +16,22 @@ describe('BuildToggleScript', () => {
         expect(script).toContain('</script>');
     });
 
-    it('includes togglePassed function', () => {
+    it.each([
+        { label: 'togglePassed', expected: 'function togglePassed' },
+        { label: 'filterTable', expected: 'function filterTable' },
+        { label: 'exportCsv', expected: 'function exportCsv' },
+        { label: 'switchTab', expected: 'function switchTab' },
+        { label: 'toggleTimeline', expected: 'function toggleTimeline' },
+        { label: 'scrollToTest', expected: 'function scrollToTest' },
+        { label: 'toggleDetail', expected: 'function toggleDetail' },
+        { label: 'filterByHierarchy', expected: 'function filterByHierarchy' },
+        { label: 'clearHierarchy', expected: 'function clearHierarchy' },
+    ])('includes $label function', ({ expected }) => {
+        expect.hasAssertions();
+
         const script = buildToggleScript();
 
-        expect(script).toContain('function togglePassed');
-    });
-
-    it('includes filterTable function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function filterTable');
-    });
-
-    it('includes exportCsv function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function exportCsv');
-    });
-
-    it('includes switchTab function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function switchTab');
-    });
-
-    it('includes toggleTimeline function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function toggleTimeline');
-    });
-
-    it('includes scrollToTest function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function scrollToTest');
-    });
-
-    it('includes toggleDetail function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function toggleDetail');
-    });
-
-    it('includes filterByHierarchy function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function filterByHierarchy');
-    });
-
-    it('includes clearHierarchy function', () => {
-        const script = buildToggleScript();
-
-        expect(script).toContain('function clearHierarchy');
+        expect(script).toContain(expected);
     });
 
     it('includes error truncation click handler', () => {
