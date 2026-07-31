@@ -84,6 +84,7 @@ function statusDot(status: string): string {
 function healthColor(grade: string): (s: string) => string {
     if (grade === 'excellent' || grade === 'good') return palette.green;
     if (grade === 'needs_attention') return palette.yellow;
+    if (grade === 'unknown') return palette.muted;
     return palette.red;
 }
 

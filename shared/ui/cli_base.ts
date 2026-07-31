@@ -225,6 +225,8 @@ function _tryPrintHealthScore(): void {
             gradeIcon = '🟡';
         } else if (hs.grade === 'needs_attention') {
             gradeIcon = '🟠';
+        } else if (hs.grade === 'unknown') {
+            gradeIcon = '⚪';
         } else {
             gradeIcon = '🔴';
         }

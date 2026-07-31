@@ -16,9 +16,10 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     }),
 }));
 
-vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
-    calcFlakinessEntries: vi.fn().mockReturnValue([]),
-}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/data-hub/compute/flakiness-entries.js')>();
+    return { ...actual, calcFlakinessEntries: vi.fn().mockReturnValue([]) };
+});
 vi.mock('../../shared/quality/run-comparison.js', () => ({ compareRuns: vi.fn(() => '') }));
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
@@ -132,21 +133,6 @@ vi.mock('../schedule-handler', () => ({
     generateWeeklyQualityReport: vi.fn(),
 }));
 vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    generateReleaseScoreHtml: vi.fn(() => '<section>release-score: score=82 grade=good breakdown=4</section>'),
-    calculateReleaseScore: vi.fn(() => ({
-        score: 82,
-        grade: 'good',
-        breakdown: [
-            { label: 'tasks', score: 80, status: 'pass' as const },
-            { label: 'health', score: 85, status: 'pass' as const },
-            { label: 'coverage', score: 70, status: 'pass' as const },
-            { label: 'flakiness', score: 90, status: 'pass' as const },
-        ],
-        recommendation: 'Ship after hardening coverage gap.',
-        timestamp: new Date().toISOString(),
-    })),
-}));
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
@@ -342,9 +328,10 @@ import { showDashboardMenu } from '../../shared/ui/dashboard-menu.js';
 import { getDataHub as getSessionDataHub } from '../session-state.js';
 import { getCurrentProject } from '../../shared/project-context.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
 import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzeBacklogHealth } from '../../shared/report/backlog-health.js';
+import { DataHubImpl } from '../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
@@ -353,7 +340,6 @@ const mockSetupSigint = vi.mocked(setupSigint);
 const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockWriteReport = vi.mocked(writeReport);
-const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
 const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
 const mockAnalyzeBacklogHealth = vi.mocked(analyzeBacklogHealth);
 
@@ -847,55 +833,37 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('DashboardReleaseScore', () => {
-        it('generates release score dashboard with real score data', async () => {
+        it('renders the hub computed release score with the REAL renderer (SSOT, integrated)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '2024-01-01',
-                            total: 1,
-                            passed: 1,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 10,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '2024-01-02',
-                            total: 1,
-                            passed: 1,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 10,
-                            tests: [],
-                        },
+            // Real DataHub built from a real parse result — no internal mocks.
+            const realHub = DataHubImpl.createFromParseResult(
+                {
+                    tests: [
+                        { title: 'test A', state: 'passed' as const, duration: 100 },
+                        { title: 'test B', state: 'passed' as const, duration: 120 },
                     ],
+                    stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 220 },
                 },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
+                'proj1',
+                makeDataHubPersistenceMock(),
+            );
+            const expectedReleaseScore = realHub.computed.releaseScore;
+
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue(realHub);
             await _testExports._dashboardReleaseScore();
 
-            // (a) função de score chamada com args reais (não mock vazio)
-            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.any(String),
-                undefined,
-                expect.any(Number),
-            );
-            // (b) efeito colateral real: HTML escrito contém o score
+            // (a) efeito colateral real: HTML escrito contém o score/grade reais
+            //     produzidos pela cadeia hub → compute → renderer (SSOT, sem mocks)
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
 
-            expect(writtenHtml).toContain('release-score: score=82 grade=good');
+            expect(writtenHtml).toContain('<!DOCTYPE html>');
+            expect(writtenHtml).toContain('Pass Rate');
+            expect(writtenHtml).toContain(String(expectedReleaseScore.score));
+            expect(writtenHtml).toContain(expectedReleaseScore.grade);
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Release Score',

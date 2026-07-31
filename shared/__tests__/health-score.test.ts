@@ -1,6 +1,7 @@
 import { calculateHealthScore, evaluateQualityGate } from '../quality/health-score.js';
 import type { DataHub, ComputedMetrics } from '../types/data-hub.js';
-import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
+import { makeDataHubMock, makeDataHubPersistenceMock } from '../test-utils/factories/data-hub-mock.js';
+import { DataHubImpl } from '../data-hub/hub.js';
 import { rootLogger } from '../logger.js';
 
 function createTestHub(overrides: Partial<ComputedMetrics> = {}): DataHub {
@@ -602,5 +603,45 @@ describe('CalculateHealthScore error handling (Fase 1.5)', () => {
         expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Health score error'));
 
         errorSpy.mockRestore();
+    });
+});
+
+describe('B2: dimensão sem dados ≠ 0 — health NUNCA critical por falta de dado (SSOT DataHub)', () => {
+    it('hub com parsed artifacts (passRate test-level) mas SEM runs/coverage/jobs → dims ausentes unavailable e resultado partial, não critical', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', makeDataHubPersistenceMock());
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.dimensions.passRate.available).toBeTruthy();
+        expect(result.dimensions.coverage.available).toBeFalsy();
+        expect(result.dimensions.executionRate.available).toBeFalsy();
+        expect(result.dimensions.suiteSpeed.available).toBeFalsy();
+        expect(result.dimensions.flakyRate.available).toBeFalsy();
+        expect(result.partial).toBeTruthy();
+        expect(result.grade).not.toBe('critical');
+        expect(result.overall).toBeGreaterThan(70);
+    });
+
+    it('hub completamente vazio → grade unknown + qualityGate unknown + partial, nunca critical fabricado', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', makeDataHubPersistenceMock());
+        const result = calculateHealthScore({ dataHub: hub });
+
+        expect(result.partial).toBeTruthy();
+        expect(result.grade).toBe('unknown');
+        expect(result.qualityGate).toBe('unknown');
+        expect(result.dimensions.passRate.available).toBeFalsy();
+        expect(result.dimensions.coverage.available).toBeFalsy();
+        expect(result.dimensions.executionRate.available).toBeFalsy();
+        expect(result.dimensions.suiteSpeed.available).toBeFalsy();
+        expect(result.dimensions.flakyRate.available).toBeFalsy();
     });
 });

@@ -521,7 +521,30 @@ export interface ReleaseScoreResult {
     dimensions: HealthDimensions;
     /** Grade (A-F). */
     grade: string;
+    /**
+     * B3 — human-readable per-dimension breakdown (labels + pass/fail). A
+     * dimension with no real data source is `noData: true` (renderers MUST show
+     * "N/A", never the 0 placeholder — AGENTS.md §24/§25). Always produced by
+     * `calcReleaseScore`; optional only for legacy/CSV-imported hubs.
+     */
+    breakdown?: ReleaseScoreBreakdownEntry[];
+    /** Human-readable recommendation derived from the failing/absent dimensions. */
+    recommendation?: string;
+    /** ISO timestamp of the computation. */
+    timestamp?: string;
 }
+
+/** Single release-score dimension entry with no-data awareness. */
+export interface ReleaseScoreBreakdownEntry {
+    label: string;
+    score: number;
+    status: 'pass' | 'fail';
+    /** True when the dimension had no real data source (not fabricated). */
+    noData?: boolean;
+}
+
+/** Per-dimension availability for release score (mirrors ComputedMetrics.dataAvailability). */
+export type ReleaseScoreAvailability = Record<keyof HealthDimensions, boolean>;
 
 /** Quarantine status for flaky tests. */
 export interface QuarantineStatus {
@@ -766,6 +789,27 @@ export interface ComputedMetrics {
     suiteBreakdown?: SuiteBreakdown[] | undefined;
     /** Failure classification per test title (e.g., 'ASSERTION', 'TIMEOUT'). */
     failureClassifications?: Record<string, string> | undefined;
+    /**
+     * Per-dimension data availability for the health score. `false` means the
+     * underlying data source is genuinely ABSENT (no runs / no coverage / no
+     * jobs), NOT a measured 0 — consumers MUST show "N/A", never the 0 value
+     * (AGENTS.md §24/§25). Always computed by `DataHubImpl.computeMetrics`.
+     */
+    dataAvailability?: DataAvailability;
+}
+
+/** Whether each health dimension has a real data source behind its computed value. */
+export interface DataAvailability {
+    /** Pipeline runs with conclusion exist OR executed tests (passed+failed) > 0. */
+    passRate: boolean;
+    /** Pipeline runs exist (flaky detection has qualifying data). */
+    flaky: boolean;
+    /** Coverage data present (raw.coverage or parsed artifact coverage > 0). */
+    coverage: boolean;
+    /** Pipeline runs with conclusion exist. */
+    executionRate: boolean;
+    /** Job durations / run timing present. */
+    suiteSpeed: boolean;
 }
 
 /**

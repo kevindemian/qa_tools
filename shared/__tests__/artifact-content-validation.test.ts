@@ -42,7 +42,7 @@ import type { BacklogHealthResult } from '../report/backlog-health.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
 import type { OptimizationResult } from '../quality/suite-optimization.js';
 import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
-import type { ReleaseScoreResult } from '../quality/release-score.js';
+import type { ReleaseScoreResult } from '../types/data-hub.js';
 import type { RegressionResult } from '../quality/silent-regression.js';
 import type { DefectTrendResult } from '../quality/defect-trend.js';
 import type { SeasonalityResult } from '../quality/defect-seasonality.js';
@@ -287,12 +287,20 @@ function makeCrossSquad(): CrossSquadResult {
 function makeReleaseScore(): ReleaseScoreResult {
     return {
         score: 82,
+        dimensions: {
+            passRate: { score: 85, status: 'pass' },
+            flakyRate: { score: 90, status: 'pass' },
+            coverage: { score: 75, status: 'pass' },
+            suiteSpeed: { score: 80, status: 'pass' },
+            executionRate: { score: 80, status: 'pass' },
+        },
         grade: 'good',
         breakdown: [
-            { label: 'Task Completion', score: 85, status: 'pass' },
-            { label: 'Health Score', score: 80, status: 'pass' },
+            { label: 'Pass Rate', score: 85, status: 'pass' },
+            { label: 'Flaky Rate', score: 90, status: 'pass' },
             { label: 'Coverage', score: 75, status: 'pass' },
-            { label: 'Flakiness', score: 90, status: 'pass' },
+            { label: 'Suite Speed', score: 80, status: 'pass' },
+            { label: 'Execution Rate', score: 80, status: 'pass' },
         ],
         recommendation: 'Release is ready with good quality metrics',
         timestamp: '2026-07-25T10:00:00Z',

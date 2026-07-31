@@ -505,4 +505,23 @@ describe('BuildHealthSection', () => {
 
         expect(html).not.toContain('Methodology & References');
     });
+
+    it('b2: renders the PARTIAL banner (with excluded dimensions) when health is partial', () => {
+        const partialHealth = {
+            ...passingHealth,
+            partial: true,
+            partialReasons: ['coverage: no data available', 'executionRate: no data available'],
+        };
+        const html = buildHealthSection(partialHealth);
+
+        expect(html).toContain('PARTIAL');
+        expect(html).toContain('insufficient data');
+        expect(html).toContain('coverage: no data available');
+    });
+
+    it('does not render the PARTIAL banner when health is complete', () => {
+        const html = buildHealthSection(passingHealth);
+
+        expect(html).not.toContain('PARTIAL');
+    });
 });

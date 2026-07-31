@@ -6,7 +6,7 @@ import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-ma
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
+import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
 import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
 import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 import JiraClient from '../shared/jira/jira-client.js';
@@ -178,17 +178,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
 
         const dataHub = getDataHub();
         const health = calculateHealthScore({ dataHub });
-        const flaky = calcFlakinessEntries(projectRuns, 2);
-        const coveragePct = dataHub.computed.coverage;
-        const releaseScore = calculateReleaseScore(
-            undefined,
-            health.overall,
-            health.overall >= 70 ? 'pass' : 'fail',
-            coveragePct,
-            flaky.filter((f) => f.rate > 0.3).length > 0
-                ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
-                : 0,
-        );
+        const releaseScore = dataHub.computed.releaseScore;
         const defects = aggregateDefectTrends(failureClassifications);
         const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, []);
 

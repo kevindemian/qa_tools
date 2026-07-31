@@ -161,6 +161,35 @@ describe('DataHubImpl', () => {
         expect(hub.computed.runPassRate).toBeCloseTo(80, 5);
     });
 
+    it('b1: computed.passRate reflects test-level pass rate when only parsed artifacts exist (no pipeline runs)', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [
+                { title: 'test A', state: 'passed' as const, duration: 100 },
+                { title: 'test B', state: 'passed' as const, duration: 150 },
+                { title: 'test C', state: 'passed' as const, duration: 200 },
+            ],
+            stats: { passed: 3, failed: 0, skipped: 0, total: 3, duration: 450 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        expect(hub.raw.runs).toHaveLength(0);
+        expect(hub.computed.passRate).toBe(100);
+        expect(hub.computed.runPassRate).toBe(100);
+    });
+
+    it('b1: computed.passRate stays 0 only when there is genuinely no data at all', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.passRate).toBe(0);
+        expect(hub.computed.runPassRate).toBe(0);
+    });
+
     it('merges data from multiple providers', async () => {
         expect.hasAssertions();
 
@@ -225,6 +254,33 @@ describe('DataHubImpl', () => {
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('b3: computed.releaseScore is the single enriched implementation — noData for absent data sources', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        const rs = hub.computed.releaseScore;
+
+        expect(rs.breakdown).toBeDefined();
+        expect(rs.breakdown).toHaveLength(5);
+
+        const passRateDim = (rs.breakdown ?? []).find((d) => d.label === 'Pass Rate');
+
+        expect(passRateDim?.noData).toBeFalsy();
+
+        for (const label of ['Coverage', 'Suite Speed', 'Execution Rate']) {
+            const dim = (rs.breakdown ?? []).find((d) => d.label === label);
+
+            expect(dim?.noData).toBeTruthy();
+        }
     });
 });
 

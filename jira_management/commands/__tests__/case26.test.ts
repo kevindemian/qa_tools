@@ -1,38 +1,14 @@
 /**
  * Tests for case26 — Release Score.
  *
- * Validates handler export, project validation, release score calculation
- * with sufficient/insufficient runs, and history recording.
- *
- * Mock strategy: vi.hoisted for all mocks to avoid unsafe casts.
+ * Anti-mock-theater: the release-score flow runs REAL and integrated.
+ * A real DataHub is built via `DataHubImpl.createFromParseResult` and the
+ * real `generateReleaseScoreHtml` renderer runs on its `computed.releaseScore`.
+ * Only infrastructure/terminal boundaries are mocked (browser, temp-dir, prompt).
  */
-const {
-    mockMetricsRuns,
-    mockCalcFlakyEntries,
-    mockCalcHealth,
-    mockCalcRelease,
-    mockGenHtml,
-    mockOpen,
-    mockWriteReport,
-} = vi.hoisted(() => ({
-    mockMetricsRuns: vi.fn().mockReturnValue([]),
-    mockCalcFlakyEntries: vi.fn().mockReturnValue([]),
-    mockCalcHealth: vi.fn<typeof calculateHealthScore>().mockReturnValue({
-        overall: 80,
-        grade: 'good',
-        qualityGate: 'pass',
-        dimensions: {
-            passRate: { score: 90, status: 'pass', available: true },
-            flakyRate: { score: 80, status: 'pass', available: true },
-            coverage: { score: 70, status: 'pass', available: true },
-            suiteSpeed: { score: 85, status: 'pass', available: true },
-            executionRate: { score: 75, status: 'pass', available: true },
-        },
-        runCount: 5,
-        timestamp: new Date().toISOString(),
-    }),
-    mockCalcRelease: vi.fn().mockReturnValue({ score: 85, label: 'B', details: {} }),
-    mockGenHtml: vi.fn().mockReturnValue('<html></html>'),
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { mockOpen, mockWriteReport } = vi.hoisted(() => ({
     mockOpen: vi.fn(),
     mockWriteReport: vi.fn().mockReturnValue('/test/qa-test/release-score.html'),
 }));
@@ -49,29 +25,7 @@ vi.mock('../../../shared/logger', () => ({
 }));
 
 vi.mock('../../../shared/data-hub/global-hub.js', () => ({
-    getDataHub: vi.fn().mockReturnValue({
-        get computed() {
-            return { metricsRuns: mockMetricsRuns() as import('../../../shared/types/data-hub.js').MetricsRun[] };
-        },
-        raw: {},
-    }),
-}));
-
-vi.mock('../../../shared/data-hub/compute/flakiness-entries', () => ({
-    calcFlakinessEntries: mockCalcFlakyEntries,
-}));
-
-vi.mock('../../../shared/config-accessor.js', () => ({
-    default: { get: vi.fn().mockReturnValue('TEST') },
-}));
-
-vi.mock('../../../shared/quality/health-score.js', () => ({
-    calculateHealthScore: mockCalcHealth,
-}));
-
-vi.mock('../../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: mockCalcRelease,
-    generateReleaseScoreHtml: mockGenHtml,
+    getDataHub: vi.fn(),
 }));
 
 vi.mock('../../../shared/open', () => ({
@@ -88,55 +42,29 @@ vi.mock('../../../shared/ui/output.js', () => ({
 
 import { warn, printError } from '../../../shared/ui/prompt.js';
 import { makeMockCommandContext } from '../../../shared/test-utils.js';
-import type { calculateHealthScore } from '../../../shared/quality/health-score.js';
+import { getDataHub } from '../../../shared/data-hub/global-hub.js';
+import { DataHubImpl } from '../../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../../shared/test-utils/factories/data-hub-mock.js';
 import case26 from '../case26.js';
 
-function makeRun(
-    overrides?: Partial<{
-        project: string;
-        timestamp: string;
-        total: number;
-        passed: number;
-        failed: number;
-        skipped: number;
-        duration: number;
-        tests: Array<{ title: string; state: 'passed' | 'failed' | 'skipped'; duration: number }>;
-    }>,
-) {
-    return {
-        timestamp: overrides?.timestamp ?? '2026-01-01T00:00:00Z',
-        project: overrides?.project ?? 'TEST',
-        total: overrides?.total ?? 10,
-        passed: overrides?.passed ?? 8,
-        failed: overrides?.failed ?? 2,
-        skipped: overrides?.skipped ?? 0,
-        duration: overrides?.duration ?? 100,
-        tests: overrides?.tests ?? [],
+/** Build a REAL DataHub from a real parse result (2 passed tests). */
+function buildRealHub(): DataHubImpl {
+    const parseResult = {
+        framework: 'jest',
+        tests: [
+            { title: 'test A', state: 'passed' as const, duration: 100 },
+            { title: 'test B', state: 'passed' as const, duration: 120 },
+        ],
+        stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 220 },
     };
+    return DataHubImpl.createFromParseResult(parseResult, 'test/repo', makeDataHubPersistenceMock());
 }
 
 describe('Case26', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockMetricsRuns.mockReturnValue([]);
-        mockCalcFlakyEntries.mockReturnValue([]);
-        mockCalcHealth.mockReturnValue({
-            overall: 80,
-            grade: 'good',
-            qualityGate: 'pass',
-            dimensions: {
-                passRate: { score: 90, status: 'pass', available: true },
-                flakyRate: { score: 80, status: 'pass', available: true },
-                coverage: { score: 70, status: 'pass', available: true },
-                suiteSpeed: { score: 85, status: 'pass', available: true },
-                executionRate: { score: 75, status: 'pass', available: true },
-            },
-            runCount: 5,
-            timestamp: new Date().toISOString(),
-        });
-        mockCalcRelease.mockReturnValue({ score: 85, label: 'B', details: {} });
-        mockGenHtml.mockReturnValue('<html></html>');
         mockWriteReport.mockReturnValue('/test/qa-test/release-score.html');
+        vi.mocked(getDataHub).mockReturnValue(buildRealHub());
     });
 
     describe('Handler export', () => {
@@ -157,75 +85,78 @@ describe('Case26', () => {
         });
     });
 
-    describe('Release score calculation', () => {
-        it('calculates release score with sufficient runs', async () => {
+    describe('Release score — real integrated flow', () => {
+        it('reads the release score computed by the real DataHub and renders real HTML', async () => {
             expect.hasAssertions();
 
-            const runs = Array.from({ length: 5 }, () => makeRun({ project: 'TEST' }));
-            mockMetricsRuns.mockReturnValue(runs);
-            mockCalcFlakyEntries.mockReturnValue([]);
-
-            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
             await case26.handler(ctx);
 
-            expect(mockCalcHealth).toHaveBeenCalledTimes(1);
+            expect(getDataHub).toHaveBeenCalledWith();
 
-            const healthCallArgs = mockCalcHealth.mock.calls[0];
+            const html = mockWriteReport.mock.calls[0]?.[1] as string;
 
-            expect(healthCallArgs).toBeDefined();
-
-            expect(healthCallArgs?.[0]).toHaveProperty('dataHub');
-
-            expect(healthCallArgs?.[0]?.dataHub).toHaveProperty('computed');
-
-            expect(mockCalcFlakyEntries).toHaveBeenCalledWith(runs, 2);
-            expect(mockCalcRelease).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.stringMatching(/^(pass|fail)$/),
-                undefined,
-                expect.any(Number),
-            );
-            expect(mockOpen).toHaveBeenCalledWith(expect.any(String), 'Release Score', expect.any(Function));
+            expect(html).toContain('<!DOCTYPE html>');
+            expect(html).toContain('Pass Rate');
+            expect(html).toContain('Insufficient data');
+            expect(html).toContain('data-part="timestamp"');
+            expect(html).toContain('data-dashboard="release-score"');
         });
 
-        it('calculates release score with insufficient runs (< 2)', async () => {
+        it('writes the report with the project-specific filename', async () => {
             expect.hasAssertions();
 
-            const runs = [makeRun({ project: 'TEST' })];
-            mockMetricsRuns.mockReturnValue(runs);
-            mockCalcFlakyEntries.mockReturnValue([]);
-
-            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
             await case26.handler(ctx);
 
-            expect(mockCalcFlakyEntries).toHaveBeenCalledWith([], 2);
-            expect(mockCalcRelease).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.stringMatching(/^(pass|fail)$/),
-                undefined,
-                expect.any(Number),
+            expect(mockWriteReport).toHaveBeenCalledWith('release-score-TEST.html', expect.any(String));
+        });
+
+        it('opens the report in the browser', async () => {
+            expect.hasAssertions();
+
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
+            await case26.handler(ctx);
+
+            expect(mockOpen).toHaveBeenCalledWith(
+                '/test/qa-test/release-score.html',
+                'Release Score',
+                expect.any(Function),
             );
         });
 
         it('records history on success', async () => {
             expect.hasAssertions();
 
-            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
             await case26.handler(ctx);
 
             expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
         });
 
+        it('renders an explicit insufficient-data state when no dimension has data', async () => {
+            expect.hasAssertions();
+
+            // A truly empty hub has no run/coverage/timing/artifact sources:
+            // every release-score dimension is unavailable (never a fabricated 0).
+            const emptyHub = DataHubImpl.createEmpty('github', 'test/repo', makeDataHubPersistenceMock());
+            vi.mocked(getDataHub).mockReturnValue(emptyHub);
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
+            await case26.handler(ctx);
+
+            const html = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            expect(html).toContain('Insufficient data for release score');
+        });
+
         it('calls printError on failure', async () => {
             expect.hasAssertions();
 
-            mockMetricsRuns.mockImplementation(() => {
+            vi.mocked(getDataHub).mockImplementation(() => {
                 throw new Error('store read failed');
             });
 
-            const ctx = makeMockCommandContext({ projectName: 'TEST' });
+            const ctx = makeMockCommandContext({ ctx: { project_name: 'TEST' } });
             await case26.handler(ctx);
 
             expect(printError).toHaveBeenCalledWith('Erro ao gerar Release Score', expect.any(Error));

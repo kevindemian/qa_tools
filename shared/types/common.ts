@@ -70,8 +70,9 @@ export interface StateSchema {
     _llmConfigError?: string;
 }
 
-/** Grade label for health score classification. */
-export type HealthScoreGrade = 'excellent' | 'good' | 'needs_attention' | 'poor' | 'critical';
+/** Grade label for health score classification. 'unknown' means no dimension
+ * had a data source (partial/insufficient data) — never a fabricated score. */
+export type HealthScoreGrade = 'excellent' | 'good' | 'needs_attention' | 'poor' | 'critical' | 'unknown';
 
 /** Inline token shape used internally by the markdown lexer/renderer.
  *  Exported here for cross-module type references (F3: replaces `any[]`). */
