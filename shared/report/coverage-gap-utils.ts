@@ -1,6 +1,5 @@
 /** @deprecated — use shared/primitives/coverage-utils.js instead. */
 export {
-    PRIORITY_WEIGHTS,
     getCoverageWeight,
     normalizeType,
     extractEpicKey,

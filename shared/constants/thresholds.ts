@@ -61,27 +61,13 @@ export const MAX_SUITE_SPEED_GATE = 3000;
 /** Execution rate target for health score calculation (percentage). */
 export const EXECUTION_RATE_TARGET = 95;
 
-/* ── Pass Rate Score Thresholds (for severity coloring) ────────────────── */
-/** Pass rate above this → green (success). */
-export const PASS_RATE_GOOD = 90;
-/** Pass rate above this → yellow (warning). */
-export const PASS_RATE_WARN = 70;
-
 /* ── Health Score Display Thresholds ───────────────────────────────────── */
 /** Health score >= this → green. */
 export const HEALTH_SCORE_GOOD = 80;
 /** Health score >= this → yellow. */
 export const HEALTH_SCORE_WARN = 50;
 
-/* ── Impact Alert Coverage Thresholds ──────────────────────────────────── */
-export const COVERAGE_THRESHOLD_LOW = 70;
-export const COVERAGE_THRESHOLD_HIGH = 80;
-
 /* ── Report Display Constants ──────────────────────────────────────────── */
-/** Default chart height in pixels. */
-export const CHART_HEIGHT = 100;
-/** Reference line value for pass rate chart. */
-export const CHART_REF_LINE = 90;
 /** Maximum characters for error message display in test tables. */
 export const MAX_ERROR_DISPLAY_LENGTH = 120;
 /** Maximum characters for error message in diff comparison. */
