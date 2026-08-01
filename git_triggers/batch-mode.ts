@@ -239,7 +239,7 @@ function generateFlakinessDashboard(projectName: string, publishTarget?: string)
         return;
     }
     const flaky = calcFlakinessEntries(projectRuns);
-    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
+    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName, { dataHub: hub });
     const outPath = writeReport('flakiness-' + projectName + '.html', html);
     success('Dashboard de flakiness gerado: ' + outPath);
     if (publishTarget) {

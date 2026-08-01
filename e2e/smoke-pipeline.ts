@@ -117,7 +117,7 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
     );
     if (projectRuns.length >= 2) {
         const flaky = calcFlakinessEntries(projectRuns, 2);
-        const html = generateFlakinessHtml(flaky, 'Flakiness — qa_tools_e2e');
+        const html = generateFlakinessHtml(flaky, 'Flakiness — qa_tools_e2e', { dataHub: hub });
         assert(html, 'generateFlakinessHtml returned empty');
         assert(html.length > 0, 'Flakiness dashboard HTML is empty');
         rootLogger.info('  Flakiness dashboard generated (' + html.length + ' chars)');

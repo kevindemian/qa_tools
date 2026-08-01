@@ -553,7 +553,11 @@ describe('Schedule Handler', () => {
 
             await handleFlakinessDashboard();
 
-            expect(mockGenerateHtml).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
+            expect(mockGenerateHtml).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.any(String),
+                expect.objectContaining({ dataHub: mockGetDataHub() }),
+            );
 
             const { openWithFallback } = (await import('../../shared/open.js')) as {
                 openWithFallback: (...args: unknown[]) => unknown;

@@ -396,7 +396,7 @@ export async function handleFlakinessDashboard(): Promise<void> {
             info('Nenhum teste flaky detectado em ' + (getCurrentProject() ?? '') + '.');
             return;
         }
-        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''));
+        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''), { dataHub: hub });
         const outPath = writeReport('flakiness-' + (getCurrentProject() ?? '') + '.html', html);
         await openWithFallback(outPath, 'Dashboard de flaky', info);
         pushHistory(

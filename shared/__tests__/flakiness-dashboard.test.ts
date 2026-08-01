@@ -181,4 +181,52 @@ describe('GenerateFlakinessHtml', () => {
         expect(html).toContain('data-section="source-quality"');
         expect(html).toContain('Source Quality Banner');
     });
+
+    it('shows explicit N/A (never silent 0%) for Flaky Rate when dataHub testCounts is missing (B19)', () => {
+        expect.hasAssertions();
+
+        const entries: FlakinessEntry[] = [
+            {
+                title: 'Very Flaky',
+                project: 'test',
+                passCount: 1,
+                failCount: 9,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.9,
+            },
+        ];
+
+        const html = generateFlakinessHtml(entries);
+
+        const rateValue = /data-part="label">Flaky Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(html)?.[1];
+
+        expect(rateValue).toBe('N/A');
+        expect(html).toContain('Insufficient Data');
+        expect(html).toContain('testCounts.total');
+    });
+
+    it('renders real Flaky Rate when dataHub testCounts.total is provided (B19 — SSOT source)', () => {
+        expect.hasAssertions();
+
+        const hub = makeDataHubMock({ computed: { testCounts: { passed: 98, failed: 2, skipped: 0, total: 100 } } });
+        const entries: FlakinessEntry[] = [
+            {
+                title: 'Very Flaky',
+                project: 'test',
+                passCount: 1,
+                failCount: 9,
+                skipCount: 0,
+                totalRuns: 10,
+                rate: 0.9,
+            },
+        ];
+
+        const html = generateFlakinessHtml(entries, 'Flakiness', { dataHub: hub });
+
+        const rateValue = /data-part="label">Flaky Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(html)?.[1];
+
+        expect(rateValue).toBe('1%');
+        expect(html).not.toContain('Insufficient Data');
+    });
 });
