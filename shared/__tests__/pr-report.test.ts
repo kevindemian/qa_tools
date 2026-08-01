@@ -58,6 +58,7 @@ const mockDataHubComputed = {
     quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
     testPassRate: 80,
     testCounts: { passed: 1, failed: 1, skipped: 1, total: 3 },
+    runPassRate: 50,
     framework: 'vitest',
     executionRate: 90,
     flakyPercentage: 1,

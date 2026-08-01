@@ -29,7 +29,6 @@ import path from 'path';
 import { rootLogger } from './logger.js';
 import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
-import { calcRunPassRate } from './data-hub/compute/run-pass-rate.js';
 import { runQualityGate } from './quality/quality-gate.js';
 import type { QualityGateStatus } from './quality/quality-gate.js';
 import { createCheckRun } from './ci/github-check-run.js';
@@ -75,8 +74,6 @@ export interface DiffComparison {
 }
 
 export interface PrReportCoreOptions {
-    tests: FlatTest[];
-    stats: PrReportStats;
     /** Project name used to persist the current run before health score calculation. */
     project?: string;
     skipAi?: boolean;
@@ -179,11 +176,9 @@ function renderQualityGateTable(passRate: number, stats: PrReportStats, diff?: D
     return lines.join('\n');
 }
 
-function buildSummaryTable(stats: PrReportStats, diff?: DiffComparison): string {
-    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
-
+function buildSummaryTable(passRate: number, stats: PrReportStats, diff?: DiffComparison): string {
     const lines: string[] = ['## [stats] Test Results', ''];
-    lines.push(renderQualityGateTable(Number(passRate), stats, diff));
+    lines.push(renderQualityGateTable(Number(passRate.toFixed(1)), stats, diff));
     lines.push('');
     if (stats.total < 30) {
         lines.push(
@@ -373,10 +368,13 @@ function buildAiAnalysisSection(llmAvailable: boolean): string {
  * This section makes the CI context explicit so reviewers understand that
  * test results and CI status may differ.
  */
-function buildCiContextSection(
-    ciEnv: { isCI: boolean; repo: string; runId: string; refName: string; serverUrl: string },
-    _stats: PrReportStats,
-): string {
+function buildCiContextSection(ciEnv: {
+    isCI: boolean;
+    repo: string;
+    runId: string;
+    refName: string;
+    serverUrl: string;
+}): string {
     if (!ciEnv.isCI) return '';
 
     const workflowUrl =
@@ -420,21 +418,21 @@ function buildCiContextSection(
  * @param stats - Parsed test stats (passed, failed, skipped, total, duration)
  * @param htmlArtifactUrl - URL to download the HTML report artifact (when available)
  */
-function writeToJobSummary(stats: PrReportStats, htmlArtifactUrl?: string): void {
+function writeToJobSummary(stats: PrReportStats, passRate: number, htmlArtifactUrl?: string): void {
     if (process.env['VITEST']) return;
     const stepSummaryPath = process.env['GITHUB_STEP_SUMMARY'];
     if (!stepSummaryPath) return;
 
     try {
         const resolvedSummary = path.resolve(stepSummaryPath);
-        const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed }).toFixed(1);
+        const passRateStr = passRate.toFixed(1);
         const durationSec = (stats.duration / 1000).toFixed(1);
         const lines: string[] = [
             '## [stats] QA Tools — PR Report',
             '',
             '| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :large_blue_diamond: Total | :clock1: Duration | :arrow_forward: Pass Rate |',
             '|---|---|---|---|---|---|',
-            `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRate}% |`,
+            `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRateStr}% |`,
         ];
         if (stats.total < 30) {
             lines.push(
@@ -543,8 +541,8 @@ function resolveCoverageForReport(
  * @returns Path to generated HTML file, or undefined on failure
  */
 function generateHtmlReportFile(
+    passRate: number,
     tests: FlatTest[],
-    stats: PrReportStats,
     options: PrReportCoreOptions,
     dataHub: DataHub,
     coverageResult: ReturnType<typeof resolveCoverageForReport>,
@@ -552,7 +550,6 @@ function generateHtmlReportFile(
     workflowUrl?: string,
 ): string | undefined {
     try {
-        const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
         const flakyEntries = dataHub.computed.flakinessEntries ?? [];
         const flakinessMap: Record<string, number> = {};
         for (const entry of flakyEntries) {
@@ -592,33 +589,36 @@ function generateHtmlReportFile(
 }
 
 /**
- * Generate and post a PR report from parsed test data.
+ * Derive PR report test data exclusively from `DataHub.computed` (SSOT — B4/B22).
  *
- * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
+ * - counts:  `computed.testCounts` (aggregated from parsed artifacts)
+ * - rate:    `computed.runPassRate` (test-level pass rate)
+ * - tests:   `computed.metricsRuns[0].tests` (latest run's test list)
+ *
+ * A missing/non-finite `runPassRate` is an incomplete SSOT and fails explicitly
+ * (AGENTS §24/§25) — the value is never silently recomputed here.
  */
-function validatePrReportStats(tests: FlatTest[], stats: PrReportStats): void {
-    const computed = tests.reduce(
-        (acc, t) => {
-            if (t.state === 'passed') acc.passed++;
-            else if (t.state === 'failed') acc.failed++;
-            else acc.skipped++;
-            return acc;
-        },
-        { passed: 0, failed: 0, skipped: 0 },
-    );
+function deriveSsoTTestData(dataHub: DataHub): { tests: FlatTest[]; stats: PrReportStats; passRate: number } {
+    const run = dataHub.computed.metricsRuns?.[0];
+    const testCounts = dataHub.computed.testCounts;
+    const runPassRate = dataHub.computed.runPassRate;
 
-    if (computed.passed !== stats.passed) {
-        rootLogger.warn(`stats validation: passed ${stats.passed} != computed ${computed.passed}`);
+    if (typeof runPassRate !== 'number' || !Number.isFinite(runPassRate)) {
+        throw new Error(
+            `PR Report SSOT inválido: computed.runPassRate ausente/não-finito (${String(runPassRate)}). ` +
+                'DataHub.computed.runPassRate é obrigatório (SSOT).',
+        );
     }
-    if (computed.failed !== stats.failed) {
-        rootLogger.warn(`stats validation: failed ${stats.failed} != computed ${computed.failed}`);
-    }
-    if (computed.skipped !== stats.skipped) {
-        rootLogger.warn(`stats validation: skipped ${stats.skipped} != computed ${computed.skipped}`);
-    }
-    if (tests.length !== stats.total) {
-        rootLogger.warn(`stats validation: total ${stats.total} != tests.length ${tests.length}`);
-    }
+
+    const stats: PrReportStats = {
+        passed: testCounts.passed,
+        failed: testCounts.failed,
+        skipped: testCounts.skipped,
+        total: testCounts.total,
+        duration: run?.duration ?? 0,
+    };
+
+    return { tests: run?.tests ?? [], stats, passRate: runPassRate };
 }
 
 /** Maximum length for error messages in markdown tables. */
@@ -631,13 +631,11 @@ const MAX_ERROR_LENGTH = 200;
  * @returns Result summary with HTML path, check run ID, and comment URL (when applicable).
  */
 export async function generatePrReport(options: PrReportCoreOptions): Promise<PrReportResult> {
-    const { tests, stats } = options;
-    validatePrReportStats(tests, stats);
-
-    persistCurrentRun(tests, stats, options.project);
-
     // DataHub é SSOT obrigatório (Invariant 8 / E1): sem fallback silencioso.
     const dataHub = options.dataHub;
+    const { tests, stats, passRate } = deriveSsoTTestData(dataHub);
+
+    persistCurrentRun(tests, stats, options.project);
     const dataQuality = summarizeDataQuality(dataHub);
     const coverageResult = resolveCoverageForReport(dataHub);
     const healthScore = calculateHealthScore({
@@ -654,8 +652,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     );
 
     const sections: string[] = [];
-    sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv(), stats));
-    sections.push(buildSummaryTable(stats, options.diffComparison));
+    sections.push(buildCiContextSection(options.ciEnv ?? getCiEnv()));
+    sections.push(buildSummaryTable(passRate, stats, options.diffComparison));
 
     // Code Coverage section (from DataHub)
     const coverageSection = buildCoverageSection(coverageResult);
@@ -682,7 +680,15 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
         if (flakySection) sections.push(flakySection);
     }
 
-    const htmlPath = generateHtmlReportFile(tests, stats, options, dataHub, coverageResult, healthScore, workflowUrl);
+    const htmlPath = generateHtmlReportFile(
+        passRate,
+        tests,
+        options,
+        dataHub,
+        coverageResult,
+        healthScore,
+        workflowUrl,
+    );
 
     const dqSection = buildDataQualitySection(dataQuality);
     if (dqSection) sections.push(dqSection);
@@ -690,9 +696,8 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     sections.push(buildFooter(artifactUrl, workflowUrl, healthScore));
 
     const htmlArtifactUrl = workflowUrl ? `${workflowUrl}?pr=1#artifacts` : undefined;
-    writeToJobSummary(stats, htmlArtifactUrl);
+    writeToJobSummary(stats, passRate, htmlArtifactUrl);
 
-    const passRate = calcRunPassRate({ passed: stats.passed, failed: stats.failed });
     const commentBody = sections.join('\n');
     const postResult = await postPrComment(commentBody);
 
@@ -1096,14 +1101,6 @@ export async function main(
     const diffComparison = previousRun ? computeDiffComparison(latestRun.tests, previousRun.tests) : undefined;
 
     const resultSummary = await generatePrReport({
-        tests: latestRun.tests,
-        stats: {
-            passed: latestRun.passed,
-            failed: latestRun.failed,
-            skipped: latestRun.skipped,
-            total: latestRun.total,
-            duration: latestRun.duration,
-        },
         project,
         skipAi,
         skipQuality,

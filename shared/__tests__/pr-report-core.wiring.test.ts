@@ -239,11 +239,9 @@ describe('TryCreateDataHub wiring', () => {
                     ['failureRecords', { confidence: 0.9, source: 'github-api', timestamp: new Date().toISOString() }],
                 ]),
             };
-            const dataHub = makeDataHubMock({ raw });
+            const dataHub = makeDataHubMock({ raw, computed: { runPassRate: 0 } });
 
             const result = await generatePrReport({
-                tests: [],
-                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
                 dataHub,
                 project: 'p',
             });
@@ -273,15 +271,13 @@ describe('TryCreateDataHub wiring', () => {
                     ['failureRecords', { confidence: 0.4, source: 'github-api', timestamp: new Date().toISOString() }],
                 ]),
             };
-            const dataHub = makeDataHubMock({ raw });
+            const dataHub = makeDataHubMock({ raw, computed: { runPassRate: 0 } });
             dataHub.getQuality = vi.fn().mockReturnValue({
                 valid: false,
                 issues: ['low confidence'],
             });
 
             const result = await generatePrReport({
-                tests: [],
-                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
                 dataHub,
                 project: 'p',
             });

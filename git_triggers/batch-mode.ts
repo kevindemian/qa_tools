@@ -127,7 +127,6 @@ async function _triggerPipeline(
 }
 
 async function generatePrReportIfNeeded(
-    parsed: import('../shared/result_parser.js').ParseResult,
     projectName: string,
     dataHub: import('../shared/types/data-hub.js').DataHub,
 ): Promise<void> {
@@ -136,14 +135,6 @@ async function generatePrReportIfNeeded(
     const prConfig = getPrReportConfig(projectName);
     try {
         const reportResult = await generatePrReport({
-            tests: parsed.tests,
-            stats: {
-                passed: parsed.stats.passed,
-                failed: parsed.stats.failed,
-                skipped: parsed.stats.skipped,
-                total: parsed.stats.total,
-                duration: parsed.stats.duration,
-            },
             skipAi: prConfig.skipAi ?? false,
             skipQuality: prConfig.skipQuality ?? false,
             skipFlaky: prConfig.skipFlaky ?? false,
@@ -205,7 +196,7 @@ async function _collectPipelineResults(
             // (quality-gate, health-score, flakiness) can access it via getDataHub().
             if (dataHub) {
                 setDataHub(dataHub);
-                await generatePrReportIfNeeded(parsed, projectName, dataHub);
+                await generatePrReportIfNeeded(projectName, dataHub);
             } else {
                 error('batch-mode: PR report não gerado — DataHub indisponível após falha de fetch.');
             }
