@@ -16,7 +16,6 @@ import {
 import { renderPipelineHealthHtml } from './pipeline-health-renderer.js';
 import type { PipelineHealthData } from './pipeline-health-renderer.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
-import { generateGitMetricsRuns, getLastGitLogError } from '../shared/ci/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/quality/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
@@ -232,19 +231,12 @@ async function triggerAndCollectBatchPipeline(
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!projectName) return;
     const hub = getDataHub();
-    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
+    const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
     if (projectRuns.length < 2) {
-        const gitRuns = generateGitMetricsRuns({ projectName });
-        const gitError = getLastGitLogError();
-        if (gitRuns.length >= 2) {
-            projectRuns = gitRuns;
-            info('Fallback para git metrics — flakiness dashboard com dados do histórico de commits');
-        } else if (gitError) {
-            warn('Não foi possível obter o git history para flakiness dashboard. ' + gitError);
-            return;
-        } else {
-            return;
-        }
+        warn(
+            `Dados insuficientes para flakiness dashboard de '${projectName}' — precisava de 2+ execuções e computed.metricsRuns tem ${projectRuns.length}. Execute pipelines primeiro.`,
+        );
+        return;
     }
     const flaky = calcFlakinessEntries(projectRuns);
     const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
@@ -374,22 +366,20 @@ function runQuarantineMaintenance(): void {
 function generateTestExport(projectName: string): void {
     try {
         const hub = getDataHub();
-        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
-            const gitRuns = generateGitMetricsRuns({ projectName });
-            const gitError = getLastGitLogError();
-            if (gitRuns.length > 0) {
-                projectRuns = gitRuns;
-                info('Fallback para git metrics — export com dados do histórico de commits');
-            } else if (gitError) {
-                warn('Não foi possível obter o git history para export. ' + gitError);
-                return;
-            } else {
-                return;
-            }
+            warn(
+                `Dados insuficientes para export de testes de '${projectName}' — sem computed.metricsRuns. Execute pipelines primeiro.`,
+            );
+            return;
         }
         const latestRun = projectRuns[projectRuns.length - 1];
-        if (!latestRun || latestRun.tests.length === 0) return;
+        if (!latestRun || latestRun.tests.length === 0) {
+            warn(
+                `Dados insuficientes para export de testes de '${projectName}' — última execução sem testes (computed.metricsRuns).`,
+            );
+            return;
+        }
         const csv = exportTestsCsv(latestRun.tests);
         const csvPath = writeReport('tests-' + projectName + '.csv', csv);
         success('Test CSV export gerado: ' + csvPath);

@@ -70,6 +70,12 @@ vi.mock('../test-results', () => ({ collectTestResults: vi.fn(() => null) }));
 
 vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
+vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
+    generateGitMetricsRuns: vi.fn(() => []),
+    getLastGitLogError: vi.fn(() => undefined),
+    clearGitLogError: vi.fn(),
+}));
+
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(() => ({
         computed: { metricsRuns: [] },
@@ -90,7 +96,7 @@ vi.mock('../../shared/infra/temp-dir.js', () => ({
 
 import Config from '../../shared/config-accessor.js';
 const setAutoConfirmSpy = vi.spyOn(Config, 'setAutoConfirm');
-import { success, error, printError } from '../../shared/ui/prompt.js';
+import { success, error, printError, warn } from '../../shared/ui/prompt.js';
 import { pushHistory, getProjects } from '../session-state.js';
 import { pollPipeline } from '../pipeline-handler.js';
 import { tryBatchMode } from '../batch-mode.js';
@@ -99,6 +105,7 @@ import { parseCliArgs } from '../cli-args.js';
 const mockSuccess = vi.mocked(success);
 const mockError = vi.mocked(error);
 const mockPrintError = vi.mocked(printError);
+const mockWarn = vi.mocked(warn);
 const mockPushHistory = vi.mocked(pushHistory);
 const mockPollPipeline = vi.mocked(pollPipeline);
 const mockGetProjects = vi.mocked(getProjects);
@@ -325,6 +332,42 @@ describe('Batch Mode', () => {
 
             expect(result).toBeTruthy();
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ID da pipeline'));
+        });
+
+        it('reports insufficient data for test export when computed.metricsRuns is empty (B11 — no silent skip)', async () => {
+            expect.hasAssertions();
+
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('export de testes'));
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('insuficiente'));
+        });
+
+        it('reports insufficient data for flakiness dashboard when fewer than 2 computed runs (B11 — no git fallback)', async () => {
+            expect.hasAssertions();
+
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('flakiness dashboard'));
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('insuficiente'));
         });
     });
 });
