@@ -40,8 +40,6 @@ import { calculateHealthScore } from './quality/health-score.js';
 import type { FlatTest, ParseResult } from './result_parser.js';
 import { getPrReportConfig } from './feature-config.js';
 import type { DataHub, MetricsRun } from './types/data-hub.js';
-import { askTestSource, DATAHUB_ERRORS } from './data-hub/test-source-fallback.js';
-import { createDataHubFromParseResult } from './data-hub/factory.js';
 import { DataHubImpl } from './data-hub/hub.js';
 import { summarizeDataQuality } from './quality/data-quality.js';
 import type { DataQualitySummary } from './quality/data-quality.js';
@@ -959,26 +957,62 @@ function hasUsableData(hub: import('./types/data-hub.js').DataHub): boolean {
  *  - Caso 3: sem dados E sem TTY para solicitar (não-interativo) → erro explícito.
  * Nunca silencia a ausência de dados: o chamador recebe um hub ou uma exceção.
  */
+const NO_TEST_DATA_ERROR_MESSAGE =
+    'Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.';
+
+function throwNoTestDataError(cause?: unknown): never {
+    throw new Error(NO_TEST_DATA_ERROR_MESSAGE, { cause });
+}
+
+function reuseInitializedHub(): DataHub | undefined {
+    if (!isDataHubInitialized()) return undefined;
+
+    const existing = getDataHub();
+
+    if (!hasUsableData(existing)) return undefined;
+
+    setDataHub(existing);
+
+    return existing;
+}
+
+/**
+ * Aciona a Camada 7 (User Fallback) via DataHub (SSOT) e orquestra os 3 desfechos:
+ *  - Caso 1 (TTY): usuário forneceu arquivo de resultado -> hub com dados.
+ *  - Caso 2 (TTY): usuário declinou explicitamente -> `LAYER7_NO_FILE`.
+ *  - Caso 3 (não-interativo): sem dados e sem TTY -> erro explícito.
+ */
+async function resolveUserFallback(repo: string): Promise<DataHub> {
+    const { createDataHubFromFallback } = await import('./data-hub/factory.js');
+
+    let fallbackResult: import('./types/data-hub.js').DataHubResult;
+    try {
+        fallbackResult = await createDataHubFromFallback(repo);
+    } catch (err) {
+        if (DataHubImpl.isLayer7UnavailableError(err)) throwNoTestDataError(err);
+        throw err;
+    }
+
+    if (hasUsableData(fallbackResult.hub)) {
+        setDataHub(fallbackResult.hub);
+
+        return fallbackResult.hub;
+    }
+
+    if (fallbackResult.warning?.code === 'LAYER7_NO_FILE') {
+        rootLogger.warn('PR Report não gerado: dados de teste insuficientes (usuário declinou o relatório manual).');
+        throw new Error('PR Report não gerado: usuário declinou o relatório manual.');
+    }
+
+    return throwNoTestDataError();
+}
+
 async function acquireReportDataHub(
     ciEnv: ReturnType<typeof getCiEnv>,
     providerFactory?: (ciEnv: ReturnType<typeof getCiEnv>) => import('./types/ci-cd.js').GitProvider | undefined,
 ): Promise<DataHub> {
-    const explicitError = (): never => {
-        throw new Error(
-            'Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.',
-        );
-    };
-
-    // Reusa um DataHub já carregado em memória com dados utilizáveis (orquestração/testes).
-    if (isDataHubInitialized()) {
-        const existing = getDataHub();
-
-        if (hasUsableData(existing)) {
-            setDataHub(existing);
-
-            return existing;
-        }
-    }
+    const reused = reuseInitializedHub();
+    if (reused) return reused;
 
     // Create DataHub from CI (Camada 1–6) apenas em contexto CI. Em execução
     // local (sem CI), pula para o fallback manual (Camada 7).
@@ -988,12 +1022,7 @@ async function acquireReportDataHub(
         try {
             dataHub = await tryCreateDataHub(ciEnv, providerFactory);
         } catch (err) {
-            if (DataHubImpl.isLayer7UnavailableError(err)) {
-                throw new Error(
-                    'Falha ao obter dados de teste: sem dados do versionador/Jira e solicitação de relatório manual indisponível em contexto não-interativo.',
-                    { cause: err },
-                );
-            }
+            if (DataHubImpl.isLayer7UnavailableError(err)) throwNoTestDataError(err);
 
             rootLogger.warn(`Falha ao criar DataHub via CI: ${formatErr(err)}`);
         }
@@ -1013,26 +1042,7 @@ async function acquireReportDataHub(
 
     if (dataHub) return dataHub;
 
-    // Sem dados do versionador/Jira: acionar fallback manual (Camada 7) explicitamente.
-    const fallback = await askTestSource();
-
-    if (fallback.data) {
-        // Caso 1 (TTY): usuário forneceu arquivo de resultado.
-        const hub = createDataHubFromParseResult(fallback.data, ciEnv.repo);
-
-        setDataHub(hub);
-
-        return hub;
-    }
-
-    if (fallback.error === DATAHUB_ERRORS.USER_SKIPPED || fallback.error === DATAHUB_ERRORS.USER_CANCELLED) {
-        // Caso 2 (TTY): usuário declinou explicitamente.
-        rootLogger.warn('PR Report não gerado: dados de teste insuficientes (usuário declinou o relatório manual).');
-        throw new Error('PR Report não gerado: usuário declinou o relatório manual.');
-    }
-
-    // Caso 3 (não-interativo): sem dados e sem TTY para solicitar — erro explícito.
-    return explicitError();
+    return resolveUserFallback(ciEnv.repo);
 }
 
 /**

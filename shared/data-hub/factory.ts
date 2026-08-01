@@ -8,7 +8,6 @@
  */
 import type { GitProvider } from '../types/ci-cd.js';
 import type { DataHub, DataHubPersistence, DataProvider } from '../types/data-hub.js';
-import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
 import Config from '../config-accessor.js';
@@ -101,15 +100,27 @@ export async function createDataHub(
 }
 
 /**
- * Cria um DataHub a partir de um `ParseResult` fornecido manualmente (Camada 7).
- * Encapsula a criação de persistência — consumidores nunca criam `DataHubPersistence`.
+ * Cria um DataHub acionando a Camada 7 (User Fallback) — sem providers.
  *
- * @param parseResult - Resultado de `parseTestResultsFile` (CTRF/JUnit/Mochawesome).
+ * Usado em contexto local (sem CI) quando o versionador/Jira não dispõe de
+ * dados: o pedido de arquivo manual é responsabilidade do DataHub (SSOT).
+ * Em não-TTY falha explicitamente via `Layer7UnavailableError` — o consumidor
+ * do PR report NÃO define `allowEmpty` e deve falhar de forma explícita.
+ *
+ * Não interage com o cache: o fallback manual é uma ação explícita do usuário,
+ * nunca reutilizável de execuções anteriores.
+ *
  * @param repo - Nome do repositório.
+ * @param options - Persistência opcional (testes injetam mock; produção auto-cria).
  */
-export function createDataHubFromParseResult(parseResult: ParseResult, repo: string): DataHub {
-    const persistence = createDataHubPersistence(repo);
-    return DataHubImpl.createFromParseResult(parseResult, repo, persistence);
+export async function createDataHubFromFallback(
+    repo: string,
+    options?: { persistence?: DataHubPersistence },
+): Promise<CreateDataHubResult> {
+    const persistence = options?.persistence ?? createDataHubPersistence(repo);
+    const { DataHubImpl } = await import('./hub.js');
+
+    return DataHubImpl.create([], { repo, allowEmpty: false }, persistence);
 }
 
 function sleep(ms: number): Promise<void> {
