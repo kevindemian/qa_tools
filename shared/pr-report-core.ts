@@ -29,6 +29,7 @@ import path from 'path';
 import { rootLogger } from './logger.js';
 import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
+import { getCiRunId } from './ci/run-id.js';
 import { runQualityGate } from './quality/quality-gate.js';
 import type { QualityGateStatus } from './quality/quality-gate.js';
 import { createCheckRun } from './ci/github-check-run.js';
@@ -466,7 +467,7 @@ function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: st
         },
     };
     const hub = getDataHub();
-    hub.saveParseResult(project, parseResult);
+    hub.saveParseResult(project, parseResult, getCiRunId());
 }
 
 function resolveCiUrls(): { workflowUrl?: string; artifactUrl?: string } {

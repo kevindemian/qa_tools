@@ -206,20 +206,50 @@ describe('Failure-analysis', () => {
 
     describe('AnalyzeFailuresWithReport', () => {
         const failed: FlatTest = { title: 'checkout total is wrong', state: 'failed', duration: 30 };
+        const failedHub = (): DataHub => makeHub([], true, 0.9, [failed]);
 
         beforeEach(() => {
             vi.mocked(reviewWithLlm).mockReset();
             vi.mocked(snapshotLlmMetrics).mockClear();
         });
 
+        it('throws explicitly when the hub has no current run (metricsRuns[0] missing) — no silent/stale analysis', async () => {
+            expect.assertions(1);
+
+            const emptyHub = { computed: { passRate: 0 } } as unknown as DataHub;
+
+            await expect(analyzeFailuresWithReport(emptyHub)).rejects.toThrow(/metricsRuns\[0\]/);
+        });
+
         it('returns high-confidence empty result when there are no failed tests', async () => {
             expect.assertions(3);
 
-            const out = await analyzeFailuresWithReport([{ title: 'ok', state: 'passed', duration: 1 }]);
+            const out = await analyzeFailuresWithReport(
+                makeHub([], true, 0.9, [{ title: 'ok', state: 'passed', duration: 1 }]),
+            );
 
             expect(out).toStrictEqual({ content: '', confidence: 'high', fallbackUsed: false });
             expect(reviewWithLlm).not.toHaveBeenCalled();
             expect(out.htmlReport).toBeUndefined();
+        });
+
+        it('analyzes the tests from the hub (metricsRuns[0]) — SSOT F0-T8', async () => {
+            expect.assertions(2);
+
+            const review: ReviewResult = {
+                content: 'root cause: rounding',
+                reviewed: true,
+                confidence: 'high',
+                fallbackUsed: false,
+            };
+            vi.mocked(reviewWithLlm).mockResolvedValue(review);
+
+            await analyzeFailuresWithReport(failedHub());
+
+            const userMessage = vi.mocked(reviewWithLlm).mock.calls[0]?.[1] ?? '';
+
+            expect(userMessage).toContain('checkout total is wrong');
+            expect(snapshotLlmMetrics).toHaveBeenCalledTimes(1);
         });
 
         it('builds a real HTML report (computed-driven) and snapshots metrics on the happy path', async () => {
@@ -233,9 +263,7 @@ describe('Failure-analysis', () => {
             };
             vi.mocked(reviewWithLlm).mockResolvedValue(review);
 
-            const out = await analyzeFailuresWithReport([failed], undefined, {
-                dataHub: makeHub([], true, 0.9, [failed]),
-            });
+            const out = await analyzeFailuresWithReport(failedHub());
 
             expect(out.content).toBe('root cause: rounding');
             expect(out.htmlReport).toContain('Failure Analysis Report');
@@ -249,7 +277,7 @@ describe('Failure-analysis', () => {
             const review: ReviewResult = { content: 'x', reviewed: true, confidence: 'high', fallbackUsed: false };
             vi.mocked(reviewWithLlm).mockResolvedValue(review);
 
-            await analyzeFailuresWithReport([failed], {
+            await analyzeFailuresWithReport(failedHub(), {
                 gitCommits: 'abc123 fix rounding',
                 gitTrend: 'pass rate 80%',
                 jiraIssues: 'PROJ-1 open',
@@ -262,7 +290,7 @@ describe('Failure-analysis', () => {
             expect(userMessage).toContain('Related Jira Issues:');
         });
 
-        it('cross-references prior failure records into the LLM user message when a dataHub is provided', async () => {
+        it('cross-references prior failure records into the LLM user message from the hub', async () => {
             expect.assertions(2);
 
             const review: ReviewResult = { content: 'x', reviewed: true, confidence: 'medium', fallbackUsed: false };
@@ -275,7 +303,7 @@ describe('Failure-analysis', () => {
                 source: 's',
             };
 
-            await analyzeFailuresWithReport([failed], undefined, { dataHub: makeHub([rec]) });
+            await analyzeFailuresWithReport(makeHub([rec], true, 0.9, [failed]));
 
             const userMessage = vi.mocked(reviewWithLlm).mock.calls[0]?.[1] ?? '';
 
@@ -289,7 +317,7 @@ describe('Failure-analysis', () => {
             const review: ReviewResult = { content: 'x', reviewed: true, confidence: 'high', fallbackUsed: false };
             vi.mocked(reviewWithLlm).mockResolvedValue(review);
 
-            await analyzeFailuresWithReport([failed], undefined, { dataHub: makeHub([], false) });
+            await analyzeFailuresWithReport(makeHub([], false, 0.9, [failed]));
 
             const userMessage = vi.mocked(reviewWithLlm).mock.calls[0]?.[1] ?? '';
 
@@ -304,7 +332,7 @@ describe('Failure-analysis', () => {
                 throw new Error('template missing');
             });
 
-            const out = await analyzeFailuresWithReport([failed]);
+            const out = await analyzeFailuresWithReport(failedHub());
 
             expect(out).toStrictEqual({ content: '', confidence: 'medium', fallbackUsed: true });
             expect(reviewWithLlm).not.toHaveBeenCalled();
@@ -316,7 +344,7 @@ describe('Failure-analysis', () => {
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
             vi.mocked(reviewWithLlm).mockRejectedValue(new Error('LLM unreachable'));
 
-            const out = await analyzeFailuresWithReport([failed]);
+            const out = await analyzeFailuresWithReport(failedHub());
 
             expect(out).toStrictEqual({ content: '', confidence: 'medium', fallbackUsed: true });
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('LLM unreachable'));
@@ -331,7 +359,7 @@ describe('Failure-analysis', () => {
             const review: ReviewResult = { content: 'c', reviewed: false, confidence: 'low', fallbackUsed: true };
             vi.mocked(reviewWithLlm).mockResolvedValue(review);
 
-            const out = await analyzeFailuresWithReport([failed]);
+            const out = await analyzeFailuresWithReport(failedHub());
 
             expect(out.fallbackUsed).toBeTruthy();
         });

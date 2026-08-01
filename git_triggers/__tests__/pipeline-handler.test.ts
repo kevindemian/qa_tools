@@ -552,9 +552,13 @@ describe('Pipeline Handler', () => {
             // Make offerPipelineFailureAnalysis call the callback
             const llmPipeline = vi.mocked(llmModule);
             vi.spyOn(llmPipeline, 'offerPipelineFailureAnalysis').mockImplementation(
-                (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
-                    if (onAnalysis)
-                        return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
+                (_parsed: ParseResult, options?: { onAnalysis?: (report: AnalysisReport) => Promise<void> }) => {
+                    if (options?.onAnalysis)
+                        return options.onAnalysis({
+                            content: 'analysis result',
+                            confidence: 'high',
+                            fallbackUsed: false,
+                        });
                     return Promise.resolve();
                 },
             );
@@ -596,9 +600,13 @@ describe('Pipeline Handler', () => {
 
             const llmPipeline = vi.mocked(llmModule);
             vi.spyOn(llmPipeline, 'offerPipelineFailureAnalysis').mockImplementation(
-                (_parsed: ParseResult, onAnalysis?: (report: AnalysisReport) => Promise<void>) => {
-                    if (onAnalysis)
-                        return onAnalysis({ content: 'analysis result', confidence: 'high', fallbackUsed: false });
+                (_parsed: ParseResult, options?: { onAnalysis?: (report: AnalysisReport) => Promise<void> }) => {
+                    if (options?.onAnalysis)
+                        return options.onAnalysis({
+                            content: 'analysis result',
+                            confidence: 'high',
+                            fallbackUsed: false,
+                        });
                     return Promise.resolve();
                 },
             );

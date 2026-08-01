@@ -4,6 +4,8 @@
  * Fronteiras externas (únicas mockadas):
  *   - `readline-sync` (lib de terceiros que lê o TTY interativo)
  *   - `analyzeFailuresWithReport` (chamada LLM externa)
+ *   - `createDataHubFromParseResult` (construção de hub dedicado — evita I/O de
+ *     disco real da persistence durante os testes; F0-T8)
  *
  * Tudo mais roda REAL e integrado:
  *   - confirm/info/success/warn/print/divider (prompt real, saída silenciada via config quiet)
@@ -19,6 +21,8 @@ import Config from '../../shared/config-accessor.js';
 import { analyzeFailuresWithReport } from '../../shared/validation/failure-analysis.js';
 import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../../shared/validation/failure-analysis.js';
 import type { AnalysisReport } from '../../shared/validation/failure-analysis.js';
+import { createDataHubFromParseResult } from '../../shared/data-hub/factory.js';
+import type { DataHub } from '../../shared/types/data-hub.js';
 import { offerPipelineFailureAnalysis } from '../llm-pipeline.js';
 
 vi.mock('../../shared/validation/failure-analysis.js', () => ({
@@ -26,7 +30,12 @@ vi.mock('../../shared/validation/failure-analysis.js', () => ({
         vi.fn<(...args: Parameters<typeof AnalyzeFailuresFn>) => ReturnType<typeof AnalyzeFailuresFn>>(),
 }));
 
+vi.mock('../../shared/data-hub/factory.js', () => ({
+    createDataHubFromParseResult: vi.fn(),
+}));
+
 const mockAnalyzeFailures = vi.mocked(analyzeFailuresWithReport);
+const mockCreateHub = vi.mocked(createDataHubFromParseResult);
 
 let reportsDir: string;
 let originalStdinTTY: unknown;
@@ -46,6 +55,8 @@ const baseParsed = {
         { title: 'test C', state: 'failed' as const, duration: 300 },
     ],
 };
+
+const testHub = { computed: { metricsRuns: [] } } as unknown as DataHub;
 
 /** Simula o operador respondendo ao confirm interativo (fronteira TTY). */
 function answerConfirm(yes: boolean): void {
@@ -67,6 +78,7 @@ function findWrittenReport(): string | null {
 describe('OfferPipelineFailureAnalysis — integração real', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockCreateHub.mockReturnValue(testHub);
         reportsDir = mkdtempSync(join(tmpdir(), 'llm-pipeline-reports-'));
         Config.set('QA_TOOLS_REPORTS_DIR', reportsDir);
         Config.set('quiet', true);
@@ -104,15 +116,27 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
 
-    it('efeito colateral real: escreve o relatório HTML no disco quando há htmlReport', async () => {
-        expect.assertions(3);
+    it('constrói um hub dedicado que reflete o parse quando nenhum hub está disponível (F0-T8)', async () => {
+        expect.assertions(2);
 
         answerConfirm(true);
         mockAnalyzeFailures.mockResolvedValue(baseReport);
 
         await offerPipelineFailureAnalysis(baseParsed);
 
-        expect(mockAnalyzeFailures).toHaveBeenCalledWith(baseParsed.tests);
+        expect(mockCreateHub).toHaveBeenCalledWith(baseParsed, expect.any(String));
+        expect(mockAnalyzeFailures).toHaveBeenCalledWith(testHub);
+    });
+
+    it('efeito colateral real: escreve o relatório HTML no disco quando há htmlReport', async () => {
+        expect.assertions(3);
+
+        answerConfirm(true);
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
+
+        expect(mockAnalyzeFailures).toHaveBeenCalledWith(testHub);
 
         const written = findWrittenReport();
 
@@ -126,7 +150,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         answerConfirm(true);
         mockAnalyzeFailures.mockResolvedValue({ ...baseReport, content: '' });
 
-        await offerPipelineFailureAnalysis(baseParsed);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
 
         expect(findWrittenReport()).toBeNull();
     });
@@ -142,7 +166,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         };
         mockAnalyzeFailures.mockResolvedValue(noHtml);
 
-        await offerPipelineFailureAnalysis(baseParsed);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
 
         expect(findWrittenReport()).toBeNull();
     });
@@ -154,9 +178,12 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         mockAnalyzeFailures.mockResolvedValue(baseReport);
         const received: AnalysisReport[] = [];
 
-        await offerPipelineFailureAnalysis(baseParsed, (r) => {
-            received.push(r);
-            return Promise.resolve();
+        await offerPipelineFailureAnalysis(baseParsed, {
+            dataHub: testHub,
+            onAnalysis: (r) => {
+                received.push(r);
+                return Promise.resolve();
+            },
         });
 
         expect(received).toStrictEqual([baseReport]);
@@ -169,7 +196,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         mockAnalyzeFailures.mockResolvedValue({ ...baseReport, content: '' });
         const onAnalysis = vi.fn().mockResolvedValue(undefined);
 
-        await offerPipelineFailureAnalysis(baseParsed, onAnalysis);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub, onAnalysis });
 
         expect(onAnalysis).not.toHaveBeenCalled();
     });
@@ -181,7 +208,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         mockAnalyzeFailures.mockResolvedValue({ ...baseReport, confidence: 'medium' });
         const onAnalysis = vi.fn().mockResolvedValue(undefined);
 
-        await offerPipelineFailureAnalysis(baseParsed, onAnalysis);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub, onAnalysis });
 
         expect(onAnalysis).toHaveBeenCalledWith({ ...baseReport, confidence: 'medium' });
     });
@@ -193,7 +220,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         mockAnalyzeFailures.mockResolvedValue({ ...baseReport, confidence: 'low' });
         const onAnalysis = vi.fn().mockResolvedValue(undefined);
 
-        await offerPipelineFailureAnalysis(baseParsed, onAnalysis);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub, onAnalysis });
 
         expect(onAnalysis).toHaveBeenCalledWith({ ...baseReport, confidence: 'low' });
     });
@@ -204,7 +231,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         answerConfirm(true);
         mockAnalyzeFailures.mockResolvedValue({ ...baseReport, fallbackUsed: true });
 
-        await offerPipelineFailureAnalysis(baseParsed);
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
 
         expect(findWrittenReport()).not.toBeNull();
     });
@@ -215,7 +242,7 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         answerConfirm(true);
         mockAnalyzeFailures.mockRejectedValue(new Error('API error'));
 
-        await expect(offerPipelineFailureAnalysis(baseParsed)).resolves.not.toThrow();
+        await expect(offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub })).resolves.not.toThrow();
         expect(findWrittenReport()).toBeNull();
     });
 
@@ -226,8 +253,11 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         mockAnalyzeFailures.mockResolvedValue(baseReport);
 
         await expect(
-            offerPipelineFailureAnalysis(baseParsed, () => {
-                throw new Error('consumer callback failed');
+            offerPipelineFailureAnalysis(baseParsed, {
+                dataHub: testHub,
+                onAnalysis: () => {
+                    throw new Error('consumer callback failed');
+                },
             }),
         ).rejects.toThrow('consumer callback failed');
     });

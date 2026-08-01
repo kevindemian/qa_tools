@@ -17,6 +17,7 @@ import type {
     FailureClassification,
 } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
+import type { ParseResult } from '../../result_parser.js';
 
 function makeRun(overrides?: Partial<PipelineRun>): PipelineRun {
     return {
@@ -758,6 +759,116 @@ describe('DataHubImpl — SSOT Persistence', () => {
 
             expect(mockedSafe(persistence).flush).toHaveBeenCalledTimes(1);
             expect(mockedSafe(persistence).flush.mock.calls[0]).toStrictEqual(['test commit']);
+        });
+    });
+
+    describe('SaveParseResult() (F0-T8 reconciliation)', () => {
+        function makeParseResult(overrides?: { failed?: number; title?: string }): ParseResult {
+            const failed = overrides?.failed ?? 0;
+            const passed = 3 - failed;
+            return {
+                tests: [
+                    { title: overrides?.title ?? 'test1', state: 'passed', duration: 100 },
+                    { title: 'test2', state: 'passed', duration: 100 },
+                    { title: 'test3', state: failed > 0 ? 'failed' : 'passed', duration: 100 },
+                ],
+                stats: {
+                    passed,
+                    failed,
+                    skipped: 0,
+                    total: 3,
+                    duration: 300,
+                },
+            };
+        }
+
+        it('delegates to persistence and reconciles parsedArtifacts under sourceRunId', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(mockedSafe(persistence).saveParseResult).toHaveBeenCalledTimes(1);
+            expect(mockedSafe(persistence).saveParseResult.mock.calls[0]).toStrictEqual(['my-project', result]);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts).toBeDefined();
+
+            const run42 = artifacts?.get(42)?.[0];
+
+            expect(run42).toBeDefined();
+            expect(run42?.fileName).toBe('42');
+            expect(run42?.data).toBe(result);
+        });
+
+        it('recomputes computed.metricsRuns[0] from the reconciled artifact (never stale)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+
+            const firstRun = hub.computed.metricsRuns?.[0];
+
+            expect(firstRun).toBeDefined();
+            expect(firstRun?.tests).toStrictEqual(result.tests);
+            expect(firstRun?.total).toBe(3);
+            expect(firstRun?.passed).toBe(3);
+            expect(firstRun?.failed).toBe(0);
+        });
+
+        it('dedups by sourceRunId: same key replaces the previous artifact', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult(), 42);
+            const second = makeParseResult({ failed: 1, title: 'second' });
+            hub.saveParseResult('my-project', second, 42);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(42)).toHaveLength(1);
+
+            const latest = artifacts?.get(42)?.[0];
+
+            expect(latest).toBeDefined();
+            expect(latest?.data).toBe(second);
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+            expect(hub.computed.metricsRuns?.[0]?.failed).toBe(1);
+        });
+
+        it('uses the user-fallback slot (key 0) when sourceRunId is omitted', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult());
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(0)).toHaveLength(1);
+
+            const slot = artifacts?.get(0)?.[0];
+
+            expect(slot).toBeDefined();
+            expect(slot?.fileName).toBe('user-fallback');
+        });
+
+        it('throws on non-integer sourceRunId (§24 boundary guard)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), 1.5)).toThrow(/inteiro/);
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), NaN)).toThrow(/inteiro/);
+            expect(mockedSafe(persistence).saveParseResult).not.toHaveBeenCalled();
         });
     });
 });

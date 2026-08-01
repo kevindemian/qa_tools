@@ -881,10 +881,23 @@ export interface DataHub {
     /** Save the full MetricsStore. Throws if persistence not configured. */
     saveMetricsStore(store: MetricsStore): void;
     /**
-     * Convert a ParseResult to MetricsRun and save it to history.
+     * Convert a ParseResult to MetricsRun, persist it to history, AND reconcile
+     * it as the authoritative current run in `computed.metricsRuns` (F0-T8).
+     *
+     * `computed.metricsRuns[0]` is guaranteed to represent `result` after the
+     * call (its tests reflect `result.tests`), making the hub the single source
+     * of truth for report generation and failure analysis.
+     *
+     * @param project - Project name for scoping.
+     * @param result - Parsed test results (CTRF/JUnit/Mochawesome).
+     * @param sourceRunId - Optional CI run id (e.g. pipeline id / GITHUB_RUN_ID).
+     *   When provided, the parse is keyed by that id (idempotent: re-saving the
+     *   same id replaces the slot instead of duplicating). When omitted, a
+     *   synthetic user-fallback slot is used.
+     * @throws Error if sourceRunId is provided but not a valid integer.
      * Throws if persistence not configured.
      */
-    saveParseResult(project: string, result: ParseResult): MetricsRun;
+    saveParseResult(project: string, result: ParseResult, sourceRunId?: number): MetricsRun;
     /** Save a quality metrics snapshot. Throws if persistence not configured. */
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
     /** Load all quality metrics snapshots. Throws if persistence not configured. */

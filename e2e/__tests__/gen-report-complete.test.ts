@@ -18,7 +18,7 @@ vi.mock('../../jira_management/jira_resource.js', () => {
 });
 
 vi.mock('../../shared/logger.js', () => ({
-    rootLogger: { info: vi.fn(), error: vi.fn() },
+    rootLogger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
 vi.mock('../../shared/ui/cli_base.js', () => ({

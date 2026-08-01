@@ -179,8 +179,34 @@ export class DataHubImpl implements DataHub {
         this.persistence.saveMetricsStore(store);
     }
 
-    saveParseResult(project: string, result: ParseResult): MetricsRun {
-        return this.persistence.saveParseResult(project, result);
+    /**
+     * Persist the parse AND reconcile it as the authoritative current run
+     * (F0-T8). After this call, `computed.metricsRuns[0]` reflects `result`
+     * (same tests), so report generation / failure analysis never read a stale
+     * hub. Keyed by `sourceRunId` when provided (idempotent dedup by real CI
+     * run id); otherwise a synthetic user-fallback slot (key 0, matching
+     * `createFromParseResult`'s convention).
+     */
+    saveParseResult(project: string, result: ParseResult, sourceRunId?: number): MetricsRun {
+        if (sourceRunId !== undefined && !Number.isInteger(sourceRunId)) {
+            throw new Error(
+                `saveParseResult: sourceRunId deve ser um inteiro válido — recebido ${String(sourceRunId)} (projeto ${project}).`,
+            );
+        }
+        const run = this.persistence.saveParseResult(project, result);
+        const artifacts = this.raw.parsedArtifacts ?? new Map<number, ArtifactParseResult[]>();
+        const key = sourceRunId ?? 0;
+        artifacts.set(key, [
+            {
+                fileName: sourceRunId !== undefined ? String(sourceRunId) : 'user-fallback',
+                data: result,
+                format: 'ctrf',
+            },
+        ]);
+        this.raw.parsedArtifacts = artifacts;
+        this.computed = DataHubImpl.computeMetrics(this.raw, { repo: this.repo });
+        this.timestamp = new Date();
+        return run;
     }
 
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void {

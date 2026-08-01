@@ -19,6 +19,8 @@ import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/quality/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
+import { normalizeRunId } from '../shared/ci/run-id.js';
+import type { ParseResult } from '../shared/result_parser.js';
 import { generatePrReport } from '../shared/pr-report-core.js';
 import { isPrReportEnabled, getPrReportConfig } from '../shared/feature-config.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
@@ -183,14 +185,7 @@ async function _collectPipelineResults(
             jiraBaseUrl,
         });
         if (parsed) {
-            await offerPipelineFailureAnalysis(parsed);
-            let dataHub: import('../shared/types/data-hub.js').DataHub | undefined;
-            try {
-                const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
-                dataHub = await getOrFetchDataHub(m, projectName);
-            } catch (err: unknown) {
-                error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
-            }
+            const dataHub = await _reconcileDataHub(m, projectName, parsed, pipelineId);
             // Register DataHub in the global singleton so downstream consumers
             // (quality-gate, health-score, flakiness) can access it via getDataHub().
             if (dataHub) {
@@ -199,9 +194,40 @@ async function _collectPipelineResults(
             } else {
                 error('batch-mode: PR report não gerado — DataHub indisponível após falha de fetch.');
             }
+            // Análise de falhas APÓS o hub estar disponível (F0-T8): o hub
+            // passado já reflete o parse coletado; sem hub, a própria oferta
+            // constrói um hub dedicado (defensivo — nunca analisa contra hub vazio).
+            await offerPipelineFailureAnalysis(parsed, dataHub ? { dataHub } : undefined);
         }
     }
     return false;
+}
+
+/**
+ * F0-T8 (SSOT): fetch do hub e reconciliação do parse coletado como run atual,
+ * ANTES de qualquer consumo. O `saveParseResult` interno do test-results vai no
+ * hub GLOBAL (ainda antigo neste momento); sem esta reconciliação, o hub novo
+ * refletiria um run stale para o PR report e a análise de falhas. Guard §24:
+ * fetch sem hub → erro explícito (§25), nunca run stale silencioso.
+ */
+async function _reconcileDataHub(
+    m: import('../shared/types.js').GitProvider,
+    projectName: string,
+    parsed: ParseResult,
+    pipelineId: string,
+): Promise<import('../shared/types/data-hub.js').DataHub | undefined> {
+    try {
+        const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
+        const fetched = await getOrFetchDataHub(m, projectName);
+        if (!fetched) {
+            throw new Error('getOrFetchDataHub returned undefined');
+        }
+        fetched.saveParseResult(projectName, parsed, normalizeRunId(pipelineId));
+        return fetched;
+    } catch (err: unknown) {
+        error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
+        return undefined;
+    }
 }
 
 async function triggerAndCollectBatchPipeline(

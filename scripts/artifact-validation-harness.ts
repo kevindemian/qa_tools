@@ -31,6 +31,7 @@ import { generateRequirementScoreHtml } from '../shared/quality/requirement-scor
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
 import { renderPipelineHealthHtml } from '../git_triggers/pipeline-health-renderer.js';
 import { generateHtmlReport } from '../shared/report/report-html.js';
+import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
 import { mdToHtml } from '../shared/report/markdown.js';
 import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
@@ -547,7 +548,22 @@ function run(): void {
         ['developer-profile.html', () => generateDeveloperProfileHtml(makeDeveloperProfile())],
         ['requirement-score.html', () => generateRequirementScoreHtml(makeRequirementScore())],
         ['coverage-gap.html', () => generateCoverageGapHtml(makeCoverageGap())],
-        ['test-report.html', () => generateHtmlReport(makeFlatTests())],
+        [
+            'test-report.html',
+            () => {
+                const tests = makeFlatTests();
+                // F0-T8 (SSOT): hub dedicado refletindo o run — `computed` é
+                // obrigatório no gerador (report-html guard).
+                const hub = createDataHubFromParseResult(
+                    {
+                        tests,
+                        stats: { passed: 1, failed: 1, skipped: 1, total: 3, duration: 4400 },
+                    },
+                    'qa_tools',
+                );
+                return generateHtmlReport(tests, { computed: hub.computed });
+            },
+        ],
         ['export.csv', () => exportTestsCsv(makeFlatTests())],
         ['export.json', () => exportTestsJson(makeFlatTests())],
         ['docs.html', () => mdToHtml('# QA Tools Docs\n\n## Installation\n\nRun setup.')],

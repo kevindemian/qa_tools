@@ -105,13 +105,16 @@ async function collectAndReportResults(gh: ReturnType<typeof createGitHubSmokeMa
             ' skipped)\n',
     );
 
-    await offerPipelineFailureAnalysis(parsed);
+    // F0-T8: a análise roda contra o hub global — que já reflete o parse via
+    // saveParseResult dentro do collectTestResults — quando disponível; senão a
+    // própria oferta constrói um hub dedicado (defensivo, nunca analisa vazio).
+    const hub = isDataHubInitialized() ? getDataHub() : undefined;
+    await offerPipelineFailureAnalysis(parsed, hub ? { dataHub: hub } : undefined);
 
-    if (!isDataHubInitialized()) {
+    if (!hub) {
         rootLogger.info('  DataHub not initialized — skipping flakiness calculation');
         return;
     }
-    const hub = getDataHub();
     const projectRuns = (hub.computed.metricsRuns ?? []).filter(
         (r: { project: string }) => r.project === 'qa_tools_e2e',
     );

@@ -8,6 +8,7 @@
  */
 import type { GitProvider } from '../types/ci-cd.js';
 import type { DataHub, DataHubPersistence, DataProvider } from '../types/data-hub.js';
+import type { ParseResult } from '../result_parser.js';
 import { rootLogger } from '../logger.js';
 import { formatErr } from '../errors.js';
 import Config from '../config-accessor.js';
@@ -121,6 +122,30 @@ export async function createDataHubFromFallback(
     const { DataHubImpl } = await import('./hub.js');
 
     return DataHubImpl.create([], { repo, allowEmpty: false }, persistence);
+}
+
+/**
+ * Cria um DataHub cujo run atual (`computed.metricsRuns[0]`) é exatamente o
+ * `parseResult` fornecido — sem providers, sem fetch, sem Camada 7.
+ *
+ * Usado por consumidores que JÁ possuem um `ParseResult` (arquivo manual,
+ * fixture E2E, run reconciliado) e precisam de um hub que o reflita como fonte
+ * única para o relatório HTML / análise de falhas (F0-T8).
+ *
+ * Síncrono: `DataHubImpl.createFromParseResult` não faz I/O de rede; a
+ * persistência é injetada (default: auto-detectada via `createDataHubPersistence`).
+ *
+ * @param parseResult - Resultado de `parseTestResultsFile` (CTRF/JUnit/Mochawesome).
+ * @param repo - Nome do repositório (contexto).
+ * @param persistence - Persistência opcional (testes injetam mock; produção auto-cria).
+ */
+export function createDataHubFromParseResult(
+    parseResult: ParseResult,
+    repo: string,
+    persistence?: DataHubPersistence,
+): DataHub {
+    const p = persistence ?? createDataHubPersistence(repo);
+    return DataHubImpl.createFromParseResult(parseResult, repo, p);
 }
 
 function sleep(ms: number): Promise<void> {
