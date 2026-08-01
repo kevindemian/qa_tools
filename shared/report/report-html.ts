@@ -115,13 +115,17 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
             return buildErrorPage('Error generating report', msg);
         }
         const stats = statsFromMetricsRun(precomputedRun);
-        const passRate =
-            computed.passRate || (precomputedRun.total > 0 ? (precomputedRun.passed / precomputedRun.total) * 100 : 0);
+        if (!Number.isFinite(computed.passRate)) {
+            throw new Error(
+                `computed.passRate inválido (${String(computed.passRate)}) — DataHub.computed.passRate é obrigatório (SSOT).`,
+            );
+        }
+        const passRate = computed.passRate;
         const title = options.title || DEFAULT_TITLE;
         const categories = options.testCategories || computed.failureClassifications || {};
         const timestamp = options.generatedAt || new Date().toISOString();
         const dashboardId = options.dashboardId || 'coverage-report';
-        const trends = computed.metricsTrends ?? options.trends ?? [];
+        const trends = computed.metricsTrends ?? [];
 
         let bodyContent = '<h1>' + title + '</h1>';
         bodyContent += `<div data-part="timestamp" data-dashboard="${escapeHtml(dashboardId)}">${timestamp}</div>`;

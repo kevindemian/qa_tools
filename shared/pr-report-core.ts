@@ -564,7 +564,6 @@ function generateHtmlReportFile(
             qualityGate: Math.round(passRate),
             healthScore,
             computed: dataHub.computed,
-            trends: dataHub.computed.metricsTrends ?? [],
             includeChart: true,
             coverageSource,
             dashboardId: 'pr-report-html',

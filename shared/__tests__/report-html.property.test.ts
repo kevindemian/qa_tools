@@ -50,7 +50,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const passed = tests.filter((t) => t.state === 'passed').length;
     const failed = tests.filter((t) => t.state === 'failed').length;
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -62,7 +62,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped: 0, total: tests.length },
         framework: '',
         metricsRuns: [

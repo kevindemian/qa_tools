@@ -23,7 +23,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const failed = tests.filter((t) => t.state === 'failed').length;
     const skipped = tests.filter((t) => t.state === 'skipped').length;
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: tests.length > 0 ? tests.reduce((s, t) => s + t.duration, 0) / tests.length : 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -35,7 +35,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped, total: tests.length },
         framework: '',
         metricsRuns: [
@@ -195,17 +195,55 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Other');
     });
 
-    it('includes trend section when trends provided', () => {
+    it('includes trend section when computed.metricsTrends provided', () => {
+        const computed = computedFor(MOCK_TESTS);
+        computed.metricsTrends = [
+            { label: 'Mon', passRate: 90, total: 10, failed: 1 },
+            { label: 'Tue', passRate: 85, total: 10, failed: 2 },
+        ];
         const html = generateHtmlReport(MOCK_TESTS, {
-            computed: computedFor(MOCK_TESTS),
+            computed,
             title: 'Trends',
-            trends: [
-                { label: 'Mon', passRate: 90, total: 10, failed: 1 },
-                { label: 'Tue', passRate: 85, total: 10, failed: 2 },
-            ],
         });
 
         expect(html).toContain('Pass Rate Trend');
+    });
+
+    it('renders computed.passRate=0 even when metricsRuns implies 100% (B5 — no derive fallback)', () => {
+        const computed = computedFor([]);
+        computed.passRate = 0;
+        computed.metricsRuns = [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'p',
+                total: 2,
+                passed: 2,
+                failed: 0,
+                skipped: 0,
+                duration: 10,
+                tests: [
+                    { title: 'A', state: 'passed', duration: 5 },
+                    { title: 'B', state: 'passed', duration: 5 },
+                ],
+            },
+        ];
+
+        const html = generateHtmlReport([], { computed, title: 'ZeroRate' });
+
+        const passRateValue = /data-part="label">Pass Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(
+            html,
+        )?.[1];
+
+        expect(passRateValue).toBe('0.0%');
+    });
+
+    it('fails explicitly when computed.passRate is non-finite (B5 — SSOT required)', () => {
+        const computed = computedFor([]);
+        computed.passRate = Number.NaN;
+
+        const html = generateHtmlReport([], { computed, title: 'BadRate' });
+
+        expect(html).toContain('Error generating report');
     });
 
     it('includes diff comparison when provided', () => {
