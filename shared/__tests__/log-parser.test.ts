@@ -135,31 +135,22 @@ FAIL	github.com/user/repo/failing	1.234s
 });
 
 describe('DetectFileLine', () => {
-    it('parses V8 frames without parentheses (e.g. GitLab test-report stack)', () => {
+    it.each([
+        [
+            'parses V8 frames without parentheses (e.g. GitLab test-report stack)',
+            'Error: expected 4 got 5\n    at src/math.ts:42:10',
+            'src/math.ts',
+            42,
+        ],
+        ['parses "at async" frames without parentheses', '    at async src/service.ts:7:3', 'src/service.ts', 7],
+        ['still parses parenthesized frames', '    at Object.<anonymous> (test.js:20:5)', 'test.js', 20],
+    ])('%s', (_name, input, file, line) => {
         expect.hasAssertions();
 
-        const loc = detectFileLine('Error: expected 4 got 5\n    at src/math.ts:42:10');
+        const loc = detectFileLine(input);
 
-        expect(loc.file).toBe('src/math.ts');
-        expect(loc.line).toBe(42);
-    });
-
-    it('parses "at async" frames without parentheses', () => {
-        expect.hasAssertions();
-
-        const loc = detectFileLine('    at async src/service.ts:7:3');
-
-        expect(loc.file).toBe('src/service.ts');
-        expect(loc.line).toBe(7);
-    });
-
-    it('still parses parenthesized frames', () => {
-        expect.hasAssertions();
-
-        const loc = detectFileLine('    at Object.<anonymous> (test.js:20:5)');
-
-        expect(loc.file).toBe('test.js');
-        expect(loc.line).toBe(20);
+        expect(loc.file).toBe(file);
+        expect(loc.line).toBe(line);
     });
 
     it('does NOT return the error message as a file (regression for bug)', () => {

@@ -71,45 +71,48 @@ describe('Compute/Suite-speed', () => {
             expect(calcSuiteSpeedP95(map, timing)).toBe(0);
         });
 
-        it('uses run_duration_ms / jobCount for success jobs', () => {
+        it.each<[string, Array<[string, PipelineJob['status']]>, number, number]>([
+            [
+                'uses run_duration_ms / jobCount for success jobs',
+                [
+                    ['a', 'success'],
+                    ['b', 'success'],
+                ],
+                1000,
+                500,
+            ],
+            [
+                'counts failure jobs in the timing path',
+                [
+                    ['a', 'failure'],
+                    ['b', 'success'],
+                ],
+                600,
+                300,
+            ],
+            [
+                'ignores skipped/pending jobs in the timing path',
+                [
+                    ['a', 'skipped'],
+                    ['b', 'success'],
+                ],
+                800,
+                400,
+            ],
+        ])('%s', (_name, jobSpecs, runDurationMs, expected) => {
             expect.hasAssertions();
 
-            const jobs: PipelineJob[] = [
-                { id: 1, name: 'a', stage: 't', status: 'success', duration: 0 },
-                { id: 2, name: 'b', stage: 't', status: 'success', duration: 0 },
-            ];
+            const jobs: PipelineJob[] = jobSpecs.map(([name, status], idx) => ({
+                id: idx + 1,
+                name,
+                stage: 't',
+                status,
+                duration: 0,
+            }));
             const map = new Map([[1, jobs]]);
-            const timing = new Map<number, WorkflowRunTiming>([[1, { run_duration_ms: 1000 }]]);
+            const timing = new Map<number, WorkflowRunTiming>([[1, { run_duration_ms: runDurationMs }]]);
 
-            // 1000ms / 2 jobs = 500ms per job, both counted → P95 = 500
-            expect(calcSuiteSpeedP95(map, timing)).toBe(500);
-        });
-
-        it('counts failure jobs in the timing path', () => {
-            expect.hasAssertions();
-
-            const jobs: PipelineJob[] = [
-                { id: 1, name: 'a', stage: 't', status: 'failure', duration: 0 },
-                { id: 2, name: 'b', stage: 't', status: 'success', duration: 0 },
-            ];
-            const map = new Map([[1, jobs]]);
-            const timing = new Map<number, WorkflowRunTiming>([[1, { run_duration_ms: 600 }]]);
-
-            expect(calcSuiteSpeedP95(map, timing)).toBe(300);
-        });
-
-        it('ignores skipped/pending jobs in the timing path', () => {
-            expect.hasAssertions();
-
-            const jobs: PipelineJob[] = [
-                { id: 1, name: 'a', stage: 't', status: 'skipped', duration: 0 },
-                { id: 2, name: 'b', stage: 't', status: 'success', duration: 0 },
-            ];
-            const map = new Map([[1, jobs]]);
-            const timing = new Map<number, WorkflowRunTiming>([[1, { run_duration_ms: 800 }]]);
-
-            // only the success job (1 of 2) counts → 800 / 2 = 400
-            expect(calcSuiteSpeedP95(map, timing)).toBe(400);
+            expect(calcSuiteSpeedP95(map, timing)).toBe(expected);
         });
 
         it('uses timing path (zero durations) even when job.duration is available', () => {

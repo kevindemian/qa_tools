@@ -60,14 +60,12 @@ describe('ImportMetricsCsv', () => {
         expect(r.passRate).toBe(85);
     });
 
-    it('r4: CSV inválido → retorna null', () => {
-        const result = importMetricsCsv('');
-
-        expect(result).toBeNull();
-    });
-
-    it('r5: CSV sem cabeçalho esperado → retorna null', () => {
-        const result = importMetricsCsv('foo,bar\n1,2');
+    it.each([
+        ['r4: CSV inválido → retorna null', ''],
+        ['r5: CSV sem cabeçalho esperado → retorna null', 'foo,bar\n1,2'],
+        ['r8: CSV with only header → returns null', 'metric,value'],
+    ])('%s', (_name, csv) => {
+        const result = importMetricsCsv(csv);
 
         expect(result).toBeNull();
     });
@@ -92,12 +90,6 @@ describe('ImportMetricsCsv', () => {
 
         expect(result.releaseScore.dimensions.passRate.score).toBe(0);
         expect(result.releaseScore.dimensions.passRate.status).toBe('fail');
-    });
-
-    it('r8: CSV with only header → returns null', () => {
-        const result = importMetricsCsv('metric,value');
-
-        expect(result).toBeNull();
     });
 
     it('r9: CSV with unknown metrics → those are ignored', () => {

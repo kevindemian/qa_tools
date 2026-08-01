@@ -135,28 +135,16 @@ describe('Validation-hook — exported units', () => {
     });
 
     describe('ValidatePath', () => {
-        it('rejects path traversal', async () => {
+        it.each([
+            ['rejects path traversal', '../../etc/passwd'],
+            ['rejects empty path', ''],
+            ['rejects env-var expansions', '${HOME}/x'],
+        ])('%s', async (_name, path) => {
             expect.hasAssertions();
 
             const m = await load();
 
-            expect(() => m.validatePath('../../etc/passwd')).toThrow(/REJEITADO/);
-        });
-
-        it('rejects empty path', async () => {
-            expect.hasAssertions();
-
-            const m = await load();
-
-            expect(() => m.validatePath('')).toThrow(/REJEITADO/);
-        });
-
-        it('rejects env-var expansions', async () => {
-            expect.hasAssertions();
-
-            const m = await load();
-
-            expect(() => m.validatePath('${HOME}/x')).toThrow(/REJEITADO/);
+            expect(() => m.validatePath(path)).toThrow(/REJEITADO/);
         });
 
         it('accepts a safe relative path', async () => {
