@@ -101,6 +101,8 @@ import { pushHistory, getProjects } from '../session-state.js';
 import { pollPipeline } from '../pipeline-handler.js';
 import { tryBatchMode } from '../batch-mode.js';
 import { parseCliArgs } from '../cli-args.js';
+import { getDataHub } from '../../shared/data-hub/global-hub.js';
+import type { DataHub } from '../../shared/types/data-hub.js';
 
 const mockSuccess = vi.mocked(success);
 const mockError = vi.mocked(error);
@@ -109,6 +111,7 @@ const mockWarn = vi.mocked(warn);
 const mockPushHistory = vi.mocked(pushHistory);
 const mockPollPipeline = vi.mocked(pollPipeline);
 const mockGetProjects = vi.mocked(getProjects);
+const mockGetDataHub = vi.mocked(getDataHub);
 
 let originalArgv: string[];
 let originalAutoConfirm: string | undefined;
@@ -368,6 +371,178 @@ describe('Batch Mode', () => {
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('flakiness dashboard'));
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('insuficiente'));
+        });
+
+        it('filters flakiness dashboard runs by project (B12 — only same-project runs count)', async () => {
+            expect.hasAssertions();
+
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            timestamp: '2026-08-01T00:00:00Z',
+                            project: 'proj2',
+                            total: 2,
+                            passed: 2,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [
+                                { title: 'a', state: 'passed' as const, duration: 10 },
+                                { title: 'b', state: 'passed' as const, duration: 20 },
+                            ],
+                        },
+                        {
+                            timestamp: '2026-08-02T00:00:00Z',
+                            project: 'proj2',
+                            total: 2,
+                            passed: 2,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [
+                                { title: 'a', state: 'passed' as const, duration: 10 },
+                                { title: 'b', state: 'passed' as const, duration: 20 },
+                            ],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as unknown as DataHub);
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('flakiness dashboard'));
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('insuficiente'));
+            expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Dashboard de flakiness'));
+        });
+
+        it('generates flakiness dashboard when 2 same-project runs exist (B12 — project boundary)', async () => {
+            expect.hasAssertions();
+
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            timestamp: '2026-08-01T00:00:00Z',
+                            project: 'proj1',
+                            total: 2,
+                            passed: 2,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [
+                                { title: 'a', state: 'passed' as const, duration: 10 },
+                                { title: 'b', state: 'passed' as const, duration: 20 },
+                            ],
+                        },
+                        {
+                            timestamp: '2026-08-02T00:00:00Z',
+                            project: 'proj1',
+                            total: 2,
+                            passed: 2,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [
+                                { title: 'a', state: 'passed' as const, duration: 10 },
+                                { title: 'b', state: 'passed' as const, duration: 20 },
+                            ],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as unknown as DataHub);
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('Dashboard de flakiness'));
+        });
+
+        it('filters test export runs by project (B12 — only same-project runs count)', async () => {
+            expect.hasAssertions();
+
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            timestamp: '2026-08-01T00:00:00Z',
+                            project: 'proj2',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [{ title: 'a', state: 'passed' as const, duration: 10 }],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as unknown as DataHub);
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('export de testes'));
+            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('insuficiente'));
+            expect(mockSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Test CSV export gerado'));
+        });
+
+        it('generates test export when a same-project run exists (B12 — project boundary)', async () => {
+            expect.hasAssertions();
+
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [
+                        {
+                            timestamp: '2026-08-01T00:00:00Z',
+                            project: 'proj1',
+                            total: 1,
+                            passed: 1,
+                            failed: 0,
+                            skipped: 0,
+                            duration: 100,
+                            tests: [{ title: 'a', state: 'passed' as const, duration: 10 }],
+                        },
+                    ],
+                },
+                raw: { failureClassifications: [] },
+            } as unknown as DataHub);
+            process.argv = ['node', 'script.js', '--project', 'proj1', '--branch', 'main'];
+            mockGetProjects.mockReturnValue({ proj1: '1' });
+            vi.spyOn(mockManager, 'getBranch').mockResolvedValue({ name: 'main' });
+            vi.spyOn(mockManager, 'triggerPipeline').mockResolvedValue({
+                id: '42',
+                web_url: 'https://gitlab.com/pipe/42',
+            });
+            mockPollPipeline.mockResolvedValue({ status: 'success', web_url: '' });
+
+            await tryBatchMode();
+
+            expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('Test CSV export gerado'));
         });
     });
 });

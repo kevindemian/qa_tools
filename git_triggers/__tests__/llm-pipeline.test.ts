@@ -23,6 +23,7 @@ import type { analyzeFailuresWithReport as AnalyzeFailuresFn } from '../../share
 import type { AnalysisReport } from '../../shared/validation/failure-analysis.js';
 import { createDataHubFromParseResult } from '../../shared/data-hub/factory.js';
 import type { DataHub } from '../../shared/types/data-hub.js';
+import { getCurrentProject } from '../../shared/project-context.js';
 import { offerPipelineFailureAnalysis } from '../llm-pipeline.js';
 
 vi.mock('../../shared/validation/failure-analysis.js', () => ({
@@ -34,11 +35,17 @@ vi.mock('../../shared/data-hub/factory.js', () => ({
     createDataHubFromParseResult: vi.fn(),
 }));
 
+vi.mock('../../shared/project-context.js', () => ({
+    getCurrentProject: vi.fn(),
+}));
+
 const mockAnalyzeFailures = vi.mocked(analyzeFailuresWithReport);
 const mockCreateHub = vi.mocked(createDataHubFromParseResult);
+const mockGetCurrentProject = vi.mocked(getCurrentProject);
 
 let reportsDir: string;
 let originalStdinTTY: unknown;
+let originalGithubRepository: string | undefined;
 
 const baseReport: AnalysisReport = {
     content: '**Analysis:** tests failed due to timeout.',
@@ -83,12 +90,20 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         Config.set('QA_TOOLS_REPORTS_DIR', reportsDir);
         Config.set('quiet', true);
         originalStdinTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+        originalGithubRepository = process.env['GITHUB_REPOSITORY'];
+        mockGetCurrentProject.mockReturnValue(undefined);
+        delete process.env['GITHUB_REPOSITORY'];
     });
 
     afterEach(() => {
         rmSync(reportsDir, { recursive: true, force: true });
         if (originalStdinTTY) {
             Object.defineProperty(process.stdin, 'isTTY', originalStdinTTY as PropertyDescriptor);
+        }
+        if (originalGithubRepository === undefined) {
+            delete process.env['GITHUB_REPOSITORY'];
+        } else {
+            process.env['GITHUB_REPOSITORY'] = originalGithubRepository;
         }
         vi.restoreAllMocks();
     });
@@ -116,6 +131,35 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         expect(mockAnalyzeFailures).not.toHaveBeenCalled();
     });
 
+    it('não chama a análise quando não há testes falhos mesmo com confirm aceito (contagem de falhas)', async () => {
+        expect.assertions(1);
+
+        answerConfirm(true);
+
+        const parsed = {
+            stats: { passed: 10, failed: 0, skipped: 0, total: 10, duration: 500 },
+            tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
+        };
+
+        await offerPipelineFailureAnalysis(parsed);
+
+        expect(mockAnalyzeFailures).not.toHaveBeenCalled();
+    });
+
+    it('contabiliza apenas testes falhos na mensagem de confirmação (F0-T8 — filtro real)', async () => {
+        expect.assertions(1);
+
+        answerConfirm(true);
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed);
+
+        expect(readlineSync.question).toHaveBeenCalledWith(
+            expect.stringContaining('Analisar 2 falha(s) com IA?'),
+            expect.anything(),
+        );
+    });
+
     it('constrói um hub dedicado que reflete o parse quando nenhum hub está disponível (F0-T8)', async () => {
         expect.assertions(2);
 
@@ -126,6 +170,45 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
 
         expect(mockCreateHub).toHaveBeenCalledWith(baseParsed, expect.any(String));
         expect(mockAnalyzeFailures).toHaveBeenCalledWith(testHub);
+    });
+
+    it('resolve o repo a partir do projeto atual quando ele existe (F0-T8 — repo preferido sobre env)', async () => {
+        expect.assertions(1);
+
+        answerConfirm(true);
+        mockGetCurrentProject.mockReturnValue('org/projeto-atual');
+        process.env['GITHUB_REPOSITORY'] = 'org/env-repo';
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed);
+
+        expect(mockCreateHub).toHaveBeenCalledWith(baseParsed, 'org/projeto-atual');
+    });
+
+    it('resolve o repo a partir de GITHUB_REPOSITORY quando não há projeto atual (F0-T8 — fallback env)', async () => {
+        expect.assertions(1);
+
+        answerConfirm(true);
+        mockGetCurrentProject.mockReturnValue(undefined);
+        process.env['GITHUB_REPOSITORY'] = 'org/env-repo';
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed);
+
+        expect(mockCreateHub).toHaveBeenCalledWith(baseParsed, 'org/env-repo');
+    });
+
+    it('resolve o repo vazio quando não há projeto nem GITHUB_REPOSITORY (F0-T8 — fallback final)', async () => {
+        expect.assertions(1);
+
+        answerConfirm(true);
+        mockGetCurrentProject.mockReturnValue(undefined);
+        delete process.env['GITHUB_REPOSITORY'];
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed);
+
+        expect(mockCreateHub).toHaveBeenCalledWith(baseParsed, '');
     });
 
     it('efeito colateral real: escreve o relatório HTML no disco quando há htmlReport', async () => {
@@ -153,6 +236,18 @@ describe('OfferPipelineFailureAnalysis — integração real', () => {
         await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
 
         expect(findWrittenReport()).toBeNull();
+    });
+
+    it('usa o dataHub explícito sem criar hub dedicado quando disponível (F0-T8 — precedência do caller)', async () => {
+        expect.assertions(2);
+
+        answerConfirm(true);
+        mockAnalyzeFailures.mockResolvedValue(baseReport);
+
+        await offerPipelineFailureAnalysis(baseParsed, { dataHub: testHub });
+
+        expect(mockCreateHub).not.toHaveBeenCalled();
+        expect(mockAnalyzeFailures).toHaveBeenCalledWith(testHub);
     });
 
     it('não escreve arquivo quando htmlReport está ausente, mas conclui sem erro', async () => {
