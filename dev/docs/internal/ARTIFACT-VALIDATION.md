@@ -298,6 +298,12 @@ npx madge --circular shared/
 6. **Comandos de verificação:** `npx vitest run <arquivo>` · `npx tsc --noEmit` · `npm run lint` · `npx madge --circular shared/` · suite completa `npx vitest run --testTimeout=120000`.
 7. **CI monitoring pós-push:** `curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/kevindemian/qa_tools/actions/runs?branch=main` (token em `.env.local`/`.env`).
 8. **Proibições absolutas:** sem bypass de segurança (Rule 18); sem alterar asserts existentes (Rule 19.5); sem `// TODO`/stub/placeholder; sem catch vazio/erro silencioso (Rule 25); sem mock de lógica interna (Rule 26); sem fallback fora do DataHub (Rule 3/14).
+9. **Inconformidades descobertas durante a execução → ciclo obrigatório de registro (REPETIR o processo de 2026-08-01):** sempre que uma inconformidade for encontrada ao longo de qualquer tarefa, PARAR a execução e repetir o ciclo completo:
+   1. **Avaliar** a inconformidade: causa raiz (origem), produtores/consumidores, impacto de contrato, evidência (Rule 12 — factual, não especulativo), e decidir a correção pela superioridade técnica + segurança (tempo/esforço NÃO são variáveis).
+   2. **Registrar como novo achado** (N#) na §7 "Achados adicionais" com arquivo/linha/defeito + fix proposto.
+   3. **Distribuir a correção ao longo das tarefas pendentes:** adicionar linha(s) atômica(s) na tabela §7 (F0-T#/fase apropriada com RED test → fix → verificação), linha no catálogo §8 (se aplicável), e linha ⏳ PENDENTE no PROGRESS com a ordem de execução ajustada (re-sequenciar dependências — hub first se a origem for o DataHub).
+   4. **Somente então** retomar a execução na ordem atualizada.
+   - Proibido: corrigir uma inconformidade recém-encontrada sem registrá-la primeiro; adiar o registro ("depois eu anoto"); resolver a inconformidade por workaround/bypass (Rule 3/14) sob qualquer justificativa.
 
 ### PROGRESS (atualizado a cada tarefa concluída)
 | Data | Fase/Tarefa | Status | Notas |
