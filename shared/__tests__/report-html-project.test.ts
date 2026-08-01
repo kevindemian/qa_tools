@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import Config from '../config-accessor.js';
-import { generateHtmlReport, generateCoverageHtml } from '../report/report-html.js';
+import { generateHtmlReport } from '../report/report-html.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
 function emptyComputed(): ComputedMetrics {
@@ -45,13 +45,6 @@ describe('Report HTML qa-project meta tag', () => {
         const html = generateHtmlReport([], { title: 'T', computed: emptyComputed() });
 
         expect(html).toContain('<meta name="qa-project" content="ibabs">');
-    });
-
-    it('includes qa-project meta in coverage reports when a project is selected', () => {
-        Config.set('qaCurrentProject', 'qa_tools');
-        const html = generateCoverageHtml([], 'Coverage');
-
-        expect(html).toContain('<meta name="qa-project" content="qa_tools">');
     });
 
     it('omits qa-project meta when no project is selected', () => {

@@ -9,7 +9,6 @@ vi.mock('fs', async () => {
     return { ...actual, readFileSync, default: { ...actual, readFileSync } };
 });
 vi.mock('../llm/llm-review.js', () => ({ reviewWithLlm: vi.fn() }));
-vi.mock('../report/report-generator.js', () => ({ generateReportWithFallback: vi.fn(() => '<html>report</html>') }));
 vi.mock('../llm/llm-metrics.js', () => ({ snapshotLlmMetrics: vi.fn() }));
 vi.mock('../llm/llm-client.js', () => ({ llmPrompt: vi.fn() }));
 
@@ -24,14 +23,53 @@ import {
 } from '../validation/failure-analysis.js';
 import { reviewWithLlm } from '../llm/llm-review.js';
 import type { ReviewResult } from '../llm/llm-review.js';
-import { generateReportWithFallback } from '../report/report-generator.js';
 import { snapshotLlmMetrics } from '../llm/llm-metrics.js';
 import { llmPrompt } from '../llm/llm-client.js';
 import { rootLogger } from '../logger.js';
 import type { FlatTest } from '../result_parser.js';
-import type { DataHub, FailureRecord } from '../types/data-hub.js';
+import type { ComputedMetrics, DataHub, FailureRecord } from '../types/data-hub.js';
 
-function makeHub(records: FailureRecord[], qualityValid = true, provenanceConfidence = 0.9): DataHub {
+function computedWith(tests: FlatTest[]): ComputedMetrics {
+    const passed = tests.filter((t) => t.state === 'passed').length;
+    const failedCount = tests.filter((t) => t.state === 'failed').length;
+    const skipped = tests.filter((t) => t.state === 'skipped').length;
+    return {
+        passRate: passed + failedCount > 0 ? (passed / (passed + failedCount)) * 100 : 0,
+        avgDuration: 0,
+        suiteSpeedP95: 0,
+        flakyRate: [],
+        coverage: 0,
+        pipelineCost: { totalRuns: 0, totalCostUsd: 0, billableMinutes: 0 },
+        defectTrends: [],
+        branchBreakdown: {},
+        topFailingJobs: [],
+        topFailureReasons: [],
+        releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
+        quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
+        testPassRate: passed + failedCount > 0 ? (passed / (passed + failedCount)) * 100 : 0,
+        testCounts: { passed, failed: failedCount, skipped, total: tests.length },
+        framework: '',
+        metricsRuns: [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'qa-tools',
+                total: tests.length,
+                passed,
+                failed: failedCount,
+                skipped,
+                duration: tests.reduce((s, t) => s + t.duration, 0),
+                tests,
+            },
+        ],
+    } as unknown as ComputedMetrics;
+}
+
+function makeHub(
+    records: FailureRecord[],
+    qualityValid = true,
+    provenanceConfidence = 0.9,
+    tests: FlatTest[] = [failedTest],
+): DataHub {
     const quality = { valid: qualityValid } as never;
     const provenance = new Map<string, { confidence: number | null }>([
         ['failureRecords', { confidence: provenanceConfidence }],
@@ -40,6 +78,7 @@ function makeHub(records: FailureRecord[], qualityValid = true, provenanceConfid
         getFailureRecords: () => records,
         getQuality: () => quality,
         getProvenance: () => provenance,
+        computed: computedWith(tests),
     } as unknown as DataHub;
 }
 
@@ -170,7 +209,6 @@ describe('Failure-analysis', () => {
 
         beforeEach(() => {
             vi.mocked(reviewWithLlm).mockReset();
-            vi.mocked(generateReportWithFallback).mockClear();
             vi.mocked(snapshotLlmMetrics).mockClear();
         });
 
@@ -181,10 +219,10 @@ describe('Failure-analysis', () => {
 
             expect(out).toStrictEqual({ content: '', confidence: 'high', fallbackUsed: false });
             expect(reviewWithLlm).not.toHaveBeenCalled();
-            expect(generateReportWithFallback).not.toHaveBeenCalled();
+            expect(out.htmlReport).toBeUndefined();
         });
 
-        it('builds an HTML report and snapshots metrics on the happy path', async () => {
+        it('builds a real HTML report (computed-driven) and snapshots metrics on the happy path', async () => {
             expect.assertions(4);
 
             const review: ReviewResult = {
@@ -195,11 +233,13 @@ describe('Failure-analysis', () => {
             };
             vi.mocked(reviewWithLlm).mockResolvedValue(review);
 
-            const out = await analyzeFailuresWithReport([failed]);
+            const out = await analyzeFailuresWithReport([failed], undefined, {
+                dataHub: makeHub([], true, 0.9, [failed]),
+            });
 
             expect(out.content).toBe('root cause: rounding');
-            expect(out.htmlReport).toBe('<html>report</html>');
-            expect(out.confidence).toBe('high');
+            expect(out.htmlReport).toContain('Failure Analysis Report');
+            expect(out.htmlReport).not.toContain('Error generating report');
             expect(snapshotLlmMetrics).toHaveBeenCalledTimes(1);
         });
 
@@ -280,7 +320,7 @@ describe('Failure-analysis', () => {
 
             expect(out).toStrictEqual({ content: '', confidence: 'medium', fallbackUsed: true });
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('LLM unreachable'));
-            expect(generateReportWithFallback).not.toHaveBeenCalled();
+            expect(out.htmlReport).toBeUndefined();
 
             warnSpy.mockRestore();
         });

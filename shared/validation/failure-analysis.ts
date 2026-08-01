@@ -10,7 +10,7 @@ import { llmPrompt } from '../llm/llm-client.js';
 import type { LlmPromptOptions } from '../types/llm.js';
 import { reviewWithLlm, type ReviewResult } from '../llm/llm-review.js';
 import { rootLogger } from '../logger.js';
-import { generateReportWithFallback } from '../report/report-generator.js';
+import { generateHtmlReport } from '../report/report-generator.js';
 import { snapshotLlmMetrics } from '../llm/llm-metrics.js';
 import Config from '../config-accessor.js';
 import { sanitizeForLlm } from '../sanitize.js';
@@ -195,13 +195,14 @@ export async function analyzeFailuresWithReport(
         return { content: '', confidence: 'medium', fallbackUsed: true };
     }
 
-    const htmlReport = generateReportWithFallback(tests, {
+    const htmlReport = generateHtmlReport(tests, {
         title: 'Failure Analysis Report',
         llmAnalysis: result.content,
         llmConfidence: result.confidence,
         ...(result.fallbackUsed ? { llmFallback: result.fallbackUsed } : {}),
         generatedAt: new Date().toISOString(),
         source: 'AI Failure Analysis',
+        ...(options?.dataHub?.computed ? { computed: options.dataHub.computed } : {}),
     });
 
     snapshotLlmMetrics();

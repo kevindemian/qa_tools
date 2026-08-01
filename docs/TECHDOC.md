@@ -100,7 +100,7 @@ Architecture (shared/ internal):
 | **Temp Dir**                 | `shared/temp-dir.ts`                                          | Gerenciamento de diretórios temporários (reports, ephemeral, cache, logs, previews)     |
 | **Integration Helpers**      | `shared/__tests__/integration/integration-helpers.ts`         | Fixtures factories + I/O helpers para testes de integração                              |
 | **Quality Gate**             | `shared/quality-gate.ts`                                      | Orquestrador de quality gate — thresholds fixos, compõe health/coverage/flakiness       |
-| **Coverage Source**          | `shared/coverage-source.ts`                                   | Resolução de cobertura em camadas: Istanbul coverage-summary.json > CTRF > 0 padrão     |
+| **Coverage Source**          | `shared/data-hub/compute/coverage.ts`           | Resolução de cobertura em camadas: Istanbul coverage-summary.json > CTRF > 0 padrão     |
 | **Quality Metrics**          | `shared/quality-metrics.ts`                                   | Coleta e persistência de métricas de qualidade: fire rates, pass rates, drift detection |
 | **Compute/Render Separation** | `shared/quality/*.ts` + `*-renderer.ts`                       | Barrel (compute + re-export) + Renderer (HTML) — padrão para todos os dashboards |
 | **Quality Suggester**        | `shared/quality-suggester.ts`                                 | Pipeline de detecção de sinais de qualidade: drift, latência, taxa de falha, benchmark  |
@@ -199,9 +199,9 @@ shared/
 │   ├── quality-suggester.ts             # Quality signal detection
 │   └── cross-squad-benchmark.ts         # Cross-squad benchmark
 │
-├── coverage/                            # Coverage analysis
-│   ├── coverage-source.ts               # Coverage data resolution
-│   └── coverage-gap-renderer.ts         # Coverage gap HTML
+├── data-hub/compute/                     # DataHub computation
+│   ├── coverage.ts                       # Coverage data resolution
+│   └── coverage-gap.ts                   # Coverage gap analysis
 │
 ├── pipeline/                            # Pipeline analysis
 │   ├── pipeline-cost.ts                 # Pipeline cost computation

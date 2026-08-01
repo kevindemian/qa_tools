@@ -175,7 +175,7 @@ Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas
 
 **Métricas:** Cada análise gera um snapshot persistido em `~/.local/state/qa-tools/llm-metrics.json` via `llm-metrics.ts` (6 contadores: requests, falhas, validações rejeitadas, retries, confiança, latência).
 
-**Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/failure-analysis.ts`, `shared/llm-review.ts`, `shared/report-generator.ts`, `shared/llm-metrics.ts`, `shared/report-validator.ts`
+**Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/validation/failure-analysis.ts`, `shared/llm/llm-review.ts`, `shared/report/report-html.ts`, `shared/llm/llm-metrics.ts`, `shared/validation/artifact-validator.ts`
 
 **Comportamento sem LLM:**
 

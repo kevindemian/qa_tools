@@ -1,7 +1,7 @@
 import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml } from '../report/report-generator.js';
+import { generateHtmlReport } from '../report/report-generator.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { TestRunTab } from '../report/report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
 function computedFor(tests: FlatTest[]): ComputedMetrics {
@@ -655,76 +655,6 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Steps');
         expect(html).toContain('Screenshots');
         expect(html).toContain('Logs');
-    });
-
-    // ── R7: Coverage HTML Report ────────────────────────────────────
-
-    it('generates coverage HTML with epics and issues', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Authentication',
-                issues: [
-                    { key: 'AUTH-1', summary: 'Login page', status: 'Done', type: 'Story' },
-                    { key: 'AUTH-2', summary: 'Logout', status: 'In Progress', type: 'Story' },
-                ],
-            },
-            {
-                key: 'EPIC-2',
-                summary: 'Dashboard',
-                issues: [{ key: 'DASH-1', summary: 'Widget', status: 'Open', type: 'Bug' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('Coverage Report');
-        expect(html).toContain('EPIC-1');
-        expect(html).toContain('AUTH-1');
-        expect(html).toContain('AUTH-2');
-        expect(html).toContain('EPIC-2');
-
-        expect(html).toContain('DASH-1');
-        expect(html).toContain('Authentication');
-        expect(html).toContain('Dashboard');
-    });
-
-    it('coverage report shows correct issue counts', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Test',
-                issues: [{ key: 'T-1', summary: 'Thing', status: 'Done', type: 'Task' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('>1<');
-        expect(html).toContain('1 issues, 100.0% closed');
-    });
-
-    it('coverage report uses custom title', () => {
-        const html = generateCoverageHtml([], 'My Coverage');
-
-        expect(html).toContain('My Coverage');
-    });
-
-    it('coverage report renders status badges', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Test',
-                issues: [
-                    { key: 'T-1', summary: 'Done', status: 'Done', type: 'Story' },
-                    { key: 'T-2', summary: 'Progress', status: 'In Progress', type: 'Story' },
-                    { key: 'T-3', summary: 'Open', status: 'Open', type: 'Bug' },
-                ],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('data-variant="pass"');
-        expect(html).toContain('data-variant="skip"');
-        expect(html).toContain('data-variant="fail"');
     });
 
     // ── R9: Mini Trend Chart ────────────────────────────────────────

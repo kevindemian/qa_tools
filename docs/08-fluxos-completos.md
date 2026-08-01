@@ -389,15 +389,15 @@ Selecionar projeto → Disparar pipeline → Aguardar conclusão
 
 ### Arquivos envolvidos
 
-| Arquivo                        | Função                                          |
-| ------------------------------ | ----------------------------------------------- |
-| `git_triggers/llm-pipeline.ts` | Orquestrador da análise IA pós-pipeline         |
-| `shared/failure-analysis.ts`   | `analyzeFailuresWithReport()` — pipeline LLM    |
-| `shared/llm-review.ts`         | `reviewWithLlm()` — validação + retry + revisor |
-| `shared/llm-client.ts`         | Cliente multi-tier com cache e fallback         |
-| `shared/report-generator.ts`   | `generateReportWithFallback()` — HTML com badge |
-| `shared/report-validator.ts`   | `ReportValidator` — schema JSON                 |
-| `shared/llm-metrics.ts`        | Métricas persistidas em JSON                    |
+| Arquivo                                   | Função                                          |
+| ----------------------------------------- | ----------------------------------------------- |
+| `git_triggers/llm-pipeline.ts`            | Orquestrador da análise IA pós-pipeline         |
+| `shared/validation/failure-analysis.ts`   | `analyzeFailuresWithReport()` — pipeline LLM    |
+| `shared/llm/llm-review.ts`                | `reviewWithLlm()` — validação + retry + revisor |
+| `shared/llm/llm-client.ts`                | Cliente multi-tier com cache e fallback         |
+| `shared/report/report-html.ts`            | `generateHtmlReport()` — HTML report            |
+| `shared/validation/artifact-validator.ts` | `ReportValidator` — schema JSON                 |
+| `shared/llm/llm-metrics.ts`               | Métricas persistidas em JSON                    |
 
 ---
 

@@ -20,17 +20,6 @@ export interface TestRunTab {
     tests: FlatTest[];
 }
 
-export interface CoverageEpic {
-    key: string;
-    summary: string;
-    issues: {
-        key: string;
-        summary: string;
-        status: string;
-        type: string;
-    }[];
-}
-
 export interface ReportOptions {
     title?: string;
     includeChart?: boolean;

@@ -7,10 +7,10 @@
  * reads. The real rootLogger is used (logs to stderr, harmless in tests).
  */
 
-import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report/report-html.js';
+import { nonNull } from '../test-utils.js';
+import { generateHtmlReport } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { TestRunTab } from '../report/report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
 const MOCK_TESTS: FlatTest[] = [
@@ -52,22 +52,6 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         ],
     } as unknown as ComputedMetrics;
 }
-
-const MOCK_EPICS: CoverageEpic[] = [
-    {
-        key: 'EPIC-1',
-        summary: 'First Epic',
-        issues: [
-            { key: 'ISSUE-1', summary: 'Task 1', status: 'Done', type: 'Task' },
-            { key: 'ISSUE-2', summary: 'Task 2', status: 'In Progress', type: 'Task' },
-        ],
-    },
-    {
-        key: 'EPIC-2',
-        summary: 'Second Epic',
-        issues: [{ key: 'ISSUE-3', summary: 'Bug 1', status: 'Open', type: 'Bug' }],
-    },
-];
 
 const HEALTH_SCORE: import('../types.js').HealthScoreResult = {
     overall: 85,
@@ -270,74 +254,10 @@ describe('GenerateHtmlReport', () => {
 
         expect(html).toContain('Diff');
     });
-});
 
-describe('GenerateReportWithFallback', () => {
-    it('returns error page when generation fails', () => {
-        const badTests = nullAs<FlatTest[]>();
-        const html = generateReportWithFallback(badTests, { title: 'Fail' });
+    it('returns error page when computed is missing (SSOT required, no fallback)', () => {
+        const html = generateHtmlReport(MOCK_TESTS, { title: 'Fail' });
 
         expect(html).toContain('Error generating report');
-    });
-});
-
-describe('GenerateCoverageHtml', () => {
-    it('returns valid HTML for epics', () => {
-        const html = generateCoverageHtml(MOCK_EPICS, 'Coverage Report');
-
-        expect(html).toContain('Coverage Report');
-        expect(html).toContain('EPIC-1');
-        expect(html).toContain('ISSUE-2');
-        expect(html).toContain('ISSUE-3');
-    });
-
-    it('shows correct close percentage', () => {
-        const html = generateCoverageHtml(MOCK_EPICS);
-
-        expect(html).toContain('33.3');
-    });
-
-    it('shows 0.0 when no epics', () => {
-        const html = generateCoverageHtml([], 'Empty Report');
-
-        expect(html).toContain('0.0');
-    });
-
-    it('handles epic with Done and Closed statuses correctly', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-3',
-                summary: 'Status Test',
-                issues: [
-                    { key: 'T-1', summary: 'Done task', status: 'Done', type: 'Task' },
-                    { key: 'T-2', summary: 'Closed task', status: 'Closed', type: 'Task' },
-                    { key: 'T-3', summary: 'Open task', status: 'Open', type: 'Task' },
-                ],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('66.7');
-    });
-
-    it('handles In Progress coverage status', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-4',
-                summary: 'Progress',
-                issues: [{ key: 'T-1', summary: 'WIP', status: 'In Progress', type: 'Task' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('In Progress');
-        expect(html).toContain('data-component="badge"');
-    });
-
-    it('returns error page on failure', () => {
-        const badEpics = nullAs<CoverageEpic[]>();
-        const html = generateCoverageHtml(badEpics);
-
-        expect(html).toContain('Error generating coverage report');
     });
 });
