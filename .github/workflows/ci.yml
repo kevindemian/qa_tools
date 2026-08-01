@@ -162,7 +162,7 @@ jobs:
         steps:
             - uses: actions/checkout@v5
               with:
-                  fetch-depth: 2
+                  fetch-depth: 0
             - uses: actions/setup-node@v6
               with:
                   node-version-file: .node-version
@@ -175,7 +175,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    TAUTEST_BASE=${{ github.base_ref }}
+                    TAUTEST_BASE=${{ github.event.pull_request.base.sha }}
                   else
                     TAUTEST_BASE=HEAD~1
                   fi
