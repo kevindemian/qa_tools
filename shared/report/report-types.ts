@@ -42,7 +42,6 @@ export interface ReportOptions {
     ciUrl?: string;
     branch?: string;
     qualityGate?: number;
-    testCategories?: Record<string, string>;
     testHistory?: Record<string, TestHistoryRun[]>;
     theme?: 'dark' | 'light';
     runs?: TestRunTab[];

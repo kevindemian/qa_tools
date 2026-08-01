@@ -122,7 +122,7 @@ export function generateReportWithFallback(_tests: FlatTest[], options?: ReportO
         }
         const passRate = computed.passRate;
         const title = options.title || DEFAULT_TITLE;
-        const categories = options.testCategories || computed.failureClassifications || {};
+        const categories = computed.failureClassifications ?? {};
         const timestamp = options.generatedAt || new Date().toISOString();
         const dashboardId = options.dashboardId || 'coverage-report';
         const trends = computed.metricsTrends ?? [];

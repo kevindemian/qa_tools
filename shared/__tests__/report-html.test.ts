@@ -246,6 +246,16 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Error generating report');
     });
 
+    it('renders failure classifications exclusively from computed.failureClassifications (F0-T4 — no dual source)', () => {
+        const computed = computedFor(MOCK_TESTS);
+        computed.failureClassifications = { 'Logout Test': 'UI' };
+
+        const html = generateHtmlReport(MOCK_TESTS, { computed, title: 'Cats' });
+
+        expect(html).toContain('category-badge');
+        expect(html).toContain('UI');
+    });
+
     it('includes diff comparison when provided', () => {
         const diffComparison = {
             newFailures: [{ title: 'F1', state: 'failed' as const, duration: 100 }],
