@@ -155,10 +155,17 @@ jobs:
         runs-on: ubuntu-latest
         needs: quality
         timeout-minutes: 15
+        env:
+            # Stryker roda o vitest in-process; o vitest.config.ts desativa o
+            # vitest-affected durante a mutação (determinismo do score) quando
+            # STRYKER_ACTIVE=true — mecanismo real, não mais a chave `env`
+            # ignorada pelo Stryker (ver dev/docs/internal/MUTATION-TESTING-PERF.md).
+            STRYKER_ACTIVE: 'true'
         permissions:
+            # Least privilege: checkout (contents) + upload de artefato
+            # (actions). pull-requests/checks write eram do tautest (removido).
             contents: read
-            pull-requests: write
-            checks: write
+            actions: write
         steps:
             - uses: actions/checkout@v5
               with:
@@ -168,42 +175,25 @@ jobs:
                   node-version-file: .node-version
                   cache: npm
             - run: npm ci
-            - name: Initialize tautest
-              run: npx tautest init --yes --runner vitest --no-install
-            - name: Run diff-scoped mutation testing
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Compute diff-scoped mutation scope
               run: |
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    TAUTEST_BASE=${{ github.event.pull_request.base.sha }}
+                    MUTATION_BASE=${{ github.event.pull_request.base.sha }}
                   else
-                    TAUTEST_BASE=HEAD~1
+                    MUTATION_BASE=HEAD~1
                   fi
-                  # Inspect the mutate scope up front so we can skip when there is
-                  # nothing to mutate: no production files changed (tautest exit 2)
-                  # or files changed but no added lines (deletion-only commits, which
-                  # would otherwise make the real run exit 1 for an empty scope).
-                  DRY_RUN_EXIT=0
-                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode --dry-run > /tmp/tautest-scope.log || DRY_RUN_EXIT=$?
-                  if [ "${DRY_RUN_EXIT}" = "2" ]; then
+                  # Exit 2 = nenhum arquivo-fonte de produção com linhas
+                  # adicionadas (PR de teste/doc ou commit de deleção) → skip.
+                  MUTATE_SCOPE=$(npx tsx scripts/mutation-scope.ts --base "${MUTATION_BASE}") || {
                     echo "No production files changed — skipping mutation testing"
                     exit 0
-                  fi
-                  if grep -q "Estimated mutation scope: none" /tmp/tautest-scope.log; then
-                    echo "No mutations possible (no added lines) — skipping mutation testing"
-                    exit 0
-                  fi
-                  EXIT_CODE=0
-                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode || EXIT_CODE=$?
-                  # Exit code 2 = no production files to mutate (expected for test-only changes)
-                  if [ "${EXIT_CODE}" = "2" ]; then
-                    echo "No production files changed — skipping mutation testing"
-                    exit 0
-                  fi
-                  exit ${EXIT_CODE}
+                  }
+                  echo "MUTATE_SCOPE=${MUTATE_SCOPE}" >> "$GITHUB_ENV"
+            - name: Run diff-scoped mutation testing
+              run: npx stryker run stryker.conf.json --mutate "${MUTATE_SCOPE}"
             - name: Upload mutation report
               uses: actions/upload-artifact@v7
               if: always()
               with:
                   name: mutation-report
-                  path: .tautest/
+                  path: reports/mutation/
