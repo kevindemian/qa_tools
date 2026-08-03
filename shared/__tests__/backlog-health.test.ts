@@ -329,6 +329,79 @@ describe('GenerateBacklogHealthHtml', () => {
         expect(html).toContain('PROJ-3');
         expect(html).toContain('PROJ-4');
     });
+
+    // I-4 (F0-T12 / INC-2 / N5): totalIssues é campo OBRIGATÓRIO — o `|| 0` foi
+    // removido; a ausência de dados é sinalizada por noData. (Rule 24/25.)
+    it('renders a REAL 0% rate as "% of total" when issues exist but none are flagged', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 5,
+            score: 90,
+            noData: false,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('0% of total');
+    });
+
+    it('does not fabricate a 0% rate when there is no data (noData=true)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 0,
+            score: 0,
+            noData: true,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+        expect(html).not.toContain('total issues');
+    });
+
+    it('surfaces a non-finite totalIssues explicitly instead of masking it as 0 (NaN || 0 === 0)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: Number.NaN,
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+        expect(html).not.toContain('total issues');
+    });
+
+    it('rejects a negative totalIssues explicitly (boundary guard, Rule 24.1)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: -3,
+            score: 60,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+    });
 });
 
 describe('Characterization — backlog vazio nao reporta saude 100% (C6, verificacao 2026-07-20)', () => {

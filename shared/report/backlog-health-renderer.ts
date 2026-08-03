@@ -90,8 +90,19 @@ function buildMetricSummary(result: BacklogHealthResult): string {
         scoreSeverity = 'error';
     }
 
-    // Calculate total issues for context
-    const totalIssues = result.totalIssues || 0;
+    // totalIssues is a REQUIRED field (BacklogHealthResult.totalIssues: number).
+    // A non-finite totalIssues signals a contract violation or corrupted data;
+    // it MUST surface explicitly (Rule 24.1/24.3/25.1), never silently masked as 0 (NaN || 0 === 0).
+    const totalIssues = result.totalIssues;
+    const hasValidTotal = Number.isFinite(totalIssues) && totalIssues >= 0;
+    const noData = result.noData === true || !hasValidTotal;
+
+    if (!hasValidTotal) {
+        rootLogger.warn(
+            `backlog-health-renderer: totalIssues inválido (${String(totalIssues)}) — contrato violado; renderizando como no-data. Causa provável: produtor emitiu valor não-finito. Correção: validar finitude na origem.`,
+        );
+    }
+
     const unassignedRate = totalIssues > 0 ? Math.round((result.unassignedIssues.length / totalIssues) * 100) : 0;
     const staleRate = totalIssues > 0 ? Math.round((result.staleIssues.length / totalIssues) * 100) : 0;
 
@@ -102,8 +113,8 @@ function buildMetricSummary(result: BacklogHealthResult): string {
             children:
                 MetricCard({
                     label: 'Backlog Score',
-                    value: result.noData ? 'N/A' : String(result.score) + '%',
-                    severity: result.noData ? 'warn' : scoreSeverity,
+                    value: noData ? 'N/A' : String(result.score) + '%',
+                    severity: noData ? 'warn' : scoreSeverity,
                     trend: totalIssues > 0 ? `${totalIssues} total issues` : '',
                     target: `target: >=${SCORE_THRESHOLD_SUCCESS}%`,
                 }) +
