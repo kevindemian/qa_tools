@@ -48,8 +48,8 @@ Legenda: ✅ conforme · ❌ violação · ⚠️ parcial/risco
 | 17 | coverage-gap | ✅ | ✅ | ✅ | Renderiza HTML válido. Timestamp ✅. Compute real em `shared/data-hub/compute/coverage-gap.ts`. |
 | 18 | report-html | ✅ | ✅ | ✅ | `generateHtmlReport` exige `options.computed` (report-html.ts:41,50). **F0-T8 (2026-08-01):** os 4 consumidores passam `computed: hub.computed` — `case17.ts:236,402`, `gen-report-complete.ts:174`, `artifact-validation-harness.ts:564`, `failure-analysis.ts:213`. Erro-page eliminado (`test-report.html` real, sem "DataHub precomputed data required"). Mocks de `generateHtmlReport` removidos de `case17.test.ts` (SSOT test: `computed: expect.objectContaining({ passRate })`). |
 | 19 | pipeline-health | ✅ | ✅ | ⚠️ | Consumido por `batch-mode.ts:445`. Renderiza 34.1KB. **⚠️ Único renderer com inline styles (6×)** + CSS custom `_PIPELINE_CSS` (pipeline-health-renderer.ts:50,161). |
-| 20 | schedule-handler | ❌ | ✅ | ⚠️ | **SSOT violation sistêmica**: computa localmente via barrels `calculateReleaseScore`, `aggregateDefectTrends`, `buildTraceabilityMatrix`, `analyzeBacklogHealth`, `aggregateDefectSeasonality`, `detectSilentRegression`, `buildDeveloperProfile`, `compareAiVsManual`, `analyzeSuiteOptimization`, `computeCrossSquadBenchmark`, `calculatePipelineCost` (schedule-handler.ts:181-275) — em vez de consumir `dataHub.computed.*`. DataHub computa `defectAggregation`, `seasonalityAggregation`, `regressionDetection`, `optimizationActions`, `impactAlerts`, `incidentEvents`, `traceabilityTree`, `crossSquad`, `coverageGap`, `suiteBreakdown` (hub.ts:836-869) com **0 consumidores**. Lógica duplicada em 2 fontes de verdade. |
-| 21 | interactive-mode | ✅ | ✅ | ⚠️ | Consome SSOT para `aiMetrics`/`passRate`/`flakyRate`/`coverage` ✅. **⚠️ Sub-dashboard Quality Gate (interactive-mode.ts:579) é HTML cru inline** (sem buildHtmlPage/primitives/CSS). |
+| 20 | schedule-handler | ✅ | ✅ | ✅ | **FIXED I-1 (2026-08-03, commit `63c0f19a`):** consome `hub.computed.*` (`defectAggregation`, `traceabilityTree`, `backlogHealth`, `developerProfile`, `aiComparison`, `pipelineCostResult`); recomputação local e fallback `generateGitMetricsRuns` removidos; guards invariantes (Rule 24/25); `<2 runs` warn+return. Gate completo verde (tsc/lint/vitest 539×7474/ts-prune/depcruise). Débito remanescente: D-1 (interactive-mode) e D-2 (dedup §6) — ver §6. |
+| 21 | interactive-mode | ✅ | ✅ | ⚠️ | Consome SSOT para `aiMetrics`/`passRate`/`flakyRate`/`coverage` ✅. **⚠️ Sub-dashboard Quality Gate (interactive-mode.ts:579) é HTML cru inline** (sem buildHtmlPage/primitives/CSS). **⚠️ D-1 (débito):** ainda recomputa ~12 métricas localmente + fallback git (`_loadProjectRunsHelper`, linhas 341-371) — deve migrar para `hub.computed.*` (mesmo padrão do schedule-handler I-1). |
 | 22 | pr-report-markdown | ✅ | ✅ | ✅ | Comentário PR com 5 métricas (Pass Rate/Passed/Failed/Skipped/Duration), timestamp, seções (CI Context, Summary Table, Coverage, Failures, Diff, Quality Gate, Flaky, Data Quality, Footer). SSOT: `dataHub` obrigatório (pr-report-core.ts:645). |
 | 23 | pr-report-job-summary | ✅ | ✅ | ❌ | Escrito em `$GITHUB_STEP_SUMMARY`. **⚠️ Emojis** (`:white_check_mark:`, `:x:`, `:fast_forward:`, `:clock1:`, `:warning:`, `:large_blue_diamond:`) — viola "zero emojis" do visual-checklist. |
 | 24 | pr-report-html | ✅ | ✅ | ✅ | `generateHtmlReportFile` passa `computed: dataHub.computed` (pr-report-core.ts:568) — wiring SSOT correto. |
@@ -70,10 +70,11 @@ Legenda: ✅ conforme · ❌ violação · ⚠️ parcial/risco
 - **Cobertura theater:** `case17.test.ts` mockava `generateHtmlReport` (13×) → teste verde não detectava o defeito.
 - **Correção de origem (aplicada):** cada consumidor agora deriva/obtém um DataHub reconciliado (`saveParseResult` F0-T8 + `createDataHubFromParseResult`) e passa `computed: hub.computed`; mocks removidos; SSOT test cobre o wiring real (`case17.ts:236,402`, `gen-report-complete.ts:174`, `artifact-validation-harness.ts:564`, `failure-analysis.ts:213`).
 
-### P3 — SSOT violation sistêmica em schedule-handler (D3)
-- **Causa raiz:** schedule-handler recomputa ~11 métricas localmente; DataHub as computa (hub.ts:836-869) com zero consumidores.
+### P3 — SSOT violation sistêmica (D3) — **PARCIALMENTE FIXED I-1 (2026-08-03, commit `63c0f19a`)**
+- **Causa raiz:** schedule-handler e interactive-mode recomputavam ~11 métricas localmente; DataHub as computa (hub.ts:836-869) com zero consumidores.
 - **Duplicação confirmada:** release score tem 2 implementações divergentes (4 vs 5 dimensões).
-- **Correção de origem:** schedule-handler deve consumir `dataHub.computed.*`; remover implementação duplicada.
+- **Correção de origem (aplicada — schedule-handler):** consome `dataHub.computed.*`; recomputação local e fallback `generateGitMetricsRuns` removidos.
+- **Débito remanescente (ver §6):** `interactive-mode` (D-1) e dedup `aggregateDefectTrends` quality/compute (D-2).
 
 ### P4 — Forma (D3)
 - `pipeline-health-renderer.ts`: 6 inline styles + `_PIPELINE_CSS` custom (único renderer).
@@ -107,7 +108,7 @@ Auditoria transversal de 2026-07-31 nos 21 artefatos (pr-report.html real + 21 o
 
 | Dimensão | ✅ | ⚠️ | ❌ |
 |----------|:---:|:---:|:---:|
-| D1 Funcional | 21 | 0 | 3 (report-html, schedule-handler, flakiness) |
+| D1 Funcional | 22 | 0 | 2 (report-html, flakiness) |
 | D2 Conteúdo | 22 | 1 (flakiness totalTests) | 1 (flakiness BUG) |
 | D3 Forma | 18 | 3 (release-score, pipeline-health, interactive-mode) | 1 (pr-report-job-summary emojis) |
 
@@ -397,9 +398,16 @@ npx madge --circular shared/
 
 **Auditoria:** commit + PROGRESS; gate completo; regenerar harness se shape de input mudar; zero `?? 0`/`|| 0` masking nos novos campos.
 
+**Status: ✅ CONCLUÍDO (2026-08-03, commit `63c0f19a`).** Gate completo verde: tsc ✅ · lint ✅ · vitest 539 files / 7474 tests ✅ · unused-exports ✅ · depcruise ✅. `rg` acceptance = **0** em `schedule-handler.ts`. Testes RED→GREEN: `hub.test.ts` (backlogHealth/developerProfile/aiComparison/pipelineCostResult/coverageGap N6), `jira-provider.test.ts` (enriquecimento `linkedIssuesOf` batch 50), `coverage-gap-compute.test.ts` (N6 SSOT), `schedule-handler.test.ts` (seed computed). No-data explícito (Rule 25): `aiComparison = compareAiVsManual(null)` — `raw.aiRecords` não carrega campos `AiComparisonRecord`; zero masking.
+
+**DÉBITO — pagável APÓS a conclusão deste documento (`ARTIFACT-VALIDATION.md`):**
+- **D-1** = tarefa **I-2** abaixo (interactive-mode → `hub.computed.*`; remover recomputação local + git fallback `_loadProjectRunsHelper`; guards invariantes nos renderers strict). Pré-requisito de D-2. Custo estimado ~3.5–4.5h.
+- **D-2** = dedup §6: consolidar `aggregateDefectTrends` NA ORIGEM em `shared/data-hub/compute/defect-aggregation.ts`; `quality/defect-trend.ts` vira barrel de renderer; mover `sanitizeTrendResult` para o renderer (Rule 5/24); re-apontar 4 importadores de tipo (`artifact-validation-harness.ts:49`, `defect-trend.test.ts`, `defect-trend-html.property.test.ts`, `defect-trend.integration.test.ts`, `artifact-content-validation.test.ts`) e `quality-check.ts:408` → compute; unificar semântica de datas inválidas (`'Unknown'` → descarte). Custo estimado ~2.5–3.5h.
+- Ordem obrigatória: **D-1 → D-2** (D-2 só é trivial porque D-1 elimina o último consumidor runtime de `aggregateDefectTrends` em quality).
+
 ---
 
-#### I-2 — FASE F0-T7 (interactive-mode, hub first)
+#### I-2 — FASE F0-T7 (interactive-mode, hub first) — **DÉBITO D-1 (pagável após conclusão deste doc; ver I-1 §Status)**
 
 **Tarefa executável:**
 - `I-2.1` Migrar `git_triggers/interactive-mode.ts:386-551` (28 refs) para `computed.*` (SSOT); remover recomputação local.
@@ -558,7 +566,7 @@ npx madge --circular shared/
 | 2026-08-03 | I-0 | I-0.4 doc claims | ✅ | §7:217 e §9:339 corrigidos p/ "implementado; aguardando validação determinística (Fase III)" |
 | 2026-08-03 | I-0 | I-0.5 commit batch | ✅ | `23851812` (27 files: F5 + GOLDEN-REFERENCE + assertions + doc); hook pre-commit verde |
 | 2026-08-03 | I-0 | I-0.6 push + CI | ⚠️ | F5 movido p/ **side branch `feat/f5-side-branch`** (decisão do usuário — plano era side branch até resolver mutation testing); PR #24 restaurado p/ `a77c12f7` (head pré-F5) via force-with-lease; todos os checks do PR #24 green exceto **Mutation Testing = timeout sistêmico (15min), pré-existente (run 30750366765) e documentado em `MUTATION-TESTING-PERF.md` (Estratégias A/B pendentes de decisão)**. Push de side branch não roda o job mutation (só PR/main/dev) |
-| 2026-08-03 | I-1 | F0-T6 (hub first) | ⏳ | — |
+| 2026-08-03 | I-1 | F0-T6 (hub first) | ✅ | `63c0f19a` — schedule-handler→`hub.computed.*`, N6 linkedTestKeys, pipelineCostResult SSOT; gate verde (tsc/vitest 539×7474/lint/depcruise/ts-prune); débito D-1/D-2 registrado (ver §Status I-1) |
 | 2026-08-03 | I-2 | F0-T7 (interactive) | ⏳ | — |
 | 2026-08-03 | I-3 | F0-T11 (duration) | ⏳ | — |
 | 2026-08-03 | I-4 | F0-T12 (totalIssues) | ⏳ | — |
