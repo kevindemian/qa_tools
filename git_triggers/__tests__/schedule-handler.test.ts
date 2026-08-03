@@ -200,16 +200,6 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
     generateImpactAlertHtml: vi.fn(() => '<section>impact</section>'),
 }));
 vi.mock('../../shared/quality/pipeline-cost.js', () => ({
-    calculatePipelineCost: vi.fn(() => ({
-        totalCost: 0.5,
-        avgCostPerRun: 0.25,
-        totalDurationSec: 120,
-        costPerMinute: 0.01,
-        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' as const }],
-        runCount: 2,
-        period: { from: '2026-01-01', to: '2026-01-02' },
-        timestamp: new Date().toISOString(),
-    })),
     generatePipelineCostHtml: vi.fn(() => '<section>pipelinecost</section>'),
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
@@ -284,9 +274,9 @@ import { createMockGitProvider } from '../../shared/test-utils/factories/index.j
 import { writeReport } from '../../shared/infra/temp-dir.js';
 import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
-import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
 import { runQualityGate } from '../../shared/quality/quality-gate.js';
 import { buildIncidentReport } from '../../shared/report/incident-report.js';
+import { aggregateDefectTrends } from '../../shared/data-hub/compute/defect-aggregation.js';
 import { DataHubImpl } from '../../shared/data-hub/hub.js';
 import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 import type { DataHub } from '../../shared/types/data-hub.js';
@@ -304,7 +294,6 @@ const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockWriteReport = vi.mocked(writeReport);
 const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
 const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
-const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
 
@@ -582,7 +571,7 @@ describe('Schedule Handler', () => {
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('warns when less than 2 runs and git fallback fails', async () => {
+        it('warns when less than 2 runs', async () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
@@ -649,6 +638,61 @@ describe('Schedule Handler', () => {
                         'proj1',
                         makeDataHubPersistenceMock(),
                     ).computed.releaseScore,
+                    // I-1 SSOT: the report consumes hub.computed, so the seed must
+                    // carry the same computed fields the hub would populate.
+                    defectAggregation: aggregateDefectTrends([]),
+                    traceabilityTree: {
+                        nodes: [
+                            { epic: 'EPIC-1', coverage: 100, requirement: 'R1', tests: ['t1'] },
+                            { epic: 'EPIC-2', coverage: 40, requirement: 'R2', tests: ['t2'] },
+                        ],
+                        totalEpics: 2,
+                        totalTests: 2,
+                        overallCoverage: 70,
+                        timestamp: new Date().toISOString(),
+                        awareness: { haveTest: 1, missingTest: 1 },
+                    },
+                    backlogHealth: {
+                        unassignedIssues: [],
+                        staleIssues: [],
+                        bugsWithoutTests: [],
+                        densityByEpic: [{ epic: 'EPIC-1', bugCount: 1, testCount: 2 }],
+                        score: 65,
+                        totalIssues: 0,
+                        noData: false,
+                        timestamp: new Date().toISOString(),
+                    },
+                    developerProfile: {
+                        authors: [{ author: 'dev1', defectCount: 1, flakyCount: 0 }],
+                        totalAuthors: 1,
+                        totalFailures: 1,
+                        topContributor: 'dev1',
+                        topFailureAuthor: 'dev1',
+                        timestamp: new Date().toISOString(),
+                    },
+                    aiComparison: {
+                        aiTotal: 0,
+                        aiPassRate: 0,
+                        aiFlakinessAvg: 0,
+                        aiAcceptanceRate: 0,
+                        manualTotal: 0,
+                        manualPassRate: 0,
+                        manualFlakinessAvg: 0,
+                        manualAcceptanceRate: 0,
+                        aiAdvantage: 'none',
+                        byVersion: [],
+                        timestamp: new Date().toISOString(),
+                    },
+                    pipelineCostResult: {
+                        totalCost: 0.5,
+                        avgCostPerRun: 0.25,
+                        totalDurationSec: 120,
+                        costPerMinute: 0.01,
+                        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' }],
+                        runCount: 2,
+                        period: { from: '2026-01-01', to: '2026-01-02' },
+                        timestamp: new Date().toISOString(),
+                    },
                 },
                 raw: {
                     failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
@@ -716,7 +760,6 @@ describe('Schedule Handler', () => {
                 expect.any(Array),
                 expect.anything(),
             );
-            expect(mockCalculatePipelineCost).toHaveBeenCalledWith(undefined, expect.anything());
             expect(mockRunQualityGate).toHaveBeenCalledWith(expect.objectContaining({ project: 'proj1' }));
             expect(mockBuildIncidentReport).toHaveBeenCalledWith(
                 expect.any(Number),

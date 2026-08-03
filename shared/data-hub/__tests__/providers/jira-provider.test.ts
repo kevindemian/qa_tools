@@ -101,6 +101,98 @@ describe('JiraDataProvider', () => {
         expect(result.jiraIssues).toHaveLength(0);
     });
 
+    it('enriches jiraIssues with linked test keys via linkedIssuesOf (N6)', async () => {
+        expect.hasAssertions();
+
+        vi.mocked(mockJira)
+            .searchJiraIssues.mockResolvedValueOnce({
+                issues: [
+                    {
+                        key: 'TEST-1',
+                        fields: {
+                            summary: 'Bug without epic link',
+                            status: { name: 'To Do' },
+                            issuetype: { name: 'Bug' },
+                            labels: [],
+                        },
+                    },
+                    {
+                        key: 'TEST-2',
+                        fields: {
+                            summary: 'Story without tests',
+                            status: { name: 'To Do' },
+                            issuetype: { name: 'Story' },
+                            labels: [],
+                        },
+                    },
+                ],
+                total: 2,
+            })
+            .mockResolvedValueOnce({
+                issues: [
+                    {
+                        key: 'TEST-3',
+                        fields: {
+                            issuetype: { name: 'Test' },
+                            issuelinks: [
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-3' },
+                                    outwardIssue: { key: 'TEST-1' },
+                                },
+                            ],
+                        },
+                    },
+                ],
+                total: 1,
+            });
+
+        const result = await provider.fetchRawData({ repo: 'TEST', count: 10 });
+
+        const issues = result.jiraIssues;
+        const bug = issues?.find((i) => i.key === 'TEST-1');
+        const story = issues?.find((i) => i.key === 'TEST-2');
+
+        expect(bug?.linkedTestKeys).toStrictEqual(['TEST-3']);
+        expect(bug?.linkedTestCount).toBe(1);
+        expect(story?.linkedTestKeys).toStrictEqual([]);
+        expect(story?.linkedTestCount).toBe(0);
+
+        expect(searchJiraIssuesMock).toHaveBeenCalledWith(
+            'issueType = Test AND issue in linkedIssuesOf("TEST-1","TEST-2")',
+            500,
+        );
+    });
+
+    it('handles linked-test fetch failure without breaking the issue mapping', async () => {
+        expect.hasAssertions();
+
+        vi.mocked(mockJira)
+            .searchJiraIssues.mockResolvedValueOnce({
+                issues: [
+                    {
+                        key: 'TEST-1',
+                        fields: {
+                            summary: 'Bug',
+                            status: { name: 'To Do' },
+                            issuetype: { name: 'Bug' },
+                            labels: [],
+                        },
+                    },
+                ],
+                total: 1,
+            })
+            .mockRejectedValueOnce(new Error('jira down'));
+
+        const result = await provider.fetchRawData({ repo: 'TEST', count: 10 });
+
+        const bug = result.jiraIssues?.[0];
+
+        expect(bug?.key).toBe('TEST-1');
+        expect(bug?.linkedTestKeys).toStrictEqual([]);
+        expect(bug?.linkedTestCount).toBe(0);
+    });
+
     it('returns empty runs and maps', async () => {
         expect.hasAssertions();
 

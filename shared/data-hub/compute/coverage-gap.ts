@@ -23,6 +23,8 @@ import { rootLogger } from '../../logger.js';
 
 /**
  * Convert RawJiraIssue[] to the format expected by buildCoverageItems.
+ * `issuelinks` é derivado de `linkedTestKeys` (enriquecido no provider) para que
+ * `extractLinkedTestKeys` (primitivo) produza o mesmo conjunto do live fetch.
  */
 function rawToJiraFormat(issues: RawJiraIssue[]): Array<{ key: string; fields: JiraIssueFields }> {
     return issues.map((issue) => {
@@ -32,7 +34,10 @@ function rawToJiraFormat(issues: RawJiraIssue[]): Array<{ key: string; fields: J
             issuetype: { name: issue.type },
             labels: issue.labels,
             fixVersions: issue.fixVersions.map((v) => ({ name: v })),
-            issuelinks: [],
+            issuelinks: (issue.linkedTestKeys ?? []).map((testKey) => ({
+                type: { name: 'Test' },
+                inwardIssue: { key: testKey },
+            })),
         };
         if (issue.priority) {
             fields.priority = { name: issue.priority };
@@ -41,21 +46,27 @@ function rawToJiraFormat(issues: RawJiraIssue[]): Array<{ key: string; fields: J
     });
 }
 
+/** Issue types analisados para cobertura — espelha o `baseJql` do live analyzeCoverageGaps. */
+const COVERAGE_ISSUE_TYPES = new Set(['story', 'task', 'bug', 'epic']);
+
 /**
  * Compute coverage gap analysis from Jira issues and test link data.
  *
  * @param issues - Array of RawJiraIssue from the hub
- * @param testLinkMap - Map of issue key → linked test keys (string arrays)
+ * @param testLinkMap - Optional Map of issue key → linked test keys (string arrays).
+ *                      When empty, the map is derived from `issues[].linkedTestKeys`
+ *                      (SSOT N6 — equivalent to the live analyzeCoverageGaps fetch).
  * @param options - Optional configuration (minCoveragePct override)
  * @returns CoverageGapResult with items, totals, epic rollup, gate config, and hierarchy
  */
 export function computeCoverageGap(
     issues: RawJiraIssue[],
-    testLinkMap: Map<string, string[]>,
+    testLinkMap: Map<string, string[]> = new Map(),
     options?: { minCoveragePct?: number },
 ): CoverageGapResult {
     try {
-        const jiraIssues = rawToJiraFormat(issues);
+        const eligible = issues.filter((issue) => COVERAGE_ISSUE_TYPES.has(String(issue.type).toLowerCase()));
+        const jiraIssues = rawToJiraFormat(eligible);
         const epicsMap = loadEpicSummaries(jiraIssues);
         const items = buildCoverageItems(jiraIssues, testLinkMap, epicsMap);
         const totals = calculateTotals(items);

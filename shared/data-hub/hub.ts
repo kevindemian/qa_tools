@@ -92,7 +92,11 @@ import {
     computeCoverageGap,
     computeSuiteBreakdown,
     computeFailureClassifications,
+    computePipelineCostResult,
 } from './compute/index.js';
+import { mapJiraIssuesToBacklogHealth, analyzeBacklogHealth } from '../report/backlog-health.js';
+import { buildDeveloperProfile } from '../quality/developer-profile.js';
+import { compareAiVsManual } from '../report/ai-comparison.js';
 
 /** Options for creating a DataHub. */
 export interface DataHubOptions {
@@ -906,12 +910,18 @@ export class DataHubImpl implements DataHub {
         } as ComputedMetrics);
         // ─── Coverage gap computation ──────────────────────────────────────
         const coverageGap =
-            raw.jiraIssues != null && raw.jiraIssues.length > 0
-                ? computeCoverageGap(raw.jiraIssues, new Map<string, string[]>())
-                : undefined;
+            raw.jiraIssues != null && raw.jiraIssues.length > 0 ? computeCoverageGap(raw.jiraIssues) : undefined;
         // ─── Suite breakdown and failure classifications ──────────────────
         const suiteBreakdown = metricsRuns.length > 0 ? computeSuiteBreakdown(metricsRuns) : [];
         const failureClassifications = metricsRuns.length > 0 ? computeFailureClassifications(metricsRuns) : {};
+        // ─── N6 / I-1 — hub-first SSOT (hub computa, renderers nunca) ─────
+        const backlogHealth = analyzeBacklogHealth(mapJiraIssuesToBacklogHealth(raw.jiraIssues ?? []));
+        const developerProfile = buildDeveloperProfile(raw.failureClassifications ?? []);
+        // raw.aiRecords é AiGenerationRecord[] — não carrega os campos de
+        // AiComparisonRecord (accepted/passed/duration/flakiness). No-data explícito
+        // (Rule 25): nunca fabricar comparação; equivale ao compareAiVsManual([]).
+        const aiComparison = compareAiVsManual(null);
+        const pipelineCostResult = computePipelineCostResult(raw.runs, perRunCosts, options.costPerMinute);
 
         return {
             passRate,
@@ -955,6 +965,10 @@ export class DataHubImpl implements DataHub {
             suiteBreakdown,
             failureClassifications,
             dataAvailability,
+            backlogHealth,
+            developerProfile,
+            aiComparison,
+            pipelineCostResult,
         };
     }
 

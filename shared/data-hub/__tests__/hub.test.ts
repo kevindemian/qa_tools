@@ -283,6 +283,165 @@ describe('DataHubImpl', () => {
             expect(dim?.noData).toBeTruthy();
         }
     });
+
+    it('computes backlogHealth with explicit no-data when there are no jira issues (Rule 25)', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        const bh = hub.computed.backlogHealth;
+
+        expect(bh).toBeDefined();
+        expect(bh?.noData).toBeTruthy();
+        expect(bh?.totalIssues).toBe(0);
+        expect(bh?.score).toBe(0);
+    });
+
+    it('computes backlogHealth from raw.jiraIssues (unassigned bugs, bugs without tests)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeEmptyRawData(),
+            jiraIssues: [
+                {
+                    key: 'PROJ-1',
+                    summary: 'Bug sem assignee',
+                    status: 'To Do',
+                    type: 'Bug',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    key: 'PROJ-2',
+                    summary: 'Bug coberto por teste',
+                    status: 'To Do',
+                    type: 'Bug',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                    linkedTestKeys: ['TEST-1'],
+                    linkedTestCount: 1,
+                },
+            ],
+        };
+        const provider = makeProvider(raw);
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const bh = hub.computed.backlogHealth;
+
+        expect(bh?.noData).toBeFalsy();
+        expect(bh?.totalIssues).toBe(2);
+        expect(bh?.unassignedIssues.map((i) => i.key)).toStrictEqual(['PROJ-1', 'PROJ-2']);
+        expect(bh?.bugsWithoutTests.map((i) => i.key)).toStrictEqual(['PROJ-1']);
+        expect(bh?.densityByEpic[0]?.testCount).toBe(1);
+    });
+
+    it('computes developerProfile from failureClassifications and empty result on no data', () => {
+        expect.hasAssertions();
+
+        const empty = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(empty.computed.developerProfile?.totalFailures).toBe(0);
+        expect(empty.computed.developerProfile?.authors).toStrictEqual([]);
+
+        const classifications: FailureClassification[] = [
+            { timestamp: '2026-01-01T00:00:00Z', testTitle: 't1', category: 'FLAKY', project: 'main' },
+            { timestamp: '2026-01-01T00:00:00Z', testTitle: 't1', category: 'FLAKY', project: 'main' },
+        ];
+        const store = makeMetricsStore({ failureClassifications: classifications });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo', createMockPersistence());
+
+        expect(hub.raw.failureClassifications).toHaveLength(2);
+        expect(hub.computed.developerProfile?.totalFailures).toBe(2);
+        expect(hub.computed.developerProfile?.authors[0]?.author).toBe('Unknown');
+    });
+
+    it('computes aiComparison as explicit no-data (raw não carrega AiComparisonRecord)', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        const cmp = hub.computed.aiComparison;
+
+        expect(cmp).toBeDefined();
+        expect(cmp?.aiTotal).toBe(0);
+        expect(cmp?.manualTotal).toBe(0);
+        expect(cmp?.aiAdvantage).toBe('none');
+        expect(cmp?.byVersion).toStrictEqual([]);
+    });
+
+    it('computes pipelineCostResult from runs and perRunCosts (SSOT projection)', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, conclusion: 'success' }), makeRun({ id: 2, conclusion: 'failure' })];
+        const provider = makeProvider(makeRawDataWithRuns(runs));
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const pcr = hub.computed.pipelineCostResult;
+
+        expect(pcr).toBeDefined();
+        expect(pcr?.runCount).toBe(2);
+        expect(pcr?.totalDurationSec).toBeGreaterThan(0);
+        expect(pcr?.costByRun.some((e) => e.status === 'passed')).toBeTruthy();
+        expect(pcr?.costByRun.some((e) => e.status === 'failed')).toBeTruthy();
+    });
+
+    it('computes coverageGap equivalent from raw.jiraIssues linkedTestKeys (N6)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeEmptyRawData(),
+            jiraIssues: [
+                {
+                    key: 'PROJ-1',
+                    summary: 'Story com teste',
+                    status: 'Done',
+                    type: 'Story',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                    linkedTestKeys: ['TEST-1'],
+                },
+                {
+                    key: 'PROJ-2',
+                    summary: 'Story sem teste',
+                    status: 'To Do',
+                    type: 'Story',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        };
+        const provider = makeProvider(raw);
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const cg = hub.computed.coverageGap;
+
+        expect(cg).toBeDefined();
+        expect(cg?.totals.totalIssues).toBe(2);
+        expect(cg?.totals.covered).toBe(1);
+        expect(cg?.totals.gap).toBe(1);
+        expect(cg?.items[0]?.hasTest).toBeTruthy();
+        expect(cg?.items[1]?.hasTest).toBeFalsy();
+    });
+
+    it('keeps coverageGap undefined when there are no jira issues', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.coverageGap).toBeUndefined();
+    });
 });
 
 describe('DataHubImpl — mergeIncremental (Gap 4)', () => {

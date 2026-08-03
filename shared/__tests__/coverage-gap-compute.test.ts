@@ -108,6 +108,50 @@ describe('ComputeCoverageGap', () => {
         });
     });
 
+    describe('Test links from raw (N6 SSOT)', () => {
+        it('marks issue as covered when linkedTestKeys is present on the raw issue (no external map)', () => {
+            const issues = [makeIssue({ key: 'PROJ-1', linkedTestKeys: ['TEST-1', 'TEST-2'] })];
+            const result = computeCoverageGap(issues);
+
+            expect(result.items[0]?.hasTest).toBeTruthy();
+            expect(result.items[0]?.linkedTestKeys).toStrictEqual(['TEST-1', 'TEST-2']);
+            expect(result.totals.covered).toBe(1);
+            expect(result.totals.gap).toBe(0);
+        });
+
+        it('merges linkedTestKeys from raw with an externally supplied map', () => {
+            const issues = [makeIssue({ key: 'PROJ-1', linkedTestKeys: ['TEST-1'] })];
+            const testLinkMap = new Map([['PROJ-1', ['TEST-9']]]);
+            const result = computeCoverageGap(issues, testLinkMap);
+
+            expect(result.items[0]?.linkedTestKeys).toStrictEqual(['TEST-1', 'TEST-9']);
+        });
+
+        it('filters out non-coverage issue types (mirrors live issuetype in (Story, Task, Bug, Epic))', () => {
+            const issues = [
+                makeIssue({ key: 'PROJ-1', type: 'Story', linkedTestKeys: ['TEST-1'] }),
+                makeIssue({ key: 'PROJ-2', type: 'Subtask' }),
+                makeIssue({ key: 'PROJ-3', type: 'Test' }),
+            ];
+            const result = computeCoverageGap(issues);
+
+            expect(result.totals.totalIssues).toBe(1);
+            expect(result.items[0]?.issueKey).toBe('PROJ-1');
+            expect(result.items[0]?.hasTest).toBeTruthy();
+        });
+
+        it('keeps linkedTestCount consistent with linkedTestKeys via rawToJiraFormat', () => {
+            const issues = [
+                makeIssue({ key: 'PROJ-1', linkedTestKeys: ['TEST-1'], type: 'Bug' }),
+                makeIssue({ key: 'PROJ-2' }),
+            ];
+            const result = computeCoverageGap(issues);
+
+            expect(result.totals.totalIssues).toBe(2);
+            expect(result.totals.covered).toBe(1);
+        });
+    });
+
     describe('Epic rollup', () => {
         it('groups issues by epic', () => {
             const issues = [makeIssue({ key: 'PROJ-1' }), makeIssue({ key: 'PROJ-2' })];

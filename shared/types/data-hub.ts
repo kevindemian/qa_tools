@@ -164,6 +164,8 @@ export interface RawJiraIssue {
     resolutionDate?: string | undefined;
     /** Number of linked test executions — enriched from Xray/Jira linkage. */
     linkedTestCount?: number | undefined;
+    /** Chaves de issues do tipo Test vinculados a este issue — enriquecido no provider via `linkedIssuesOf` (SSOT coverage-gap, N6). */
+    linkedTestKeys?: string[] | undefined;
 }
 
 /** A single Xray Cloud test run (within a test execution). */
@@ -714,6 +716,26 @@ export interface TraceabilityAwareness {
     minConfidence: number | null;
 }
 
+/** Per-run pipeline cost entry (projection over PerRunCost + run status). */
+export interface PipelineCostEntry {
+    timestamp: string;
+    durationSec: number;
+    cost: number;
+    status: string;
+}
+
+/** Pipeline cost analytics result (SSOT — computed by DataHub, rendered by renderers). */
+export interface PipelineCostResult {
+    totalCost: number;
+    avgCostPerRun: number;
+    totalDurationSec: number;
+    costPerMinute: number;
+    costByRun: PipelineCostEntry[];
+    runCount: number;
+    period: { from: string; to: string };
+    timestamp: string;
+}
+
 export interface ComputedMetrics {
     passRate: number;
     avgDuration: number;
@@ -785,6 +807,14 @@ export interface ComputedMetrics {
     // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────
     /** Coverage gap analysis result. */
     coverageGap?: import('./coverage.js').CoverageGapResult | undefined;
+    /** Backlog health: stale, unassigned, bugs without tests (SSOT — N6 hub-first). */
+    backlogHealth?: import('../report/backlog-health.js').BacklogHealthResult | undefined;
+    /** Developer profile from failure classifications (SSOT — N6 hub-first). */
+    developerProfile?: import('../quality/developer-profile.js').DeveloperProfileResult | undefined;
+    /** AI vs manual test comparison from aiRecords (SSOT — N6 hub-first). */
+    aiComparison?: import('../report/ai-comparison.js').AiComparisonResult | undefined;
+    /** Pipeline cost analytics result — SSOT projection over perRunCosts (I-1). */
+    pipelineCostResult?: PipelineCostResult | undefined;
     /** Suite-level aggregation: passed/failed/skipped/duration per suite. */
     suiteBreakdown?: SuiteBreakdown[] | undefined;
     /** Failure classification per test title (e.g., 'ASSERTION', 'TIMEOUT'). */

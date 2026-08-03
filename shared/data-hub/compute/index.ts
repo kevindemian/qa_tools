@@ -16,7 +16,7 @@ export { computeGrade } from './scoring.js';
 export type { Grade, ScoreResult } from './scoring.js';
 export { calcReleaseScore, makeDimensionScore } from './release-score.js';
 export { calcQuarantineStatus } from './quarantine-status.js';
-export { calcPipelineCost } from './pipeline-cost.js';
+export { calcPipelineCost, computePipelineCostResult } from './pipeline-cost.js';
 export { calcExecutionRate } from './execution-rate.js';
 export { calcFlakyPercentage } from './flaky-percentage.js';
 export { calcPerRunCosts } from './per-run-costs.js';
