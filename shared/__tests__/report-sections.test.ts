@@ -10,6 +10,7 @@ import { nonNull } from '../test-utils.js';
 import type { FlatTest } from '../result_parser.js';
 import type { TestRunTab, ReportOptions, ReportStats } from '../report/report-types.js';
 import type { SuiteBreakdown, ComputedMetrics } from '../types/data-hub.js';
+import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
 import {
     buildTabs,
     buildTabContents,
@@ -18,6 +19,7 @@ import {
     buildSummaryCards,
     buildLlmSection,
     buildQualityGate,
+    buildQualityGateSection,
     buildFilterBar,
     buildFailedSummary,
     buildReleaseSection,
@@ -285,6 +287,61 @@ describe('BuildQualityGate', () => {
         expect(html).toContain('0.0%');
     });
 });
+
+describe('BuildQualityGateSection', () => {
+    const gate = (
+        overall: QualityGateStatus = 'pass',
+        checks: QualityGateResult['checks'] = [],
+    ): QualityGateResult => ({
+        overall,
+        checks,
+        score: 85,
+    });
+
+    it('renders a structured section without a raw <pre> block', () => {
+        const html = buildQualityGateSection(gate());
+
+        expect(html).toContain('data-section="quality-gate"');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).not.toContain('<pre>');
+        expect(html).toContain('Score: 85/100');
+    });
+
+    it('reflects the overall status as a fail badge', () => {
+        const html = buildQualityGateSection(gate('fail'));
+
+        expect(html).toContain('data-variant="fail"');
+        expect(html).toContain('fail');
+    });
+
+    it('renders every check with score, threshold and escaped details', () => {
+        const html = buildQualityGateSection(
+            gate('pass', [
+                { name: 'pass-rate', status: 'pass', score: 92, threshold: 90, details: 'Pass rate: 92%' },
+                { name: 'caution <x>', status: 'fail', score: 40, threshold: 90, details: '<script>alert(1)</script>' },
+            ]),
+        );
+
+        expect(html).toContain(dataStatus('pass'));
+        expect(html).toContain(dataStatus('fail'));
+        expect(html).toContain('pass-rate');
+        expect(html).toContain('92/90');
+        expect(html).toContain('&lt;script&gt;');
+        expect(html).not.toContain('<script>');
+        expect(html).toContain('&lt;x&gt;');
+    });
+
+    it('surfaces a non-finite score as N/A — never a silent 0 (Rule 25)', () => {
+        const html = buildQualityGateSection({ overall: 'pass', checks: [], score: Number.NaN });
+
+        expect(html).toContain('Score: N/A/100');
+        expect(html).not.toContain('Score: 0');
+    });
+});
+
+function dataStatus(status: QualityGateStatus): string {
+    return `data-status="${status}"`;
+}
 
 describe('BuildFilterBar', () => {
     it('returns filter bar HTML', () => {

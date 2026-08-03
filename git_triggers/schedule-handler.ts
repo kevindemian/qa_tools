@@ -23,7 +23,8 @@ import { buildIncidentReport, generateIncidentReportHtml } from '../shared/repor
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
 import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
-import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
+import { runQualityGate } from '../shared/quality/quality-gate.js';
+import { buildQualityGateSection } from '../shared/report/report-sections.js';
 
 import { writeReport } from '../shared/infra/temp-dir.js';
 import {
@@ -217,11 +218,7 @@ export function generateWeeklyQualityReport(): void {
             dataHub: qgDataHub,
         });
         const timestamp = new Date().toISOString();
-        sections.push(
-            '<div data-section="quality-gate"><h2>Quality Gate</h2><pre>' +
-                formatQualityGateText(qualityGate) +
-                '</pre></div>',
-        );
+        sections.push('<h2>Quality Gate</h2>' + buildQualityGateSection(qualityGate));
         sections.push(
             '<div data-section="cross-squad-benchmark"><h2>Cross-Squad Benchmark</h2>' +
                 generateBenchmarkHtml(benchmark) +

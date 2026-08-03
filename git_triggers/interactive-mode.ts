@@ -94,9 +94,10 @@ import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
 import { calculateRequirementScores } from '../shared/quality/requirement-score.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
-import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
+import { runQualityGate } from '../shared/quality/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
+import { buildQualityGateSection } from '../shared/report/report-sections.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { handlePrReportReconfig } from './pr-report-setup-handler.js';
@@ -560,9 +561,7 @@ async function _dashboardQualityGate(): Promise<void> {
     const html = `<html><body>
 <h1>Quality Gate</h1>
 <div data-part="timestamp" data-dashboard="quality-gate">${timestamp.slice(0, 10)}</div>
-<div data-section="quality-gate">
-<pre>${formatQualityGateText(qualityGate)}</pre>
-</div>
+${buildQualityGateSection(qualityGate)}
 </body></html>`;
     await _generateAndOpenDashboard(html, 'quality-gate', 'Quality Gate');
 }

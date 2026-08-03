@@ -32,7 +32,6 @@ Ao iniciar, um menu lista seus projetos (ver
 | b      | Executar batch                           |
 | c      | Comparar execuções (HTML)                |
 | d      | Dashboards individuais (submenu)         |
-| e      | Git Metrics Adapter (doc)                |
 | g      | Bug Report Interativo                    |
 | i      | AI PR Description                        |
 | p      | Pipeline health (HTML)                   |
@@ -593,19 +592,6 @@ Alterna a criação automática de bugs Jira para novas falhas. O estado dura ap
 Para persistir entre sessões: `QA_AUTO_BUG=true` no `.env`.
 
 **Arquivo:** `git_triggers/interactive-mode.ts`
-
----
-
-## 21. Git Metrics Adapter (Opção `e`)
-
-Exibe informações sobre o adaptador que gera métricas sintéticas a partir do histórico Git quando não há pipelines (menos de 2 execuções).
-
-| Função                                | O que gera                         |
-| ------------------------------------- | ---------------------------------- |
-| `generateGitMetricsRuns()`            | Execuções simuladas do git history |
-| `generateGitFailureClassifications()` | Classificação de falhas simuladas  |
-
-**Arquivo:** `shared/git-metrics-adapter.ts`
 
 ---
 

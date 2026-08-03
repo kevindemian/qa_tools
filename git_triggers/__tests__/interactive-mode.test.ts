@@ -286,7 +286,6 @@ vi.mock('../../shared/quality/requirement-score.js', () => ({
 }));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
-    formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));

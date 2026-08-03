@@ -404,7 +404,7 @@ npx madge --circular shared/
 
 ---
 
-#### I-2 — FASE F0-T7 (interactive-mode, hub first) — **EM EXECUÇÃO (D1 + D2 + D3 + §6 trio + I-2.2, TUDO NA ORIGEM, ZERO ADIAMENTO)**
+#### I-2 — FASE F0-T7 (interactive-mode, hub first) — **✅ CONCLUÍDA (2026-08-03, commits `02b2c652` + I-2.3 gate)**
 
 **Decisões de escopo aprovadas (superioridade técnica + segurança; tempo/esforço NÃO contam):**
 - **Hub é por-projeto** (verificado: `createDataHub(provider, repo)` ci-data.ts:58; `session-state.ts:49-68` busca `getOrFetchDataHub(activeManager, activeProject)`; `global-hub.ts` guarda projeto ativo) → `hub.computed.*` é SSOT sem mistura de projetos.
@@ -583,7 +583,7 @@ npx madge --circular shared/
 | 2026-08-03 | I-0 | I-0.5 commit batch | ✅ | `23851812` (27 files: F5 + GOLDEN-REFERENCE + assertions + doc); hook pre-commit verde |
 | 2026-08-03 | I-0 | I-0.6 push + CI | ⚠️ | F5 movido p/ **side branch `feat/f5-side-branch`** (decisão do usuário — plano era side branch até resolver mutation testing); PR #24 restaurado p/ `a77c12f7` (head pré-F5) via force-with-lease; todos os checks do PR #24 green exceto **Mutation Testing = timeout sistêmico (15min), pré-existente (run 30750366765) e documentado em `MUTATION-TESTING-PERF.md` (Estratégias A/B pendentes de decisão)**. Push de side branch não roda o job mutation (só PR/main/dev) |
 | 2026-08-03 | I-1 | F0-T6 (hub first) | ✅ | `63c0f19a` — schedule-handler→`hub.computed.*`, N6 linkedTestKeys, pipelineCostResult SSOT; gate verde (tsc/vitest 539×7474/lint/depcruise/ts-prune); débito D-1/D-2 registrado (ver §Status I-1) |
-| 2026-08-03 | I-2 | F0-T7 (interactive) | ⏳ | — |
+| 2026-08-03 | I-2 | F0-T7 (interactive) | ✅ | `02b2c652` + `(I-2.3)` — interactive/schedule 100% `hub.computed.*`; D1/D2/D3/§6 trio na origem; D2-delete adapter; I-2.3 gate: `buildQualityGateSection(QualityGateResult)` em `report-sections.ts` (HTML estruturado, sem `<pre>`) nos 2 dashboards; `formatQualityGateText` mantido (tests próprios); mocks mortos removidos; docs stale (TECHDOC/03-git-triggers) corrigidos. Gate verde (tsc/vitest/lint) |
 | 2026-08-03 | I-3 | F0-T11 (duration) | ⏳ | — |
 | 2026-08-03 | I-4 | F0-T12 (totalIssues) | ⏳ | — |
 | 2026-08-03 | I-5 | F2 (EmptyState) | ⏳ | — |

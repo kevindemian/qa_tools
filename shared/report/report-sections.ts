@@ -14,6 +14,7 @@ import type { FlatTest } from '../result_parser.js';
 import type { HealthScoreResult, HealthScoreProvenance } from '../types.js';
 import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
+import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
 import { buildTestTable } from './report-table.js';
 import { MetricCard, MetricGrid, Card, Badge } from '../primitives/index.js';
 import { FilterBar, SearchInput, Button } from '../primitives/index.js';
@@ -192,6 +193,64 @@ export function buildQualityGate(passRate: number, threshold: number): string {
         children: `<div class="label qg-fail">${icon('x-circle', 16)} Quality Gate Failed</div>
 <p class="qg-fail">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
     });
+}
+
+const QG_STATUS_VARIANT: Record<QualityGateStatus, 'pass' | 'fail' | 'info'> = {
+    pass: 'pass',
+    fail: 'fail',
+    unknown: 'info',
+};
+
+function qualityGateIcon(status: QualityGateStatus): string {
+    if (status === 'pass') return icon('check-circle', 14);
+    if (status === 'unknown') return icon('help-circle', 14);
+    return icon('x-circle', 14);
+}
+
+/**
+ * Structured HTML section for a `QualityGateResult` (single source of truth).
+ * Replaces the raw `<pre>`/`formatQualityGateText` blocks previously rendered in
+ * the interactive and schedule dashboards (B13) — no free-text `<pre>` output.
+ * All user-derived strings are HTML-escaped; non-finite scores surface as `N/A`
+ * (explicit, never a silent `0`) per Rule 24/25.
+ */
+export function buildQualityGateSection(result: QualityGateResult): string {
+    const score = Number.isFinite(result.score) ? String(result.score) : 'N/A';
+    const checks = result.checks
+        .map((c) => {
+            const cScore = Number.isFinite(c.score) ? String(c.score) : 'N/A';
+            const cThreshold = Number.isFinite(c.threshold) ? String(c.threshold) : 'N/A';
+            return (
+                '<li data-part="quality-gate-check" data-status="' +
+                c.status +
+                '">' +
+                qualityGateIcon(c.status) +
+                ' <strong>' +
+                escapeHtml(c.name) +
+                '</strong> <span data-part="quality-gate-score">' +
+                cScore +
+                '/' +
+                cThreshold +
+                '</span> <span data-part="quality-gate-details">' +
+                escapeHtml(c.details) +
+                '</span></li>'
+            );
+        })
+        .join('');
+    return (
+        '<div data-section="quality-gate" data-component="quality-gate" role="region" aria-label="Quality Gate">' +
+        '<div data-part="quality-gate-overall">' +
+        Badge({
+            variant: QG_STATUS_VARIANT[result.overall],
+            children: qualityGateIcon(result.overall) + ' ' + result.overall,
+        }) +
+        ' <span data-part="quality-gate-total-score">Score: ' +
+        score +
+        '/100</span></div>' +
+        '<ul data-part="quality-gate-checks" role="list">' +
+        checks +
+        '</ul></div>'
+    );
 }
 
 export function buildFilterBar(): string {

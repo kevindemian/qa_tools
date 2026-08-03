@@ -208,7 +208,6 @@ vi.mock('../../shared/quality/requirement-score.js', () => ({
 }));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
-    formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn((name: string, content: string) => {

@@ -945,7 +945,6 @@ import { globSync } from 'glob'; // file globbing
 | `data-hub/compute/`            | Pure metric functions (30+)                             | `calcPassRate()`, `calcFlakyRate()`, `scorePassRate()`, etc.                       |
 | `data-hub/persistence.ts`       | Metrics persistence (SSOT — replaces legacy `metrics.ts`) | `loadMetrics()`, `saveMetrics()` (delegated by `DataHub`)                     |
 | `test-impact.ts`                | Three-tier test impact analysis                        | `analyzeTestImpact()`, `generateTestSelectionJson()`                              |
-| `git-metrics-adapter.ts`        | Git history → MetricsRun[] adapter                     | `generateGitMetricsRuns()`, `generateGitFailureClassifications()`                 |
 | `coverage-verifier.ts`          | Coverage recalculation (Layer 3)                       | `recalculateCoverage()`                                                           |
 | `coverage-gap.ts`               | Coverage gap analysis                                  | `analyzeCoverageGaps()`                                                           |
 | `generate-coverage-gap-html.ts` | Coverage gap HTML report generation                    | `generateCoverageGapHtml()`                                                       |
