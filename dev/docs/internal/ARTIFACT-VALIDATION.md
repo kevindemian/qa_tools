@@ -400,22 +400,38 @@ npx madge --circular shared/
 
 **Status: ✅ CONCLUÍDO (2026-08-03, commit `63c0f19a`).** Gate completo verde: tsc ✅ · lint ✅ · vitest 539 files / 7474 tests ✅ · unused-exports ✅ · depcruise ✅. `rg` acceptance = **0** em `schedule-handler.ts`. Testes RED→GREEN: `hub.test.ts` (backlogHealth/developerProfile/aiComparison/pipelineCostResult/coverageGap N6), `jira-provider.test.ts` (enriquecimento `linkedIssuesOf` batch 50), `coverage-gap-compute.test.ts` (N6 SSOT), `schedule-handler.test.ts` (seed computed). No-data explícito (Rule 25): `aiComparison = compareAiVsManual(null)` — `raw.aiRecords` não carrega campos `AiComparisonRecord`; zero masking.
 
-**DÉBITO — pagável APÓS a conclusão deste documento (`ARTIFACT-VALIDATION.md`):**
-- **D-1** = tarefa **I-2** abaixo (interactive-mode → `hub.computed.*`; remover recomputação local + git fallback `_loadProjectRunsHelper`; guards invariantes nos renderers strict). Pré-requisito de D-2. Custo estimado ~3.5–4.5h.
-- **D-2** = dedup §6: consolidar `aggregateDefectTrends` NA ORIGEM em `shared/data-hub/compute/defect-aggregation.ts`; `quality/defect-trend.ts` vira barrel de renderer; mover `sanitizeTrendResult` para o renderer (Rule 5/24); re-apontar 4 importadores de tipo (`artifact-validation-harness.ts:49`, `defect-trend.test.ts`, `defect-trend-html.property.test.ts`, `defect-trend.integration.test.ts`, `artifact-content-validation.test.ts`) e `quality-check.ts:408` → compute; unificar semântica de datas inválidas (`'Unknown'` → descarte). Custo estimado ~2.5–3.5h.
-- Ordem obrigatória: **D-1 → D-2** (D-2 só é trivial porque D-1 elimina o último consumidor runtime de `aggregateDefectTrends` em quality).
+**DÉBITOS D-1/D-2 — ABSORVIDOS NA EXECUÇÃO DE I-2 (sem adiamento; decisão explícita do usuário).** Nenhum débito remanescente desta fase: D-1 (I-2), D-2 (dedup §6 `aggregateDefectTrends`) e o trio §6 recém-descoberto (seasonality/regression/optimization) são executados juntos nesta fase, na origem.
 
 ---
 
-#### I-2 — FASE F0-T7 (interactive-mode, hub first) — **DÉBITO D-1 (pagável após conclusão deste doc; ver I-1 §Status)**
+#### I-2 — FASE F0-T7 (interactive-mode, hub first) — **EM EXECUÇÃO (D1 + D2 + D3 + §6 trio + I-2.2, TUDO NA ORIGEM, ZERO ADIAMENTO)**
 
-**Tarefa executável:**
-- `I-2.1` Migrar `git_triggers/interactive-mode.ts:386-551` (28 refs) para `computed.*` (SSOT); remover recomputação local.
-- `I-2.2` Quality-gate `<pre>${formatQualityGateText(qualityGate)}</pre>` (`:570`) -> primitives/`buildQualityGate` (forma final em I-6/F3-T3 + I-8/F6 `buildHtmlPage`).
+**Decisões de escopo aprovadas (superioridade técnica + segurança; tempo/esforço NÃO contam):**
+- **Hub é por-projeto** (verificado: `createDataHub(provider, repo)` ci-data.ts:58; `session-state.ts:49-68` busca `getOrFetchDataHub(activeManager, activeProject)`; `global-hub.ts` guarda projeto ativo) → `hub.computed.*` é SSOT sem mistura de projetos.
+- **D1 (completo):** migrar interactive-mode TODOS os dashboards para `hub.computed.*` (`defectAggregation`, `traceabilityTree`, `seasonalityAggregation`, `regressionDetection`, `optimizationActions`, `backlogHealth`, `developerProfile`, `aiComparison`, `pipelineCostResult`, `coverageGap`); completar SSOT no schedule-handler. Composição (não-recomputação) mantida: cross-squad benchmark (multi-projeto), requirement-score, `buildIncidentReport`/`analyzePipelineImpact` (inputs `hub.computed.*`).
+- **D-2 dedup §6 `aggregateDefectTrends`:** consolidar NA ORIGEM em `compute/defect-aggregation.ts`; `quality/defect-trend.ts` vira barrel renderer; `sanitizeTrendResult` → renderer (Rule 5/24); re-apontar importadores (`quality-check.ts:408`, testes) para compute; **unificar semântica de datas inválidas = agrupar sob 'Unknown'** (Rule 25, sem perda silenciosa — NÃO descarte).
+- **§6 trio recém-descoberto (seasonality/regression/optimization):** DUAS implementações divergentes (quality vs compute) confirmadas (ver §evidência abaixo). Consolidar NA ORIGEM, corrigindo o compute: (a) regression adota estatística "média/desvio sobre a história excluindo a atual" (quality é a correta, ISO 3534-2; compute inclui a atual no datapoint que testa — incorreto); (b) seasonality/defect agrupam datas inválidas sob 'Unknown'; (c) optimization mantém ms→s (corrige **bug de unidade ATIVO**: `result_parser.ts:57` = ms, quality consumia como s → output incorreto no relatório semanal + dashboard atual). Enriquecer 3 tipos canônicos com `timestamp` (contrato, autorizado).
+- **D2-delete:** DELETAR `shared/ci/git-metrics-adapter.ts` + 3 testes + mocks em `schedule-handler`/`batch-mode`/`integration-handlers`/`interactive-mode`.test + menu/help "Git Metrics Adapter". Fallback git é mecanismo proibido (AGENTS §3; Rule 25 masking).
+- **D3-gap:** `analyzeCoverageGaps` live → `hub.computed.coverageGap ?? null` nos fluxos git_triggers (interactive incident/impact/coverage-gap + schedule incident/impact). `buildIncidentReport(coverageGap?)`/`analyzePipelineImpact(_coverageGap?)` já aceitam undefined. **Manter** `analyzeCoverageGaps` (jira_management `case21/case27` rodam sem hub).
+- **I-2.3:** quality-gate `<pre>${formatQualityGateText(qualityGate)}</pre>` (interactive:570 + schedule:244) → primitiva `buildQualityGateSection(result: QualityGateResult)` em `report-sections.ts` (single source, §7 equivalente; absorve I-6.3/B13).
 
-**Acceptance:** `rg -n "formatQualityGateText|<pre>" git_triggers/interactive-mode.ts` -> 0 no gate; recomputação local eliminada; suíte + contrato equivalentes (§10).
+**Evidências verificadas (§10):**
+- Tipos canônicos em `shared/types/data-hub-extensions.ts` sem `timestamp`: `SeasonalityAggregationResult:67`, `RegressionDetectionResult:91`, `OptimizationResult:114`. `DefectAggregationResult:59` = `DefectTrendResult` + `totalRecords` (superset, já compatível — I-1 verde).
+- Renderers que importam tipos quality (únicos): `defect-seasonality-renderer.ts:16`, `silent-regression-renderer.ts:24` (usa `timestamp`), `suite-optimization-renderer.ts:21` → re-pontear p/ extensões.
+- Divergência §6: seasonality (compute descarta data inválida `:151-158` vs quality agrupa 'Unknown'); regression (compute inclui a atual na estatística `regression-detection.ts:43-49` vs quality exclui `silent-regression.ts:80-87`); optimization (compute ms→s `optimization-actions.ts:54` vs quality consumia ms como s `suite-optimization.ts:68-78`).
+- Consumidores quality fns a re-pontear: `interactive-mode.ts`, `schedule-handler.ts`, `scripts/quality-check.ts:408`, testes `defect-trend/defect-seasonality/silent-regression/suite-optimization(.property/.integration)`.
 
-**Auditoria:** commit + gate; revisar impacto em `batch-mode.ts:242,366`.
+**Tarefa executável (Phases P1–P9):**
+- P1 tipos (`+timestamp`) · P2 compute correto (semântica unificada) · P3 renderers re-ponteados + `sanitizeTrendResult` · P4 barrels só-renderer + re-pointers · P5 D1 interactive completo + guards invariantes nos 4 renderers strict · P6 D3-gap · P7 delete adapter · P8 primitiva gate · P9 testes + gates.
+
+**Acceptance (rg = 0 por toda a árvore de execução):**
+- `generateGitMetricsRuns|getLastGitLogError|generateGitFailureClassifications` → 0.
+- `aggregateDefectTrends|aggregateDefectSeasonality|detectSilentRegression|analyzeSuiteOptimization` fora de `compute/` → 0.
+- Renderers importam tipos de `data-hub-extensions` (zero imports de tipos quality).
+- `formatQualityGateText|<pre>` em interactive/schedule → 0.
+- Recomputação local eliminada; suíte 100% + gate completo antes de commit; contrato/equivalência preservados (§10).
+
+**Auditoria:** commit + gate completo; remover mocks obsoletos (git-metrics) de 4 suítes; regenerar harness se shape mudar; zero masking.
 
 ---
 

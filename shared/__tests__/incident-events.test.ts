@@ -76,6 +76,7 @@ describe('ComputeIncidentEvents', () => {
                     ],
                     totalTests: 100,
                     threshold: 2,
+                    timestamp: '2026-07-25T10:00:00Z',
                 },
             }),
         );

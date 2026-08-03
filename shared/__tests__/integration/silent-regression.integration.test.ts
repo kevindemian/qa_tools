@@ -19,12 +19,12 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('detects regressions above threshold', async () => {
             expect.hasAssertions();
 
-            const { detectSilentRegression } = await import('../../quality/silent-regression.js');
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
             const histories: Record<string, number[]> = {
                 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5],
                 'api test': [2.0, 2.1, 1.9, 2.0, 2.1],
             };
-            const result = detectSilentRegression(histories);
+            const result = detectSilentRegressions(histories);
 
             expect(result.regressions).toHaveLength(1);
             expect(result.totalTests).toBe(2);
@@ -34,8 +34,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('returns empty when all within range', async () => {
             expect.hasAssertions();
 
-            const { detectSilentRegression } = await import('../../quality/silent-regression.js');
-            const result = detectSilentRegression({ 'stable test': [1.0, 1.1, 0.9, 1.0, 1.05] });
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
+            const result = detectSilentRegressions({ 'stable test': [1.0, 1.1, 0.9, 1.0, 1.05] });
 
             expect(result.regressions).toHaveLength(0);
         });
@@ -45,8 +45,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('returns empty for empty object', async () => {
             expect.hasAssertions();
 
-            const { detectSilentRegression } = await import('../../quality/silent-regression.js');
-            const result = detectSilentRegression({});
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
+            const result = detectSilentRegressions({});
 
             expect(result.regressions).toStrictEqual([]);
             expect(result.totalTests).toBe(0);
@@ -55,8 +55,8 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('skips entries with fewer than 2 durations', async () => {
             expect.hasAssertions();
 
-            const { detectSilentRegression } = await import('../../quality/silent-regression.js');
-            const result = detectSilentRegression({ single: [1.0], empty: [] });
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
+            const result = detectSilentRegressions({ single: [1.0], empty: [] });
 
             expect(result.totalTests).toBe(0);
         });
@@ -66,9 +66,9 @@ describe('Integration: Silent Regression (FT-22)', () => {
         it('produces complete HTML with regression data', async () => {
             expect.hasAssertions();
 
-            const { detectSilentRegression, generateSilentRegressionHtml } =
-                await import('../../quality/silent-regression.js');
-            const result = detectSilentRegression({ 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5] });
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
+            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
+            const result = detectSilentRegressions({ 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5] });
             const html = generateSilentRegressionHtml(result, 'Regression Report');
 
             expect(html).toContain('<!DOCTYPE html>');
@@ -120,9 +120,9 @@ describe('Integration: Silent Regression (FT-22)', () => {
             const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
                 throw new Error('CSS failure');
             });
-            const { detectSilentRegression, generateSilentRegressionHtml } =
-                await import('../../quality/silent-regression.js');
-            const result = detectSilentRegression({ test: [1.0, 2.0, 3.0, 10.0] });
+            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
+            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
+            const result = detectSilentRegressions({ test: [1.0, 2.0, 3.0, 10.0] });
             const html = generateSilentRegressionHtml(result);
 
             expect(html).toContain('Error generating silent regression report');

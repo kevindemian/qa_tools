@@ -206,12 +206,6 @@ vi.mock('../../shared/quality/requirement-score.js', () => ({
     calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
     generateRequirementScoreHtml: vi.fn(() => '<section>reqscore</section>'),
 }));
-vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
-    generateGitMetricsRuns: vi.fn(() => []),
-    generateGitFailureClassifications: vi.fn(() => []),
-    getLastGitLogError: vi.fn(() => undefined),
-    clearGitLogError: vi.fn(),
-}));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
     formatQualityGateText: vi.fn(() => ''),
@@ -272,7 +266,7 @@ import {
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
 import { runQualityGate } from '../../shared/quality/quality-gate.js';
 import { buildIncidentReport } from '../../shared/report/incident-report.js';
@@ -292,7 +286,7 @@ const mockInfo = vi.mocked(info);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockWriteReport = vi.mocked(writeReport);
-const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
+const mockGenerateBenchmarkHtml = vi.mocked(generateBenchmarkHtml);
 const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
@@ -561,17 +555,17 @@ describe('Schedule Handler', () => {
     });
 
     describe('GenerateWeeklyQualityReport', () => {
-        it('warns when no project selected', async () => {
+        it('warns when no project selected', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('');
 
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('warns when less than 2 runs', async () => {
+        it('warns when less than 2 runs', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
@@ -593,7 +587,7 @@ describe('Schedule Handler', () => {
                 },
                 raw: { failureClassifications: [] },
             } as never);
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
         });
@@ -683,6 +677,64 @@ describe('Schedule Handler', () => {
                         byVersion: [],
                         timestamp: new Date().toISOString(),
                     },
+                    seasonalityAggregation: {
+                        byDayOfWeek: [],
+                        byHour: [],
+                        peakDay: 'N/A',
+                        peakHour: -1,
+                        totalRecords: 0,
+                        period: { from: '', to: '' },
+                        timestamp: new Date().toISOString(),
+                    },
+                    regressionDetection: {
+                        regressions: [],
+                        totalTests: 0,
+                        threshold: 2,
+                        timestamp: new Date().toISOString(),
+                    },
+                    optimizationActions: {
+                        optimizations: [],
+                        totalTests: 0,
+                        totalDuration: 0,
+                        potentialSavings: 0,
+                        slowThreshold: 5,
+                        flakyThreshold: 0.3,
+                        timestamp: new Date().toISOString(),
+                    },
+                    crossSquad: {
+                        benchmarks: [
+                            {
+                                project: 'proj1',
+                                healthScore: 70,
+                                grade: 'good',
+                                passRate: 80,
+                                flakyRate: 5,
+                                coveragePct: 70,
+                                runCount: 2,
+                                trend: 'up' as const,
+                            },
+                        ],
+                        topSquad: 'proj1',
+                        bottomSquad: 'proj1',
+                        averageScore: 70,
+                        stdDev: 0,
+                        timestamp: new Date().toISOString(),
+                    },
+                    coverageGap: {
+                        items: [],
+                        totals: {
+                            totalIssues: 0,
+                            covered: 0,
+                            gap: 0,
+                            weightedCoveragePct: 65,
+                            rawCoveragePct: 65,
+                        },
+                        byEpic: {},
+                        gateConfig: { minCoveragePct: 80, failingEpics: [] },
+                        hierarchy: [],
+                        trends: [],
+                        timestamp: new Date().toISOString(),
+                    },
                     pipelineCostResult: {
                         totalCost: 0.5,
                         avgCostPerRun: 0.25,
@@ -702,11 +754,11 @@ describe('Schedule Handler', () => {
             } as never);
         }
 
-        it('writes the genuinely computed release score into the report HTML', async () => {
+        it('writes the genuinely computed release score into the report HTML', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             const hub = vi.mocked(getSessionDataHub).mock.results[0]?.value as DataHub | undefined;
             const hubRuns = (hub?.computed.metricsRuns ?? []) as Array<{ project: string }>;
@@ -724,33 +776,25 @@ describe('Schedule Handler', () => {
             expect(writtenHtml).toContain(String(hubReleaseScore?.grade));
         });
 
-        it('passes the real project benchmark data to computeCrossSquadBenchmark', async () => {
+        it('renders the hub computed cross-squad benchmark into the report', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
-            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls.find((call) =>
-                Array.isArray(call[0]),
-            )?.[0] as Array<{
-                name: string;
-                runCount: number;
-                healthScore: number;
-                grade: string;
-                passRate: number;
-                flakyRate: number;
-                coveragePct: number;
-            }>;
+            const benchmarkInput = mockGenerateBenchmarkHtml.mock.calls[0]?.[0] as
+                { topSquad: string; benchmarks: Array<{ project: string; runCount: number }> } | undefined;
 
-            expect(Array.isArray(benchmarkInput), `benchmarkInput=${JSON.stringify(benchmarkInput)}`).toBeTruthy();
-            expect(benchmarkInput.some((b) => b.name === 'proj1' && b.runCount === 2)).toBeTruthy();
+            expect(benchmarkInput, `benchmarkInput=${JSON.stringify(benchmarkInput)}`).toBeTruthy();
+            expect(benchmarkInput?.topSquad).toBe('proj1');
+            expect(benchmarkInput?.benchmarks.some((b) => b.project === 'proj1' && b.runCount === 2)).toBeTruthy();
         });
 
-        it('invokes the score/dashboard analyzers with real run data', async () => {
+        it('invokes the score/dashboard analyzers with real run data', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith(
                 expect.any(Number),
@@ -771,11 +815,11 @@ describe('Schedule Handler', () => {
             );
         });
 
-        it('writes exactly one report file with the project-specific path', async () => {
+        it('writes exactly one report file with the project-specific path', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockPrintError).not.toHaveBeenCalled();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
@@ -785,11 +829,11 @@ describe('Schedule Handler', () => {
             expect(writtenPath).toContain('weekly-quality-proj1.html');
         });
 
-        it('renders every dashboard section in the generated HTML', async () => {
+        it('renders every dashboard section in the generated HTML', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             const calls = mockWriteReport.mock.calls;
             const writtenHtml = calls[calls.length - 1]?.[1] as string;

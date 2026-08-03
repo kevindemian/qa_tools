@@ -18,7 +18,7 @@ import { buildCss } from '../report/report-styles.js';
 import { rootLogger } from '../logger.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { icon } from '../icons.js';
-import type { OptimizationResult } from './suite-optimization.js';
+import type { OptimizationResult } from '../types/data-hub-extensions.js';
 
 const POTENTIAL_SAVINGS_WARN_THRESHOLD = 60;
 
@@ -70,8 +70,12 @@ function buildRecommendedActions(result: OptimizationResult): string {
     });
 }
 
-export function generateOptimizationHtml(result: OptimizationResult, title?: string): string {
+export function generateOptimizationHtml(result: OptimizationResult | null | undefined, title?: string): string {
     const pageTitle = title || 'Suite Optimization Report';
+    if (!result) {
+        rootLogger.error('generateOptimizationHtml: optimization result is missing.');
+        return buildErrorPage('Error generating dashboard', 'Suite optimization data is unavailable.');
+    }
     const actionable = result.optimizations.filter((e) => e.action !== 'none');
 
     const customCss = [

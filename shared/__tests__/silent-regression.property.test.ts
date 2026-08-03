@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../quality/silent-regression.js';
+import { detectSilentRegressions } from '../data-hub/compute/regression-detection.js';
+import { generateSilentRegressionHtml } from '../quality/silent-regression.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -30,7 +31,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 const expected = Object.values(histories).filter((d) => d.length >= 2).length;
 
                 expect(result.totalTests).toBe(expected);
@@ -44,7 +45,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 const eligibleTitles = Object.entries(histories)
                     .filter(([, d]) => d.length >= 2)
                     .map(([t]) => t);
@@ -61,7 +62,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 for (const reg of result.regressions) {
                     expect(Number.isFinite(reg.zScore)).toBeTruthy();
                 }
@@ -75,7 +76,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 for (const reg of result.regressions) {
                     let expectedSeverity: string;
                     if (reg.zScore > 5) {
@@ -102,7 +103,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
 
                 expect(result.threshold).toBe(2);
             }),
@@ -115,7 +116,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 const html = generateSilentRegressionHtml(result);
 
                 expect(html).toContain('<!DOCTYPE html>');
@@ -130,7 +131,7 @@ describe('DetectSilentRegression — property-based invariants', () => {
 
         fc.assert(
             fc.property(historyArb, (histories) => {
-                const result = detectSilentRegression(histories);
+                const result = detectSilentRegressions(histories);
                 for (const reg of result.regressions) {
                     const inputDurations = histories[reg.title];
                     if (inputDurations === undefined) continue;

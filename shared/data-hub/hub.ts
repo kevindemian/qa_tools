@@ -110,6 +110,12 @@ export interface DataHubOptions {
      * (dashboards/metrics). PR report generation must NOT set this.
      */
     allowEmpty?: boolean;
+    /**
+     * Project name stamped on MetricsRun entries derived from parsed
+     * artifacts. Every consumer filter (`r.project === project`) matches this.
+     * Defaults to `options.repo` when absent.
+     */
+    project?: string;
 }
 
 /**
@@ -208,7 +214,7 @@ export class DataHubImpl implements DataHub {
             },
         ]);
         this.raw.parsedArtifacts = artifacts;
-        this.computed = DataHubImpl.computeMetrics(this.raw, { repo: this.repo });
+        this.computed = DataHubImpl.computeMetrics(this.raw, { repo: this.repo, project });
         this.timestamp = new Date();
         return run;
     }
@@ -854,7 +860,10 @@ export class DataHubImpl implements DataHub {
             suiteSpeed: DataHubImpl.suiteSpeedSourcePresent(raw),
         };
         const perRunCosts = calcPerRunCosts(raw.runs, options.costPerMinute);
-        const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts, raw.runs) : [];
+        const metricsRuns =
+            raw.parsedArtifacts != null
+                ? convertToMetricsRuns(raw.parsedArtifacts, raw.runs, options.project ?? options.repo)
+                : [];
         const flakinessEntries = calcFlakinessEntries(metricsRuns);
         const metricsTrends = calcMetricsTrends(metricsRuns);
         // ─── SSOT expansion — test-level metrics ────────────────────────────

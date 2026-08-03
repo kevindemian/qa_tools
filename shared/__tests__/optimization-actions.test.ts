@@ -21,6 +21,8 @@ describe('ComputeOptimizationActions', () => {
             expect(r.totalTests).toBe(0);
             expect(r.totalDuration).toBe(0);
             expect(r.potentialSavings).toBe(0);
+            expect(r.timestamp).toBeDefined();
+            expect(Date.parse(r.timestamp)).not.toBeNaN();
         });
 
         it('skips entries with empty durations array', () => {

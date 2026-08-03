@@ -7,7 +7,6 @@ import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/ui/cli_
 import Config from '../shared/config-accessor.js';
 import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { showSplash } from '../shared/ui/splash.js';
-import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import type { MetricsRun, RawXrayData } from '../shared/types/data-hub.js';
 import { compareRuns } from '../shared/quality/run-comparison.js';
@@ -91,30 +90,13 @@ import { generateIncidentReportHtml } from '../shared/report/incident-report.js'
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
 import { generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
-import { aggregateDefectTrends } from '../shared/quality/defect-trend.js';
-import { buildTraceabilityMatrix } from '../shared/report/traceability-matrix.js';
-import { aggregateDefectSeasonality } from '../shared/quality/defect-seasonality.js';
-import { detectSilentRegression } from '../shared/quality/silent-regression.js';
-import { compareAiVsManual } from '../shared/report/ai-comparison.js';
-import { computeCrossSquadBenchmark } from '../shared/quality/cross-squad-benchmark.js';
-import { buildDeveloperProfile } from '../shared/quality/developer-profile.js';
-import { analyzeSuiteOptimization } from '../shared/quality/suite-optimization.js';
 import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
-import { calculatePipelineCost } from '../shared/quality/pipeline-cost.js';
 import { calculateRequirementScores } from '../shared/quality/requirement-score.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
 import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
-import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
-import { mapJiraIssuesToBacklogHealth, analyzeBacklogHealth } from '../shared/report/backlog-health.js';
-import type { RawJiraIssue } from '../shared/types/data-hub.js';
-import {
-    generateGitMetricsRuns,
-    generateGitFailureClassifications,
-    getLastGitLogError,
-} from '../shared/ci/git-metrics-adapter.js';
 import { handleHelp as _handleHelp, handleShowHistory as _handleShowHistory } from './ui-helpers.js';
 import { handleSetupWizard as _handleSetupWizard } from './case00-handler.js';
 import { handlePrReportReconfig } from './pr-report-setup-handler.js';
@@ -334,39 +316,23 @@ async function handleBugReportFlow(_m: GitProvider): Promise<boolean> {
 }
 
 /**
- * Load project runs with git fallback — shared helper for dashboards.
+ * Load project runs from the Data Hub — shared helper for dashboards that
+ * need run-level metrics. Data comes exclusively from hub.computed.metricsRuns.
  */
 function _loadProjectRunsHelper(): {
     projectRuns: MetricsRun[];
-    failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
-    usingGitFallback: boolean;
 } | null {
     if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
         return null;
     }
     const hub = getDataHub();
-    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
-    let failureClassifications = hub.raw.failureClassifications ?? [];
-    let usingGitFallback = false;
+    const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
     if (projectRuns.length < 2) {
-        const gitRuns = generateGitMetricsRuns({ projectName: getCurrentProject() ?? '' });
-        const gitError = getLastGitLogError();
-        if (gitRuns.length >= 2) {
-            projectRuns = gitRuns;
-            failureClassifications = generateGitFailureClassifications({
-                projectName: getCurrentProject() ?? '',
-            });
-            usingGitFallback = true;
-        } else if (gitError) {
-            warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
-            return null;
-        } else {
-            warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
-            return null;
-        }
+        warn('Menos de 2 execuções registradas. Execute pipelines para gerar dados primeiro.');
+        return null;
     }
-    return { projectRuns, failureClassifications, usingGitFallback };
+    return { projectRuns };
 }
 
 async function _generateAndOpenDashboard(html: string, suffix: string, label: string): Promise<void> {
@@ -383,16 +349,30 @@ async function _dashboardReleaseScore(): Promise<void> {
 }
 
 async function _dashboardDefectTrends(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const defects = aggregateDefectTrends(data.failureClassifications);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const defects = hub.computed.defectAggregation;
+    if (!defects) {
+        warn('Nenhum dado de defeitos disponível no DataHub. Execute pipelines para gerar dados primeiro.');
+        return;
+    }
     await _generateAndOpenDashboard(generateDefectTrendHtml(defects), 'defect-trends', 'Defect Trends');
 }
 
 async function _dashboardTraceabilityMatrix(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const matrix = buildTraceabilityMatrix(data.projectRuns, undefined, []);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const matrix = hub.computed.traceabilityTree;
+    if (!matrix) {
+        warn('Nenhuma matriz de rastreabilidade disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
 }
 
@@ -403,75 +383,96 @@ async function _dashboardAiEffectiveness(): Promise<void> {
 }
 
 async function _dashboardSeasonality(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const seasonality = aggregateDefectSeasonality(data.failureClassifications);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const seasonality = hub.computed.seasonalityAggregation;
+    if (!seasonality) {
+        warn('Nenhum dado de sazonalidade disponível no DataHub. Execute pipelines para gerar dados primeiro.');
+        return;
+    }
     await _generateAndOpenDashboard(generateSeasonalityHtml(seasonality), 'seasonality', 'Defect Seasonality');
 }
 
 async function _dashboardSilentRegression(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const testDurationMap = calcTestDurationMap(data.projectRuns);
-    const regression = detectSilentRegression(testDurationMap);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const regression = hub.computed.regressionDetection;
+    if (!regression) {
+        warn('Nenhum dado de regressão silenciosa disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateSilentRegressionHtml(regression), 'silent-regression', 'Silent Regression');
 }
 
 async function _dashboardAiComparison(): Promise<void> {
-    const aiComparison = compareAiVsManual([]);
+    const hub = getDataHub();
+    const aiComparison = hub.computed.aiComparison;
+    if (!aiComparison) {
+        warn('Nenhum dado de comparação AI vs Manual disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateAiComparisonHtml(aiComparison), 'ai-comparison', 'AI Test Comparison');
 }
 
 async function _dashboardBenchmark(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const dataHub = getDataHub();
-    const projectNames = [...new Set(data.projectRuns.map((r) => r.project))];
-    const projectBenchmarks = projectNames.map((name) => {
-        const pRuns = (dataHub.computed.metricsRuns ?? []).filter((r) => r.project === name);
-        const pHealth = calculateHealthScore({ dataHub });
-        return {
-            name,
-            healthScore: pHealth.overall,
-            grade: pHealth.grade,
-            passRate: pHealth.dimensions.passRate.score,
-            flakyRate: pHealth.dimensions.flakyRate.score,
-            coveragePct: pHealth.dimensions.coverage.score,
-            runCount: pRuns.length,
-        };
-    });
-    const benchmark = computeCrossSquadBenchmark(projectBenchmarks);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const benchmark = hub.computed.crossSquad;
+    if (!benchmark) {
+        warn('Nenhum dado de benchmark entre squads disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateBenchmarkHtml(benchmark), 'benchmark', 'Cross-Squad Benchmark');
 }
 
 async function _dashboardDeveloperProfile(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const devProfile = buildDeveloperProfile(
-        data.failureClassifications.map((fc) => ({
-            testTitle: fc.testTitle,
-            category: fc.category,
-            timestamp: fc.timestamp,
-        })),
-    );
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const devProfile = hub.computed.developerProfile;
+    if (!devProfile) {
+        warn('Nenhum perfil de desenvolvedor disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateDeveloperProfileHtml(devProfile), 'developer-profile', 'Developer Profile');
 }
 
 async function _dashboardSuiteOptimization(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
-    const flatTests = data.projectRuns.flatMap((r) =>
-        r.tests.map((t) => ({ title: t.title, duration: t.duration, flakiness: 0 })),
-    );
-    const optimization = analyzeSuiteOptimization(flatTests);
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
+    const hub = getDataHub();
+    const optimization = hub.computed.optimizationActions;
+    if (!optimization) {
+        warn('Nenhuma análise de otimização de suíte disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generateOptimizationHtml(optimization), 'suite-optimization', 'Suite Optimization');
 }
 
 async function _dashboardBacklogHealth(): Promise<void> {
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
     const hub = getDataHub();
-    const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
-    const issues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
-    const backlog = analyzeBacklogHealth(issues);
+    const backlog = hub.computed.backlogHealth;
+    if (!backlog) {
+        warn('Nenhum dado de saúde do backlog disponível no DataHub. Configure a integração Jira e sincronize.');
+        return;
+    }
     await _generateAndOpenDashboard(generateBacklogHealthHtml(backlog), 'backlog-health', 'Backlog Health');
 }
 
@@ -480,36 +481,35 @@ async function _dashboardIncidentReport(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
-    const testDurationMap = calcTestDurationMap(data.projectRuns);
-    const regression = detectSilentRegression(testDurationMap);
-    const seasonality = aggregateDefectSeasonality(data.failureClassifications);
+    const regression = dataHub.computed.regressionDetection;
+    const seasonality = dataHub.computed.seasonalityAggregation;
+    const coverageGap = dataHub.computed.coverageGap;
     const failRate = calcRunFailureRate(data.projectRuns);
 
-    // Fase 9: Use real coverage gap analysis
-    const jiraResource = new JiraClient(
-        Config.get('jiraPersonalToken'),
-        Config.get('jiraBaseUrl') + '/rest/api/2',
-        Config.get('jiraMode'),
-    );
-    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
-    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+    const uncoveredEpics = coverageGap?.gateConfig.failingEpics ?? [];
 
     const incidentReport = buildIncidentReport(
         failRate,
-        regression.regressions.length,
-        seasonality.peakDay,
+        regression?.regressions.length ?? 0,
+        seasonality?.peakDay ?? 'N/A',
         uncoveredEpics,
         health.overall,
-        coverageGapResult,
+        coverageGap,
     );
     await _generateAndOpenDashboard(generateIncidentReportHtml(incidentReport), 'incident-report', 'Incident Report');
 }
 
 async function _dashboardPipelineCost(): Promise<void> {
-    const data = _loadProjectRunsHelper();
-    if (!data) return;
+    if (!getCurrentProject()) {
+        warn('Nenhum projeto selecionado.');
+        return;
+    }
     const dataHub = getDataHub();
-    const pipelineCost = calculatePipelineCost(undefined, dataHub);
+    const pipelineCost = dataHub.computed.pipelineCostResult;
+    if (!pipelineCost) {
+        warn('Nenhum dado de custo de pipeline disponível no DataHub.');
+        return;
+    }
     await _generateAndOpenDashboard(generatePipelineCostHtml(pipelineCost), 'pipeline-cost', 'Pipeline Cost');
 }
 
@@ -518,19 +518,13 @@ async function _dashboardImpactAlert(): Promise<void> {
     if (!data) return;
     const dataHub = getDataHub();
     const health = calculateHealthScore({ dataHub });
-    const defects = aggregateDefectTrends(data.failureClassifications);
+    const defects = dataHub.computed.defectAggregation;
+    const coverageGap = dataHub.computed.coverageGap;
 
-    // Fase 9: Use real coverage gap analysis
-    const jiraResource = new JiraClient(
-        Config.get('jiraPersonalToken'),
-        Config.get('jiraBaseUrl') + '/rest/api/2',
-        Config.get('jiraMode'),
-    );
-    const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
-    const uncoveredEpics = coverageGapResult.gateConfig.failingEpics;
+    const uncoveredEpics = coverageGap?.gateConfig.failingEpics ?? [];
 
     const trendCategories = new Set<string>();
-    for (const t of defects.trends) {
+    for (const t of defects?.trends ?? []) {
         for (const cat of Object.keys(t.categories)) {
             trendCategories.add(cat);
         }
@@ -541,7 +535,7 @@ async function _dashboardImpactAlert(): Promise<void> {
         [...trendCategories].slice(0, 5),
         health.dimensions.coverage.score,
         uncoveredEpics,
-        coverageGapResult,
+        coverageGap,
     );
     await _generateAndOpenDashboard(generateImpactAlertHtml(impactAlert), 'impact-alert', 'Pipeline Impact Alert');
 }
@@ -578,21 +572,12 @@ async function _dashboardCoverageGap(): Promise<void> {
         warn('Nenhum projeto selecionado.');
         return;
     }
-    if (!Config.get('jiraBaseUrl') || !Config.get('jiraPersonalToken')) {
-        warn('Jira não configurado. Coverage Gap requer JIRA_BASE_URL e JIRA_PERSONAL_TOKEN.');
+    const hub = getDataHub();
+    const result = hub.computed.coverageGap;
+    if (!result) {
+        warn('Nenhum resultado de Coverage Gap no DataHub. Sincronize os issues do Jira para gerar a análise.');
         return;
     }
-    const projectKey = Config.get('jiraProject');
-    if (!projectKey) {
-        warn('JIRA_PROJECT não configurado.');
-        return;
-    }
-    const jiraResource = new JiraClient(
-        Config.get('jiraPersonalToken'),
-        Config.get('jiraBaseUrl') + '/rest/api/2',
-        Config.get('jiraMode'),
-    );
-    const result = await analyzeCoverageGaps(jiraResource, projectKey);
     await _generateAndOpenDashboard(
         generateCoverageGapHtml(result, 'Coverage Gap — ' + (getCurrentProject() ?? '')),
         'coverage-gap',
@@ -760,14 +745,6 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         await _showDataHubSummary();
         return false;
     },
-    e: () => {
-        info(
-            'Git Metrics Adapter — gera métricas de pipeline a partir do git history como fallback.\n' +
-                'Funções: generateGitMetricsRuns() e generateGitFailureClassifications().\n' +
-                'Usado automaticamente quando não há dados de pipeline (menos de 2 execuções).',
-        );
-        return Promise.resolve(false);
-    },
     f: () => {
         handlePrReportReconfig();
         return Promise.resolve(false);
@@ -786,7 +763,7 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
         return Promise.resolve(false);
     },
     r: () => {
-        void generateWeeklyQualityReport();
+        generateWeeklyQualityReport();
         return Promise.resolve(false);
     },
 };

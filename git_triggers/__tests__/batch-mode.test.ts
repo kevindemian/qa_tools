@@ -70,12 +70,6 @@ vi.mock('../test-results', () => ({ collectTestResults: vi.fn(() => null) }));
 
 vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
 
-vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
-    generateGitMetricsRuns: vi.fn(() => []),
-    getLastGitLogError: vi.fn(() => undefined),
-    clearGitLogError: vi.fn(),
-}));
-
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(() => ({
         computed: { metricsRuns: [] },

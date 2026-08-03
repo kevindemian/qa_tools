@@ -186,7 +186,7 @@ describe('AggregateDefectTrends', () => {
     });
 
     describe('Negative cases', () => {
-        it('record with invalid timestamp is skipped', () => {
+        it('records with invalid timestamps are grouped under Unknown date (no silent loss)', () => {
             expect.hasAssertions();
 
             const records = [
@@ -196,8 +196,22 @@ describe('AggregateDefectTrends', () => {
             const r = aggregateDefectTrends(records);
 
             expect(r.totalRecords).toBe(2);
-            expect(r.trends).toHaveLength(1);
+            expect(r.trends).toHaveLength(2);
+            expect(r.trends[0]?.date).toBe('2026-03-15');
             expect(r.trends[0]?.total).toBe(1);
+            expect(r.trends.some((t) => t.date === 'Unknown' && t.total === 1)).toBeTruthy();
+        });
+
+        it('all-invalid records → single Unknown trend with empty period', () => {
+            expect.hasAssertions();
+
+            const r = aggregateDefectTrends([makeRecord({ timestamp: 'bad' }), makeRecord({ timestamp: 'nope' })]);
+
+            expect(r.trends).toHaveLength(1);
+            expect(r.trends[0]?.date).toBe('Unknown');
+            expect(r.trends[0]?.total).toBe(2);
+            expect(r.period.from).toBe('');
+            expect(r.period.to).toBe('');
         });
     });
 });
@@ -213,9 +227,11 @@ describe('AggregateDefectSeasonality', () => {
 
             expect(r.byDayOfWeek).toHaveLength(7);
             expect(r.byHour).toHaveLength(24);
-            expect(r.peakDay).toBe('');
+            expect(r.peakDay).toBe('N/A');
             expect(r.peakHour).toBe(-1);
             expect(r.totalRecords).toBe(0);
+            expect(r.timestamp).toBeDefined();
+            expect(Date.parse(r.timestamp)).not.toBeNaN();
         });
     });
 
@@ -275,13 +291,13 @@ describe('AggregateDefectSeasonality', () => {
             expect.hasAssertions();
 
             const records = [
-                makeRecord({ timestamp: '2026-03-16T10:00:00Z' }), // Tuesday
-                makeRecord({ timestamp: '2026-03-16T11:00:00Z' }), // Tuesday
-                makeRecord({ timestamp: '2026-03-17T10:00:00Z' }), // Wednesday
+                makeRecord({ timestamp: '2026-03-16T10:00:00Z' }), // Monday
+                makeRecord({ timestamp: '2026-03-16T11:00:00Z' }), // Monday
+                makeRecord({ timestamp: '2026-03-17T10:00:00Z' }), // Tuesday
             ];
             const r = aggregateDefectSeasonality(records);
 
-            expect(r.peakDay).toBe('Monday');
+            expect(r.peakDay).toBe('Mon');
         });
 
         it('peakHour matches hour with highest total', () => {
@@ -299,7 +315,7 @@ describe('AggregateDefectSeasonality', () => {
     });
 
     describe('Negative cases', () => {
-        it('records with invalid timestamps are skipped', () => {
+        it('records with invalid timestamps are surfaced under Unknown day (no silent loss)', () => {
             expect.hasAssertions();
 
             const records = [makeRecord({ timestamp: 'invalid' }), makeRecord({ timestamp: '2026-03-15T14:00:00Z' })];
@@ -307,6 +323,11 @@ describe('AggregateDefectSeasonality', () => {
 
             expect(r.totalRecords).toBe(2);
             expect(r.byHour[14]?.total).toBe(1);
+            expect(r.byDayOfWeek).toHaveLength(8);
+
+            const unknownDay = r.byDayOfWeek.find((d) => d.dayOfWeek === 'Unknown');
+
+            expect(unknownDay?.total).toBe(1);
         });
     });
 });

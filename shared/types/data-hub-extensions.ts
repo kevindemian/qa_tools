@@ -71,6 +71,8 @@ export interface SeasonalityAggregationResult {
     peakHour: number;
     totalRecords: number;
     period: { from: string; to: string };
+    /** ISO timestamp of when the aggregation was produced. */
+    timestamp: string;
 }
 
 /** Regression severity classification. */
@@ -92,6 +94,8 @@ export interface RegressionDetectionResult {
     regressions: RegressionEntry[];
     totalTests: number;
     threshold: number;
+    /** ISO timestamp of when the detection was produced. */
+    timestamp: string;
 }
 
 /** Optimization action type. */
@@ -118,4 +122,6 @@ export interface OptimizationResult {
     potentialSavings: number;
     slowThreshold: number;
     flakyThreshold: number;
+    /** ISO timestamp of when the analysis was produced. */
+    timestamp: string;
 }

@@ -36,20 +36,18 @@ function makeRun(id: number, overrides: Partial<PipelineRun> = {}): PipelineRun 
 }
 
 describe('ConvertToMetricsRuns', () => {
-describe('Bug Fix: project field must come from runs array, not be empty', () => {
-        it('sets project from matching run when runs array is provided', () => {
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [12345, [makeArtifact()]],
-            ]);
+    describe('Project identity: the owning project name is stamped on every run', () => {
+        it('stamps the owning project name when runs array is provided', () => {
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[12345, [makeArtifact()]]]);
             const runs: PipelineRun[] = [makeRun(12345, { head_branch: 'main' })];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
             expect(result).toHaveLength(1);
-            expect(result[0]?.project).toBe('main');
+            expect(result[0]?.project).toBe('proj1');
         });
 
-        it('sets correct project for multiple runs with different IDs', () => {
+        it('stamps the same owning project name across all runs (identity is the project, not the branch)', () => {
             const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
                 [100, [makeArtifact({ passed: 5 })]],
                 [200, [makeArtifact({ passed: 8 })]],
@@ -61,68 +59,59 @@ describe('Bug Fix: project field must come from runs array, not be empty', () =>
                 makeRun(300, { head_branch: 'main' }),
             ];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
-            const projects = result.map((r) => r.project).sort((a, b) => a.localeCompare(b));
+            const projects = result.map((r) => r.project);
 
-            expect(projects).toStrictEqual(['feature-a', 'feature-b', 'main']);
+            expect(projects).toStrictEqual(['proj1', 'proj1', 'proj1']);
         });
 
-        it('handles large CI run IDs (e.g., 12345) correctly — the original bug', () => {
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [12345, [makeArtifact()]],
-            ]);
-            const runs: PipelineRun[] = [makeRun(12345, { head_branch: 'develop' })];
+        it('handles large CI run IDs (e.g., 12345) correctly — timestamp join, project independent', () => {
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[12345, [makeArtifact()]]]);
+            const runs: PipelineRun[] = [
+                makeRun(12345, { head_branch: 'develop', created_at: '2026-07-20T08:30:00Z' }),
+            ];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
-            expect(result[0]?.project).toBe('develop');
+            expect(result[0]?.project).toBe('proj1');
+            expect(result[0]?.timestamp).toBe('2026-07-20T08:30:00Z');
         });
 
-        it('returns empty project when run ID not found in runs array', () => {
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [99999, [makeArtifact()]],
-            ]);
+        it('keeps the owning project name when run ID not found in runs array', () => {
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[99999, [makeArtifact()]]]);
             const runs: PipelineRun[] = [makeRun(100, { head_branch: 'main' })];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
-            expect(result[0]?.project).toBe('');
+            expect(result[0]?.project).toBe('proj1');
         });
 
-        it('returns empty project when runs array is not provided', () => {
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [12345, [makeArtifact()]],
-            ]);
+        it('keeps the owning project name when runs array is not provided', () => {
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[12345, [makeArtifact()]]]);
 
-            const result = convertToMetricsRuns(parsedArtifacts);
+            const result = convertToMetricsRuns(parsedArtifacts, undefined, 'proj1');
 
-            expect(result[0]?.project).toBe('');
+            expect(result[0]?.project).toBe('proj1');
         });
     });
 
     describe('Bug Fix: timestamp must come from runs array', () => {
         it('uses created_at from matching run', () => {
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [12345, [makeArtifact()]],
-            ]);
-            const runs: PipelineRun[] = [
-                makeRun(12345, { created_at: '2026-07-20T08:30:00Z' }),
-            ];
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[12345, [makeArtifact()]]]);
+            const runs: PipelineRun[] = [makeRun(12345, { created_at: '2026-07-20T08:30:00Z' })];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
             expect(result[0]?.timestamp).toBe('2026-07-20T08:30:00Z');
         });
 
         it('uses current time when run not found (fallback)', () => {
             const before = Date.now();
-            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-                [99999, [makeArtifact()]],
-            ]);
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[99999, [makeArtifact()]]]);
             const runs: PipelineRun[] = [];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
             const after = Date.now();
             const ts = new Date(result[0]?.timestamp ?? '').getTime();
@@ -139,11 +128,20 @@ describe('Bug Fix: project field must come from runs array, not be empty', () =>
             ]);
             const runs: PipelineRun[] = [makeRun(100, { head_branch: 'main' })];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
             expect(result[0]?.passed).toBe(8);
             expect(result[0]?.failed).toBe(3);
             expect(result[0]?.total).toBe(13);
+        });
+
+        it('stamps the owning project name on every produced run (consumer filter identity)', () => {
+            const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[100, [makeArtifact()]]]);
+            const runs: PipelineRun[] = [makeRun(100, { head_branch: 'feature-x' })];
+
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
+
+            expect(result[0]?.project).toBe('proj1');
         });
 
         it('sorts by timestamp descending (newest first)', () => {
@@ -158,7 +156,7 @@ describe('Bug Fix: project field must come from runs array, not be empty', () =>
                 makeRun(3, { created_at: '2026-07-21T10:00:00Z' }),
             ];
 
-            const result = convertToMetricsRuns(parsedArtifacts, runs);
+            const result = convertToMetricsRuns(parsedArtifacts, runs, 'proj1');
 
             expect(result[0]?.timestamp).toBe('2026-07-22T10:00:00Z');
             expect(result[1]?.timestamp).toBe('2026-07-21T10:00:00Z');

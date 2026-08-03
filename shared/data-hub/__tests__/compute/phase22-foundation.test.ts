@@ -221,7 +221,7 @@ describe('ConvertToMetricsRuns', () => {
         expect.hasAssertions();
 
         const artifacts = new Map<number, ArtifactParseResult[]>([[1, [makeArtifact()]]]);
-        const runs = convertToMetricsRuns(artifacts);
+        const runs = convertToMetricsRuns(artifacts, undefined, 'proj1');
 
         expect(runs).toHaveLength(1);
 
@@ -251,7 +251,7 @@ describe('ConvertToMetricsRuns', () => {
             },
         });
         const artifacts = new Map<number, ArtifactParseResult[]>([[1, [artifact1, artifact2]]]);
-        const runs = convertToMetricsRuns(artifacts);
+        const runs = convertToMetricsRuns(artifacts, undefined, 'proj1');
         const run = runs[0];
 
         expect(run).toBeDefined();
@@ -264,7 +264,7 @@ describe('ConvertToMetricsRuns', () => {
     it('returns empty for empty artifacts', () => {
         expect.hasAssertions();
 
-        expect(convertToMetricsRuns(new Map())).toHaveLength(0);
+        expect(convertToMetricsRuns(new Map(), undefined, 'proj1')).toHaveLength(0);
     });
 });
 

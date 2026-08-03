@@ -405,15 +405,15 @@ export function checkDashboardExports(): CheckResult {
     const violations: Violation[] = [];
     const dashboards: Array<{ file: string; export_: string }> = [
         { file: 'shared/data-hub/compute/release-score.ts', export_: 'calcReleaseScore' },
-        { file: 'shared/quality/defect-trend.ts', export_: 'aggregateDefectTrends' },
+        { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectTrends' },
         { file: 'shared/quality/defect-trend.ts', export_: 'generateDefectTrendHtml' },
         { file: 'shared/report/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
         { file: 'shared/report/traceability-renderer.ts', export_: 'generateTraceabilityHtml' },
         { file: 'shared/report/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
         { file: 'shared/report/ai-effectiveness-renderer.ts', export_: 'generateAiEffectivenessHtml' },
-        { file: 'shared/quality/defect-seasonality.ts', export_: 'aggregateDefectSeasonality' },
+        { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectSeasonality' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
-        { file: 'shared/quality/silent-regression.ts', export_: 'detectSilentRegression' },
+        { file: 'shared/data-hub/compute/regression-detection.ts', export_: 'detectSilentRegressions' },
         { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
         { file: 'shared/report/ai-comparison.ts', export_: 'compareAiVsManual' },
         { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
@@ -421,7 +421,7 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
         { file: 'shared/quality/developer-profile.ts', export_: 'generateDeveloperProfileHtml' },
-        { file: 'shared/quality/suite-optimization.ts', export_: 'analyzeSuiteOptimization' },
+        { file: 'shared/data-hub/compute/optimization-actions.ts', export_: 'computeOptimizationActions' },
         { file: 'shared/quality/suite-optimization.ts', export_: 'generateOptimizationHtml' },
         { file: 'shared/report/backlog-health.ts', export_: 'analyzeBacklogHealth' },
         { file: 'shared/report/backlog-health-renderer.ts', export_: 'generateBacklogHealthHtml' },
@@ -572,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:f658b96ee40991118a13c3182f390b6c59e2cd13a7ee42fd31a7db554ac013e1 */
+        /* HASH:ff73d0daf5e3de5c9138d84b2b2b7389143db976784455ea0daa322befab28f5 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

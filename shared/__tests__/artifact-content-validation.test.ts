@@ -40,12 +40,12 @@ import type { TraceabilityResult } from '../report/traceability-matrix.js';
 import type { FlakinessEntry } from '../types/data-hub.js';
 import type { BacklogHealthResult } from '../report/backlog-health.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
-import type { OptimizationResult } from '../quality/suite-optimization.js';
+import type { OptimizationResult } from '../types/data-hub-extensions.js';
 import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
 import type { ReleaseScoreResult } from '../types/data-hub.js';
-import type { RegressionResult } from '../quality/silent-regression.js';
-import type { DefectTrendResult } from '../quality/defect-trend.js';
-import type { SeasonalityResult } from '../quality/defect-seasonality.js';
+import type { RegressionDetectionResult } from '../types/data-hub-extensions.js';
+import type { DefectAggregationResult } from '../types/data-hub-extensions.js';
+import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../quality/developer-profile.js';
 import type { RequirementScoreResult } from '../quality/requirement-score.js';
 import type { CoverageGapResult } from '../types/coverage.js';
@@ -307,7 +307,7 @@ function makeReleaseScore(): ReleaseScoreResult {
     };
 }
 
-function makeSilentRegression(): RegressionResult {
+function makeSilentRegression(): RegressionDetectionResult {
     return {
         regressions: [
             {
@@ -326,7 +326,7 @@ function makeSilentRegression(): RegressionResult {
     };
 }
 
-function makeDefectTrend(): DefectTrendResult {
+function makeDefectTrend(): DefectAggregationResult {
     return {
         trends: [
             { date: '2026-07-20', categories: { bug: 5, vulnerability: 1 }, total: 6 },
@@ -334,20 +334,21 @@ function makeDefectTrend(): DefectTrendResult {
         ],
         topCategories: [{ category: 'bug', count: 8 }],
         period: { from: '2026-07-20', to: '2026-07-25' },
+        totalRecords: 9,
     };
 }
 
-function makeSeasonality(): SeasonalityResult {
+function makeSeasonality(): SeasonalityAggregationResult {
     return {
         byDayOfWeek: [
-            { dayOfWeek: 'Monday', total: 10, categories: { bug: 8, vulnerability: 2 } },
-            { dayOfWeek: 'Tuesday', total: 5, categories: { bug: 5 } },
+            { dayOfWeek: 'Mon', total: 10, categories: { bug: 8, vulnerability: 2 } },
+            { dayOfWeek: 'Tue', total: 5, categories: { bug: 5 } },
         ],
         byHour: [
             { hour: 9, total: 8, categories: { bug: 6, vulnerability: 2 } },
             { hour: 14, total: 7, categories: { bug: 7 } },
         ],
-        peakDay: 'Monday',
+        peakDay: 'Mon',
         peakHour: 9,
         totalRecords: 50,
         period: { from: '2026-07-20', to: '2026-07-25' },

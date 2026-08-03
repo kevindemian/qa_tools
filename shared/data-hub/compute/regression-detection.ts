@@ -12,14 +12,54 @@ import type {
     RegressionSeverity,
 } from '../../types/data-hub-extensions.js';
 
-const LOW_THRESHOLD = 1;
-const MEDIUM_THRESHOLD = 2;
-const HIGH_THRESHOLD = 3;
-const CRITICAL_THRESHOLD = 5;
+/**
+ * Dimension 5 Provenance — documents the source and justification for z-score thresholds.
+ * @reference ISO 3534-2 (Statistical process control)
+ */
+export const SILENT_REGRESSION_PROVENANCE = {
+    severityThresholds: {
+        LOW: { zScore: 1, source: 'Statistical process control (1-sigma)', standard: 'ISO 3534-2' },
+        MEDIUM: { zScore: 2, source: 'Statistical process control (2-sigma)', standard: 'ISO 3534-2' },
+        HIGH: { zScore: 3, source: 'Statistical process control (3-sigma)', standard: 'ISO 3534-2' },
+        CRITICAL: { zScore: 5, source: 'Extreme outlier detection (5-sigma)', standard: 'ISO 3534-2' },
+    },
+} as const;
+
+const SEVERITY_THRESHOLD_CRITICAL = 5;
+const SEVERITY_THRESHOLD_HIGH = 3;
+const SEVERITY_THRESHOLD_MEDIUM = 2;
+const SEVERITY_THRESHOLD_LOW = 1;
 const STDDEV_DENOM_FALLBACK = 0.001;
+const DEFAULT_THRESHOLD = 2;
+
+function computeMean(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sum = values.reduce((a, b) => a + b, 0);
+    return Number.isFinite(sum) ? sum / values.length : 0;
+}
+
+function computeStdDev(values: number[], mean: number): number {
+    if (values.length === 0) return 0;
+    const squaredDiffs = values.map((v) => (v - mean) ** 2);
+    const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+    return Number.isFinite(variance) ? Math.sqrt(variance) : 0;
+}
+
+function computeSeverity(zScore: number): RegressionSeverity {
+    if (!Number.isFinite(zScore)) return 'none';
+    if (zScore > SEVERITY_THRESHOLD_CRITICAL) return 'critical';
+    if (zScore > SEVERITY_THRESHOLD_HIGH) return 'high';
+    if (zScore > SEVERITY_THRESHOLD_MEDIUM) return 'medium';
+    if (zScore > SEVERITY_THRESHOLD_LOW) return 'low';
+    return 'none';
+}
 
 /**
  * Detect silent regressions in test durations using z-score analysis.
+ *
+ * Statistics are computed over the PRIOR durations only (excluding the current
+ * run) so the tested value is never part of its own baseline — a correct
+ * outlier test ("> 2σ from historical mean", ISO 3534-2).
  *
  * @param testDurationMap - Record mapping test title to array of durations across runs.
  * @param threshold - Z-score threshold for flagging a regression (default: 2).
@@ -27,9 +67,9 @@ const STDDEV_DENOM_FALLBACK = 0.001;
  */
 export function detectSilentRegressions(
     testDurationMap: Record<string, number[]>,
-    threshold: number = 2,
+    threshold: number = DEFAULT_THRESHOLD,
 ): RegressionDetectionResult {
-    const validThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : 2;
+    const validThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : DEFAULT_THRESHOLD;
     const regressions: RegressionEntry[] = [];
     let totalTests = 0;
 
@@ -37,39 +77,30 @@ export function detectSilentRegressions(
         if (!Array.isArray(durations) || durations.length < 2) continue;
         totalTests++;
 
-        const finiteDurations = durations.filter(Number.isFinite);
-        if (finiteDurations.length < 2) continue;
-
-        const mean = finiteDurations.reduce((s, v) => s + v, 0) / finiteDurations.length;
-        const variance = finiteDurations.reduce((s, v) => s + (v - mean) ** 2, 0) / finiteDurations.length;
-        const stdDev = Math.sqrt(variance);
-
-        const current = finiteDurations[finiteDurations.length - 1];
-        if (current === undefined) continue;
-        const zScore = stdDev > STDDEV_DENOM_FALLBACK ? (current - mean) / stdDev : 0;
+        const hist = durations.slice(0, -1);
+        const last = durations[durations.length - 1];
+        if (last === undefined) continue;
+        const currentDuration = last;
+        const mean = computeMean(hist);
+        const stdDev = computeStdDev(hist, mean);
+        const denom = stdDev || STDDEV_DENOM_FALLBACK;
+        const zScore = (currentDuration - mean) / denom;
+        const severity = computeSeverity(zScore);
 
         if (zScore > validThreshold) {
             regressions.push({
                 title,
-                meanDuration: Math.round(mean * 100) / 100,
-                currentDuration: current,
-                stdDev: Math.round(stdDev * 100) / 100,
-                zScore: Math.round(zScore * 100) / 100,
-                severity: classifyRegressionSeverity(zScore),
-                previousDurations: finiteDurations.slice(0, -1),
+                meanDuration: mean,
+                currentDuration,
+                stdDev,
+                zScore,
+                severity,
+                previousDurations: hist,
             });
         }
     }
 
     regressions.sort((a, b) => b.zScore - a.zScore);
 
-    return { regressions, totalTests, threshold: validThreshold };
-}
-
-function classifyRegressionSeverity(zScore: number): RegressionSeverity {
-    if (zScore > CRITICAL_THRESHOLD) return 'critical';
-    if (zScore > HIGH_THRESHOLD) return 'high';
-    if (zScore > MEDIUM_THRESHOLD) return 'medium';
-    if (zScore > LOW_THRESHOLD) return 'low';
-    return 'none';
+    return { regressions, totalTests, threshold: validThreshold, timestamp: new Date().toISOString() };
 }

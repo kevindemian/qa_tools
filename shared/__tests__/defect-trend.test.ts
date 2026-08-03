@@ -2,7 +2,8 @@
  * Tests for defect-trend — Defect Trend Dashboard aggregator and HTML generator.
  */
 
-import { aggregateDefectTrends, generateDefectTrendHtml, sanitizeTrendResult } from '../quality/defect-trend.js';
+import { aggregateDefectTrends } from '../data-hub/compute/defect-aggregation.js';
+import { generateDefectTrendHtml } from '../quality/defect-trend.js';
 import type { FailureClassification } from '../types/data-hub.js';
 
 describe('AggregateDefectTrends', () => {
@@ -126,60 +127,6 @@ describe('AggregateDefectTrends', () => {
     });
 });
 
-describe('SanitizeTrendResult', () => {
-    it('converts NaN to zero', () => {
-        const input = {
-            trends: [{ date: '2026-01-01', categories: { A: NaN }, total: NaN }],
-            topCategories: [{ category: 'A', count: NaN }],
-            period: { from: '2026-01-01', to: '2026-01-01' },
-        };
-        const result = sanitizeTrendResult(input);
-
-        expect(result.trends[0]?.total).toBe(0);
-        expect(result.trends[0]?.categories['A']).toBe(0);
-        expect(result.topCategories[0]?.count).toBe(0);
-    });
-
-    it('converts Infinity to zero', () => {
-        const input = {
-            trends: [
-                { date: '2026-01-01', categories: { A: Number.POSITIVE_INFINITY }, total: Number.NEGATIVE_INFINITY },
-            ],
-            topCategories: [{ category: 'A', count: Number.POSITIVE_INFINITY }],
-            period: { from: '2026-01-01', to: '2026-01-01' },
-        };
-        const result = sanitizeTrendResult(input);
-
-        expect(result.trends[0]?.total).toBe(0);
-        expect(result.trends[0]?.categories['A']).toBe(0);
-        expect(result.topCategories[0]?.count).toBe(0);
-    });
-
-    it('preserves valid finite numbers', () => {
-        const input = {
-            trends: [{ date: '2026-01-01', categories: { A: 5 }, total: 10 }],
-            topCategories: [{ category: 'A', count: 5 }],
-            period: { from: '2026-01-01', to: '2026-01-01' },
-        };
-        const result = sanitizeTrendResult(input);
-
-        expect(result.trends[0]?.total).toBe(10);
-        expect(result.trends[0]?.categories['A']).toBe(5);
-        expect(result.topCategories[0]?.count).toBe(5);
-    });
-
-    it('preserves rest structure', () => {
-        const input = {
-            trends: [],
-            topCategories: [],
-            period: { from: '2026-01-01', to: '2026-01-10' },
-        };
-        const result = sanitizeTrendResult(input);
-
-        expect(result.period).toStrictEqual({ from: '2026-01-01', to: '2026-01-10' });
-    });
-});
-
 describe('GenerateDefectTrendHtml', () => {
     it('shows no-data message for empty trends', () => {
         const result = aggregateDefectTrends([]);
@@ -190,7 +137,12 @@ describe('GenerateDefectTrendHtml', () => {
     });
 
     it('shows no-data message for null/undefined result trends', () => {
-        const html = generateDefectTrendHtml({ trends: [], topCategories: [], period: { from: '', to: '' } });
+        const html = generateDefectTrendHtml({
+            trends: [],
+            topCategories: [],
+            period: { from: '', to: '' },
+            totalRecords: 0,
+        });
 
         expect(html).toContain('No defect data available.');
     });
@@ -285,6 +237,7 @@ describe('GenerateDefectTrendHtml', () => {
                 { category: 'ENV', count: 3 },
             ],
             period: { from: '2026-06-01', to: '2026-06-01' },
+            totalRecords: NaN,
         };
         const html = generateDefectTrendHtml(result);
 

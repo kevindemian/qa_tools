@@ -2,27 +2,23 @@
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/ui/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
-import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
 import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
 import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
-import JiraClient from '../shared/jira/jira-client.js';
-import Config from '../shared/config-accessor.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import { buildHtmlPage } from '../shared/report/html-factory.js';
 import { generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
-import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
+import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
+import { generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
 import { generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
 import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
-import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
+import { generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
@@ -123,7 +119,7 @@ function extractTrendCategories(trends: { categories: Record<string, number> }[]
     return [...categories];
 }
 
-export async function generateWeeklyQualityReport(): Promise<void> {
+export function generateWeeklyQualityReport(): void {
     try {
         if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
@@ -141,9 +137,6 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             );
             return;
         }
-
-        const failureClassifications = dataHub.raw.failureClassifications ?? [];
-        const effectiveRuns = projectRuns;
 
         const health = calculateHealthScore({ dataHub });
         const releaseScore = dataHub.computed.releaseScore;
@@ -165,46 +158,30 @@ export async function generateWeeklyQualityReport(): Promise<void> {
         const aiResult = dataHub.computed.aiMetrics;
         const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
 
-        // Fase 9: Compute real coverage gap analysis for incident/impact reports
-        const jiraResource = new JiraClient(
-            Config.get('jiraPersonalToken'),
-            Config.get('jiraBaseUrl') + '/rest/api/2',
-            Config.get('jiraMode'),
-        );
-        const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
-
-        const seasonality = aggregateDefectSeasonality(failureClassifications);
-        const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
+        const seasonality = dataHub.computed.seasonalityAggregation;
+        const regression = dataHub.computed.regressionDetection;
         const devProfile = dataHub.computed.developerProfile;
         const aiComparison = dataHub.computed.aiComparison;
-        const flatTests = projectRuns.flatMap((r) =>
-            r.tests.map((t) => ({ title: t.title, duration: t.duration, flakiness: 0 })),
-        );
-        const optimization = analyzeSuiteOptimization(flatTests);
+        const optimization = dataHub.computed.optimizationActions;
+        const benchmark = dataHub.computed.crossSquad;
+        const coverageGap = dataHub.computed.coverageGap;
 
-        const projectNames = [...new Set(effectiveRuns.map((r) => r.project))];
-        const benchmark = computeCrossSquadBenchmark(
-            projectNames.map((name) => {
-                const pRuns = (dataHub.computed.metricsRuns ?? []).filter((r) => r.project === name);
-                const pDataHub = getDataHub();
-                const pHealth = calculateHealthScore({ dataHub: pDataHub });
-                return {
-                    name,
-                    healthScore: pHealth.overall,
-                    grade: pHealth.grade,
-                    passRate: pHealth.dimensions.passRate.score,
-                    flakyRate: pHealth.dimensions.flakyRate.score,
-                    coveragePct: pHealth.dimensions.coverage.score,
-                    runCount: pRuns.length,
-                };
-            }),
-        );
+        if (seasonality == null) {
+            throw new Error('Invariant violated: hub.computed.seasonalityAggregation is undefined.');
+        }
+        if (regression == null) {
+            throw new Error('Invariant violated: hub.computed.regressionDetection is undefined.');
+        }
+        if (optimization == null) {
+            throw new Error('Invariant violated: hub.computed.optimizationActions is undefined.');
+        }
+        if (benchmark == null) {
+            throw new Error('Invariant violated: hub.computed.crossSquad is undefined.');
+        }
 
         const failRate = calcRunFailureRate(projectRuns);
 
-        // Use real coverage gap analysis for uncovered epics
-        const uncoveredEpics: string[] = coverageGapResult.gateConfig.failingEpics;
-        // Fallback to traceability matrix if no coverage gap data
+        const uncoveredEpics: string[] = [...(coverageGap?.gateConfig.failingEpics ?? [])];
         if (uncoveredEpics.length === 0) {
             matrix.nodes.forEach((n) => {
                 if (n.coverage < 100) uncoveredEpics.push(n.epic);
@@ -217,7 +194,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             seasonality.peakDay,
             uncoveredEpics,
             health.overall,
-            coverageGapResult,
+            coverageGap,
         );
 
         const trendCategories = extractTrendCategories(defects.trends);
@@ -228,7 +205,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             trendCategories.slice(0, 5),
             health.dimensions.coverage.score,
             uncoveredEpics,
-            coverageGapResult,
+            coverageGap,
         );
 
         const pipelineCost = dataHub.computed.pipelineCostResult;

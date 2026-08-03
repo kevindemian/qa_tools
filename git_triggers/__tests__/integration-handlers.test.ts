@@ -88,10 +88,6 @@ vi.mock('../../shared/validation/quarantine.js', () => ({
     quarantineRatio: vi.fn(),
     generatePipelineQuarantine: vi.fn(),
 }));
-vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
-    generateGitMetricsRuns: vi.fn(() => []),
-    generateGitFailureClassifications: vi.fn(() => []),
-}));
 vi.mock('../../shared/report/report-export.js', () => ({
     exportTestsCsv: vi.fn(),
     exportTestsJson: vi.fn(),

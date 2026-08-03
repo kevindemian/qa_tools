@@ -1,8 +1,8 @@
 /**
  * Defect Seasonality Dashboard — HTML rendering layer.
  *
- * Extracted from defect-seasonality.ts (compute) to separate concerns.
- * This module handles ONLY HTML generation; all business logic remains in defect-seasonality.ts.
+ * This module handles ONLY HTML generation; the aggregation (SSOT) lives in
+ * `shared/data-hub/compute/defect-aggregation.ts`.
  *
  * @module defect-seasonality-renderer
  */
@@ -13,7 +13,7 @@ import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
 import { MetricCard, MetricGrid, DataTable, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
-import type { SeasonalityResult } from './defect-seasonality.js';
+import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import { icon } from '../icons.js';
 
 const HIGH_CONCENTRATION_DAY_MULTIPLIER = 1.5;
@@ -25,7 +25,7 @@ function getVsAvgLabel(total: number, avgTotal: number): string {
     return `${icon('minus-circle', 14)} Normal`;
 }
 
-function buildDayTable(days: SeasonalityResult['byDayOfWeek']): string {
+function buildDayTable(days: SeasonalityAggregationResult['byDayOfWeek']): string {
     const allCategories = new Set<string>();
     for (const d of days) {
         for (const cat of Object.keys(d.categories)) {
@@ -63,7 +63,7 @@ function buildDayTable(days: SeasonalityResult['byDayOfWeek']): string {
     });
 }
 
-function buildHourTable(hours: SeasonalityResult['byHour']): string {
+function buildHourTable(hours: SeasonalityAggregationResult['byHour']): string {
     const allCategories = new Set<string>();
     for (const h of hours) {
         for (const cat of Object.keys(h.categories)) {
@@ -101,7 +101,7 @@ function buildHourTable(hours: SeasonalityResult['byHour']): string {
     });
 }
 
-function buildRecommendedActions(result: SeasonalityResult): string {
+function buildRecommendedActions(result: SeasonalityAggregationResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Peak activity
@@ -148,9 +148,17 @@ function buildRecommendedActions(result: SeasonalityResult): string {
     });
 }
 
-export function generateSeasonalityHtml(result: SeasonalityResult, title?: string): string {
+export function generateSeasonalityHtml(
+    result: SeasonalityAggregationResult | null | undefined,
+    title?: string,
+): string {
     try {
         const pageTitle = title || 'Defect Seasonality Dashboard';
+
+        if (!result) {
+            rootLogger.error('generateSeasonalityHtml: seasonality aggregation result is missing.');
+            return buildErrorPage('Error generating dashboard', 'Defect seasonality data is unavailable.');
+        }
 
         if (result.totalRecords === 0) {
             return buildHtmlPage({

@@ -15,13 +15,29 @@ import type {
     SeasonalityHour,
 } from '../../types/data-hub-extensions.js';
 
-const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const FULL_DAY_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/;
+const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const FULL_DAY_ORDER = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function extractDate(timestamp: string): string | undefined {
-    const match = DATE_PATTERN.exec(timestamp);
-    return match?.[1];
+/**
+ * Create a prototype-free counter bucket. A category name such as '__proto__'
+ * becomes an own data property instead of hitting a prototype accessor
+ * (prototype-pollution guard).
+ */
+function createBucket(): Record<string, number> {
+    return Object.create(null) as Record<string, number>;
+}
+
+/**
+ * Extract a YYYY-MM-DD date from a timestamp, or 'Unknown' for records that
+ * cannot be placed on a temporal axis. Grouping under 'Unknown' (rather than
+ * discarding) preserves visibility of every failure record (Rule 25 — no silent
+ * data loss).
+ */
+function extractDate(timestamp: string): string {
+    if (!timestamp || typeof timestamp !== 'string' || timestamp.length < 10) return 'Unknown';
+    const datePart = timestamp.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return 'Unknown';
+    return datePart;
 }
 
 function updateMinMax(date: string, currentMin: string, currentMax: string): { min: string; max: string } {
@@ -32,32 +48,44 @@ function updateMinMax(date: string, currentMin: string, currentMax: string): { m
 }
 
 function addToCategoryMap(map: Map<string, Record<string, number>>, key: string, category: string): void {
-    let bucket = map.get(key);
-    if (!bucket) {
-        bucket = {};
-        map.set(key, bucket);
-    }
-    bucket[category] = (bucket[category] ?? 0) + 1;
+    const existing = map.get(key);
+    const bucket = existing ?? createBucket();
+    const current = bucket[category];
+    bucket[category] = (typeof current === 'number' && Number.isFinite(current) ? current : 0) + 1;
+    map.set(key, bucket);
 }
 
 function mapToDayArray(map: Map<string, Record<string, number>>): SeasonalityDay[] {
     return DAY_ORDER.map((d) => {
-        const cats = map.get(d) ?? {};
-        return { dayOfWeek: d, total: Object.values(cats).reduce((s, v) => s + v, 0), categories: cats };
+        const cats = map.get(d) ?? createBucket();
+        return {
+            dayOfWeek: d,
+            total: Object.values(cats).reduce((s, v) => s + v, 0),
+            categories: mapToCategoryCounts(cats),
+        };
     });
 }
 
 function mapToHourArray(map: Map<number, Record<string, number>>): SeasonalityHour[] {
     return Array.from({ length: 24 }, (_, i) => {
-        const cats = map.get(i) ?? {};
-        return { hour: i, total: Object.values(cats).reduce((s, v) => s + v, 0), categories: cats };
+        const cats = map.get(i) ?? createBucket();
+        return {
+            hour: i,
+            total: Object.values(cats).reduce((s, v) => s + v, 0),
+            categories: mapToCategoryCounts(cats),
+        };
     });
+}
+
+function mapToCategoryCounts(cats: Record<string, number>): Record<string, number> {
+    return Object.fromEntries(Object.entries(cats));
 }
 
 function findPeakDay(days: SeasonalityDay[]): string {
     let maxTotal = 0;
-    let peak = '';
+    let peak = 'N/A';
     for (const d of days) {
+        if (d.dayOfWeek === 'Unknown') continue;
         if (d.total > maxTotal) {
             maxTotal = d.total;
             peak = d.dayOfWeek;
@@ -84,8 +112,8 @@ function findPeakHour(hours: SeasonalityHour[]): number {
  * @param records - FailureClassification[] from DataHub.
  * @returns DefectAggregationResult with daily trends and top categories.
  */
-export function aggregateDefectTrends(records: FailureClassification[]): DefectAggregationResult {
-    if (records.length === 0) {
+export function aggregateDefectTrends(records: FailureClassification[] | null | undefined): DefectAggregationResult {
+    if (!records || records.length === 0) {
         return { trends: [], topCategories: [], period: { from: '', to: '' }, totalRecords: 0 };
     }
 
@@ -93,24 +121,26 @@ export function aggregateDefectTrends(records: FailureClassification[]): DefectA
     const categoryTotals = new Map<string, number>();
     let minDate = '9999-12-31';
     let maxDate = '0000-01-01';
+    let hasValidDate = false;
 
     for (const record of records) {
         const date = extractDate(record.timestamp);
-        if (!date) continue;
-        const range = updateMinMax(date, minDate, maxDate);
-        minDate = range.min;
-        maxDate = range.max;
-
         const category = record.category;
         addToCategoryMap(dailyMap, date, category);
         categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + 1);
+        if (date !== 'Unknown') {
+            const range = updateMinMax(date, minDate, maxDate);
+            minDate = range.min;
+            maxDate = range.max;
+            hasValidDate = true;
+        }
     }
 
     const trends: DefectTrendPoint[] = [...dailyMap.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, categories]) => ({
             date,
-            categories,
+            categories: mapToCategoryCounts(categories),
             total: Object.values(categories).reduce((s, v) => s + v, 0),
         }));
 
@@ -118,7 +148,12 @@ export function aggregateDefectTrends(records: FailureClassification[]): DefectA
         .sort(([, a], [, b]) => b - a)
         .map(([category, count]) => ({ category, count }));
 
-    return { trends, topCategories, period: { from: minDate, to: maxDate }, totalRecords: records.length };
+    return {
+        trends,
+        topCategories,
+        period: hasValidDate ? { from: minDate, to: maxDate } : { from: '', to: '' },
+        totalRecords: records.length,
+    };
 }
 
 /**
@@ -127,15 +162,18 @@ export function aggregateDefectTrends(records: FailureClassification[]): DefectA
  * @param records - FailureClassification[] from DataHub.
  * @returns SeasonalityAggregationResult with day-of-week and hour-of-day breakdowns.
  */
-export function aggregateDefectSeasonality(records: FailureClassification[]): SeasonalityAggregationResult {
-    if (records.length === 0) {
+export function aggregateDefectSeasonality(
+    records: FailureClassification[] | null | undefined,
+): SeasonalityAggregationResult {
+    if (!records || records.length === 0) {
         return {
             byDayOfWeek: DAY_ORDER.map((d) => ({ dayOfWeek: d, total: 0, categories: {} })),
             byHour: Array.from({ length: 24 }, (_, i) => ({ hour: i, total: 0, categories: {} })),
-            peakDay: '',
+            peakDay: 'N/A',
             peakHour: -1,
             totalRecords: 0,
             period: { from: '', to: '' },
+            timestamp: new Date().toISOString(),
         };
     }
 
@@ -143,30 +181,49 @@ export function aggregateDefectSeasonality(records: FailureClassification[]): Se
     const hourMap = new Map<number, Record<string, number>>();
     let minDate = '9999-12-31';
     let maxDate = '0000-01-01';
+    let hasValidDate = false;
+    let hasUnknown = false;
 
-    for (const d of DAY_ORDER) dayMap.set(d, {});
-    for (let h = 0; h < 24; h++) hourMap.set(h, {});
+    for (const d of DAY_ORDER) dayMap.set(d, createBucket());
+    for (let h = 0; h < 24; h++) hourMap.set(h, createBucket());
 
     for (const record of records) {
         const date = extractDate(record.timestamp);
-        if (!date) continue;
-        const range = updateMinMax(date, minDate, maxDate);
-        minDate = range.min;
-        maxDate = range.max;
-
         const ts = new Date(record.timestamp);
-        if (!Number.isFinite(ts.getTime())) continue;
-
-        const dayOfWeek = FULL_DAY_ORDER[ts.getUTCDay()] ?? 'Unknown';
-        const hour = ts.getUTCHours();
+        const tsValid = Number.isFinite(ts.getTime());
         const category = record.category;
 
-        addToCategoryMap(dayMap, dayOfWeek, category);
-        const hourBucket = hourMap.get(hour);
-        if (hourBucket) hourBucket[category] = (hourBucket[category] ?? 0) + 1;
+        if (tsValid && date !== 'Unknown') {
+            const range = updateMinMax(date, minDate, maxDate);
+            minDate = range.min;
+            maxDate = range.max;
+            hasValidDate = true;
+        }
+
+        if (tsValid) {
+            const dayOfWeek = FULL_DAY_ORDER[ts.getUTCDay()] ?? 'Unknown';
+            const hour = ts.getUTCHours();
+            addToCategoryMap(dayMap, dayOfWeek, category);
+            const hourBucket = hourMap.get(hour);
+            if (hourBucket) hourBucket[category] = (hourBucket[category] ?? 0) + 1;
+        } else {
+            // Rule 25: records with unparseable timestamps are surfaced under
+            // 'Unknown' on the day axis (no hour axis) instead of being silently
+            // dropped. totalRecords keeps counting them (explicit, no masking).
+            addToCategoryMap(dayMap, 'Unknown', category);
+            hasUnknown = true;
+        }
     }
 
     const byDayOfWeek = mapToDayArray(dayMap);
+    if (hasUnknown) {
+        const unknownCats = dayMap.get('Unknown') ?? createBucket();
+        byDayOfWeek.push({
+            dayOfWeek: 'Unknown',
+            total: Object.values(unknownCats).reduce((s, v) => s + v, 0),
+            categories: mapToCategoryCounts(unknownCats),
+        });
+    }
     const byHour = mapToHourArray(hourMap);
 
     return {
@@ -175,6 +232,7 @@ export function aggregateDefectSeasonality(records: FailureClassification[]): Se
         peakDay: findPeakDay(byDayOfWeek),
         peakHour: findPeakHour(byHour),
         totalRecords: records.length,
-        period: { from: minDate, to: maxDate },
+        period: hasValidDate ? { from: minDate, to: maxDate } : { from: '', to: '' },
+        timestamp: new Date().toISOString(),
     };
 }

@@ -28,9 +28,14 @@ const SUMMARY_TRUNCATE_LENGTH = 80;
 const SCORE_THRESHOLD_SUCCESS = 80;
 const SCORE_THRESHOLD_WARN = 50;
 
-export function generateBacklogHealthHtml(result: BacklogHealthResult, title?: string): string {
+export function generateBacklogHealthHtml(result: BacklogHealthResult | null | undefined, title?: string): string {
     try {
         const pageTitle = title || 'Backlog Health Dashboard';
+
+        if (!result) {
+            rootLogger.error('generateBacklogHealthHtml: backlog health result is missing.');
+            return buildErrorPage('Error generating dashboard', 'Backlog health data is unavailable.');
+        }
 
         const bodyContent = wrapContainer(
             pageTitle,
