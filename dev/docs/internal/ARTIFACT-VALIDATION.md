@@ -552,12 +552,12 @@ npx madge --circular shared/
 
 | Data | Fase | Tarefa | Status | Evidência |
 |---|---|---|---|---|
-| 2026-08-03 | I-0 | I-0.1 lint (8 errors) | ⏳ | — |
-| 2026-08-03 | I-0 | I-0.2 ratchet warnings (4 detect-unsafe-regex) | ⏳ | — |
-| 2026-08-03 | I-0 | I-0.3 gate (tsc/vitest/lint) | ⏳ | — |
-| 2026-08-03 | I-0 | I-0.4 doc claims | ⏳ | — |
-| 2026-08-03 | I-0 | I-0.5 commit batch | ⏳ | — |
-| 2026-08-03 | I-0 | I-0.6 push + CI | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.1 lint (8 errors) | ✅ | `eslint` 0 erros (prefer-expect-assertions x4 + padding x4, `--fix` só whitespace) |
+| 2026-08-03 | I-0 | I-0.2 ratchet warnings (4 detect-unsafe-regex) | ✅ | helper `containsEmoji` (sem regex) em `assertions.ts` + teste; ratchet OK (≤755, sem regressão) |
+| 2026-08-03 | I-0 | I-0.3 gate (tsc/vitest/lint) | ✅ | tsc 0 · vitest 539 files/7461 tests · lint OK · depcruise 0 violações · type-coverage 99.53% |
+| 2026-08-03 | I-0 | I-0.4 doc claims | ✅ | §7:217 e §9:339 corrigidos p/ "implementado; aguardando validação determinística (Fase III)" |
+| 2026-08-03 | I-0 | I-0.5 commit batch | ✅ | `23851812` (27 files: F5 + GOLDEN-REFERENCE + assertions + doc); hook pre-commit verde |
+| 2026-08-03 | I-0 | I-0.6 push + CI | ⚠️ | F5 movido p/ **side branch `feat/f5-side-branch`** (decisão do usuário — plano era side branch até resolver mutation testing); PR #24 restaurado p/ `a77c12f7` (head pré-F5) via force-with-lease; todos os checks do PR #24 green exceto **Mutation Testing = timeout sistêmico (15min), pré-existente (run 30750366765) e documentado em `MUTATION-TESTING-PERF.md` (Estratégias A/B pendentes de decisão)**. Push de side branch não roda o job mutation (só PR/main/dev) |
 | 2026-08-03 | I-1 | F0-T6 (hub first) | ⏳ | — |
 | 2026-08-03 | I-2 | F0-T7 (interactive) | ⏳ | — |
 | 2026-08-03 | I-3 | F0-T11 (duration) | ⏳ | — |
