@@ -43,7 +43,8 @@ export function BarChart(props: BarChartProps): string {
         if (!Number.isFinite(segW) || segW <= 0) continue;
         let label = '';
         if (props.showLabels !== false && segW >= 20) {
-            const textColor = seg.color === '#facc15' ? '#333' : '#fff';
+            const textColor =
+                seg.color === tokens.color.chart.skip ? tokens.color.chart.onFillLight : tokens.color.chart.onFillDark;
             label = `<text x="${x + segW / 2}" y="${h / 2 + 1}" text-anchor="middle" fill="${textColor}" font-size="12" font-family="${tokens.fontFamily}">${seg.label ?? seg.value}</text>`;
         }
         bars += `<rect x="${x}" y="0" width="${segW}" height="${h}" rx="4" fill="${seg.color}" role="img" aria-label="${seg.label ?? seg.value}"/>

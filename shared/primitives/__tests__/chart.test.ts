@@ -110,7 +110,7 @@ describe('Chart primitives', () => {
         it('uses high color for >= 50', () => {
             const html = Sparkline({ value: 75 });
 
-            expect(html).toContain('#ef4444');
+            expect(html).toContain('#d1242f');
         });
 
         it('renders empty and never produces NaN when value is NaN', () => {

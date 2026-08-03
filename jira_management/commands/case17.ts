@@ -253,7 +253,8 @@ async function _enrichHtmlWithContext(
     const hub = isDataHubInitialized() ? getDataHub() : undefined;
     const commitLog = hub?.raw.commitLog ?? '';
     const storeRuns = hub?.computed.metricsRuns ?? [];
-    const gitHtml = buildGitTrendHtml(commitLog, storeRuns);
+    const flakyEntries = hub?.computed.flakinessEntries ?? [];
+    const gitHtml = buildGitTrendHtml(commitLog, storeRuns, flakyEntries);
     let enriched = html;
     if (gitHtml) {
         enriched = enriched.replace('</body>', gitHtml + '</body>');

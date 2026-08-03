@@ -767,7 +767,7 @@ describe('Case17', () => {
 
             hubState.hub = {
                 raw: { commitLog: 'KNOWN_COMMIT_LOG' },
-                computed: { metricsRuns: [] },
+                computed: { metricsRuns: [], flakinessEntries: [] },
             };
 
             vi.mocked(resolveTestDataSource).mockResolvedValueOnce({
@@ -782,7 +782,7 @@ describe('Case17', () => {
 
             await case17Module.handler(baseContext);
 
-            expect(spy).toHaveBeenCalledWith('KNOWN_COMMIT_LOG', expect.any(Array));
+            expect(spy).toHaveBeenCalledWith('KNOWN_COMMIT_LOG', expect.any(Array), expect.any(Array));
 
             spy.mockRestore();
         });

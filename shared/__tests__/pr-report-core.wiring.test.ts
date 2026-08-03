@@ -254,7 +254,7 @@ describe('TryCreateDataHub wiring', () => {
 
             const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
 
-            expect(body).toContain('### :white_check_mark: Data Quality');
+            expect(body).toContain('### [PASS] Data Quality');
             expect(body).toContain('**Min. confidence:** 90%');
         });
 
@@ -286,7 +286,7 @@ describe('TryCreateDataHub wiring', () => {
 
             const body = mockPRComment.postPrComment.mock.calls[0]?.[0] as string;
 
-            expect(body).toContain('### :warning: Data Quality');
+            expect(body).toContain('### [WARN] Data Quality');
         });
     });
 });

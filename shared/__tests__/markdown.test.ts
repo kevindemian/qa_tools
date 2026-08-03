@@ -379,7 +379,8 @@ describe('MdToHtml', () => {
     it('handles empty input', () => {
         const result = mdToHtml('');
 
-        expect(result).toContain('<body></body>');
+        expect(result).toContain('class="skip-link" href="#main-content"');
+        expect(result).toContain('<main id="main-content"></main>');
     });
 
     it('uses custom title', () => {

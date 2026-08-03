@@ -46,6 +46,27 @@ import type { DataQualitySummary } from './quality/data-quality.js';
 import { MIN_PASS_RATE, MAX_DIFF_ERROR_LENGTH } from './constants/thresholds.js';
 
 /**
+ * ASCII status symbols for Markdown report output.
+ * B18: GitHub emoji shortcodes (`:white_check_mark:`, `:x:`, etc.) render as
+ * emojis in job summaries. Replaced with ASCII text symbols for deterministic,
+ * emoji-free output. Single source of truth for report status markers.
+ */
+const MARKDOWN_SYMBOLS = {
+    pass: '[PASS]',
+    fail: '[FAIL]',
+    warn: '[WARN]',
+    skip: '[SKIP]',
+    time: '[TIME]',
+    total: '[TOTAL]',
+    rate: '[RATE]',
+    changed: '[CHANGED]',
+    unknown: '[UNKNOWN]',
+    quarantined: '[QUARANTINED]',
+    info: '[INFO]',
+    arrow: '->',
+} as const;
+
+/**
  * Read CI-injected environment variables with typed fallbacks.
  * These are GitHub Actions runtime vars, not user configuration.
  */
@@ -150,27 +171,33 @@ function renderQualityGateTable(passRate: number, stats: PrReportStats, diff?: D
     const lines: string[] = [];
 
     let statusIcon: string;
-    if (stats.failed === 0) statusIcon = ':white_check_mark:';
-    else if (stats.failed <= 3) statusIcon = ':warning:';
-    else statusIcon = ':x:';
+    if (stats.failed === 0) statusIcon = MARKDOWN_SYMBOLS.pass;
+    else if (stats.failed <= 3) statusIcon = MARKDOWN_SYMBOLS.warn;
+    else statusIcon = MARKDOWN_SYMBOLS.fail;
 
     lines.push(`**${statusIcon} ${passRate}% pass rate** (${stats.passed}/${stats.total})`);
     lines.push('');
 
-    lines.push('| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :clock1: Duration |');
+    lines.push(
+        `| ${MARKDOWN_SYMBOLS.pass} Passed | ${MARKDOWN_SYMBOLS.fail} Failed | ${MARKDOWN_SYMBOLS.skip} Skipped | ${MARKDOWN_SYMBOLS.time} Duration |`,
+    );
     lines.push('|---|---|---|---|');
     lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
     lines.push('');
 
     if (diff) {
         if (diff.newFailures.length > 0) {
-            lines.push(`> :x: **${diff.newFailures.length} new failure(s)** introduced in this PR`);
+            lines.push(
+                `> ${MARKDOWN_SYMBOLS.fail} **${diff.newFailures.length} new failure(s)** introduced in this PR`,
+            );
         }
         if (diff.newPasses.length > 0) {
-            lines.push(`> :white_check_mark: **${diff.newPasses.length} test(s) fixed** by this PR`);
+            lines.push(`> ${MARKDOWN_SYMBOLS.pass} **${diff.newPasses.length} test(s) fixed** by this PR`);
         }
         if (diff.flaky.length > 0) {
-            lines.push(`> :repeat: **${diff.flaky.length} test(s) changed state** (potential flaky)`);
+            lines.push(
+                `> ${MARKDOWN_SYMBOLS.changed} **${diff.flaky.length} test(s) changed state** (potential flaky)`,
+            );
         }
     }
 
@@ -183,7 +210,7 @@ function buildSummaryTable(passRate: number, stats: PrReportStats, diff?: DiffCo
     lines.push('');
     if (stats.total < 30) {
         lines.push(
-            `> :warning: **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
+            `> ${MARKDOWN_SYMBOLS.warn} **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
         );
         lines.push('');
     }
@@ -205,7 +232,7 @@ function buildFailureTable(tests: FlatTest[]): string {
 
     return [
         '',
-        '### :x: Failed Tests',
+        '### ' + MARKDOWN_SYMBOLS.fail + ' Failed Tests',
         '',
         '| Test | Duration | Error |',
         '|---|---|---|',
@@ -232,7 +259,7 @@ function buildFlakySection(dataHub: DataHub): string {
 
         const rows = highFlaky.map((t) => {
             const quarantined = dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title);
-            const status = quarantined ? ':heavy_plus_sign: Quarantined' : ':warning: New';
+            const status = quarantined ? MARKDOWN_SYMBOLS.quarantined + ' Quarantined' : MARKDOWN_SYMBOLS.warn + ' New';
             return [
                 `| ${t.title.replace(/\|/g, '\\|')}`,
                 `${(t.rate * 100).toFixed(0)}%`,
@@ -244,12 +271,12 @@ function buildFlakySection(dataHub: DataHub): string {
         const newFlaky = highFlaky.filter((t) => !dataHub.getQuarantine().entries.some((e) => e.testTitle === t.title));
         const suggestion =
             newFlaky.length > 0
-                ? `\n> :arrow_right: ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
+                ? `\n> ${MARKDOWN_SYMBOLS.arrow} ${newFlaky.length} flaky test(s) not yet quarantined. Consider adding them to quarantine to reduce CI noise.\n`
                 : '';
 
         return [
             '',
-            '## :warning: Flaky Tests (rate ≥ 30%)',
+            `## ${MARKDOWN_SYMBOLS.warn} Flaky Tests (rate \u2265 30%)`,
             '',
             '| Test | Flaky Rate | Passed/Total | Quarantine |',
             '|---|---|---|---|',
@@ -267,9 +294,9 @@ function buildCoverageSection(coverageResult: ReturnType<typeof resolveCoverageF
     if (!coverageResult) return '';
     const { coveragePct, source, detail } = coverageResult;
     let icon: string;
-    if (coveragePct >= 70) icon = ':white_check_mark:';
-    else if (coveragePct >= 50) icon = ':warning:';
-    else icon = ':x:';
+    if (coveragePct >= 70) icon = MARKDOWN_SYMBOLS.pass;
+    else if (coveragePct >= 50) icon = MARKDOWN_SYMBOLS.warn;
+    else icon = MARKDOWN_SYMBOLS.fail;
     return [
         '',
         `## ${icon} Code Coverage`,
@@ -308,11 +335,11 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
     const { newFailures, newPasses, flaky } = diff;
     if (newFailures.length === 0 && newPasses.length === 0 && flaky.length === 0) return '';
 
-    const lines: string[] = ['', '## :repeat: Changes in This PR'];
+    const lines: string[] = ['', `## ${MARKDOWN_SYMBOLS.changed} Changes in This PR`];
 
     const failureTable = buildTestTable(
         'New Failures (Introduced by this PR)',
-        ':x:',
+        MARKDOWN_SYMBOLS.fail,
         newFailures,
         '| Test | Duration | Error |',
         10,
@@ -325,7 +352,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const passTable = buildTestTable(
         'Fixed (Previously Failing)',
-        ':white_check_mark:',
+        MARKDOWN_SYMBOLS.pass,
         newPasses,
         '| Test | Duration |',
         10,
@@ -335,7 +362,7 @@ function buildDiffSection(diff: DiffComparison | undefined): string {
 
     const flakyTable = buildTestTable(
         'Flaky (State Changed)',
-        ':repeat:',
+        MARKDOWN_SYMBOLS.changed,
         flaky,
         '| Test | Duration |',
         10,
@@ -350,7 +377,7 @@ function buildAiAnalysisSection(llmAvailable: boolean): string {
     if (!llmAvailable) return '';
     return [
         '',
-        '### AI AI Failure Analysis',
+        '### AI Failure Analysis',
         '',
         'AI-powered failure analysis with classification, self-consistency, and attribution ',
         'is available when LLM is configured (`LLM_API_KEY`).',
@@ -431,14 +458,14 @@ function writeToJobSummary(stats: PrReportStats, passRate: number, htmlArtifactU
         const lines: string[] = [
             '## [stats] QA Tools — PR Report',
             '',
-            '| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped | :large_blue_diamond: Total | :clock1: Duration | :arrow_forward: Pass Rate |',
+            `| ${MARKDOWN_SYMBOLS.pass} Passed | ${MARKDOWN_SYMBOLS.fail} Failed | ${MARKDOWN_SYMBOLS.skip} Skipped | ${MARKDOWN_SYMBOLS.total} Total | ${MARKDOWN_SYMBOLS.time} Duration | ${MARKDOWN_SYMBOLS.rate} Pass Rate |`,
             '|---|---|---|---|---|---|',
             `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRateStr}% |`,
         ];
         if (stats.total < 30) {
             lines.push(
                 '',
-                `> :warning: **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
+                `> ${MARKDOWN_SYMBOLS.warn} **Sample size warning:** Only ${stats.total} test(s). Results may not be statistically significant.`,
             );
         }
         if (htmlArtifactUrl) {
@@ -718,15 +745,15 @@ type QualityGateSummary = {
 };
 
 function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return ':white_check_mark:';
-    if (status === 'unknown') return ':question:';
-    return ':x:';
+    if (status === 'pass') return MARKDOWN_SYMBOLS.pass;
+    if (status === 'unknown') return MARKDOWN_SYMBOLS.unknown;
+    return MARKDOWN_SYMBOLS.fail;
 }
 
 function gateOverallLabel(overall: QualityGateStatus): { icon: string; word: string } {
-    if (overall === 'pass') return { icon: ':white_check_mark:', word: 'PASSED' };
-    if (overall === 'unknown') return { icon: ':question:', word: 'UNKNOWN' };
-    return { icon: ':x:', word: 'FAILED' };
+    if (overall === 'pass') return { icon: MARKDOWN_SYMBOLS.pass, word: 'PASSED' };
+    if (overall === 'unknown') return { icon: MARKDOWN_SYMBOLS.unknown, word: 'UNKNOWN' };
+    return { icon: MARKDOWN_SYMBOLS.fail, word: 'FAILED' };
 }
 
 function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'failure' {
@@ -761,7 +788,7 @@ function buildQualityGateSection(result: QualityGateSummary): string {
 
     return [
         '',
-        `## :large_blue_diamond: Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
+        `## Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
         '',
         renderQualityGateChecksTable(result),
     ].join('\n');
@@ -797,9 +824,9 @@ function buildDataQualitySection(dataQuality: DataQualitySummary): string | unde
     if (status === 'missing' && notes.length === 0) return undefined;
 
     let icon: string;
-    if (status === 'ok') icon = ':white_check_mark:';
-    else if (status === 'degraded') icon = ':warning:';
-    else icon = ':information_source:';
+    if (status === 'ok') icon = MARKDOWN_SYMBOLS.pass;
+    else if (status === 'degraded') icon = MARKDOWN_SYMBOLS.warn;
+    else icon = MARKDOWN_SYMBOLS.info;
 
     const confidenceLabel = minConfidence == null ? '_n/a_' : `${(minConfidence * 100).toFixed(0)}%`;
     const parts: string[] = [

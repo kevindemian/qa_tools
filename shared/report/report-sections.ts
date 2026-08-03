@@ -114,12 +114,7 @@ export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): st
         html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(s.suite) + '\')">';
         html += summary;
         html += '<span class="suite-name">' + escapeHtml(suiteLabel) + '</span>';
-        html +=
-            '<div class="timeline-bar timeline-bar-width" style="--bar-width:' +
-            barW.toFixed(0) +
-            'px;background:' +
-            tokens.color.chart.pass +
-            '"></div>';
+        html += '<div class="timeline-bar timeline-bar-width" style="--bar-width:' + barW.toFixed(0) + 'px"></div>';
         html += '<span class="timeline-duration">' + fmtDuration(s.totalDuration) + '</span>';
         html += '</div>';
     }

@@ -8,6 +8,7 @@ import type { DataHub } from '../types/data-hub.js';
 import { createTestHub } from './test-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
+import { containsEmoji } from '../test-utils/assertions.js';
 
 const report = (
     opts: Omit<PrReportCoreOptions, 'dataHub' | 'tests' | 'stats'> & {
@@ -431,8 +432,12 @@ describe('Pr Report Core', () => {
                 const content = typeof summaryCall[1] === 'string' ? summaryCall[1] : '';
 
                 expect(content).toContain('QA Tools — PR Report');
-                expect(content).toContain('| :white_check_mark: Passed | :x: Failed | :fast_forward: Skipped |');
+                expect(content).toContain(
+                    '| [PASS] Passed | [FAIL] Failed | [SKIP] Skipped | [TOTAL] Total | [TIME] Duration | [RATE] Pass Rate |',
+                );
                 expect(content).toContain('| 8 | 1 | 1 | 10 |');
+                expect(content).not.toMatch(/:[a-z_]+:/);
+                expect(containsEmoji(content)).toBeFalsy();
             } finally {
                 delete process.env['GITHUB_STEP_SUMMARY'];
                 if (prevVitest !== undefined) process.env['VITEST'] = prevVitest;

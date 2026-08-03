@@ -10,8 +10,8 @@ describe('BuildChartSvg', () => {
 
         expect(svg).toContain('<svg');
         expect(svg).toContain('data-component="bar-chart"');
-        expect(svg).toContain('#22c55e');
-        expect(svg).toContain('#ef4444');
+        expect(svg).toContain('#1a7f37');
+        expect(svg).toContain('#d1242f');
     });
 
     it('handles zero values gracefully', () => {
@@ -32,7 +32,7 @@ describe('BuildMiniTrendChart', () => {
         expect(svg).toContain('<svg');
         expect(svg).toContain('data-component="trend-chart"');
         expect(svg).toContain('path');
-        expect(svg).toContain('#6366f1');
+        expect(svg).toContain('#0969da');
     });
 
     it('handles empty data', () => {

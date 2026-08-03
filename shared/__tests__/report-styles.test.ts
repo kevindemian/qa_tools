@@ -20,8 +20,8 @@ describe('Report-styles', () => {
         it('contains light-mode color values', () => {
             const vars = buildCssVars();
 
-            expect(vars).toContain('#22c55e');
-            expect(vars).toContain('#ef4444');
+            expect(vars).toContain('#1a7f37');
+            expect(vars).toContain('#d1242f');
         });
     });
 

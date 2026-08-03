@@ -8,7 +8,30 @@ import {
     isValidCtrfData,
     parseCliExtra,
 } from '../case17-helpers.js';
-import type { MetricsRun } from '../../../shared/types/data-hub.js';
+import type { MetricsRun, FlakinessEntry } from '../../../shared/types/data-hub.js';
+import { containsEmoji } from '../../../shared/test-utils/assertions.js';
+
+const makeFlakyEntry = (title: string, passCount: number, failCount: number): FlakinessEntry => ({
+    title,
+    project: 'test-project',
+    passCount,
+    failCount,
+    skipCount: 0,
+    totalRuns: passCount + failCount,
+    rate: failCount > 0 ? failCount / (passCount + failCount) : 0,
+});
+
+const expectOnlyBarDataStyles = (html: string): void => {
+    for (const styleAttr of html.match(/style="[^"]*"/g) ?? []) {
+        const declarations = styleAttr
+            .slice('style="'.length, -1)
+            .split(';')
+            .filter((d) => d.trim().length > 0);
+        for (const declaration of declarations) {
+            expect(declaration).toMatch(/^--bar-[^:]+:[^;]+$/);
+        }
+    }
+};
 
 describe('IsGitHubCi', () => {
     const OGT = process.env['GITHUB_TOKEN'];
@@ -73,55 +96,55 @@ describe('IsGitLabCi', () => {
 });
 
 describe('BuildGitTrendHtml', () => {
+    const makeRun = (failed: boolean): MetricsRun => ({
+        timestamp: '2024-01-15T00:00:00Z',
+        project: 'test-project',
+        passed: failed ? 9 : 10,
+        failed: failed ? 1 : 0,
+        skipped: 0,
+        total: 10,
+        duration: 1000,
+        tests: [{ title: 'Flaky Test', state: failed ? 'failed' : 'passed', duration: 100 }],
+    });
+
     it('returns empty string when CI context is empty', () => {
-        expect(buildGitTrendHtml('', [])).toBe('');
+        expect(buildGitTrendHtml('', [], [])).toBe('');
     });
 
     it('returns HTML with run bars when runs are present', () => {
-        const html = buildGitTrendHtml('', [
-            {
-                timestamp: '2024-01-15T00:00:00Z',
-                project: 'test-project',
-                passed: 10,
-                failed: 0,
-                skipped: 0,
-                total: 10,
-                duration: 1000,
-                tests: [],
-            },
-        ]);
+        const html = buildGitTrendHtml('', [makeRun(false)], []);
 
         expect(html).toContain('Git Pipeline Context');
         expect(html).toContain('100.0%');
     });
 
-    it('includes flaky tests section with structured table', () => {
-        const makeRun = (failed: boolean): MetricsRun => ({
-            timestamp: '2024-01-15T00:00:00Z',
-            project: 'test-project',
-            passed: failed ? 9 : 10,
-            failed: failed ? 1 : 0,
-            skipped: 0,
-            total: 10,
-            duration: 1000,
-            tests: [{ title: 'Flaky Test', state: failed ? 'failed' : 'passed', duration: 100 }],
-        });
-        const html = buildGitTrendHtml('', [
-            makeRun(false),
-            makeRun(true),
-            makeRun(false),
-            makeRun(true),
-            makeRun(false),
-        ]);
+    it('includes flaky tests section with structured table from computed entries', () => {
+        const flakyEntries: FlakinessEntry[] = [makeFlakyEntry('Flaky Test', 3, 3)];
+        const html = buildGitTrendHtml('', [makeRun(true)], flakyEntries);
 
         expect(html).toContain('Flaky Tests');
+        expect(html).toContain('Flaky Test');
+        expect(html).toContain('50.0%');
     });
 
     it('includes commits section', () => {
-        const html = buildGitTrendHtml('- fix login (user, 2024-01-15)', []);
+        const html = buildGitTrendHtml('- fix login (user, 2024-01-15)', [], []);
 
         expect(html).toContain('Recent Commits');
         expect(html).toContain('fix login');
+    });
+
+    it('renders no emojis and no color/border inline styles (B15)', () => {
+        expect.hasAssertions();
+
+        const flakyEntries: FlakinessEntry[] = [makeFlakyEntry('Flaky Test', 3, 3)];
+        const html = buildGitTrendHtml('- fix login (user, 2024-01-15)', [makeRun(true)], flakyEntries);
+
+        expect(containsEmoji(html)).toBeFalsy();
+
+        expectOnlyBarDataStyles(html);
+
+        expect(html).toContain('case17-');
     });
 });
 
@@ -160,6 +183,8 @@ describe('BuildDiffSummary', () => {
     });
 
     it('includes new failures', () => {
+        expect.hasAssertions();
+
         const html = buildDiffSummary({
             newFailures: [{ title: 'Fail A', state: 'failed', duration: 100, error: 'timeout' }],
             newPasses: [],
@@ -168,6 +193,9 @@ describe('BuildDiffSummary', () => {
 
         expect(html).toContain('new failure');
         expect(html).toContain('Fail A');
+        expect(containsEmoji(html)).toBeFalsy();
+
+        expectOnlyBarDataStyles(html);
     });
 
     it('includes new passes', () => {

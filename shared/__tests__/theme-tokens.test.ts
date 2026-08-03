@@ -6,13 +6,29 @@
 
 import { tokens, getToken } from '../ui/theme-tokens.js';
 
+function relativeLuminance(hex: string): number {
+    const value = hex.replace('#', '');
+    const r = parseInt(value.slice(0, 2), 16) / 255;
+    const g = parseInt(value.slice(2, 4), 16) / 255;
+    const b = parseInt(value.slice(4, 6), 16) / 255;
+    const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrastRatio(foreground: string, background: string): number {
+    const fg = relativeLuminance(foreground);
+    const bg = relativeLuminance(background);
+    const [lighter, darker] = fg >= bg ? [fg, bg] : [bg, fg];
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe('Theme-tokens', () => {
     describe('Color.semantic', () => {
-        it('has all four semantic colors', () => {
-            expect(tokens.color.semantic.success.light).toBe('#22c55e');
-            expect(tokens.color.semantic.error.light).toBe('#ef4444');
-            expect(tokens.color.semantic.warn.light).toBe('#facc15');
-            expect(tokens.color.semantic.info.light).toBe('#6366f1');
+        it('has all four semantic colors (Primer light, B16/F5-T1)', () => {
+            expect(tokens.color.semantic.success.light).toBe('#1a7f37');
+            expect(tokens.color.semantic.error.light).toBe('#d1242f');
+            expect(tokens.color.semantic.warn.light).toBe('#9a6700');
+            expect(tokens.color.semantic.info.light).toBe('#0969da');
         });
 
         it('has dark variants', () => {
@@ -20,6 +36,23 @@ describe('Theme-tokens', () => {
             expect(tokens.color.semantic.error.dark).toBe('#f87171');
             expect(tokens.color.semantic.warn.dark).toBe('#fbbf24');
             expect(tokens.color.semantic.info.dark).toBe('#a5b4fc');
+        });
+
+        it('light semantic colors meet WCAG AA text contrast ≥ 4.5:1 on white', () => {
+            expect.hasAssertions();
+
+            const white = '#ffffff';
+            const cases = [
+                { name: 'success', value: tokens.color.semantic.success.light },
+                { name: 'error', value: tokens.color.semantic.error.light },
+                { name: 'warn', value: tokens.color.semantic.warn.light },
+                { name: 'info', value: tokens.color.semantic.info.light },
+            ];
+            for (const c of cases) {
+                const ratio = contrastRatio(c.value, white);
+
+                expect(ratio).toBeGreaterThanOrEqual(4.5);
+            }
         });
     });
 
@@ -65,11 +98,33 @@ describe('Theme-tokens', () => {
 
     describe('Color.chart', () => {
         it('has chart colors', () => {
-            expect(tokens.color.chart.pass).toBe('#22c55e');
-            expect(tokens.color.chart.fail).toBe('#ef4444');
-            expect(tokens.color.chart.skip).toBe('#facc15');
-            expect(tokens.color.chart.line).toBe('#6366f1');
-            expect(tokens.color.chart.ref).toBe('#ef4444');
+            expect(tokens.color.chart.pass).toBe('#1a7f37');
+            expect(tokens.color.chart.fail).toBe('#d1242f');
+            expect(tokens.color.chart.skip).toBe('#9a6700');
+            expect(tokens.color.chart.line).toBe('#0969da');
+            expect(tokens.color.chart.ref).toBe('#d1242f');
+            expect(tokens.color.chart.onFillDark).toBe('#ffffff');
+            expect(tokens.color.chart.onFillLight).toBe('#333333');
+        });
+
+        it('on-fill text tokens contrast with their fill colors', () => {
+            expect(contrastRatio(tokens.color.chart.onFillDark, tokens.color.chart.pass)).toBeGreaterThanOrEqual(4.5);
+            expect(contrastRatio(tokens.color.chart.onFillDark, tokens.color.chart.fail)).toBeGreaterThanOrEqual(4.5);
+        });
+
+        it('chart colors used as text meet WCAG AA contrast ≥ 4.5:1 on white', () => {
+            expect.hasAssertions();
+
+            const white = '#ffffff';
+            for (const value of [
+                tokens.color.chart.pass,
+                tokens.color.chart.fail,
+                tokens.color.chart.skip,
+                tokens.color.chart.line,
+                tokens.color.chart.ref,
+            ]) {
+                expect(contrastRatio(value, white)).toBeGreaterThanOrEqual(4.5);
+            }
         });
     });
 
@@ -133,7 +188,7 @@ describe('Theme-tokens', () => {
 
     describe('GetToken', () => {
         it('retrieves nested tokens by dot path', () => {
-            expect(getToken('color.semantic.success.light')).toBe('#22c55e');
+            expect(getToken('color.semantic.success.light')).toBe('#1a7f37');
             expect(getToken('spacing.lg')).toBe(16);
             expect(getToken('fontFamily')).toBe(tokens.fontFamily);
         });

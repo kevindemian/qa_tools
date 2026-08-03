@@ -32,6 +32,7 @@ import {
     Moon,
     ChevronRight,
     ArrowUpDown,
+    Link,
 } from 'lucide';
 
 /** Lucide icon path data: array of [tagName, attributes] tuples. */
@@ -63,6 +64,7 @@ const ICON_MAP: Record<string, IconPaths> = {
     moon: Moon as unknown as IconPaths,
     'chevron-right': ChevronRight as unknown as IconPaths,
     'arrow-up-down': ArrowUpDown as unknown as IconPaths,
+    link: Link as unknown as IconPaths,
 };
 
 export type IconName = keyof typeof ICON_MAP;

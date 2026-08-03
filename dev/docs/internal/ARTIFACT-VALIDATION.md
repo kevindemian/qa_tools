@@ -214,7 +214,7 @@ do DataHub; sem dados → artefato informa "insufficient data"; parcial permitid
 | **F2** | F2-T1..T4 | Todos os `return ''` → `EmptyState` (razão + ação) | grep zero `return ''` |
 | **F3** | F3-T1..T3 | Gate sempre visível PASS/WARN/FAIL + score; threshold real de config-accessor; HTML não `<pre>` | buildQualityGate sempre renderiza |
 | **F4** | F4-T1..T5 | test-table colapsada (teto T2); merge 3 builders de gate; hierarquia h1→h2/h3; Recommended Actions; remover badges decorativos | gate AQS pr-report |
-| **F5** | F5-T1..T6 | Tokens AA (`warn→#d97706`, `info→#2563eb`, `error→#dc2626`, `success→#16a34a`); focus-visible/reduced-motion/tabular-nums/color-mix/skip-link; classificar 15 `style=`; emojis→SVG; golden reference | `rg` zero hex fora de tokens; zero emoji |
+| **F5** | F5-T1..T6 | Tokens AA (light→**Primer**, decisão §10: `success→#1a7f37`, `error→#d1242f`, `warn→#9a6700`, `info→#0969da`); focus-visible/reduced-motion/tabular-nums/color-mix/skip-link; classificar 15 `style=`; emojis→texto/ASCII; golden reference (OmniRoute) | `rg` zero hex fora de tokens; zero emoji | ⏳ implementado (I-0.5); aguardando validação determinística (Fase III) |
 | **F6** | F6-T1..T3 | pipeline-health → primitivos; schedule `buildHtmlPage` com CSS; interactive dashboards via primitivos | D3 ✅ |
 | **F7** | F7-T1..T5 | `artifact-quality-gate.ts` spec-driven; harness com fixtures externas; job CI via injector; rodar AQS 24+1; remoção AQS<60 | scorecard por artefato |
 
@@ -271,10 +271,10 @@ npx madge --circular shared/
 | B12 | `schedule-handler.ts:178-275` recomputa 13 métricas localmente (defectAggregation, traceability, seasonality, regression, developerProfile, aiComparison, suiteOptimization, crossSquad, incident, pipelineCost, impact, backlogHealth, coverageGap). **Hub não computa `backlogHealth`/`developerProfile`/`aiComparison` e `coverageGap` é não-equivalente (N6)** | `git_triggers/__tests__/schedule-handler.test.ts`: remover mocks de função; outputs iguais a `dataHub.computed.*` | **Hub first:** adicionar `backlogHealth`/`developerProfile`/`aiComparison` ao `ComputedMetrics` + corrigir `coverageGap`; depois consumir `computed.*` | F0-T6 |
 | B13 | `interactive-mode.ts:577-583` quality-gate em HTML cru `<pre>` sem CSS | `git_triggers/__tests__/interactive-mode.test.ts`: dashboard contém `<!DOCTYPE html>` + primitivos/CSS | usar `buildHtmlPage` + primitivos + `computed` | F3-T3 |
 | B14 | `pipeline-health-renderer.ts` `_PIPELINE_CSS` custom (:50-58), 6 inline styles, 3 emojis | `git_triggers/__tests__/pipeline-health.test.ts`: 0 `style=` estático, 0 emoji, tokens `buildCss` presentes | migrar p/ primitivos + `buildCss`; emojis→SVG | F6-T1 |
-| B15 | `case17-helpers.ts`: 31 inline styles, 7 emojis, recomputa `calcRunPassRate`/`calcFlakinessEntries` | `jira_management/commands/__tests__/case17-helpers.test.ts`: 0 inline/emoji; consumir `computed` | sanitizar helpers; consumir `computed.*` | F5-T4/F6 |
-| B16 | `theme-tokens.ts:153-158` cores light falham contraste AA (warn `#facc15`≈1.5:1, info `#6366f1`≈4.3:1, error `#ef4444`≈3.7:1) | `shared/ui/__tests__/theme-tokens.test.ts`: razão de contraste (rel. luminância) ≥4.5:1 p/ texto em branco | tokens AA (pesquisa): warn→`#d97706`, info→`#2563eb`, error→`#dc2626`, success→`#16a34a` + dark pairs | F5-T1 |
+| B15 | `case17-helpers.ts`: 31 inline styles, 7 emojis, recomputa `calcRunPassRate`/`calcFlakinessEntries` | `jira_management/commands/__tests__/case17-helpers.test.ts`: 0 inline/emoji; consumir `computed` | sanitizar helpers; consumir `computed.*` | ✅ F5-T4 (2026-08-03) |
+| B16 | `theme-tokens.ts:153-158` cores light falham contraste AA (warn `#facc15`≈1.5:1, info `#6366f1`≈4.3:1, error `#ef4444`≈3.7:1, success `#22c55e`≈2.3:1) | `shared/ui/__tests__/theme-tokens.test.ts`: razão de contraste (rel. luminância) ≥4.5:1 p/ texto em branco | tokens AA (Primer, §10): warn→`#9a6700`, info→`#0969da`, error→`#d1242f`, success→`#1a7f37` + dark pairs | F5-T1 |
 | B17 | inline styles estáticos em `report-sections.ts` (8), `report-table.ts` (3), `report-chart.ts` (3), `generate-coverage-gap-html.ts:120` (1) | `shared/__tests__/report-sections.test.ts` etc: 0 `style=` estático (permitido só largura/geometria de dados dinâmica) | classificar: estáticos→classes CSS; dinâmicos→documentar | F5-T3 |
-| B18 | `pr-report-job-summary` emojis (`:white_check_mark:`, `:x:`, etc.) | pr-report-core test: 0 codepoints emoji no job-summary | substituir por texto/símbolos ASCII | F5 |
+| B18 | `pr-report-job-summary` emojis (`:white_check_mark:`, `:x:`, etc.) | pr-report-core test: 0 codepoints emoji no job-summary | substituir por texto/símbolos ASCII | ✅ F5-T5 (2026-08-03) |
 | B19 | `flakiness-renderer.ts:39` `options?.dataHub?.computed.testCounts.total ?? 0` → Flaky Rate 0% (P1); callers `schedule-handler:399`/`batch-mode:242` sem options | `shared/__tests__/flakiness-dashboard.test.ts`: com dataHub → total correto; sem dataHub → "no data" explícito (nunca 0) | renderer exige dataHub (contrato); callers passam hub; no-data explícito | F0/F1 |
 | B20 | `report-export.ts` ok (projeção pura), MAS input deve vir de DataHub; call-site `batch-mode.ts:402` já usa `computed.metricsRuns[].tests` | `shared/__tests__/report-export.test.ts`: projeção pura (zero recomputação); call-site testa "insufficient data" | manter puro; garantir input dataHub-sourced | F0-T10 |
 | B21 | `report-html.ts:46,59`, `report-sections.ts:30,52,72,90,168,213,411`, `report-table.ts:75,100,187`, `report-chart.ts:30,43,51`, `report-diff.ts:76`, `report-utils.ts:46` — `return ''` = omissão silenciosa | por função: ausência → `EmptyState` com razão+ação (teste: HTML contém `data-component="empty-state"`) | substituir por primitivo `EmptyState` | F2 |
@@ -336,8 +336,237 @@ npx madge --circular shared/
 | — | F2-T1..T4 (B21 — `return ''` → `EmptyState` em 8+ renderers/primitives) | ⏳ PENDENTE | grep zero `return ''`; ausência → `data-component="empty-state"` |
 | — | F3-T1..T3 (B8 gate threshold real; B7 gate sempre visível; B13 `<pre>` → HTML) | ⏳ PENDENTE | gate FAIL real; `buildQualityGate` sempre renderiza |
 | — | F4-T1..T5 (B9 tabela colapsada; merge 3 builders gate; hierarquia; Recommended Actions; badges) | ⏳ PENDENTE | teto T2 + "Show all N" |
-| — | F5-T1..T6 (B16 tokens AA; focus-visible/reduced-motion; B17 classificar `style=`; B15 case17-helpers; B18 emojis job-summary; golden reference) | ⏳ PENDENTE | `rg` zero hex fora de tokens; zero emoji |
+| — | F5-T1..T6 (B16 tokens AA; focus-visible/reduced-motion; B17 classificar `style=`; B15 case17-helpers; B18 emojis job-summary; golden reference) | ⏳ PENDENTE | `rg` zero hex fora de tokens; zero emoji. **Decisões §10 (2026-08-02):** ① Contraste medido (luminância relativa WCAG): prescritos originais do plano `#16a34a`=3.30:1 e `#d97706`=3.19:1 NÃO atingem AA texto (4.5:1) — achado §9 registrado aqui; correção na origem = valores **Primer** (`#1a7f37`=5.08:1, `#d1242f`=5.24:1, `#9a6700`=4.87:1, `#0969da`=5.19:1, todos AA texto). Dark atual já passa (6–11:1) e é Primer exato (`#0d1117/#161b22/#8b949e/#c9d1d9`). ② Referências: **Primer** primária, **Carbon** data-viz secundária, **USWDS** régua acessibilidade, **Linear** benchmark, **OmniRoute** (`diegosouzapw/OmniRoute`) como referência estética documentada no golden reference (grid wallpaper rejeitado — ruído em reports data-dense). ③ Lucide mantido, uso enriquecido. ④ Nota de estudo LLM+dados (OmniRoute → `git_triggers/llm-pipeline.ts`) registrada como estudo pós-tarefa, fora do escopo. **F5-T1 ✅ (2026-08-02):** light semantic + chart → Primer (`#1a7f37/#d1242f/#9a6700/#0969da`); `chart.ts:46` comparação hardcoded `#facc15` → `tokens.color.chart.skip` (consumidor corrigido na origem); fallback error-page `html-factory.ts:69` → `#d1242f`; testes atualizados (theme-tokens/teste contraste ≥4.5:1 RED→GREEN + chart/report-chart/report-generator/report-styles). Gate: tsc ✅ · vitest 539 files/7453 tests ✅ · lint ✅ · **F5-T2 ✅ (2026-08-02):** `ACCESSIBILITY_CSS` em `report-styles.ts` (skip-link, `:focus-visible` ring, `font-variant-numeric:tabular-nums` p/ dados, `prefers-reduced-motion` desabilitando transições, badges via `color-mix`); `buildHtmlPage` injeta `<a class="skip-link" href="#main-content">` + `<main id="main-content">`; `report-table.ts` badges removem `--badge-bg` hardcoded (`${color}20` → `--badge-color` + color-mix). Teste `markdown.test.ts` 'handles empty input' atualizado p/ nova estrutura a11y. Gate: tsc ✅ · vitest 539 files/7453 tests ✅ · lint ✅ · **F5-T3 ✅ (2026-08-02):** classificação 15 `style=` (B17). Estáticos → CSS: legend dots `--color-chart-*` (3, `report-chart.ts` → `.dot-pass/fail/skip` com token direto em `report-styles.ts`), `th-cell` `--th-padding/--th-font-size` (valores token estáticos → `.th-cell`), `timeline-bar` `background` inline (token estático → `.timeline-bar`). Dinâmicos documentados (permitidos, B17: "só largura/geometria de dados dinâmica"): `report-sections` (8: `--bar-width`, `--score-color`×2, `--dim-bg`, `--dim-color`, `--bar-width/--bar-color`, `--overall-color`, `--qc-bg/--qc-color` — todos selecionados por score/status/availability), `report-table` (2: `--badge-color` category/flakiness + width dinâmica `th`), `generate-coverage-gap-html` (1: `--hierarchy-color` por threshold). Gate: tsc ✅ · vitest 539 files/7453 tests ✅ · **F5-T4 ✅ (2026-08-03):** `case17-helpers.ts` sanitizado (B15). 31 inline → classes `CASE17_CSS` em `report-styles.ts` (`.runs-chart-*`, `.case17-table/th/td`, `.case17-details/summary`, `.case17-pre*`, `.case17-diff-*`, `.case17-box*`, acento Jira `--color-brand-jira` `#0052cc`); 7 emojis → `icon()` Lucide (`trending-up`/`file-text`/`alert-triangle`/`link`/`bar-chart`/`x-circle`/`check-circle`, 14px, `role="img"`); recomputação eliminada na origem: `buildGitTrendHtml` recebe `flakyEntries` do `computed` (SSOT) como 3º parâmetro — `case17.ts:_enrichHtmlWithContext` passa `hub.computed.flakinessEntries`; `calcFlakinessEntries` NÃO é mais importado no helper (per-run `calcRunPassRate` permanece como projeção de `computed.metricsRuns`, mesmo padrão F0-T4 `statsFromMetricsRun` — não há campo `computed` p/ passRate por run sem janelamento de `metricsTrends`, equivalência §10 preservada). Bar chart usa `--bar-h/--bar-color` custom props de dados (B17) + `tokens.color.chart.*`. Testes: helper `case17-helpers.test.ts` (29) com asserts B15 (0 emoji via regex unicode; inline `style=` só permite `--bar-*`); wiring `case17.test.ts` atualizado p/ 3 args. `theme-tokens.ts` ganhou `color.brand.jira` + var `--color-brand-jira` em `report-styles.ts` (dark, para acento/borda nunca texto — `#0052cc` lum 0.13 falha AA em dark §10). Gate: tsc ✅ · vitest 539 files/7455 tests ✅ · lint ✅ · **F5-T5 ✅ (2026-08-03):** `pr-report-core.ts` B18 — 12 shortcodes emoji GitHub (`:white_check_mark:`, `:x:`, `:warning:`, `:fast_forward:`, `:clock1:`, `:repeat:`, `:arrow_right:`, `:large_blue_diamond:`, `:arrow_forward:`, `:question:`, `:heavy_plus_sign:`, `:information_source:`) substituídos por `MARKDOWN_SYMBOLS` ASCII (`[PASS]/[FAIL]/[WARN]/[SKIP]/[TIME]/[TOTAL]/[RATE]/[CHANGED]/[UNKNOWN]/[QUARANTINED]/[INFO]/->`) — SSOT constante única (`pr-report-core.ts`, antes de `getCiEnv`); aplicado em `renderQualityGateTable`, `buildSummaryTable` (sample-size), `buildFailureTable` header, `buildFlakySection` (status + suggestion + header), `buildCoverageSection`, `buildDiffSection` (3 `buildTestTable`), `writeToJobSummary` (tabela), `gateStatusIcon`/`gateOverallLabel`, `buildQualityGateSection`, `buildDataQualitySection`. Bug corrigido na origem: header duplicado `'### AI AI Failure Analysis'` → `'### AI Failure Analysis'`. Testes atualizados (`pr-report-core.test.ts:434` tabela + asserts `:/[a-z_]+:/` e regex emoji unicode — regex `:\w+:` era falso-positivo p/ ISO timestamp `:59:`), `pr-report.test.ts:391/444-445`, `pr-report-core.wiring.test.ts:257/289`. Gate: tsc ✅ · vitest 539 files/7455 tests ✅ · lint ✅ · **F5-T6 ✅ (2026-08-03):** criado `dev/docs/internal/GOLDEN-REFERENCE.md` — aprovação única de aparência: mandate "modern professional", hierarquia de referências (Primer primária · Carbon data-viz · USWDS régua a11y · Linear benchmark · **OmniRoute** referência estética aprovada com escopo, grid wallpaper **rejeitado** por ruído em reports data-dense · Lucide mantido), tokens Primer AA com contraste medido, símbolos ASCII `MARKDOWN_SYMBOLS`, gates de aceite e cross-refs. **Gate F5 aceite (fechamento):** `rg` zero hex em primitivos de report — `chart.ts:46` texto on-fill `#333/#fff` tokenizado na origem → `tokens.color.chart.onFillDark('#ffffff')/onFillLight('#333333')` (tema-independente, pois fills de chart são valores únicos) + teste contraste ≥4.5:1; demais hex residuais são CSS var fallbacks de `html-factory.ts` (documentados F5-T1) e paleta de terminal (splash/prompt-format/palette — fora de escopo de report). Zero emoji (B15/B18). **F5-T1..T6 implementado (registro acima); aguardando validação determinística (Fase III).** Não é fase completa — gate final só na Fase III. |
 | — | F6-T1..T3 (B14 pipeline-health → primitives; schedule/interactive `buildHtmlPage`) | ⏳ PENDENTE | D3 ✅ |
 | — | F7-T1..T5 (AQS spec-driven; harness fixtures externas; job CI via injector; AQS 24+1; remoção AQS<60) | ⏳ PENDENTE | scorecard por artefato |
 
 > **Nota:** a parametrização pré-existente de `git_triggers/__tests__/pipeline-health.test.ts` e `jira_management/__tests__/jira_link_manager.test.ts` foi commitada (2026-08-01, `3f73837f`).
+---
+
+## 11. PLANO DE EXECUÇÃO REGISTRADO (2026-08-03) — SSOT DE EXECUÇÃO
+
+**Propósito:** registro único, à prova de perda de contexto, do plano de execução completo para encerrar este trabalho de validação de artefatos. Cada fase/tarefa abaixo tem **tarefa executável**, **critério de aceite verificável por comando**, **validação** e **auditoria de conclusão**. Executada **uma fase por vez, sem agrupamentos**; cada fase só inicia após a anterior estar commitada e com CI green. Fontes de autoridade existentes: §7 (definição de fases/achados), §8 (catálogo de bugs e teste RED), §9 (protocolo de retomada e proibições). Contratos de segurança obrigatórios: AGENTS.md §0-§28 (imutabilidade de safety mechanisms §5/§18, causa-raiz §4, DRY/SSOT §6, warning-ratchet 755, Rule 19 RED-to-GREEN, Rule 26 mock somente em fronteiras externas).
+
+### 11.1 Estado verificado (2026-08-03, antes da execução)
+
+| Item | Estado | Evidência |
+|---|---|---|
+| Fase A, F1-T1..T5, F0-T1..T4, F0-T8..T10, B19 | ✅ commitado e verificado estaticamente | git log; arquivos/removidos confirmados (`release-score.ts`, `statsFromTests`, `generateReportWithFallback`/`generateCoverageHtml`) |
+| F5-T1..T6 (24 arquivos + `GOLDEN-REFERENCE.md`) | ⚠️ no working tree, NÃO commitado, bloqueado | `git status`: 24 M + 1 A; eslint: 8 errors + 4 warnings novos (`detect-unsafe-regex`); contagem de warnings 758 > 755 |
+| Claims falsos no doc | §7 linha 217 `✅ (2026-08-03)`; §9 linha 339 `F5 FASE COMPLETA ✅ (2026-08-03)` | inspeção -> corrigir no I-0 |
+| Pendentes verificado no código | F0-T6, F0-T7, F0-T11, F0-T12, F2, F3, F4, F6, F7 | `schedule-handler.ts:182/183`, `interactive-mode.ts:570`, `pr-report-core.ts:89`, `backlog-health-renderer.ts:89`, `report-sections.ts` 8x `return ''`, `pipeline-health-renderer.ts:49/75/97/140-143`, AQS ausente |
+| Validação determinística | nunca executada/relatada | reports/verificação de fechamento | `reports/validation/*` = 01/Ago 13:17 (pré-F5); `content-validation-report.md` 27/Jul (só D2) |
+
+### Rota de execução (ordem estrita)
+
+`I-0` -> `I-1` (F0-T6) -> `I-2` (F0-T7) -> `I-3` (F0-T11) -> `I-4` (F0-T12) -> `I-5` (F2) -> `I-6` (F3) -> `I-7` (F4) -> `I-8` (F6) -> `I-9` (F7) -> `Fase II` (protocolo) -> `Fase III` (validação determinística) -> `Fase IV` (encerramento). Princípio **hub first**: corrigir o DataHub (`shared/data-hub/`) ANTES dos renderers - nunca o inverso (aplica a I-1/I-2).
+
+---
+
+### FASE I - CONCLUSÃO DA IMPLEMENTAÇÃO DO PLANO ORIGINAL
+
+#### I-0 — FECHAR O F5 (execução IMEDIATA)
+
+**Objetivo:** commitar o F5 inteiro (T1-T6) como unidade atômica, corrigindo os bloqueios de lint, e sanear claims falsos do doc. O F5 **não** será marcado como fase concluída — aguarda a validação determinística (Fase III).
+
+| Tarefa | Ação | Critério de aceite (verificável) |
+|---|---|---|
+| **I-0.1** | Corrigir **8 erros ESLint**: 4 `vitest/prefer-expect-assertions` (`expect.hasAssertions()` como primeira expressão) em `case17-helpers.test.ts:126,172` e `theme-tokens.test.ts:41,112`; 4 `vitest/padding-around-all` (`case17-helpers.test.ts:131,134,182`, `theme-tokens.test.ts:51` — autofix via `eslint --fix`, revisar diff para garantir somente whitespace) | `npx eslint <2 arquivos>` -> **0 errors**; asserts existentes intactos (Rule 19.5) |
+| **I-0.2** | Corrigir **4 warnings novos `security/detect-unsafe-regex`** (ratchet 758 > 755): novo helper `containsEmoji(text: string): boolean` (scan de code-points `0x1F000-0x1FAFF`, `0x2600-0x27BF`; sem regex, zero ReDoS) em `shared/test-utils/assertions.ts` + teste próprio em `assertions.test.ts` (Rule 19.13). Aplicar em `case17-helpers.test.ts:13` (remover `EMOJI_RE`), `:130/:181` e `pr-report-core.test.ts:439` -> `expect(containsEmoji(x)).toBe(false)`; reestruturar regex de `style=` (`case17:132,183`) com quantificador aninhado (ReDoS) -> validação por declaração (`split(';')`) com regex simples `/^--bar-[^:]+:[^;]+$/` | `npx eslint <2 arquivos>` -> 0 erros; ratchet **754 ≤ 755** (sem regressão; `npm run lint` mostra `lint-warnings` OK); nenhuma supressão (`# noqa`/eslint-disable proibidos, Rule 5/14) |
+| **I-0.3** | **Gate completo** | `npx tsc --noEmit` -> 0; `npx vitest run` (suíte completa) -> 100%; `npm run lint` (quality-check) -> verde; unused-exports; `npx madge --circular shared/`; depcruise; type-coverage |
+| **I-0.4** | Corrigir claims falsos em `ARTIFACT-VALIDATION.md`: linha 217 (`✅ (2026-08-03)` -> status factual) e linha 339 (remover `F5 FASE COMPLETA ✅`, manter detalhe T1-T6 como registro de implementação); **B15/B18 §8 mantêm ✅** (precisos). Adicionar linha PROGRESS para I-0 | doc sem claim de "F5 FASE COMPLETA"; status = "implementado, commitado em I-0, aguardando validação determinística (Fase III)"; §11.2 PROGRESS atualizado |
+| **I-0.5** | **Commit atômico batch** (24 arquivos + `GOLDEN-REFERENCE.md` + `assertions.ts`/`assertions.test.ts` + doc) | commit único; **sem `--no-verify`** (hook roda gates legítimos) |
+| **I-0.6** | **Pach + monitorar CI** | `gh` com timeout >= 300s; monitorar via API GitHub `Bearer` (`$GITHUB_TOKEN` em `.env.local`/`.env`); PR #24 `feat/f1-datahub-ssot` -> `conclusion: success` |
+
+**Auditoria de conclusão (I-0):** lint 0 erros / 754 warnings; suíte 100% verde; doc sem claims falsos; commit encerra todo o F5; CI green; PROGRESS atualizado com SHA; F5 mantido como "implementação, aguardando validação" (não fase completa).
+
+---
+
+#### I-1 — F0-T6 (B12/N6 — Ferramenta), hub first
+
+**Tarefa executável:**
+- `I-1.1` Estender `ComputedMetrics` (contrato `shared/types/data-hub.ts:694-769`) e `computeMetrics` (`shared/data-hub/hub.ts:794-914`) com `backlogHealth`/`developerProfile`/`aiComparison` e `coverageGap` equivalente (N6 — hoje `new Map()` vazio); hub computa estes, nunca renderers (hub first).
+- `I-1.2` Migrar `git_triggers/schedule-handler.ts:181-275` para `hub.computed.*` — remover recomputação local de `aggregateDefectTrends`/`buildTraceabilityMatrix`/`analyzeBacklogHealth`/`calculatePipelineCost` e fallback `generateGitMetricsRuns` (git-metrics); no-data explícito (Rule 25).
+- `I-1.3` Testes RED->GREEN sem mock-teatro: hub real (`DataHubImpl.createFromParseResult`), mock apenas de fronteira externa (adapter git).
+
+**Critérios de aceite:**
+- `rg -n "aggregateDefectTrends|buildTraceabilityMatrix|analyzeBacklogHealth|calculatePipelineCost|generateGitMetricsRuns" git_triggers/schedule-handler.ts` -> **0** (sem recomputação local/fallback).
+- Hub parsed-only e vazio computam os 4 campos com no-data explícito (RED -> GREEN).
+- Teste RED falha antes; GREEN passa depois; asserts existentes intactos.
+- Consumidores atualizados sistemicamente (§7): `session-state`, `batch-mode`, `prefetchAllProjects`, harness.
+
+**Auditoria:** commit + PROGRESS; gate completo; regenerar harness se shape de input mudar; zero `?? 0`/`|| 0` masking nos novos campos.
+
+---
+
+#### I-2 — FASE F0-T7 (interactive-mode, hub first)
+
+**Tarefa executável:**
+- `I-2.1` Migrar `git_triggers/interactive-mode.ts:386-551` (28 refs) para `computed.*` (SSOT); remover recomputação local.
+- `I-2.2` Quality-gate `<pre>${formatQualityGateText(qualityGate)}</pre>` (`:570`) -> primitives/`buildQualityGate` (forma final em I-6/F3-T3 + I-8/F6 `buildHtmlPage`).
+
+**Acceptance:** `rg -n "formatQualityGateText|<pre>" git_triggers/interactive-mode.ts` -> 0 no gate; recomputação local eliminada; suíte + contrato equivalentes (§10).
+
+**Auditoria:** commit + gate; revisar impacto em `batch-mode.ts:242,366`.
+
+---
+
+#### I-3 — FASE F0-T11 (contrato duration, INC-1/N4)
+
+**Tarefa executável:**
+- `I-3.1` Contrato `PrReportStats.duration: number` (`pr-report-core.ts:89`) -> `number | undefined`.
+- `I-3.2` Renderers de duration -> `N/A` quando ausente.
+
+**Acceptance (RED):** teste sem run -> render `'N/A'`, nunca `'0.0s'` (Rule 25.1). Atualizar produtores/consumidores/testes (Rule 7).
+
+**Auditoria:** commit + gate; `rg` zero `duration.*0.0s` em renderers.
+
+---
+
+#### I-4 — FASE F0-T12 (totalIssues INC-2/N5)
+
+**Tarefa executável:**
+- `I-4.1` Remover `result.totalIssues || 0` em `pagimento (backlog-health-renderer.ts:89) ->` para `backlog-health-renderer.ts`.
+- `I-4.2` Guarda na origem (Rule 24.3); campo ausente -> erro/warn estruturado (Rule 25.1); nunca 0 para "ausência".
+
+**Acceptance (RED):** `totalIssues=0` -> taxas corretas (0% real vs ausente); teste de no-data acende.
+
+**Auditoria:** commit + gate; `rg` zero `totalIssues.*\|\| 0`.
+
+---
+
+#### I-5 — FASE F2 (B21 — `return ''` -> `EmptyState`)
+
+**Tarefas executáveis:**
+- `I-5.1` Substituir os **8 `return ''`** de `report-sections.ts` (`:30,52,72,90,163,188,208,417`) e demais renderers por `data-component="empty-state"` (EmptyState) — ausência de dado explícita (Rule 25).
+- `I-5.2` Estender para `report-table`/primitivas conforme §7 B21.
+
+**Acceptance:** `rg -n "return ''" shared/report/*.ts shared/quality/*.ts` -> 0 (fora de casos legítimos documentados); teste EmptyState (RED -> GREEN).
+
+**Auditoria:** commit + gate; regenerar harness (Fase III) se novo `data-component`.
+
+---
+
+#### I-6 — FASE F3 (B7/B8/B13 — quality gate)
+
+**Tarefas executável:**
+- `I-6.1` B7: `buildQualityGate` (`report-sections.ts:188`) `if (passRate >= threshold) return ''` -> sempre renderiza (EmptyState no lugar de string vazia).
+- `I-6.2` B8: threshold real (gate FAIL real; não-finito -> erro explícito Rule 25.3).
+- `I-6.3` B13: `<pre>` quality-gate (`interactive-mode.ts:570`) -> HTML estruturado (consolida I-2.2/I-8).
+
+**Acceptance:** RED gate FAIL renderizado; `buildQualityGate` sempre emite markup; NaN/Infinity -> erro explícito (guard §24).
+
+**Auditoria:** commit + gate; interplay `report-styles`/badge ok.
+
+---
+
+#### I-7 — FASE F4 (B9 — tabela colapsada + resto)
+
+**Tarefas executável:**
+- `I-7.1` Simplificar os **3 builders de gate** em um (DRY/SSOT, §6).
+- `I-7.2` Hierarquia de seções; `I-7.3` Recommended Actions presentes.
+- `I-7.4` Badges `--badge-color` (`report-table.ts:135,152` já ok) + tabela colapsada (já presente `:293,316` "Show all N" — validar/estender).
+
+**Acceptance:** tabela colapsada + "Show all N"; Recommended Actions no HTML; zero builders duplicados.
+
+**Auditoria:** commit + gate; content-validation test atualizado (D2).
+
+---
+
+#### I-8 — FASE F6 (B14 — pipeline-health primitivo)
+
+**Tarefas executável:**
+- `I-8.1` `git_triggers/pipeline-health-renderer.ts`: remover `_PIPELINE_CSS` (`:49`) + inline styles (`:75,97,140-143`) -> primitivas (`shared/primitives`/`report-styles`/tokens); a11y preservada.
+- `I-8.2` schedule/interactive dashboards -> `buildHtmlPage` (F5-T2 a11y).
+
+**Acceptance:** `rg` zero CSS inline / `_PIPELINE_CSS` em pipeline-health; zero hex/emoji fora de tokens; a11y (skip-link/focus) preservada.
+
+**Auditoria:** commit + gate; regenerar harness (pipeline-health.html).
+
+---
+
+#### I-9 — FASE F7 (AQS — artefato quality score)
+
+**Tarefas executável:**
+- `I-9.1` AQS **spec-driven** (scorecard por artefato via `ARTIFACT_SPECS`).
+- `I-9.2` Harness com **fixtures externas JSON** commitadas (`scripts/__fixtures__/artefactos/*.json`) e **validáveis na carga** contra `shared/types/artifact-specs.ts` (guard Rule 24.3; SSOT de input compartilhado: harness D1/D3 + AQS + content-validation).
+- `I-9.3` Job CI via `shared/ci/ci-injector.ts` (proibido editar yml, G2).
+- `I-9.4` AQS **24+1** (24 tipos + 1).
+- `I-9.5` Remoção de artefato com **AQS < 60**.
+
+**Acceptance:** scorecard por artefato; fixtures externas tipadas e validadas; CI job via injector; AQS 24+1 atendido; `deterministic-validation` produz scorecard.
+
+**Auditoria:** gate + rodar AQS; 24+1 ok; artefato <60 removido/registrado; harness determinístico.
+
+---
+
+## FASE II — PROTOCOLO DE VALIDAÇÃO DETERMINÍSTICA
+
+**Tarefas executável:**
+- `II.1` Criar `dev/docs/internal/VALIDATION-PLAN.md`: determinismo (mesmo SHA + comando -> outputs idênticos, provado por sha256 dos HTML); input = **fixtures commitadas** (não dados vivos de CI); fluxo por fase = regenerar harness + D1 (`vitest run`) + D2 (`artifact-content-validation.test.ts`) + D3 (rg zero inline estático/emoji/hex fora de tokens; contraste WCAG >= 4.5:1; auditoria `data-*`) + **hashes sha256** + re-prova.
+- `II.2` Criar `scripts/deterministic-validation.ts`: automatiza harness + D1 + D2 + checks D3 (allowlist de exceções documentadas, ex: `html-factory.ts:69` para fallback) + sha256 -> gera `VALIDATION-REPORT.md`.
+
+**Acceptance:** protocolo documentado e reproduzível; script idempotente; zero "validação determinística" sem relatório commitado.
+
+**Auditoria:** rodar script em estado atual -> input da Fase III.
+
+---
+
+## FASE III — VALIDAÇÃO DETERMINÍSTICA DE FECHAMENTO
+
+- **III.1** Regenerar `reports/validation/` (harness) a partir do estado commitado final.
+- **III.2** Rodar `deterministic-validation` -> `dev/docs/internal/VALIDATION-REPORT.md` (matriz 24x3, D1/D2/D3 por artefato, sha256).
+- **III.3** Re-prova (rerun -> hashes idênticos = prova de reprodutibilidade).
+- **III.4** Commit relatório + finalização `GOLDEN-REFERENCE.md`.
+
+**Acceptance:** relatório completo com hashes; re-prova reproduzida; 24 artefatos com D1/D2/D3.
+
+**Auditoria:** hashes idênticos em 2 rodadas; relatório commitado.
+
+---
+
+## FASE IV — FECHAMENTO DOCUMENTAL
+
+- **IV.1** Marcar `ARTIFACT-VALIDATION.md` como encerrado **somente com as 3 condições** (§6): (a) commits atômicos com SHA, (b) PROGRESS completo, (c) `VALIDATION-REPORT.md` com hashes.
+- **IV.2** Auditoria final §8 (refs stale) + matriz 24x3 completa (D1/D2/D3).
+- **IV.3** CI green final.
+
+**Acceptance:** runbook completo; 0 refs stale; CI green.
+
+---
+
+### Regras transversais obrigatórias (todas as fases; AGENTS.md §0-§24)
+
+1. RED -> GREEN -> Refactor (§9/§19.13); teste que falha -> bug no código (Rule 19.4/19.5; nunca alterar expects).
+2. Gate completo por fase: executar `tsc --noEmit` + `vitest run` + `npm run lint` + unused-exports + depcruise + `madge --circular` + type-coverage.
+3. Zero violação de safety mechanism, sem supressão nem bypass (Rule 5/14/18); sem `# noqa`/`eslint-disable`/`--no-verify`/`[skip ci]`/`@ts-ignore`/`.skip` (exceto autorização explícita).
+4. Rodar `npm run lint` imediatamente antes do commit (quality-check = mesmo eslint do hook).
+5. Mocks somente em fronteiras externas (HTTP/rede/e-mail/subprocess). Nenhum mock de lógica interna (Rule 26).
+6. Safeguard clauses (`Number.isFinite`, null/undefined, empty-collection, boundary) e logs/warnings estruturados; zero catch vazio (Rule 24/25).
+7. SSOT/hub first: corrigir origem (DataHub/`computed`) antes de renderers; zero `|| 0`/`?? 0` masking de dados.
+8. Push: `gh` timeout >= 300s; monitorar CI com `Bearer` token (AGENTS §13); CI verde obrigatório.
+
+---
+
+## 11.2 PROGRESS (I-0 -> Fase IV)
+
+| Data | Fase | Tarefa | Status | Evidência |
+|---|---|---|---|---|
+| 2026-08-03 | I-0 | I-0.1 lint (8 errors) | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.2 ratchet warnings (4 detect-unsafe-regex) | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.3 gate (tsc/vitest/lint) | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.4 doc claims | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.5 commit batch | ⏳ | — |
+| 2026-08-03 | I-0 | I-0.6 push + CI | ⏳ | — |
+| 2026-08-03 | I-1 | F0-T6 (hub first) | ⏳ | — |
+| 2026-08-03 | I-2 | F0-T7 (interactive) | ⏳ | — |
+| 2026-08-03 | I-3 | F0-T11 (duration) | ⏳ | — |
+| 2026-08-03 | I-4 | F0-T12 (totalIssues) | ⏳ | — |
+| 2026-08-03 | I-5 | F2 (EmptyState) | ⏳ | — |
+| 2026-08-03 | I-6 | F3 (gate) | ⏳ | — |
+| 2026-08-03 | I-7 | F4 (tabela) | ⏳ | — |
+| 2026-08-03 | I-8 | F6 (pipeline) | ⏳ | — |
+| 2026-08-03 | I-9 | F7 (AQS) | ⏳ | — |
+| 2026-08-03 | II | protocolo | ⏳ | — |
+| 2026-08-03 | III | validação determinística | ⏳ | — |
+| 2026-08-03 | IV | encerramento | ⏳ | — |

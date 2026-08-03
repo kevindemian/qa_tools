@@ -132,7 +132,7 @@ export function buildHistoryCell(history: TestHistoryRun[]): string {
 
 export function buildCategoryBadge(cat: string): string {
     const color = Object.entries(CATEGORY_COLORS).find(([k]) => k === cat)?.[1] || tokens.color.chart.pass;
-    return `<span class="category-badge category-badge-dynamic" style="--badge-bg:${color}20;--badge-color:${color}">${cat}</span>`;
+    return `<span class="category-badge category-badge-dynamic" style="--badge-color:${color}">${cat}</span>`;
 }
 
 export function buildFlakinessBadge(rate: number): string {
@@ -149,7 +149,7 @@ export function buildFlakinessBadge(rate: number): string {
         color = tokens.color.chart.pass;
         label = 'baixa';
     }
-    return `<span class="flakiness-badge" style="--badge-bg:${color}20;--badge-color:${color}" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;
+    return `<span class="flakiness-badge" style="--badge-color:${color}" title="Flakiness: ${pct}%">${icon('refresh-cw', 12)} ${label}</span>`;
 }
 
 const DEFAULT_MAX_VISIBLE_PASSED = 50;
@@ -250,8 +250,8 @@ function buildColumns(opts: {
 function buildThead(columns: ColDef[]): string {
     let thead = '<thead class="thead-colored"><tr>';
     for (const col of columns) {
-        const width = col.width ? `width:${col.width};` : '';
-        thead += `<th data-column="${col.key}" scope="col" class="th-cell" style="--th-padding:${tokens.spacing.xs}px ${tokens.spacing.sm}px;--th-font-size:${tokens.fontSize.sm};${width}">${col.label}</th>`;
+        const width = col.width ? `style="width:${col.width}"` : '';
+        thead += `<th data-column="${col.key}" scope="col" class="th-cell" ${width}>${col.label}</th>`;
     }
     return thead + '</tr></thead>';
 }

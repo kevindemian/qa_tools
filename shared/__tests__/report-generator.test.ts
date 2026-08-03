@@ -433,7 +433,7 @@ describe('GenerateHtmlReport', () => {
 
         expect(html).toContain('Pass Rate Trend');
         expect(html).toContain('<svg');
-        expect(html).toContain('6366f1');
+        expect(html).toContain('0969da');
     });
 
     it('omits trend chart when trends have fewer than 2 points', () => {
@@ -531,8 +531,8 @@ describe('GenerateHtmlReport', () => {
         ];
         const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
-        expect(html).toContain('#22c55e');
-        expect(html).toContain('#ef4444');
+        expect(html).toContain('#1a7f37');
+        expect(html).toContain('#d1242f');
     });
 
     it('omits timeline when test list is empty', () => {
