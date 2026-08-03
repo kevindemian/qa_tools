@@ -98,7 +98,7 @@ const report = (
                           failed: statsForHub.failed,
                           skipped: statsForHub.skipped,
                           total: statsForHub.total,
-                          duration: statsForHub.duration,
+                          duration: statsForHub.duration ?? 0,
                           tests,
                       },
                   ],

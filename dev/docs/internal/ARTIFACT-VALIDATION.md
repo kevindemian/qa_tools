@@ -435,15 +435,15 @@ npx madge --circular shared/
 
 ---
 
-#### I-3 — FASE F0-T11 (contrato duration, INC-1/N4)
+#### I-3 — FASE F0-T11 (contrato duration, INC-1/N4) — **✅ CONCLUÍDA (2026-08-03)**
 
 **Tarefa executável:**
-- `I-3.1` Contrato `PrReportStats.duration: number` (`pr-report-core.ts:89`) -> `number | undefined`.
-- `I-3.2` Renderers de duration -> `N/A` quando ausente.
+- `I-3.1` Contrato `PrReportStats.duration: number` (`pr-report-core.ts:89`) -> `number | undefined`. **FEITO** — produtor `deriveSsoTTestData` seta `run?.duration` (ausência explícita, sem `?? 0`).
+- `I-3.2` Renderers de duration -> `N/A` quando ausente. **FEITO** — `renderDurationCell` (`renderQualityGateTable` + `writeToJobSummary`); ausência → `N/A`; NaN/∞/negativo → warn estruturado + `N/A` (Rule 24/25).
 
-**Acceptance (RED):** teste sem run -> render `'N/A'`, nunca `'0.0s'` (Rule 25.1). Atualizar produtores/consumidores/testes (Rule 7).
+**Acceptance (RED):** teste sem run -> render `'N/A'`, nunca `'0.0s'` (Rule 25.1). Atualizar produtores/consumidores/testes (Rule 7). **Atendido** — 3 testes novos em `pr-report-core.test.ts` (N/A sem run; `2.5s` com run; existing intactos). `persistCurrentRun` projeta `?? 0` para o contrato `ParseResult` (dataset vazio = agregado 0, alinhado a `EMPTY_PARSE_RESULT`; não é masking).
 
-**Auditoria:** commit + gate; `rg` zero `duration.*0.0s` em renderers.
+**Auditoria:** commit + gate; `rg` zero `duration.*0.0s` em renderers. **OK** — únicos hits de `0.0s` são o comentário da helper e o nome do teste.
 
 ---
 
@@ -583,8 +583,8 @@ npx madge --circular shared/
 | 2026-08-03 | I-0 | I-0.5 commit batch | ✅ | `23851812` (27 files: F5 + GOLDEN-REFERENCE + assertions + doc); hook pre-commit verde |
 | 2026-08-03 | I-0 | I-0.6 push + CI | ⚠️ | F5 movido p/ **side branch `feat/f5-side-branch`** (decisão do usuário — plano era side branch até resolver mutation testing); PR #24 restaurado p/ `a77c12f7` (head pré-F5) via force-with-lease; todos os checks do PR #24 green exceto **Mutation Testing = timeout sistêmico (15min), pré-existente (run 30750366765) e documentado em `MUTATION-TESTING-PERF.md` (Estratégias A/B pendentes de decisão)**. Push de side branch não roda o job mutation (só PR/main/dev) |
 | 2026-08-03 | I-1 | F0-T6 (hub first) | ✅ | `63c0f19a` — schedule-handler→`hub.computed.*`, N6 linkedTestKeys, pipelineCostResult SSOT; gate verde (tsc/vitest 539×7474/lint/depcruise/ts-prune); débito D-1/D-2 registrado (ver §Status I-1) |
-| 2026-08-03 | I-2 | F0-T7 (interactive) | ✅ | `02b2c652` + `(I-2.3)` — interactive/schedule 100% `hub.computed.*`; D1/D2/D3/§6 trio na origem; D2-delete adapter; I-2.3 gate: `buildQualityGateSection(QualityGateResult)` em `report-sections.ts` (HTML estruturado, sem `<pre>`) nos 2 dashboards; `formatQualityGateText` mantido (tests próprios); mocks mortos removidos; docs stale (TECHDOC/03-git-triggers) corrigidos. Gate verde (tsc/vitest/lint) |
-| 2026-08-03 | I-3 | F0-T11 (duration) | ⏳ | — |
+| 2026-08-03 | I-2 | F0-T7 (interactive) | ✅ | `02b2c652` (SSOT/compute/D2-delete) + `1a6e6ab2` (I-2.3 gate) — interactive/schedule 100% `hub.computed.*`; D1/D2/D3/§6 trio na origem; D2-delete adapter; I-2.3 gate: `buildQualityGateSection(QualityGateResult)` em `report-sections.ts` (HTML estruturado, sem `<pre>`) nos 2 dashboards; `formatQualityGateText` mantido (tests próprios); mocks mortos removidos; docs stale (TECHDOC/03-git-triggers) corrigidos. Gate verde (tsc/vitest/lint) |
+| 2026-08-03 | I-3 | F0-T11 (duration) | ✅ | commit I-3 — `PrReportStats.duration: number \| undefined` (`pr-report-core.ts`); produtor `run?.duration` (sem `?? 0`); `renderDurationCell` renderiza `N/A` (ausência/NaN/negativo explícitos, Rule 24/25), nunca `0.0s`; `persistCurrentRun` projeta `?? 0` como agregado de dataset vazio (contrato ParseResult, documentado). RED→GREEN: 3 testes (N/A sem run, 2.5s com run, existing). Gate verde: tsc/vitest 536×7420/eslint/depcruise/ts-prune/quality-check |
 | 2026-08-03 | I-4 | F0-T12 (totalIssues) | ⏳ | — |
 | 2026-08-03 | I-5 | F2 (EmptyState) | ⏳ | — |
 | 2026-08-03 | I-6 | F3 (gate) | ⏳ | — |

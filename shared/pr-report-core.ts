@@ -86,7 +86,8 @@ export interface PrReportStats {
     failed: number;
     skipped: number;
     total: number;
-    duration: number;
+    /** Total run duration in ms. Absent when there is no run — never masked as `0` (Rule 25). */
+    duration?: number | undefined;
 }
 
 export interface DiffComparison {
@@ -166,8 +167,23 @@ export function computeDiffComparison(current: FlatTest[], previous: FlatTest[])
     return { newFailures, newPasses, flaky };
 }
 
+/**
+ * Render a run duration (ms) as a `ss.s`s cell for Markdown tables.
+ * Rule 24/25: undefined (no run) and non-finite/negative values surface as explicit
+ * `N/A` — never `0.0s` (which would mask absence). An anomalous (invalid) duration
+ * also emits a structured warning so the data defect is not silent.
+ */
+function renderDurationCell(duration: number | undefined): string {
+    if (duration === undefined) return 'N/A';
+    if (!Number.isFinite(duration) || duration < 0) {
+        rootLogger.warn(`pr-report: duração inválida (${String(duration)}); renderizando N/A`);
+        return 'N/A';
+    }
+    return (duration / 1000).toFixed(1) + 's';
+}
+
 function renderQualityGateTable(passRate: number, stats: PrReportStats, diff?: DiffComparison): string {
-    const durationSec = (stats.duration / 1000).toFixed(1);
+    const durationCell = renderDurationCell(stats.duration);
     const lines: string[] = [];
 
     let statusIcon: string;
@@ -182,7 +198,7 @@ function renderQualityGateTable(passRate: number, stats: PrReportStats, diff?: D
         `| ${MARKDOWN_SYMBOLS.pass} Passed | ${MARKDOWN_SYMBOLS.fail} Failed | ${MARKDOWN_SYMBOLS.skip} Skipped | ${MARKDOWN_SYMBOLS.time} Duration |`,
     );
     lines.push('|---|---|---|---|');
-    lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationSec}s |`);
+    lines.push(`| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${durationCell} |`);
     lines.push('');
 
     if (diff) {
@@ -454,13 +470,13 @@ function writeToJobSummary(stats: PrReportStats, passRate: number, htmlArtifactU
     try {
         const resolvedSummary = path.resolve(stepSummaryPath);
         const passRateStr = passRate.toFixed(1);
-        const durationSec = (stats.duration / 1000).toFixed(1);
+        const durationCell = renderDurationCell(stats.duration);
         const lines: string[] = [
             '## [stats] QA Tools — PR Report',
             '',
             `| ${MARKDOWN_SYMBOLS.pass} Passed | ${MARKDOWN_SYMBOLS.fail} Failed | ${MARKDOWN_SYMBOLS.skip} Skipped | ${MARKDOWN_SYMBOLS.total} Total | ${MARKDOWN_SYMBOLS.time} Duration | ${MARKDOWN_SYMBOLS.rate} Pass Rate |`,
             '|---|---|---|---|---|---|',
-            `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationSec}s | ${passRateStr}% |`,
+            `| ${stats.passed} | ${stats.failed} | ${stats.skipped} | ${stats.total} | ${durationCell} | ${passRateStr}% |`,
         ];
         if (stats.total < 30) {
             lines.push(
@@ -490,7 +506,10 @@ function persistCurrentRun(tests: FlatTest[], stats: PrReportStats, project?: st
             failed: stats.failed,
             skipped: stats.skipped,
             total: stats.total,
-            duration: stats.duration,
+            // Projeção para o contrato ParseResult (dur. obrigatória): `undefined`
+            // só ocorre quando `tests` está vazio (sem run), então `0` é o agregado
+            // correto do dataset vazio (emparelha EMPTY_PARSE_RESULT) — não é masking.
+            duration: stats.duration ?? 0,
         },
     };
     const hub = getDataHub();
@@ -642,7 +661,7 @@ function deriveSsoTTestData(dataHub: DataHub): { tests: FlatTest[]; stats: PrRep
         failed: testCounts.failed,
         skipped: testCounts.skipped,
         total: testCounts.total,
-        duration: run?.duration ?? 0,
+        duration: run?.duration,
     };
 
     return { tests: run?.tests ?? [], stats, passRate: runPassRate };

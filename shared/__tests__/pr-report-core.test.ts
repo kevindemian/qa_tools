@@ -40,7 +40,7 @@ const report = (
                           failed: statsForHub.failed,
                           skipped: statsForHub.skipped,
                           total: statsForHub.total,
-                          duration: statsForHub.duration,
+                          duration: statsForHub.duration ?? 0,
                           tests,
                       },
                   ],
@@ -316,6 +316,34 @@ describe('Pr Report Core', () => {
             expect(result.healthScore).toBeDefined();
             expect(result.healthScore.overall).toBeGreaterThanOrEqual(0);
             expect(result.passRate).toBe(0);
+        });
+
+        it('renders N/A for duration when there is no run — never 0.0s or NaN', async () => {
+            expect.hasAssertions();
+
+            await report({
+                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: undefined },
+            });
+
+            const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
+            expect(commentBody).toContain('N/A');
+            expect(commentBody).not.toContain('0.0s');
+            expect(commentBody).not.toContain('NaN');
+        });
+
+        it('renders a real run duration in seconds when a run exists', async () => {
+            expect.hasAssertions();
+
+            await report({
+                tests: [sampleTest],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 2500 },
+            });
+
+            const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
+            expect(commentBody).toContain('2.5s');
+            expect(commentBody).not.toContain('N/A');
         });
 
         it('handles health score with coverage override', async () => {
