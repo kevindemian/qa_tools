@@ -42,6 +42,7 @@ import type {
     FlatTest,
     ReportMeta,
     BranchEntry,
+    DataAvailability,
 } from '../types/data-hub.js';
 import type { PipelineRun, PipelineJob } from '../types/ci-cd.js';
 import type { ArtifactParseResult } from './artifact-parser.js';
@@ -178,8 +179,34 @@ export class DataHubImpl implements DataHub {
         this.persistence.saveMetricsStore(store);
     }
 
-    saveParseResult(project: string, result: ParseResult): MetricsRun {
-        return this.persistence.saveParseResult(project, result);
+    /**
+     * Persist the parse AND reconcile it as the authoritative current run
+     * (F0-T8). After this call, `computed.metricsRuns[0]` reflects `result`
+     * (same tests), so report generation / failure analysis never read a stale
+     * hub. Keyed by `sourceRunId` when provided (idempotent dedup by real CI
+     * run id); otherwise a synthetic user-fallback slot (key 0, matching
+     * `createFromParseResult`'s convention).
+     */
+    saveParseResult(project: string, result: ParseResult, sourceRunId?: number): MetricsRun {
+        if (sourceRunId !== undefined && !Number.isInteger(sourceRunId)) {
+            throw new Error(
+                `saveParseResult: sourceRunId deve ser um inteiro válido — recebido ${String(sourceRunId)} (projeto ${project}).`,
+            );
+        }
+        const run = this.persistence.saveParseResult(project, result);
+        const artifacts = this.raw.parsedArtifacts ?? new Map<number, ArtifactParseResult[]>();
+        const key = sourceRunId ?? 0;
+        artifacts.set(key, [
+            {
+                fileName: sourceRunId !== undefined ? String(sourceRunId) : 'user-fallback',
+                data: result,
+                format: 'ctrf',
+            },
+        ]);
+        this.raw.parsedArtifacts = artifacts;
+        this.computed = DataHubImpl.computeMetrics(this.raw, { repo: this.repo });
+        this.timestamp = new Date();
+        return run;
     }
 
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void {
@@ -792,7 +819,13 @@ export class DataHubImpl implements DataHub {
     }
 
     private static computeMetrics(raw: RawData, options: FetchOptions & DataHubOptions): ComputedMetrics {
-        const passRate = calcPipelinePassRate(raw.runs);
+        const testCounts = DataHubImpl.aggregateTestCounts(raw.parsedArtifacts);
+        const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
+        // Coherent passRate (SSOT — B1): pipeline-level when CI runs with conclusion exist;
+        // otherwise falls back to the test-level pass rate from parsed artifacts; 0 only when
+        // there is genuinely no data. Prevents the self-run contradiction (100% vs critical).
+        const pipelineRunsWithConclusion = raw.runs.filter((r) => r.conclusion != null);
+        const passRate = pipelineRunsWithConclusion.length > 0 ? calcPipelinePassRate(raw.runs) : runPassRate;
         const avgDuration = calcAvgDuration(raw.runs, raw.timing);
         const suiteSpeedP95 = calcSuiteSpeedP95(raw.jobs, raw.timing);
         const flakyRate = calcFlakyFromPipelineRuns(raw.runs, raw.jobs);
@@ -804,6 +837,18 @@ export class DataHubImpl implements DataHub {
         const defectTrends = calcTrendsFromPipelineRuns(raw.runs);
         const executionRate = calcExecutionRate(raw.runs);
         const flakyPercentage = calcFlakyPercentage(flakyRate, raw.runs, raw.jobs);
+        // ─── Data availability (B2 — SSOT) ───────────────────────────────────
+        // Declares whether each health dimension has a REAL data source behind its
+        // computed value. A missing source (no runs / no coverage / no jobs) must be
+        // distinguishable from a measured 0 — consumers show "N/A", never 0
+        // (AGENTS.md §24/§25). Mirrors computeCoverage / calcSuiteSpeedP95 sources.
+        const dataAvailability: DataAvailability = {
+            passRate: pipelineRunsWithConclusion.length > 0 || testCounts.passed + testCounts.failed > 0,
+            flaky: raw.runs.length > 0,
+            coverage: DataHubImpl.coverageSourcePresent(raw),
+            executionRate: pipelineRunsWithConclusion.length > 0,
+            suiteSpeed: DataHubImpl.suiteSpeedSourcePresent(raw),
+        };
         const perRunCosts = calcPerRunCosts(raw.runs, options.costPerMinute);
         const metricsRuns = raw.parsedArtifacts != null ? convertToMetricsRuns(raw.parsedArtifacts, raw.runs) : [];
         const flakinessEntries = calcFlakinessEntries(metricsRuns);
@@ -825,12 +870,11 @@ export class DataHubImpl implements DataHub {
             suiteSpeedP95,
             raw.runs,
             raw.jobs,
+            dataAvailability,
         );
         const quarantineStatus = calcQuarantineStatus(flakyRate);
-        const testCounts = DataHubImpl.aggregateTestCounts(raw.parsedArtifacts);
         const testPassRate =
             testCounts.total > 0 ? Math.round((testCounts.passed / testCounts.total) * 100 * 100) / 100 : 0;
-        const runPassRate = calcRunPassRate({ passed: testCounts.passed, failed: testCounts.failed });
         const framework = raw.framework ?? 'unknown';
         // ─── Content specification computed metrics ────────────────────────────
         const defectAggregation = aggregateDefectTrends(raw.failureClassifications ?? []);
@@ -910,6 +954,7 @@ export class DataHubImpl implements DataHub {
             coverageGap,
             suiteBreakdown,
             failureClassifications,
+            dataAvailability,
         };
     }
 
@@ -930,6 +975,43 @@ export class DataHubImpl implements DataHub {
             }
         }
         return 0;
+    }
+
+    /** Whether a real coverage source exists (mirrors computeCoverage sources). */
+    private static coverageSourcePresent(raw: RawData): boolean {
+        if (raw.coverage != null) {
+            const result = calcCoverageFromRaw(raw.coverage);
+            if (result.total > 0) return true;
+        }
+        if (raw.parsedArtifacts != null) {
+            for (const artifacts of raw.parsedArtifacts.values()) {
+                for (const artifact of artifacts) {
+                    if (artifact.coverage != null && artifact.coverage.percentage > 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Whether job duration / run timing data exists (mirrors calcSuiteSpeedP95 sources). */
+    private static suiteSpeedSourcePresent(raw: RawData): boolean {
+        if (raw.timing != null) {
+            for (const timingData of raw.timing.values()) {
+                if (Number.isFinite(timingData.run_duration_ms) && timingData.run_duration_ms >= 0) {
+                    return true;
+                }
+            }
+        }
+        for (const jobList of raw.jobs.values()) {
+            for (const job of jobList) {
+                if (job.duration != null && job.duration > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static aggregateTestCounts(parsedArtifacts: Map<number, ArtifactParseResult[]> | undefined): TestCounts {
@@ -953,6 +1035,7 @@ export class DataHubImpl implements DataHub {
         suiteSpeedP95: number,
         runs: PipelineRun[],
         jobs: Map<number, PipelineJob[]>,
+        availability: DataAvailability,
     ): ReleaseScoreResult {
         const flakyPercentage = calcFlakyPercentage(flakyRate, runs, jobs);
         const executionRate = calcExecutionRate(runs);
@@ -965,7 +1048,15 @@ export class DataHubImpl implements DataHub {
             executionRate: makeDimensionScore(executionRate, 95),
         };
 
-        return calcReleaseScore(dimensions);
+        // B2/§25 — availability mirrors the health dimensions (flakyPercentage/executionRate
+        // are derived from the same run/job sources).
+        return calcReleaseScore(dimensions, undefined, {
+            passRate: availability.passRate,
+            flakyRate: availability.flaky,
+            coverage: availability.coverage,
+            suiteSpeed: availability.suiteSpeed,
+            executionRate: availability.executionRate,
+        });
     }
 
     private static normalizeSuiteSpeed(suiteSpeedP95: number): number {

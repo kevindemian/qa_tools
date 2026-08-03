@@ -46,9 +46,10 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     }),
 }));
 
-vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
-    calcFlakinessEntries: vi.fn().mockReturnValue([]),
-}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/data-hub/compute/flakiness-entries.js')>();
+    return { ...actual, calcFlakinessEntries: vi.fn().mockReturnValue([]) };
+});
 
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
@@ -61,21 +62,6 @@ vi.mock('../../shared/quality/health-score.js', () => ({
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
     generateDefectTrendHtml: vi.fn(() => ''),
-}));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({
-        score: 82,
-        grade: 'good',
-        breakdown: [
-            { label: 'tasks', score: 80, status: 'pass' as const },
-            { label: 'health', score: 85, status: 'pass' as const },
-            { label: 'coverage', score: 70, status: 'pass' as const },
-            { label: 'flakiness', score: 90, status: 'pass' as const },
-        ],
-        recommendation: 'Ship after hardening coverage gap.',
-        timestamp: new Date().toISOString(),
-    })),
-    generateReleaseScoreHtml: vi.fn(() => '<section>release</section>'),
 }));
 vi.mock('../../shared/report/ai-effectiveness.js', () => ({
     computeAiEffectiveness: vi.fn(() => ({
@@ -296,12 +282,14 @@ import {
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
 import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
 import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
 import { runQualityGate } from '../../shared/quality/quality-gate.js';
 import { buildIncidentReport } from '../../shared/report/incident-report.js';
+import { DataHubImpl } from '../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
+import type { DataHub } from '../../shared/types/data-hub.js';
 const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
@@ -314,7 +302,6 @@ const mockInfo = vi.mocked(info);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockWriteReport = vi.mocked(writeReport);
-const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
 const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
 const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
 const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
@@ -566,7 +553,11 @@ describe('Schedule Handler', () => {
 
             await handleFlakinessDashboard();
 
-            expect(mockGenerateHtml).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
+            expect(mockGenerateHtml).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.any(String),
+                expect.objectContaining({ dataHub: mockGetDataHub() }),
+            );
 
             const { openWithFallback } = (await import('../../shared/open.js')) as {
                 openWithFallback: (...args: unknown[]) => unknown;
@@ -645,6 +636,19 @@ describe('Schedule Handler', () => {
                         },
                     ],
                     coverage: 65,
+                    // The release score is genuinely computed by the real chain
+                    // (DataHub → calcReleaseScore) — never a hand-written fixture.
+                    releaseScore: DataHubImpl.createFromParseResult(
+                        {
+                            tests: [
+                                { title: 't1', state: 'passed' as const, duration: 50 },
+                                { title: 't2', state: 'passed' as const, duration: 55 },
+                            ],
+                            stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 105 },
+                        },
+                        'proj1',
+                        makeDataHubPersistenceMock(),
+                    ).computed.releaseScore,
                 },
                 raw: {
                     failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
@@ -654,21 +658,37 @@ describe('Schedule Handler', () => {
             } as never);
         }
 
-        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', async () => {
+        it('writes the genuinely computed release score into the report HTML', async () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
             await generateWeeklyQualityReport();
 
-            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.any(String),
-                65,
-                expect.any(Number),
-            );
+            const hub = vi.mocked(getSessionDataHub).mock.results[0]?.value as DataHub | undefined;
+            const hubRuns = (hub?.computed.metricsRuns ?? []) as Array<{ project: string }>;
 
-            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls[0]?.[0] as Array<{
+            expect(hubRuns, `hubRuns=${JSON.stringify(hubRuns)}`).toHaveLength(2);
+
+            // The real release-score chain ran: the written HTML must contain the
+            // genuinely computed score (SSOT via DataHub → calcReleaseScore → renderer).
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+            const hubReleaseScore = hub?.computed.releaseScore;
+
+            expect(writtenHtml).toContain('<div data-section="release-score">');
+            expect(writtenHtml).toContain('Release Score');
+            expect(writtenHtml).toContain(String(hubReleaseScore?.score));
+            expect(writtenHtml).toContain(String(hubReleaseScore?.grade));
+        });
+
+        it('passes the real project benchmark data to computeCrossSquadBenchmark', async () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            await generateWeeklyQualityReport();
+
+            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls.find((call) =>
+                Array.isArray(call[0]),
+            )?.[0] as Array<{
                 name: string;
                 runCount: number;
                 healthScore: number;
@@ -678,8 +698,16 @@ describe('Schedule Handler', () => {
                 coveragePct: number;
             }>;
 
-            expect(Array.isArray(benchmarkInput)).toBeTruthy();
+            expect(Array.isArray(benchmarkInput), `benchmarkInput=${JSON.stringify(benchmarkInput)}`).toBeTruthy();
             expect(benchmarkInput.some((b) => b.name === 'proj1' && b.runCount === 2)).toBeTruthy();
+        });
+
+        it('invokes the score/dashboard analyzers with real run data', async () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            await generateWeeklyQualityReport();
+
             expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith(
                 expect.any(Number),
                 expect.any(Number),

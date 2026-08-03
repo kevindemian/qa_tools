@@ -128,4 +128,12 @@ export interface HealthScoreResult {
      * this score (confidence, per-category validity via getQuality(), provenance).
      */
     dataQuality?: import('../quality/data-quality.js').DataQualitySummary;
+    /**
+     * B2 — true when at least one dimension had NO data source (partial
+     * assessment). Renderers MUST show the PARTIAL banner ("dados insuficientes,
+     * confiança baixa") — the score covers only the available dimensions.
+     */
+    partial?: boolean;
+    /** Dimensions excluded from the score because no data was available (when partial). */
+    partialReasons?: string[];
 }

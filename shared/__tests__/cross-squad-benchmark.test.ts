@@ -281,44 +281,38 @@ describe('GenerateBenchmarkHtml', () => {
         expect(html).toContain('</html>');
     });
 
-    it('renders default title', () => {
-        const html = generateBenchmarkHtml(makeResult());
+    it.each([
+        ['renders default title', undefined, 'Cross-Squad Benchmark'],
+        ['uses custom title when provided', 'Sprint 11 Review', 'Sprint 11 Review'],
+    ])('%s', (_name, title, expectedTitle) => {
+        expect.hasAssertions();
 
-        expect(html).toContain('Cross-Squad Benchmark');
+        const html = generateBenchmarkHtml(makeResult(), title);
+
+        expect(html).toContain(expectedTitle);
     });
 
-    it('uses custom title when provided', () => {
+    it('custom title replaces default title', () => {
+        expect.hasAssertions();
+
         const html = generateBenchmarkHtml(makeResult(), 'Sprint 11 Review');
 
-        expect(html).toContain('Sprint 11 Review');
         expect(html).not.toContain('Cross-Squad Benchmark');
     });
 
-    it('renders summary cards with average score', () => {
+    it.each([
+        ['renders summary cards with average score', ['Average Score', '69.8']],
+        ['renders summary card with std deviation', ['Std Deviation']],
+        ['renders summary card with top squad name', ['Top Squad', 'Squad Alpha']],
+        ['renders summary card with bottom squad name', ['Bottom Squad', 'Squad Delta']],
+    ])('%s', (_name, expected) => {
+        expect.hasAssertions();
+
         const html = generateBenchmarkHtml(makeResult());
 
-        expect(html).toContain('Average Score');
-        expect(html).toContain('69.8');
-    });
-
-    it('renders summary card with std deviation', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Std Deviation');
-    });
-
-    it('renders summary card with top squad name', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Top Squad');
-        expect(html).toContain('Squad Alpha');
-    });
-
-    it('renders summary card with bottom squad name', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Bottom Squad');
-        expect(html).toContain('Squad Delta');
+        for (const text of expected) {
+            expect(html).toContain(text);
+        }
     });
 
     it('renders leaderboard heading', () => {

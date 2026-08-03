@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createDataHub } from '../factory.js';
+import { createDataHub, createDataHubFromParseResult } from '../factory.js';
 import { getCachedHub, setCachedHub, clearCache } from '../cache.js';
 import type { DataHub, DataHubPersistence } from '../../types/data-hub.js';
 import type { GitProvider } from '../../types/ci-cd.js';
+import type { ParseResult } from '../../result_parser.js';
 import { makeDataHubMock } from '../../test-utils/factories/data-hub-mock.js';
 
 /* ── Mocks ─────────────────────────────────────────────────────────────── */
@@ -232,5 +233,60 @@ describe('CreateDataHub', () => {
 
         vi.restoreAllMocks();
         vi.doUnmock('../hub.js');
+    });
+});
+
+describe('CreateDataHubFromParseResult (F0-T8)', () => {
+    beforeEach(() => {
+        clearCache();
+        vi.clearAllMocks();
+    });
+
+    function makeParseResult(): ParseResult {
+        return {
+            tests: [{ title: 't1', state: 'passed', duration: 50 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 50 },
+        };
+    }
+
+    it('builds a dedicated hub whose computed.metricsRuns reflects the parse (SSOT)', () => {
+        const result = makeParseResult();
+
+        const hub = createDataHubFromParseResult(result, 'qa_tools_e2e', makeMockPersistence());
+
+        expect(hub.repo).toBe('qa_tools_e2e');
+        expect(hub.provider).toBe('github');
+        expect(hub.computed.metricsRuns).toHaveLength(1);
+
+        const firstRun = hub.computed.metricsRuns?.[0];
+
+        expect(firstRun).toBeDefined();
+        expect(firstRun?.tests).toStrictEqual(result.tests);
+        expect(firstRun?.passed).toBe(1);
+        expect(firstRun?.failed).toBe(0);
+    });
+
+    it('uses the user-fallback slot (key 0) as the artifact run id', () => {
+        const hub = createDataHubFromParseResult(makeParseResult(), 'qa_tools_e2e', makeMockPersistence());
+
+        const artifacts = hub.raw.parsedArtifacts;
+
+        expect(artifacts).toBeDefined();
+        expect(artifacts?.get(0)).toHaveLength(1);
+
+        const slot = artifacts?.get(0)?.[0];
+
+        expect(slot).toBeDefined();
+        expect(slot?.fileName).toBe('user-fallback');
+    });
+
+    it('is synchronous (no async I/O) and independent of the global cache', () => {
+        const result = makeParseResult();
+        setCachedHub('other/repo', makeDataHubMock({ repo: 'other/repo' }));
+
+        const hub = createDataHubFromParseResult(result, 'qa_tools_e2e', makeMockPersistence());
+
+        expect(getCachedHub('qa_tools_e2e')).toBeUndefined();
+        expect(hub).toBeDefined();
     });
 });

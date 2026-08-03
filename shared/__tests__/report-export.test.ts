@@ -26,25 +26,31 @@ describe('ExportTestsCsv', () => {
         expect(lines[2]).toContain('Timeout');
     });
 
-    it('escapes fields containing commas with quotes', () => {
-        const tests: FlatTest[] = [{ title: 'Test, with, commas', state: 'passed', duration: 100 }];
-        const csv = exportTestsCsv(tests);
+    it.each([
+        [
+            'escapes fields containing commas with quotes',
+            { title: 'Test, with, commas', state: 'passed', duration: 100 },
+            '"Test, with, commas"',
+        ],
+        [
+            'escapes fields containing double quotes',
+            { title: 'Test says "hello"', state: 'passed', duration: 100 },
+            '"Test says ""hello"""',
+        ],
+        [
+            'includes suite from fullTitle',
+            { title: 'Test', state: 'passed', duration: 100, fullTitle: 'SuiteA > Test' },
+            'SuiteA',
+        ],
+        [
+            'handles test with missing error field',
+            { title: 'Test', state: 'passed', duration: 100 },
+            'Test,passed,100,,',
+        ],
+    ])('%s', (_name, test, expected) => {
+        const csv = exportTestsCsv([test as FlatTest]);
 
-        expect(csv).toContain('"Test, with, commas"');
-    });
-
-    it('escapes fields containing double quotes', () => {
-        const tests: FlatTest[] = [{ title: 'Test says "hello"', state: 'passed', duration: 100 }];
-        const csv = exportTestsCsv(tests);
-
-        expect(csv).toContain('"Test says ""hello"""');
-    });
-
-    it('includes suite from fullTitle', () => {
-        const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100, fullTitle: 'SuiteA > Test' }];
-        const csv = exportTestsCsv(tests);
-
-        expect(csv).toContain('SuiteA');
+        expect(csv).toContain(expected);
     });
 
     it('uses custom delimiter when provided', () => {
@@ -52,13 +58,6 @@ describe('ExportTestsCsv', () => {
         const csv = exportTestsCsv(tests, { delimiter: ';' });
 
         expect(csv).toContain('#;Test;Status;Duration;Suite;Error');
-    });
-
-    it('handles test with missing error field', () => {
-        const tests: FlatTest[] = [{ title: 'Test', state: 'passed', duration: 100 }];
-        const csv = exportTestsCsv(tests);
-
-        expect(csv).toContain('Test,passed,100,,');
     });
 });
 

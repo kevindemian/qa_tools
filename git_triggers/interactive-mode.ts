@@ -7,7 +7,6 @@ import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/ui/cli_
 import Config from '../shared/config-accessor.js';
 import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { showSplash } from '../shared/ui/splash.js';
-import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import type { MetricsRun, RawXrayData } from '../shared/types/data-hub.js';
@@ -77,7 +76,7 @@ import { interactiveBugReportFlow } from '../shared/report/bug-report.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 
-import { generateReleaseScoreHtml } from '../shared/quality/release-score.js';
+import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
 import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
@@ -92,7 +91,6 @@ import { generateIncidentReportHtml } from '../shared/report/incident-report.js'
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
 import { generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
-import { calculateReleaseScore } from '../shared/quality/release-score.js';
 import { aggregateDefectTrends } from '../shared/quality/defect-trend.js';
 import { buildTraceabilityMatrix } from '../shared/report/traceability-matrix.js';
 import { aggregateDefectSeasonality } from '../shared/quality/defect-seasonality.js';
@@ -380,18 +378,7 @@ async function _dashboardReleaseScore(): Promise<void> {
     const data = _loadProjectRunsHelper();
     if (!data) return;
     const dataHub = getDataHub();
-    const health = calculateHealthScore({ dataHub });
-    const flaky = calcFlakinessEntries(data.projectRuns, 2);
-    const coveragePct = dataHub.computed.coverage;
-    const releaseScore = calculateReleaseScore(
-        undefined,
-        health.overall,
-        health.overall >= 70 ? 'pass' : 'fail',
-        coveragePct,
-        flaky.length > 0
-            ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
-            : 0,
-    );
+    const releaseScore = dataHub.computed.releaseScore;
     await _generateAndOpenDashboard(generateReleaseScoreHtml(releaseScore), 'release-score', 'Release Score');
 }
 

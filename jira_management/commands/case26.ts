@@ -1,7 +1,5 @@
 import { getDataHub } from '../../shared/data-hub/global-hub.js';
-import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
-import { calculateHealthScore } from '../../shared/quality/health-score.js';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../../shared/quality/release-score.js';
+import { generateReleaseScoreHtml } from '../../shared/quality/release-score-renderer.js';
 import { info, warn, title, printError } from '../../shared/ui/prompt.js';
 import { openWithFallback } from '../../shared/open.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
@@ -17,21 +15,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
 
     try {
         const hub = getDataHub();
-        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
-
-        const health = calculateHealthScore({ dataHub: hub });
-        const flaky = calcFlakinessEntries(projectRuns.length >= 2 ? projectRuns : [], 2);
-
-        const coveragePct = hub.computed.coverage;
-        const releaseScore = calculateReleaseScore(
-            undefined,
-            health.overall,
-            health.overall >= 70 ? 'pass' : 'fail',
-            coveragePct,
-            flaky.length > 0
-                ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
-                : 0,
-        );
+        const releaseScore = hub.computed.releaseScore;
 
         const html = generateReleaseScoreHtml(releaseScore);
         const filePath = writeReport('release-score-' + projectName + '.html', html);

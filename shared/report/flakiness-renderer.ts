@@ -33,13 +33,17 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
         const pageTitle = title || 'Flakiness Dashboard';
         const sourceBanner = buildSourceQualityBanner(options?.dataHub);
 
-        // Total test count from DataHub computed metrics
-        const totalTests = options?.dataHub?.computed.testCounts.total ?? 0;
+        // Total test count from DataHub computed metrics (SSOT). Missing data is
+        // NEVER masked as 0 (Rule 25) — it surfaces as explicit no-data.
+        const dataHub = options?.dataHub;
+        const totalTests = dataHub?.computed.testCounts.total;
+        const hasTotalTests = typeof totalTests === 'number' && Number.isFinite(totalTests) && totalTests >= 0;
 
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>
             <div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>
             ${sourceBanner}
+            ${hasTotalTests ? '' : buildNoDataBanner()}
             ${buildFlakinessSummary(high, flaky, thresholds, totalTests)}
             ${buildFlakinessTable(high, thresholds)}
             ${buildActions(high, thresholds, totalTests)}
@@ -62,14 +66,23 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
     }
 }
 
+function buildNoDataBanner(): string {
+    return Section({
+        dataSection: 'no-data',
+        title: 'Insufficient Data',
+        children:
+            'Flaky Rate indispon\u00edvel — dataHub.computed.testCounts.total ausente ou inv\u00e1lido (SSOT). Passe o DataHub (computed) ao renderer.',
+    });
+}
+
 function buildFlakinessSummary(
     high: FlakinessEntry[],
     flaky: FlakinessEntry[],
     thresholds: FlakinessThresholds,
-    totalTests: number,
+    totalTests: number | undefined,
 ): string {
-    // Calculate flaky rate as percentage of total tests
-    const flakyRate = totalTests > 0 ? Math.round((high.length / totalTests) * 100) : 0;
+    const hasTotalTests = totalTests !== undefined;
+    const flakyRate = hasTotalTests && totalTests > 0 ? Math.round((high.length / totalTests) * 100) : 0;
 
     return Section({
         dataSection: 'summary',
@@ -82,14 +95,16 @@ function buildFlakinessSummary(
                     value: String(high.length),
                     severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
                     trend:
-                        totalTests > 0 ? `${Math.round((high.length / totalTests) * 100)}% of ${totalTests} total` : '',
+                        hasTotalTests && totalTests > 0
+                            ? `${Math.round((high.length / totalTests) * 100)}% of ${totalTests} total`
+                            : '',
                     target: `target: <${thresholds.errorSeverityThreshold}`,
                 }) +
                 // 2. Flaky Rate
                 MetricCard({
                     label: 'Flaky Rate',
-                    value: `${flakyRate}%`,
-                    severity: flakyRate > 5 ? 'warn' : 'default',
+                    value: hasTotalTests ? `${flakyRate}%` : 'N/A',
+                    severity: hasTotalTests && flakyRate > 5 ? 'warn' : 'default',
                     target: 'target: <5%',
                 }) +
                 // 3. High Flakiness
@@ -201,7 +216,7 @@ function buildSourceQualityBanner(dataHub?: DataHub): string {
     });
 }
 
-function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, totalTests: number): string {
+function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, totalTests: number | undefined): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     if (high.length > 0) {
@@ -227,7 +242,7 @@ function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, t
         }
 
         // Add flaky rate context if total tests known
-        if (totalTests > 0) {
+        if (totalTests !== undefined && totalTests > 0) {
             const flakyRate = Math.round((high.length / totalTests) * 100);
             if (flakyRate > 5) {
                 actions.push({

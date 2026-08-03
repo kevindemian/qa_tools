@@ -1,15 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import VitestCtrfReporter from './shared/vitest-ctrf-reporter.js';
 import { vitestAffected } from 'vitest-affected';
+// D — Desacoplar vitest-affected do mutation testing: durante runs do Stryker
+// (STRYKER_ACTIVE=true), o plugin é desativado para que todos os testes que
+// cobrem o mutante rodem (subset por cobertura — determinismo do score). Com
+// GITHUB_EVENT_NAME=pull_request fora da mutação, o plugin permanece ativo
+// (test selection por diff, rápido).
 const isPR = process.env['GITHUB_EVENT_NAME'] === 'pull_request';
-const vitestAffectedPlugin = isPR
-    ? vitestAffected({
-          fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
-          staleCacheDays: 14,
-          maxSelectiveRuns: 50,
-          shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
-      })
-    : undefined;
+const isMutationRun = process.env['STRYKER_ACTIVE'] === 'true';
+const vitestAffectedPlugin =
+    isPR && !isMutationRun
+        ? vitestAffected({
+              fullSuiteTriggers: ['**/__tests__/fixtures/**', '*.md'],
+              staleCacheDays: 14,
+              maxSelectiveRuns: 50,
+              shadow: process.env.VITEST_AFFECTED_SHADOW === '1',
+          })
+        : undefined;
 
 export default defineConfig({
     plugins: [...(vitestAffectedPlugin ? [vitestAffectedPlugin] : [])],

@@ -27,16 +27,7 @@ const mockFeatureConfig = vi.hoisted(() => ({
 }));
 const mockFactory = vi.hoisted(() => ({
     createDataHub: vi.fn(),
-    createDataHubFromParseResult: vi.fn(),
-}));
-const mockTestSource = vi.hoisted(() => ({
-    askTestSource: vi.fn(),
-    DATAHUB_ERRORS: {
-        USER_SKIPPED: 'USER_SKIPPED',
-        USER_CANCELLED: 'USER_CANCELLED',
-        NO_TTY: 'NO_TTY',
-        NO_DATA_SOURCE: 'NO_DATA_SOURCE',
-    },
+    createDataHubFromFallback: vi.fn(),
 }));
 const mockGlobalHub = vi.hoisted(() => ({
     getDataHub: vi.fn(),
@@ -65,7 +56,6 @@ vi.mock('../feature-config.js', () => ({
     isFlakySkipped: mockFeatureConfig.isFlakySkipped,
 }));
 vi.mock('../data-hub/factory.js', () => mockFactory);
-vi.mock('../data-hub/test-source-fallback.js', () => mockTestSource);
 vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 vi.mock('../data-hub/compute/flakiness-entries.js', () => mockFlakiness);
 vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
@@ -93,9 +83,11 @@ describe('TryCreateDataHub wiring — property-based', () => {
         mockFeatureConfig.isAiSkipped.mockReturnValue(false);
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
-        mockFactory.createDataHub.mockResolvedValue({ hub: {}, status: 'ok' });
-        mockFactory.createDataHubFromParseResult.mockResolvedValue({});
-        mockTestSource.askTestSource.mockResolvedValue({ data: undefined, error: undefined });
+        mockFactory.createDataHub.mockResolvedValue({ hub: { getRuns: () => [] }, status: 'ok' });
+        mockFactory.createDataHubFromFallback.mockResolvedValue({
+            hub: { getRuns: () => [], raw: {}, computed: {} },
+            status: 'ok',
+        });
         vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 

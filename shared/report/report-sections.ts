@@ -388,6 +388,16 @@ export function buildHealthSection(health: HealthScoreResult): string {
         provenanceHtml = buildProvenanceSection(health.provenance);
     }
 
+    const partialBanner =
+        health.partial === true
+            ? Badge({
+                  variant: 'warn',
+                  children: 'PARTIAL — insufficient data, low confidence',
+                  title: (health.partialReasons ?? []).join('; '),
+                  ariaLabel: 'Partial assessment: ' + (health.partialReasons ?? []).join(', '),
+              })
+            : '';
+
     const html = Card({
         variant: 'default',
         children:
@@ -399,6 +409,7 @@ export function buildHealthSection(health: HealthScoreResult): string {
             `<div class="health-grade-text">${health.grade.replace(/_/g, ' ')}</div></div>` +
             `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
             `<span class="health-meta">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
+            partialBanner +
             `</div>` +
             `<div class="categories-grid">${dimCards}</div>` +
             provenanceHtml,

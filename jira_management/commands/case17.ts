@@ -16,10 +16,15 @@ import {
     type ReportOptions,
     type TestHistoryRun,
 } from '../../shared/report/report-generator.js';
-import { getDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
+import { getDataHub, setDataHub, isDataHubInitialized } from '../../shared/data-hub/global-hub.js';
+import { createDataHubFromParseResult } from '../../shared/data-hub/factory.js';
 import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
-import { analyzeFailuresWithReport, type LlmContext } from '../../shared/validation/failure-analysis.js';
+import {
+    analyzeFailuresWithReport,
+    type AnalysisReport,
+    type LlmContext,
+} from '../../shared/validation/failure-analysis.js';
 import { collectAutomated, interactiveBugReportFlow } from '../../shared/report/bug-report.js';
 import { openWithFallback } from '../../shared/open.js';
 import { publishReport } from '../../shared/publish.js';
@@ -79,11 +84,21 @@ async function _fetchJiraContext(
     }
 }
 
-async function _addAiAnalysis(html: string, tests: ParseResult['tests'], context?: LlmContext): Promise<string> {
-    const hub = isDataHubInitialized() ? getDataHub() : undefined;
-    const analysis = await withSpinner('Analisando falhas com IA...', () =>
-        analyzeFailuresWithReport(tests, context, { dataHub: hub }),
-    );
+async function _addAiAnalysis(html: string, context?: LlmContext): Promise<string> {
+    let analysis: AnalysisReport;
+    try {
+        // F0-T8: o hub é a fonte única — `getDataHub()` já reflete `result` como
+        // run atual (reconciliado no handler). A análise deriva os testes do
+        // próprio hub (metricsRuns[0]); nunca recebe testes por parâmetro.
+        analysis = await withSpinner('Analisando falhas com IA...', () =>
+            analyzeFailuresWithReport(getDataHub(), context),
+        );
+    } catch (err) {
+        // Degradação explícita (§25): análise indisponível NÃO silenciosa, o
+        // relatório segue sem a seção de análise.
+        printError('Falha ao analisar falhas com IA', err);
+        return html;
+    }
     if (!analysis.content) return html;
     return injectAnalysisSection(html, analysis.content);
 }
@@ -192,6 +207,7 @@ async function _buildReportOptions(
     result: ParseResult,
     diff: ReturnType<typeof computeDiff>,
     cliExtra: ReturnType<typeof parseCliExtra>,
+    reportHub: DataHub,
 ): Promise<ReportOptions> {
     const historyCache = new TestHistoryCache();
     const testHistory = await resolveTestHistory(result.tests, c, historyCache);
@@ -215,6 +231,9 @@ async function _buildReportOptions(
         title: `Relatório - ${c.ctx.project_name}`,
         generatedAt: new Date().toISOString(),
         source: 'Relatório HTML',
+        // F0-T8 (SSOT): `computed` é obrigatório no gerador (report-html guard).
+        // O hub reconciliado reflete `result` como run atual.
+        computed: reportHub.computed,
         ...(Object.keys(testHistory).length > 0 ? { testHistory } : {}),
         ...(runs.length > 0 ? { runs } : {}),
         diffComparison: diff,
@@ -268,7 +287,7 @@ async function _runAiAnalysis(
     if (jiraContext) llmContext.jiraIssues = jiraContext;
 
     if (result.stats.failed > 0 && (await askConfirm('Incluir análise das falhas (IA)?', true))) {
-        return _addAiAnalysis(html, result.tests, llmContext);
+        return _addAiAnalysis(html, llmContext);
     }
     return html;
 }
@@ -364,8 +383,22 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     title('Analisando relatório...');
     const result = data.result;
 
+    // F0-T8 (SSOT): reconcilia `result` como run atual do hub ANTES de qualquer
+    // consumo (análise de falhas e relatório HTML). `store` é o hub global
+    // (resolveSessionContext → getDataHub). Em falha de persistência, cai para
+    // um hub dedicado em memória que ainda reflete `result` — degradação
+    // explícita e logada (§25), o relatório nunca usa dados stale/vazios.
+    let reportHub: DataHub = store;
+    try {
+        store.saveParseResult(c.ctx.project_name, result);
+    } catch (err) {
+        rootLogger.warn('case17: falha ao reconciliar run no hub — usando hub dedicado: ' + formatErr(err));
+        reportHub = createDataHubFromParseResult(result, c.ctx.project_name);
+        setDataHub(reportHub);
+    }
+
     const diff = computeDiff(result.tests, store, c.ctx.project_name);
-    const genOptions = await _buildReportOptions(c, result, diff, cliExtra);
+    const genOptions = await _buildReportOptions(c, result, diff, cliExtra, reportHub);
     let html = generateHtmlReport(result.tests, genOptions);
 
     const failedTests = result.tests.filter((t) => t.state === 'failed');

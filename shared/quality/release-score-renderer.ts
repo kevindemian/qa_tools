@@ -11,7 +11,7 @@ import { buildHtmlPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
 import { sanitizeHtml } from '../escape.js';
 import { Badge, MetricCard, MetricGrid, Section, RecommendedActions, EmptyState } from '../primitives/index.js';
-import type { ReleaseScoreResult } from './release-score.js';
+import type { ReleaseScoreResult } from '../types.js';
 import { icon } from '../icons.js';
 import { SCORE_CRITICAL, SCORE_QUALITY_GATE } from '../constants/thresholds.js';
 
@@ -35,13 +35,30 @@ export function generateReleaseScoreHtml(result: ReleaseScoreResult | null | und
         });
     }
 
-    const bodyContent = wrapContainer(
-        'Release Readiness Score',
-        buildScoreSummary(result) +
-            buildBreakdown(result) +
-            buildRecommendation(result) +
-            buildRecommendedActions(result),
-    );
+    // B3/§25 — a result with NO available dimension is insufficient data: an
+    // explicit EmptyState, never a fabricated 0/critical score.
+    const availableBreakdown = (result.breakdown ?? []).filter((d) => !d.noData);
+    let bodyContent: string;
+    if (availableBreakdown.length === 0) {
+        bodyContent = wrapContainer(
+            'Release Readiness Score',
+            EmptyState({
+                title: 'Insufficient data for release score',
+                description:
+                    'Release score requires pipeline run data and quality gate results. No dimension had a data source.',
+                action: 'Run the release score analysis with valid pipeline and quality data.',
+                icon: icon('info', 48),
+            }),
+        );
+    } else {
+        bodyContent = wrapContainer(
+            'Release Readiness Score',
+            buildScoreSummary(result) +
+                buildBreakdown(result) +
+                buildRecommendation(result) +
+                buildRecommendedActions(result),
+        );
+    }
 
     return buildHtmlPage({
         title: 'Release Readiness Score',
@@ -76,9 +93,9 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
     const gateSeverity = deploymentReady ? 'success' : 'error';
 
     // Count passed/failed checks
-    const passedChecks = result.breakdown.filter((item) => item.status === 'pass').length;
-    const failedChecks = result.breakdown.filter((item) => item.status === 'fail').length;
-    const totalChecks = result.breakdown.length;
+    const passedChecks = (result.breakdown ?? []).filter((item) => item.status === 'pass' && !item.noData).length;
+    const failedChecks = (result.breakdown ?? []).filter((item) => item.status === 'fail' && !item.noData).length;
+    const totalChecks = (result.breakdown ?? []).filter((item) => !item.noData).length;
 
     return Section({
         dataSection: 'score',
@@ -102,7 +119,7 @@ function buildScoreSummary(result: ReleaseScoreResult): string {
 }
 
 function buildBreakdown(result: ReleaseScoreResult): string {
-    const items = result.breakdown
+    const items = (result.breakdown ?? [])
         .map((item) => {
             const statusIcon = item.status === 'pass' ? icon('check-circle', 14) : icon('x-circle', 14);
             const scoreText = item.noData ? 'N/A' : String(item.score);
@@ -132,10 +149,11 @@ function buildBreakdown(result: ReleaseScoreResult): string {
 }
 
 function buildRecommendation(result: ReleaseScoreResult): string {
+    const recommendation = result.recommendation?.trim();
     return Section({
         dataSection: 'recommendation',
         title: 'Recommendation',
-        children: `<div data-part="recommendation">${sanitizeHtml(result.recommendation)}</div>`,
+        children: `<div data-part="recommendation">${sanitizeHtml(recommendation || 'No recommendation available.')}</div>`,
     });
 }
 
@@ -159,7 +177,7 @@ function buildRecommendedActions(result: ReleaseScoreResult): string {
     }
 
     // Action 3: Failed checks with specific names
-    const failedItems = result.breakdown.filter((item) => item.status === 'fail');
+    const failedItems = (result.breakdown ?? []).filter((item) => item.status === 'fail' && !item.noData);
     if (failedItems.length > 0) {
         actions.push({
             severity: 'warn',

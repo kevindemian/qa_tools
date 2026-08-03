@@ -3,14 +3,49 @@ import path from 'path';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
-import type { PrReportCoreOptions } from '../pr-report-core.js';
+import type { PrReportCoreOptions, PrReportStats } from '../pr-report-core.js';
 import type { DataHub } from '../types/data-hub.js';
 import { createTestHub } from './test-hub.js';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
+import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
 
 const report = (
-    opts: Omit<PrReportCoreOptions, 'dataHub'> & { dataHub?: DataHub },
-): ReturnType<typeof generatePrReport> => generatePrReport({ ...opts, dataHub: opts.dataHub ?? createTestHub() });
+    opts: Omit<PrReportCoreOptions, 'dataHub' | 'tests' | 'stats'> & {
+        tests?: FlatTest[];
+        stats?: PrReportStats;
+        dataHub?: DataHub;
+    },
+): ReturnType<typeof generatePrReport> => {
+    const { tests, stats, dataHub, ...rest } = opts;
+    const statsForHub: PrReportStats = stats ?? { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 };
+    const hub = dataHub ?? createTestHub();
+    hub.computed = {
+        ...hub.computed,
+        testCounts: {
+            passed: statsForHub.passed,
+            failed: statsForHub.failed,
+            skipped: statsForHub.skipped,
+            total: statsForHub.total,
+        },
+        runPassRate: calcRunPassRate({ passed: statsForHub.passed, failed: statsForHub.failed }),
+        metricsRuns:
+            tests == null
+                ? (hub.computed.metricsRuns ?? [])
+                : [
+                      {
+                          timestamp: new Date().toISOString(),
+                          project: '',
+                          passed: statsForHub.passed,
+                          failed: statsForHub.failed,
+                          skipped: statsForHub.skipped,
+                          total: statsForHub.total,
+                          duration: statsForHub.duration,
+                          tests,
+                      },
+                  ],
+    };
+    return generatePrReport({ ...rest, dataHub: hub });
+};
 
 vi.mock('fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
@@ -453,6 +488,94 @@ describe('Pr Report Core', () => {
             } finally {
                 if (original) process.env['GITHUB_STEP_SUMMARY'] = original;
             }
+        });
+    });
+
+    describe('GeneratePrReport — SSOT (B4/B22)', () => {
+        it('derives summary and job-summary exclusively from computed.testCounts/runPassRate', async () => {
+            expect.hasAssertions();
+
+            const passedTest: FlatTest = { title: 'passing-test', state: 'passed', duration: 100 };
+            const failedTest: FlatTest = {
+                title: 'failing-test',
+                state: 'failed',
+                duration: 200,
+                error: 'AssertionError: boom',
+            };
+
+            // SSOT deliberately disagrees with the latest run's totals: the summary
+            // MUST reflect computed.testCounts/runPassRate, and the failure table the
+            // latest run's tests (computed.metricsRuns[0].tests).
+            const hub = createTestHub({
+                testCounts: { passed: 8, failed: 2, skipped: 0, total: 10 },
+                runPassRate: calcRunPassRate({ passed: 8, failed: 2 }),
+                metricsRuns: [
+                    {
+                        timestamp: new Date().toISOString(),
+                        project: 'p',
+                        passed: 1,
+                        failed: 1,
+                        skipped: 0,
+                        total: 2,
+                        duration: 5000,
+                        tests: [passedTest, failedTest],
+                    },
+                ],
+            });
+
+            const summaryPath = path.join(os.tmpdir(), 'qa-ssot-step-summary.md');
+            const fs = await import('node:fs');
+            const prevVitest = process.env['VITEST'];
+            delete process.env['VITEST'];
+            process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+
+            try {
+                const result = await generatePrReport({ dataHub: hub, project: 'p' });
+
+                expect(result.passRate).toBe(80);
+
+                const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
+                expect(commentBody).toContain('80% pass rate');
+                expect(commentBody).toContain('(8/10)');
+                expect(commentBody).toContain('| 8 | 2 | 0 | 5.0s |');
+                expect(commentBody).toContain('failing-test');
+                expect(commentBody).not.toContain('(1/2)');
+
+                const writeCalls = vi.mocked(fs.writeFileSync).mock.calls;
+                const summaryCall = writeCalls.find((call) => String(call[0]) === summaryPath);
+                if (!summaryCall) throw new Error('Expected job summary to be written');
+                const content = typeof summaryCall[1] === 'string' ? summaryCall[1] : '';
+
+                expect(content).toContain('| 8 | 2 | 0 | 10 | 5.0s | 80.0% |');
+            } finally {
+                delete process.env['GITHUB_STEP_SUMMARY'];
+                if (prevVitest !== undefined) process.env['VITEST'] = prevVitest;
+                else delete process.env['VITEST'];
+            }
+        });
+
+        it('fails explicitly when computed.runPassRate is missing (incomplete SSOT)', async () => {
+            expect.hasAssertions();
+
+            const hub = createTestHub({
+                testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+                metricsRuns: [
+                    {
+                        timestamp: new Date().toISOString(),
+                        project: 'p',
+                        passed: 1,
+                        failed: 0,
+                        skipped: 0,
+                        total: 1,
+                        duration: 100,
+                        tests: [{ title: 't', state: 'passed', duration: 100 }],
+                    },
+                ],
+            });
+
+            await expect(generatePrReport({ dataHub: hub })).rejects.toThrow(/runPassRate/);
+            expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
         });
     });
 });

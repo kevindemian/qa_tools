@@ -13,20 +13,9 @@ vi.mock('../data-hub/global-hub.js', () => mockGlobalHub);
 
 const mockFactory = vi.hoisted(() => ({
     createDataHub: vi.fn(),
-    createDataHubFromParseResult: vi.fn(),
+    createDataHubFromFallback: vi.fn(),
 }));
 vi.mock('../data-hub/factory.js', () => mockFactory);
-
-const mockTestSource = vi.hoisted(() => ({
-    askTestSource: vi.fn(),
-    DATAHUB_ERRORS: {
-        USER_SKIPPED: 'USER_SKIPPED',
-        USER_CANCELLED: 'USER_CANCELLED',
-        NO_TTY: 'NO_TTY',
-        NO_DATA_SOURCE: 'NO_DATA_SOURCE',
-    },
-}));
-vi.mock('../data-hub/test-source-fallback.js', () => mockTestSource);
 
 function makeMockProvider(overrides?: Partial<GitProvider>): GitProvider {
     return {
@@ -94,8 +83,7 @@ describe('TryCreateDataHub wiring', () => {
         mockGlobalHub.setDataHub.mockClear();
         mockGlobalHub.isDataHubInitialized.mockReturnValue(false);
         mockFactory.createDataHub.mockReset();
-        mockFactory.createDataHubFromParseResult.mockReset();
-        mockTestSource.askTestSource.mockReset();
+        mockFactory.createDataHubFromFallback.mockReset();
         delete process.env['GITHUB_STEP_SUMMARY'];
         delete process.env['CI'];
         delete process.env['GITHUB_ACTIONS'];
@@ -117,17 +105,39 @@ describe('TryCreateDataHub wiring', () => {
         mockFeatureConfig.isQualitySkipped.mockReturnValue(false);
         mockFeatureConfig.isFlakySkipped.mockReturnValue(false);
         mockFactory.createDataHub.mockResolvedValue({ hub: makeFetchedHub(), status: 'ok' });
-        mockFactory.createDataHubFromParseResult.mockResolvedValue(makeFetchedHub());
-        mockTestSource.askTestSource.mockResolvedValue({ data: undefined, error: undefined });
+        mockFactory.createDataHubFromFallback.mockResolvedValue({ hub: makeFetchedHub(), status: 'ok' });
         vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
     describe('Main without providerFactory', () => {
-        it('calls main without factory — no DataHub fetch', async () => {
+        it('routes Layer 7 through createDataHubFromFallback (no provider fetch)', async () => {
             expect.hasAssertions();
 
             await expect(main()).rejects.toThrow(/sem dados do versionador/);
 
+            expect(mockFactory.createDataHub).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHubFromFallback).toHaveBeenCalledTimes(1);
+        });
+
+        it('returns the hub when the manual fallback provides usable data', async () => {
+            expect.hasAssertions();
+
+            const hubWithData = {
+                ...makeFetchedHub(),
+                raw: {
+                    runs: [],
+                    jobs: new Map(),
+                    artifacts: new Map(),
+                    failureReasons: new Map(),
+                    parsedArtifacts: new Map([[0, []]]),
+                },
+            };
+            mockFactory.createDataHubFromFallback.mockResolvedValue({ hub: hubWithData, status: 'ok' });
+
+            await main();
+
+            expect(mockFactory.createDataHubFromFallback).toHaveBeenCalledTimes(1);
+            expect(mockGlobalHub.setDataHub).toHaveBeenCalledWith(hubWithData);
             expect(mockFactory.createDataHub).not.toHaveBeenCalled();
         });
     });
@@ -182,6 +192,7 @@ describe('TryCreateDataHub wiring', () => {
             await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
             expect(mockFactory.createDataHub).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHubFromFallback).toHaveBeenCalledTimes(1);
         });
 
         it('throws explicit error when createDataHub fails (no fallback data)', async () => {
@@ -198,6 +209,7 @@ describe('TryCreateDataHub wiring', () => {
             await expect(main(factory)).rejects.toThrow(/sem dados do versionador/);
 
             expect(mockPRComment.postPrComment).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHubFromFallback).toHaveBeenCalledTimes(1);
         });
 
         it('does not call factory when isCI=false', async () => {
@@ -209,6 +221,7 @@ describe('TryCreateDataHub wiring', () => {
 
             expect(factory).not.toHaveBeenCalled();
             expect(mockFactory.createDataHub).not.toHaveBeenCalled();
+            expect(mockFactory.createDataHubFromFallback).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -226,11 +239,9 @@ describe('TryCreateDataHub wiring', () => {
                     ['failureRecords', { confidence: 0.9, source: 'github-api', timestamp: new Date().toISOString() }],
                 ]),
             };
-            const dataHub = makeDataHubMock({ raw });
+            const dataHub = makeDataHubMock({ raw, computed: { runPassRate: 0 } });
 
             const result = await generatePrReport({
-                tests: [],
-                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
                 dataHub,
                 project: 'p',
             });
@@ -260,15 +271,13 @@ describe('TryCreateDataHub wiring', () => {
                     ['failureRecords', { confidence: 0.4, source: 'github-api', timestamp: new Date().toISOString() }],
                 ]),
             };
-            const dataHub = makeDataHubMock({ raw });
+            const dataHub = makeDataHubMock({ raw, computed: { runPassRate: 0 } });
             dataHub.getQuality = vi.fn().mockReturnValue({
                 valid: false,
                 issues: ['low confidence'],
             });
 
             const result = await generatePrReport({
-                tests: [],
-                stats: { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 },
                 dataHub,
                 project: 'p',
             });

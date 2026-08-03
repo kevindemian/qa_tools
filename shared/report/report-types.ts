@@ -20,17 +20,6 @@ export interface TestRunTab {
     tests: FlatTest[];
 }
 
-export interface CoverageEpic {
-    key: string;
-    summary: string;
-    issues: {
-        key: string;
-        summary: string;
-        status: string;
-        type: string;
-    }[];
-}
-
 export interface ReportOptions {
     title?: string;
     includeChart?: boolean;
@@ -42,9 +31,7 @@ export interface ReportOptions {
     ciUrl?: string;
     branch?: string;
     qualityGate?: number;
-    testCategories?: Record<string, string>;
     testHistory?: Record<string, TestHistoryRun[]>;
-    trends?: import('../types/data-hub.js').TrendPoint[];
     theme?: 'dark' | 'light';
     runs?: TestRunTab[];
     healthScore?: import('../types.js').HealthScoreResult;

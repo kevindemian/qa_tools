@@ -2,9 +2,8 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
-import type { MetricsRun } from '../../shared/types/data-hub.js';
 import type { TraceabilityResult } from '../../shared/report/traceability-matrix.js';
-import type { ReleaseScoreResult } from '../../shared/quality/release-score.js';
+import type { ReleaseScoreResult } from '../../shared/types/data-hub.js';
 
 vi.mock('../../shared/ui/prompt.js', () => ({
     showSelect: vi.fn(),
@@ -32,8 +31,7 @@ vi.mock('../../shared/report/traceability-matrix.js', () => ({
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(),
 }));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(),
+vi.mock('../../shared/quality/release-score-renderer.js', () => ({
     generateReleaseScoreHtml: vi.fn(),
 }));
 vi.mock('../../shared/report/coverage-gap.js', () => ({
@@ -85,23 +83,23 @@ function makeTraceabilityResult(overrides?: Partial<TraceabilityResult>): Tracea
     };
 }
 
-const MOCK_DIMENSIONS = {
-    passRate: { score: 90, threshold: 80, status: 'pass' as const, available: true },
-    flakyRate: { score: 95, threshold: 80, status: 'pass' as const, available: true },
-    coverage: { score: 85, threshold: 70, status: 'pass' as const, available: true },
-    suiteSpeed: { score: 80, threshold: 70, status: 'pass' as const, available: true },
-    executionRate: { score: 90, threshold: 80, status: 'pass' as const, available: true },
-};
-
 function makeReleaseScoreResult(overrides?: Partial<ReleaseScoreResult>): ReleaseScoreResult {
     return {
         score: 82,
+        dimensions: {
+            passRate: { score: 90, status: 'pass' },
+            flakyRate: { score: 85, status: 'pass' },
+            coverage: { score: 80, status: 'pass' },
+            suiteSpeed: { score: 75, status: 'pass' },
+            executionRate: { score: 88, status: 'pass' },
+        },
         grade: 'good',
         breakdown: [
-            { label: 'Tasks', score: 80, status: 'pass' },
-            { label: 'Health', score: 85, status: 'pass' },
-            { label: 'Coverage', score: 75, status: 'pass' },
-            { label: 'Flakiness', score: 90, status: 'pass' },
+            { label: 'Pass Rate', score: 90, status: 'pass' },
+            { label: 'Flaky Rate', score: 85, status: 'pass' },
+            { label: 'Coverage', score: 80, status: 'pass' },
+            { label: 'Suite Speed', score: 75, status: 'pass' },
+            { label: 'Execution Rate', score: 88, status: 'pass' },
         ],
         recommendation: 'All dimensions meet the release threshold. Ready for release.',
         timestamp: '2026-06-14T10:00:00Z',
@@ -205,26 +203,11 @@ describe('Case-d — dashboard menu', () => {
         const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('26');
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } =
-            await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: [{ project: 'TEST' }] },
+            computed: { metricsRuns: [{ project: 'TEST' }], releaseScore: makeReleaseScoreResult() },
         } as never);
-        vi.mocked(calcFlakinessEntries).mockReturnValue([
-            { title: 't1', project: 'TEST', passCount: 1, failCount: 1, skipCount: 0, totalRuns: 2, rate: 0.5 },
-        ]);
-        vi.mocked(calculateHealthScore).mockReturnValue({
-            overall: 80,
-            grade: 'good',
-            qualityGate: 'pass',
-            dimensions: MOCK_DIMENSIONS,
-            runCount: 10,
-            timestamp: '2026-06-14T10:00:00Z',
-        });
-        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
@@ -419,70 +402,49 @@ describe('Case26 — Release Score', () => {
         expect(ctx.pushHistory).not.toHaveBeenCalled();
     });
 
-    it('filters runs by project name', async () => {
+    it('uses the hub computed release score (SSOT, no local recomputation)', async () => {
         expect.hasAssertions();
 
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } =
-            await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        const allRuns = [makeRun('OTHER'), makeRun('TEST'), makeRun('OTHER'), makeRun('TEST')];
+        const releaseScore = makeReleaseScoreResult();
         vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: allRuns },
+            computed: { metricsRuns: [makeRun('TEST')], releaseScore },
         } as never);
-        vi.mocked(calculateHealthScore).mockReturnValue({
-            overall: 80,
-            grade: 'good',
-            qualityGate: 'pass',
-            dimensions: MOCK_DIMENSIONS,
-            runCount: 10,
-            timestamp: '2026-06-14T10:00:00Z',
-        });
-        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
-        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
-        const receivedRuns = vi.mocked(calcFlakinessEntries).mock.calls[0]?.[0] as MetricsRun[];
 
-        expect(receivedRuns).toHaveLength(2);
-        expect(receivedRuns[0]?.project).toBe('TEST');
-        expect(receivedRuns[1]?.project).toBe('TEST');
+        expect(getDataHub).toHaveBeenCalledWith();
+        expect(generateReleaseScoreHtml).toHaveBeenCalledWith(releaseScore);
     });
 
-    it('passes correct parameters to calculateReleaseScore', async () => {
+    it('renders a NOT-READY gate for a release score below the quality gate', async () => {
         expect.hasAssertions();
 
-        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } =
-            await import('../../shared/quality/release-score.js');
+        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(calculateHealthScore).mockReturnValue({
-            overall: 85,
-            grade: 'good',
-            qualityGate: 'pass',
-            dimensions: MOCK_DIMENSIONS,
-            runCount: 10,
-            timestamp: '2026-06-14T10:00:00Z',
-        });
-        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
-        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
+        vi.mocked(getDataHub).mockReturnValue({
+            computed: {
+                metricsRuns: [makeRun('TEST')],
+                releaseScore: makeReleaseScoreResult({ score: 55, grade: 'needs_attention' }),
+            },
+        } as never);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: case26 } = await import('../commands/case26.js');
         await case26.handler(ctx);
 
-        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 85, 'pass', undefined, expect.any(Number));
+        expect(ctx.pushHistory).toHaveBeenCalledWith('release-score', 'TEST', 'ok');
     });
 
     it('generates HTML with correct title', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -498,7 +460,7 @@ describe('Case26 — Release Score', () => {
     it('writes report with correct filename pattern', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -513,7 +475,7 @@ describe('Case26 — Release Score', () => {
     it('opens report in browser', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         const { openWithFallback } = await import('../../shared/open.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
@@ -533,7 +495,7 @@ describe('Case26 — Release Score', () => {
     it('pushes history with project name on success', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -565,7 +527,7 @@ describe('Case26 — Release Score', () => {
     it('calls title with correct label', async () => {
         expect.hasAssertions();
 
-        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score.js');
+        const { generateReleaseScoreHtml } = await import('../../shared/quality/release-score-renderer.js');
         const { writeReport } = await import('../../shared/infra/temp-dir.js');
         vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
         vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
@@ -575,68 +537,6 @@ describe('Case26 — Release Score', () => {
         const { title } = await import('../../shared/ui/prompt.js');
 
         expect(vi.mocked(title)).toHaveBeenCalledWith('Release Score');
-    });
-
-    it('uses health gate pass when health >= 70', async () => {
-        expect.hasAssertions();
-
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } =
-            await import('../../shared/quality/release-score.js');
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: [makeRun('TEST')] },
-        } as never);
-        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
-        vi.mocked(calculateHealthScore).mockReturnValue({
-            overall: 75,
-            grade: 'good',
-            qualityGate: 'pass',
-            dimensions: MOCK_DIMENSIONS,
-            runCount: 10,
-            timestamp: '2026-06-14T10:00:00Z',
-        });
-        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult());
-        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        const { default: case26 } = await import('../commands/case26.js');
-        await case26.handler(ctx);
-
-        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 75, 'pass', undefined, expect.any(Number));
-    });
-
-    it('uses health gate fail when health < 70', async () => {
-        expect.hasAssertions();
-
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { calcFlakinessEntries } = await import('../../shared/data-hub/compute/flakiness-entries.js');
-        const { calculateHealthScore } = await import('../../shared/quality/health-score.js');
-        const { calculateReleaseScore, generateReleaseScoreHtml } =
-            await import('../../shared/quality/release-score.js');
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: [makeRun('TEST')] },
-        } as never);
-        vi.mocked(calcFlakinessEntries).mockReturnValue([]);
-        vi.mocked(calculateHealthScore).mockReturnValue({
-            overall: 55,
-            grade: 'needs_attention',
-            qualityGate: 'fail',
-            dimensions: MOCK_DIMENSIONS,
-            runCount: 10,
-            timestamp: '2026-06-14T10:00:00Z',
-        });
-        vi.mocked(calculateReleaseScore).mockReturnValue(makeReleaseScoreResult({ grade: 'needs_attention' }));
-        vi.mocked(generateReleaseScoreHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        const { default: case26 } = await import('../commands/case26.js');
-        await case26.handler(ctx);
-
-        expect(calculateReleaseScore).toHaveBeenCalledWith(undefined, 55, 'fail', undefined, expect.any(Number));
     });
 });
 

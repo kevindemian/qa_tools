@@ -31,6 +31,7 @@ import { generateRequirementScoreHtml } from '../shared/quality/requirement-scor
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
 import { renderPipelineHealthHtml } from '../git_triggers/pipeline-health-renderer.js';
 import { generateHtmlReport } from '../shared/report/report-html.js';
+import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
 import { mdToHtml } from '../shared/report/markdown.js';
 import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
@@ -43,7 +44,7 @@ import type { BacklogHealthResult } from '../shared/report/backlog-health.js';
 import type { PipelineCostResult } from '../shared/quality/pipeline-cost.js';
 import type { OptimizationResult } from '../shared/quality/suite-optimization.js';
 import type { CrossSquadResult } from '../shared/quality/cross-squad-benchmark.js';
-import type { ReleaseScoreResult } from '../shared/quality/release-score.js';
+import type { ReleaseScoreResult } from '../shared/types/data-hub.js';
 import type { RegressionResult } from '../shared/quality/silent-regression.js';
 import type { DefectTrendResult } from '../shared/quality/defect-trend.js';
 import type { SeasonalityResult } from '../shared/quality/defect-seasonality.js';
@@ -303,12 +304,20 @@ function makeCrossSquad(): CrossSquadResult {
 function makeReleaseScore(): ReleaseScoreResult {
     return {
         score: 82,
+        dimensions: {
+            passRate: { score: 85, status: 'pass' },
+            flakyRate: { score: 90, status: 'pass' },
+            coverage: { score: 75, status: 'pass' },
+            suiteSpeed: { score: 80, status: 'pass' },
+            executionRate: { score: 80, status: 'pass' },
+        },
         grade: 'good',
         breakdown: [
-            { label: 'Task Completion', score: 85, status: 'pass' },
-            { label: 'Health Score', score: 80, status: 'pass' },
+            { label: 'Pass Rate', score: 85, status: 'pass' },
+            { label: 'Flaky Rate', score: 90, status: 'pass' },
             { label: 'Coverage', score: 75, status: 'pass' },
-            { label: 'Flakiness', score: 90, status: 'pass' },
+            { label: 'Suite Speed', score: 80, status: 'pass' },
+            { label: 'Execution Rate', score: 80, status: 'pass' },
         ],
         recommendation: 'Release is ready with good quality metrics',
         timestamp: '2026-07-25T10:00:00Z',
@@ -539,7 +548,22 @@ function run(): void {
         ['developer-profile.html', () => generateDeveloperProfileHtml(makeDeveloperProfile())],
         ['requirement-score.html', () => generateRequirementScoreHtml(makeRequirementScore())],
         ['coverage-gap.html', () => generateCoverageGapHtml(makeCoverageGap())],
-        ['test-report.html', () => generateHtmlReport(makeFlatTests())],
+        [
+            'test-report.html',
+            () => {
+                const tests = makeFlatTests();
+                // F0-T8 (SSOT): hub dedicado refletindo o run — `computed` é
+                // obrigatório no gerador (report-html guard).
+                const hub = createDataHubFromParseResult(
+                    {
+                        tests,
+                        stats: { passed: 1, failed: 1, skipped: 1, total: 3, duration: 4400 },
+                    },
+                    'qa_tools',
+                );
+                return generateHtmlReport(tests, { computed: hub.computed });
+            },
+        ],
         ['export.csv', () => exportTestsCsv(makeFlatTests())],
         ['export.json', () => exportTestsJson(makeFlatTests())],
         ['docs.html', () => mdToHtml('# QA Tools Docs\n\n## Installation\n\nRun setup.')],

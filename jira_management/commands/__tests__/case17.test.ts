@@ -9,18 +9,21 @@ vi.mock('../../../shared/result_parser', () => ({
     parseTestResultsFile: vi.fn(),
 }));
 
-vi.mock('../../../shared/report/report-generator.js', () => ({
-    generateHtmlReport: vi.fn(),
+// F0-T8: `report-generator` e `failure-analysis` NÃO são mockados (mock-theater
+// removido). O relatório real roda com `computed` reconciliado do hub; a análise
+// real usa a fronteira LLM (reviewWithLlm/snapshotLlmMetrics) como único mock
+// (§26 boundary).
 
-    categorizeFailure: vi.fn(),
+vi.mock('../../../shared/llm/llm-review.js', () => ({ reviewWithLlm: vi.fn() }));
+vi.mock('../../../shared/llm/llm-metrics.js', () => ({ snapshotLlmMetrics: vi.fn() }));
+vi.mock('../../../shared/llm/llm-client.js', () => ({ llmPrompt: vi.fn() }));
+vi.mock('../../../shared/ui/spinner.js', () => ({
+    withSpinner: vi.fn((_label: string, fn: () => Promise<unknown>) => fn()),
 }));
+vi.mock('child_process', () => ({ execFileSync: vi.fn(() => '') }));
 
 vi.mock('../../../shared/publish', () => ({
     publishReport: vi.fn(),
-}));
-
-vi.mock('../../../shared/validation/failure-analysis.js', () => ({
-    analyzeFailuresWithReport: vi.fn(),
 }));
 
 vi.mock('../../../shared/open', () => ({
@@ -52,18 +55,41 @@ vi.mock('../../../shared/infra/store-backend.js', () => ({
     detectProjectGitDir: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../../shared/session-context', () => ({
-    resolveTestDataSource: vi.fn().mockResolvedValue(null),
-    resolveSessionContext: vi.fn().mockReturnValue({
-        sha: null,
-        branch: null,
-        store: {
-            loadReport: vi.fn().mockReturnValue(null),
-            loadMetrics: vi.fn(() => loadMetricsValue),
-            saveMetrics: vi.fn(),
-        },
-    }),
-}));
+vi.mock('../../../shared/session-context', () => {
+    // F0-T8 (SSOT): `store` é o hub. `saveParseResult` reconcilia `computed`
+    // (reflete o run salvo) — mesmo contrato do DataHubImpl real.
+    const store = {
+        loadReport: vi.fn().mockReturnValue(null),
+        loadMetrics: vi.fn(() => loadMetricsValue),
+        saveMetrics: vi.fn(),
+        saveParseResult: vi.fn(),
+        computed: undefined as unknown,
+    };
+    store.saveParseResult.mockImplementation((_project: string, _result: { tests: unknown[] }) => {
+        store.computed = {
+            passRate: 100,
+            metricsRuns: [{ tests: _result.tests }],
+        };
+        return {
+            timestamp: '',
+            project: '',
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration: 0,
+            tests: _result.tests,
+        };
+    });
+    return {
+        resolveTestDataSource: vi.fn().mockResolvedValue(null),
+        resolveSessionContext: vi.fn().mockReturnValue({
+            sha: null,
+            branch: null,
+            store,
+        }),
+    };
+});
 
 const { hubState } = vi.hoisted(() => {
     const state: { hub: unknown } = { hub: undefined };
@@ -73,6 +99,9 @@ const { hubState } = vi.hoisted(() => {
 vi.mock('../../../shared/data-hub/global-hub', () => ({
     isDataHubInitialized: () => hubState.hub !== undefined,
     getDataHub: () => hubState.hub,
+    setDataHub: (hub: unknown) => {
+        hubState.hub = hub;
+    },
 }));
 
 let loadMetricsValue: unknown = null;
@@ -96,7 +125,10 @@ vi.mock('../../../shared/infra/http-client.js', () => ({
 import * as promptModule from '../../../shared/ui/prompt.js';
 import * as parserModule from '../../../shared/result_parser.js';
 import * as reportGenModule from '../../../shared/report/report-generator.js';
-import * as analysisModule from '../../../shared/validation/failure-analysis.js';
+import { reviewWithLlm } from '../../../shared/llm/llm-review.js';
+import { snapshotLlmMetrics } from '../../../shared/llm/llm-metrics.js';
+import { createDataHubFromParseResult } from '../../../shared/data-hub/factory.js';
+import type { ParseResult } from '../../../shared/result_parser.js';
 import * as publishModule from '../../../shared/publish.js';
 import * as openModule from '../../../shared/open.js';
 import fs from 'fs';
@@ -118,6 +150,11 @@ describe('Case17', () => {
         vi.clearAllMocks();
         loadMetricsValue = null;
         hubState.hub = undefined;
+        // Isolamento de teste (§19): `vi.clearAllMocks()` não reseta implementações —
+        // sem estes resets, o mockReturnValue de readFileSync/existsSync de um teste
+        // anterior vaza para o seguinte (ex: análise IA lê o prompt real e invoca o LLM).
+        vi.mocked(fs).readFileSync.mockReset();
+        vi.mocked(fs).existsSync.mockReset();
         // Ensure withSpinner invokes the callback (auto-mock returns undefined otherwise)
         vi.mocked(promptModule).withSpinner.mockImplementation(async (_label: string, fn: () => Promise<unknown>) =>
             fn(),
@@ -130,7 +167,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
             const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
             mockGetJira.mockResolvedValueOnce({
@@ -144,8 +180,6 @@ describe('Case17', () => {
                 stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -153,11 +187,38 @@ describe('Case17', () => {
             expect(openModule.openWithFallback).toHaveBeenCalledWith(expect.any(String), 'Relatório', prompt.info);
         });
 
+        it('passes computed (SSOT F0-T8) to generateHtmlReport — o hub reconcilia o run atual', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const parser = vi.mocked(parserModule);
+            const genSpy = vi.spyOn(reportGenModule, 'generateHtmlReport');
+
+            prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
+
+            parser.parseTestResultsFile.mockReturnValueOnce({
+                tests: [{ title: 'Login test', state: 'failed', duration: 100, error: 'fail' }],
+                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+            });
+
+            const mod = case17Module;
+            await mod.handler(baseContext);
+
+            expect(genSpy).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.objectContaining({
+                    computed: expect.objectContaining({ passRate: expect.any(Number) as number }) as object,
+                }),
+            );
+
+            // O gerador REAL rodou (spy sem mockReturnValue) e não produziu error page.
+            expect(String(genSpy.mock.results[0]?.value ?? '')).not.toContain('Error generating report');
+        });
+
         it('computes diff against last run and logs info', async () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             vi.mocked(resolveTestDataSource).mockResolvedValueOnce({
                 result: {
@@ -171,8 +232,6 @@ describe('Case17', () => {
             });
 
             prompt.ask.mockResolvedValueOnce('');
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             loadMetricsValue = {
                 tests: [
@@ -191,7 +250,6 @@ describe('Case17', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             process.env['QA_AUTO_BUG'] = 'true';
 
@@ -207,11 +265,6 @@ describe('Case17', () => {
             });
 
             prompt.ask.mockResolvedValueOnce('');
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
-            const reportGenFull = vi.mocked(reportGenModule);
-            reportGenFull.categorizeFailure.mockReturnValue('regression');
 
             const mockPostJira = vi.spyOn(baseContext.jiraResource, 'postJiraResource');
             mockPostJira.mockResolvedValue({ key: 'BUG-42' });
@@ -231,7 +284,7 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
+            const genSpy = vi.spyOn(reportGenModule, 'generateHtmlReport');
 
             process.env['QA_MAPPING_PATH'] = path.join(os.tmpdir(), 'qa-mapping.json');
 
@@ -255,17 +308,17 @@ describe('Case17', () => {
                 stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 300 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(reportGen.generateHtmlReport).toHaveBeenCalledWith(
+            expect(genSpy).toHaveBeenCalledWith(
                 expect.any(Array),
                 expect.objectContaining({
-                    testHistory: expect.any(Object) as object,
+                    computed: expect.objectContaining({ passRate: expect.any(Number) as number }) as object,
                 }),
             );
+            // O gerador REAL rodou (spy sem mockReturnValue) e não produziu error page.
+            expect(String(genSpy.mock.results[0]?.value ?? '')).not.toContain('Error generating report');
         });
 
         it('handles AI analysis with empty content returning html unchanged', async () => {
@@ -273,30 +326,28 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
-            const analysis = vi.mocked(analysisModule);
 
-            analysis.analyzeFailuresWithReport.mockResolvedValue({
-                content: '',
-                confidence: 'low',
-                fallbackUsed: false,
-            });
+            const parseResult: ParseResult = {
+                tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
+                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+            };
+            // F0-T8: o hub global é a fonte da análise real. Hub dedicado reflete o parse.
+            hubState.hub = createDataHubFromParseResult(parseResult, 'proj');
 
             prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
-            parser.parseTestResultsFile.mockReturnValueOnce({
-                tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
-                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
-            });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
+            parser.parseTestResultsFile.mockReturnValueOnce(parseResult);
 
             prompt.askConfirm.mockResolvedValue(true);
 
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledTimes(1);
+            // Template ausente (fs mock) → analyze retorna vazio SEM chamar o LLM
+            // (caminho real, sem mock-teater de analyzeFailuresWithReport).
+            expect(reviewWithLlm).not.toHaveBeenCalled();
+            expect(snapshotLlmMetrics).not.toHaveBeenCalled();
+            expect(prompt.printError).not.toHaveBeenCalledWith('Falha ao analisar falhas com IA', expect.any(Error));
         });
 
         it('handles _fetchJiraContext when issues list is empty', async () => {
@@ -304,7 +355,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
             const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
             mockGetJira.mockResolvedValueOnce({
@@ -318,8 +368,6 @@ describe('Case17', () => {
                 stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -332,7 +380,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
             const mockGetJira = vi.spyOn(baseContext.jiraResource, 'getJiraResource');
 
             mockGetJira.mockResolvedValueOnce({
@@ -346,8 +393,6 @@ describe('Case17', () => {
                 stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -359,7 +404,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             vi.mocked(fs).existsSync.mockReturnValueOnce(true);
             vi.mocked(fs).readFileSync.mockReturnValueOnce(
@@ -377,8 +421,6 @@ describe('Case17', () => {
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -390,7 +432,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             process.env['QA_MAPPING_PATH'] = path.join(os.tmpdir(), 'qa-missing-tests.json');
 
@@ -404,8 +445,6 @@ describe('Case17', () => {
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -417,7 +456,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             const origArgv = process.argv;
             process.argv = ['node', 'script', '--unknown-flag', '--publish', '', '--run', 'nofile'];
@@ -428,8 +466,6 @@ describe('Case17', () => {
                 tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
@@ -444,7 +480,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             // Previous run had one test that was passing
             vi.mocked(fs).existsSync.mockReturnValue(true);
@@ -464,8 +499,6 @@ describe('Case17', () => {
                 stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 60 },
             });
 
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
-
             const mod = case17Module;
             await mod.handler(baseContext);
 
@@ -478,7 +511,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             const origArgv = process.argv;
             process.argv = ['node', 'script', '--run', '=onlyfile', '--run', 'name='];
@@ -489,8 +521,6 @@ describe('Case17', () => {
                 tests: [{ title: 'Test 1', state: 'passed', duration: 100 }],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
@@ -505,30 +535,35 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
-            const analysis = vi.mocked(analysisModule);
 
-            prompt.askConfirm.mockResolvedValue(true);
-            analysis.analyzeFailuresWithReport.mockResolvedValue({
+            const parseResult: ParseResult = {
+                tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
+                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
+            };
+            hubState.hub = createDataHubFromParseResult(parseResult, 'proj');
+
+            // Template disponível (fs mock → retorna o prompt p/ failure-analysis.md) e
+            // LLM real via fronteira reviewWithLlm (único mock, §26).
+            vi.mocked(fs).readFileSync.mockImplementationOnce((filePath: unknown) =>
+                String(filePath).endsWith('failure-analysis.md') ? 'Analyze failures: {failed}' : '',
+            );
+            vi.mocked(reviewWithLlm).mockResolvedValue({
                 content: 'Analysis text',
                 confidence: 'high',
                 fallbackUsed: false,
-            });
+            } as never);
+
+            prompt.askConfirm.mockResolvedValue(true);
 
             prompt.ask.mockResolvedValueOnce('/path/to/report.json').mockResolvedValueOnce('');
 
-            parser.parseTestResultsFile.mockReturnValueOnce({
-                tests: [{ title: 'Fail', state: 'failed', duration: 100, error: 'err' }],
-                stats: { passed: 0, failed: 1, skipped: 0, total: 1, duration: 100 },
-            });
-
-            // HTML without </body> to cover the bodyEnd === -1 branch
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html><head></head><div>no body tag</div></html>');
+            parser.parseTestResultsFile.mockReturnValueOnce(parseResult);
 
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(analysis.analyzeFailuresWithReport).toHaveBeenCalledTimes(1);
+            expect(reviewWithLlm).toHaveBeenCalledTimes(1);
+            expect(snapshotLlmMetrics).toHaveBeenCalledWith();
         });
 
         it('handles empty filepath early return (line 166-167)', async () => {
@@ -571,7 +606,7 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
+            const genSpy = vi.spyOn(reportGenModule, 'generateHtmlReport');
 
             const origArgv = process.argv;
             process.argv = ['node', 'script', '--run', 'extra=extra-report.json'];
@@ -587,12 +622,11 @@ describe('Case17', () => {
                 });
 
             prompt.ask.mockResolvedValueOnce('/report.json').mockResolvedValueOnce('');
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
 
-            expect(reportGen.generateHtmlReport).toHaveBeenCalledWith(
+            expect(genSpy).toHaveBeenCalledWith(
                 expect.any(Array),
                 expect.objectContaining({
                     runs: expect.arrayContaining([expect.objectContaining({ name: 'Primary' })]) as Array<{
@@ -609,7 +643,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
             const publish = vi.mocked(publishModule);
 
             process.env['QA_FAIL_ON'] = '80';
@@ -621,8 +654,6 @@ describe('Case17', () => {
                 tests: [{ title: 'Pass', state: 'passed', duration: 100 }],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
@@ -638,7 +669,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             process.env['QA_FAIL_ON'] = '90';
 
@@ -652,8 +682,6 @@ describe('Case17', () => {
                 ],
                 stats: { passed: 1, failed: 1, skipped: 0, total: 2, duration: 150 },
             });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             const result = await mod.handler(baseContext);
@@ -669,7 +697,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             vi.mocked(fs).existsSync.mockReturnValue(true);
             vi.mocked(fs).readFileSync.mockReturnValue(JSON.stringify({ results: { tests: [] } }));
@@ -682,8 +709,6 @@ describe('Case17', () => {
                 tests: [{ title: 'Test', state: 'passed', duration: 100 }],
                 stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
             });
-
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
@@ -704,7 +729,6 @@ describe('Case17', () => {
 
             const prompt = vi.mocked(promptModule);
             const parser = vi.mocked(parserModule);
-            const reportGen = vi.mocked(reportGenModule);
 
             const origArgv = process.argv;
             process.argv = ['node', 'script', '--run', 'extra=bad-file.json'];
@@ -721,7 +745,6 @@ describe('Case17', () => {
                 });
 
             prompt.ask.mockResolvedValueOnce('/report.json').mockResolvedValueOnce('');
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             const mod = case17Module;
             await mod.handler(baseContext);
@@ -740,7 +763,6 @@ describe('Case17', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            const reportGen = vi.mocked(reportGenModule);
             const spy = vi.spyOn(case17Helpers, 'buildGitTrendHtml');
 
             hubState.hub = {
@@ -757,7 +779,6 @@ describe('Case17', () => {
             });
 
             prompt.ask.mockResolvedValueOnce('');
-            reportGen.generateHtmlReport.mockReturnValueOnce('<html>report</html>');
 
             await case17Module.handler(baseContext);
 

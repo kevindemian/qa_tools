@@ -16,10 +16,11 @@ import {
 import { renderPipelineHealthHtml } from './pipeline-health-renderer.js';
 import type { PipelineHealthData } from './pipeline-health-renderer.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
-import { generateGitMetricsRuns, getLastGitLogError } from '../shared/ci/git-metrics-adapter.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/quality/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
 import { collectTestResults as _collectTestResults } from './test-results.js';
+import { normalizeRunId } from '../shared/ci/run-id.js';
+import type { ParseResult } from '../shared/result_parser.js';
 import { generatePrReport } from '../shared/pr-report-core.js';
 import { isPrReportEnabled, getPrReportConfig } from '../shared/feature-config.js';
 import type { PipelineTriggerResult } from '../shared/types.js';
@@ -127,7 +128,6 @@ async function _triggerPipeline(
 }
 
 async function generatePrReportIfNeeded(
-    parsed: import('../shared/result_parser.js').ParseResult,
     projectName: string,
     dataHub: import('../shared/types/data-hub.js').DataHub,
 ): Promise<void> {
@@ -136,14 +136,6 @@ async function generatePrReportIfNeeded(
     const prConfig = getPrReportConfig(projectName);
     try {
         const reportResult = await generatePrReport({
-            tests: parsed.tests,
-            stats: {
-                passed: parsed.stats.passed,
-                failed: parsed.stats.failed,
-                skipped: parsed.stats.skipped,
-                total: parsed.stats.total,
-                duration: parsed.stats.duration,
-            },
             skipAi: prConfig.skipAi ?? false,
             skipQuality: prConfig.skipQuality ?? false,
             skipFlaky: prConfig.skipFlaky ?? false,
@@ -193,25 +185,49 @@ async function _collectPipelineResults(
             jiraBaseUrl,
         });
         if (parsed) {
-            await offerPipelineFailureAnalysis(parsed);
-            let dataHub: import('../shared/types/data-hub.js').DataHub | undefined;
-            try {
-                const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
-                dataHub = await getOrFetchDataHub(m, projectName);
-            } catch (err: unknown) {
-                error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
-            }
+            const dataHub = await _reconcileDataHub(m, projectName, parsed, pipelineId);
             // Register DataHub in the global singleton so downstream consumers
             // (quality-gate, health-score, flakiness) can access it via getDataHub().
             if (dataHub) {
                 setDataHub(dataHub);
-                await generatePrReportIfNeeded(parsed, projectName, dataHub);
+                await generatePrReportIfNeeded(projectName, dataHub);
             } else {
                 error('batch-mode: PR report não gerado — DataHub indisponível após falha de fetch.');
             }
+            // Análise de falhas APÓS o hub estar disponível (F0-T8): o hub
+            // passado já reflete o parse coletado; sem hub, a própria oferta
+            // constrói um hub dedicado (defensivo — nunca analisa contra hub vazio).
+            await offerPipelineFailureAnalysis(parsed, dataHub ? { dataHub } : undefined);
         }
     }
     return false;
+}
+
+/**
+ * F0-T8 (SSOT): fetch do hub e reconciliação do parse coletado como run atual,
+ * ANTES de qualquer consumo. O `saveParseResult` interno do test-results vai no
+ * hub GLOBAL (ainda antigo neste momento); sem esta reconciliação, o hub novo
+ * refletiria um run stale para o PR report e a análise de falhas. Guard §24:
+ * fetch sem hub → erro explícito (§25), nunca run stale silencioso.
+ */
+async function _reconcileDataHub(
+    m: import('../shared/types.js').GitProvider,
+    projectName: string,
+    parsed: ParseResult,
+    pipelineId: string,
+): Promise<import('../shared/types/data-hub.js').DataHub | undefined> {
+    try {
+        const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
+        const fetched = await getOrFetchDataHub(m, projectName);
+        if (!fetched) {
+            throw new Error('getOrFetchDataHub returned undefined');
+        }
+        fetched.saveParseResult(projectName, parsed, normalizeRunId(pipelineId));
+        return fetched;
+    } catch (err: unknown) {
+        error('batch-mode: DataHub fetch failed — ' + extractErrorMessage(err));
+        return undefined;
+    }
 }
 
 async function triggerAndCollectBatchPipeline(
@@ -241,22 +257,15 @@ async function triggerAndCollectBatchPipeline(
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!projectName) return;
     const hub = getDataHub();
-    let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
+    const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
     if (projectRuns.length < 2) {
-        const gitRuns = generateGitMetricsRuns({ projectName });
-        const gitError = getLastGitLogError();
-        if (gitRuns.length >= 2) {
-            projectRuns = gitRuns;
-            info('Fallback para git metrics — flakiness dashboard com dados do histórico de commits');
-        } else if (gitError) {
-            warn('Não foi possível obter o git history para flakiness dashboard. ' + gitError);
-            return;
-        } else {
-            return;
-        }
+        warn(
+            `Dados insuficientes para flakiness dashboard de '${projectName}' — precisava de 2+ execuções e computed.metricsRuns tem ${projectRuns.length}. Execute pipelines primeiro.`,
+        );
+        return;
     }
     const flaky = calcFlakinessEntries(projectRuns);
-    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName);
+    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName, { dataHub: hub });
     const outPath = writeReport('flakiness-' + projectName + '.html', html);
     success('Dashboard de flakiness gerado: ' + outPath);
     if (publishTarget) {
@@ -383,22 +392,20 @@ function runQuarantineMaintenance(): void {
 function generateTestExport(projectName: string): void {
     try {
         const hub = getDataHub();
-        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
+        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
         if (projectRuns.length === 0) {
-            const gitRuns = generateGitMetricsRuns({ projectName });
-            const gitError = getLastGitLogError();
-            if (gitRuns.length > 0) {
-                projectRuns = gitRuns;
-                info('Fallback para git metrics — export com dados do histórico de commits');
-            } else if (gitError) {
-                warn('Não foi possível obter o git history para export. ' + gitError);
-                return;
-            } else {
-                return;
-            }
+            warn(
+                `Dados insuficientes para export de testes de '${projectName}' — sem computed.metricsRuns. Execute pipelines primeiro.`,
+            );
+            return;
         }
         const latestRun = projectRuns[projectRuns.length - 1];
-        if (!latestRun || latestRun.tests.length === 0) return;
+        if (!latestRun || latestRun.tests.length === 0) {
+            warn(
+                `Dados insuficientes para export de testes de '${projectName}' — última execução sem testes (computed.metricsRuns).`,
+            );
+            return;
+        }
         const csv = exportTestsCsv(latestRun.tests);
         const csvPath = writeReport('tests-' + projectName + '.csv', csv);
         success('Test CSV export gerado: ' + csvPath);

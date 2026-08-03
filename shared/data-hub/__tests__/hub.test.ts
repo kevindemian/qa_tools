@@ -17,6 +17,7 @@ import type {
     FailureClassification,
 } from '../../types/data-hub.js';
 import type { PipelineRun } from '../../types/ci-cd.js';
+import type { ParseResult } from '../../result_parser.js';
 
 function makeRun(overrides?: Partial<PipelineRun>): PipelineRun {
     return {
@@ -161,6 +162,35 @@ describe('DataHubImpl', () => {
         expect(hub.computed.runPassRate).toBeCloseTo(80, 5);
     });
 
+    it('b1: computed.passRate reflects test-level pass rate when only parsed artifacts exist (no pipeline runs)', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [
+                { title: 'test A', state: 'passed' as const, duration: 100 },
+                { title: 'test B', state: 'passed' as const, duration: 150 },
+                { title: 'test C', state: 'passed' as const, duration: 200 },
+            ],
+            stats: { passed: 3, failed: 0, skipped: 0, total: 3, duration: 450 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        expect(hub.raw.runs).toHaveLength(0);
+        expect(hub.computed.passRate).toBe(100);
+        expect(hub.computed.runPassRate).toBe(100);
+    });
+
+    it('b1: computed.passRate stays 0 only when there is genuinely no data at all', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.passRate).toBe(0);
+        expect(hub.computed.runPassRate).toBe(0);
+    });
+
     it('merges data from multiple providers', async () => {
         expect.hasAssertions();
 
@@ -225,6 +255,33 @@ describe('DataHubImpl', () => {
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('b3: computed.releaseScore is the single enriched implementation — noData for absent data sources', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        const rs = hub.computed.releaseScore;
+
+        expect(rs.breakdown).toBeDefined();
+        expect(rs.breakdown).toHaveLength(5);
+
+        const passRateDim = (rs.breakdown ?? []).find((d) => d.label === 'Pass Rate');
+
+        expect(passRateDim?.noData).toBeFalsy();
+
+        for (const label of ['Coverage', 'Suite Speed', 'Execution Rate']) {
+            const dim = (rs.breakdown ?? []).find((d) => d.label === label);
+
+            expect(dim?.noData).toBeTruthy();
+        }
     });
 });
 
@@ -702,6 +759,116 @@ describe('DataHubImpl — SSOT Persistence', () => {
 
             expect(mockedSafe(persistence).flush).toHaveBeenCalledTimes(1);
             expect(mockedSafe(persistence).flush.mock.calls[0]).toStrictEqual(['test commit']);
+        });
+    });
+
+    describe('SaveParseResult() (F0-T8 reconciliation)', () => {
+        function makeParseResult(overrides?: { failed?: number; title?: string }): ParseResult {
+            const failed = overrides?.failed ?? 0;
+            const passed = 3 - failed;
+            return {
+                tests: [
+                    { title: overrides?.title ?? 'test1', state: 'passed', duration: 100 },
+                    { title: 'test2', state: 'passed', duration: 100 },
+                    { title: 'test3', state: failed > 0 ? 'failed' : 'passed', duration: 100 },
+                ],
+                stats: {
+                    passed,
+                    failed,
+                    skipped: 0,
+                    total: 3,
+                    duration: 300,
+                },
+            };
+        }
+
+        it('delegates to persistence and reconciles parsedArtifacts under sourceRunId', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(mockedSafe(persistence).saveParseResult).toHaveBeenCalledTimes(1);
+            expect(mockedSafe(persistence).saveParseResult.mock.calls[0]).toStrictEqual(['my-project', result]);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts).toBeDefined();
+
+            const run42 = artifacts?.get(42)?.[0];
+
+            expect(run42).toBeDefined();
+            expect(run42?.fileName).toBe('42');
+            expect(run42?.data).toBe(result);
+        });
+
+        it('recomputes computed.metricsRuns[0] from the reconciled artifact (never stale)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+
+            const firstRun = hub.computed.metricsRuns?.[0];
+
+            expect(firstRun).toBeDefined();
+            expect(firstRun?.tests).toStrictEqual(result.tests);
+            expect(firstRun?.total).toBe(3);
+            expect(firstRun?.passed).toBe(3);
+            expect(firstRun?.failed).toBe(0);
+        });
+
+        it('dedups by sourceRunId: same key replaces the previous artifact', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult(), 42);
+            const second = makeParseResult({ failed: 1, title: 'second' });
+            hub.saveParseResult('my-project', second, 42);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(42)).toHaveLength(1);
+
+            const latest = artifacts?.get(42)?.[0];
+
+            expect(latest).toBeDefined();
+            expect(latest?.data).toBe(second);
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+            expect(hub.computed.metricsRuns?.[0]?.failed).toBe(1);
+        });
+
+        it('uses the user-fallback slot (key 0) when sourceRunId is omitted', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult());
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(0)).toHaveLength(1);
+
+            const slot = artifacts?.get(0)?.[0];
+
+            expect(slot).toBeDefined();
+            expect(slot?.fileName).toBe('user-fallback');
+        });
+
+        it('throws on non-integer sourceRunId (§24 boundary guard)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), 1.5)).toThrow(/inteiro/);
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), NaN)).toThrow(/inteiro/);
+            expect(mockedSafe(persistence).saveParseResult).not.toHaveBeenCalled();
         });
     });
 });

@@ -3,8 +3,6 @@
  *
  * Validates the HTML report orchestrator end-to-end:
  * - generateHtmlReport with/without options
- * - generateCoverageHtml with varying epics
- * - generateReportWithFallback error handling
  * - Key sections present: summary, chart, table, footer
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +15,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const skipped = tests.filter((t) => t.state === 'skipped').length;
     const totalDuration = tests.reduce((s: number, t: FlatTest) => s + t.duration, 0);
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -29,7 +27,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped, total: tests.length },
         framework: '',
         metricsRuns: [
@@ -159,55 +157,6 @@ describe('Integration: HTML Report (FT-17)', () => {
         });
     });
 
-    describe('FT-17b: generateCoverageHtml', () => {
-        it('returns complete HTML document', async () => {
-            expect.hasAssertions();
-
-            const { generateCoverageHtml } = await import('../../report/report-html.js');
-            const epics = [
-                {
-                    key: 'EPIC-1',
-                    summary: 'First Epic',
-                    issues: [
-                        { key: 'T-1', summary: 'Task 1', status: 'Done', type: 'Task' },
-                        { key: 'T-2', summary: 'Task 2', status: 'In Progress', type: 'Task' },
-                    ],
-                },
-            ];
-            const html = generateCoverageHtml(epics, 'Coverage Test');
-
-            expect(html).toContain('Coverage Test');
-            expect(html).toContain('EPIC-1');
-            expect(html).toContain('T-1');
-            expect(html).toContain('T-2');
-        });
-
-        it('shows per-epic close percentage', async () => {
-            expect.hasAssertions();
-
-            const { generateCoverageHtml } = await import('../../report/report-html.js');
-            const epics = [
-                {
-                    key: 'EPIC-A',
-                    summary: 'Half closed',
-                    issues: [
-                        { key: 'A-1', summary: 'Done', status: 'Done', type: 'Task' },
-                        { key: 'A-2', summary: 'Open', status: 'Open', type: 'Bug' },
-                    ],
-                },
-                {
-                    key: 'EPIC-B',
-                    summary: 'All open',
-                    issues: [{ key: 'B-1', summary: 'To Do', status: 'To Do', type: 'Task' }],
-                },
-            ];
-            const html = generateCoverageHtml(epics);
-
-            expect(html).toContain('50.0');
-            expect(html).toContain('0.0');
-        });
-    });
-
     describe('FT-17c: error fallback', () => {
         it('returns buildErrorPage when buildHtmlPage throws', async () => {
             expect.hasAssertions();
@@ -229,18 +178,6 @@ describe('Integration: HTML Report (FT-17)', () => {
             expect(vi.spyOn(rootLogger, 'error')).toHaveBeenCalledWith(
                 expect.stringContaining('Failed to generate HTML report'),
             );
-        });
-    });
-
-    describe('FT-17d: generateCoverageHtml with empty epics', () => {
-        it('handles empty epics gracefully', async () => {
-            expect.hasAssertions();
-
-            const { generateCoverageHtml } = await import('../../report/report-html.js');
-            const html = generateCoverageHtml([]);
-
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).not.toContain('Error generating coverage report');
         });
     });
 });

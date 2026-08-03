@@ -13,7 +13,6 @@
         ".tmp/**/*.ts",
         ".shared/**/*.ts",
         "vitest.config.stryker.ts",
-        "tautest.config.ts",
         "stryker.conf.json"
     ],
     "exclude": ["node_modules", "docs-archive"]

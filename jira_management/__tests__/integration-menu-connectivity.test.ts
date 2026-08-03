@@ -76,14 +76,7 @@ vi.mock('../../shared/quality/health-score.js', () => ({
         timestamp: '',
     })),
 }));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({
-        score: 85,
-        grade: 'good',
-        breakdown: [],
-        recommendation: '',
-        timestamp: '',
-    })),
+vi.mock('../../shared/quality/release-score-renderer.js', () => ({
     generateReleaseScoreHtml: vi.fn(() => '<html/>'),
 }));
 vi.mock('../../shared/report/coverage-gap.js', () => ({
@@ -278,7 +271,21 @@ describe('Jira_management — case handlers are connected', () => {
         const ctx = createMockContext();
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            computed: {
+                releaseScore: {
+                    score: 85,
+                    grade: 'good',
+                    breakdown: [
+                        { label: 'Pass Rate', score: 90, status: 'pass' as const },
+                        { label: 'Flaky Rate', score: 80, status: 'pass' as const },
+                        { label: 'Coverage', score: 85, status: 'pass' as const },
+                        { label: 'Suite Speed', score: 80, status: 'pass' as const },
+                        { label: 'Execution Rate', score: 90, status: 'pass' as const },
+                    ],
+                    recommendation: '',
+                    timestamp: '',
+                },
+            },
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 

@@ -76,4 +76,67 @@ describe('Compute/release-score', () => {
             expect(makeDimensionScore(80, 90).status).toBe('fail');
         });
     });
+
+    describe('B3: enriched ReleaseScoreResult (single implementation)', () => {
+        it('produces a 5-dimension breakdown with labels', () => {
+            expect.hasAssertions();
+
+            const result = calcReleaseScore(allPass);
+
+            expect(result.breakdown).toHaveLength(5);
+            expect((result.breakdown ?? []).map((d) => d.label)).toStrictEqual([
+                'Pass Rate',
+                'Flaky Rate',
+                'Coverage',
+                'Suite Speed',
+                'Execution Rate',
+            ]);
+            expect((result.breakdown ?? []).every((d) => d.status === 'pass')).toBeTruthy();
+        });
+
+        it('produces a recommendation and ISO timestamp', () => {
+            expect.hasAssertions();
+
+            const result = calcReleaseScore(allPass);
+
+            expect(typeof result.recommendation).toBe('string');
+            expect((result.recommendation ?? '').length).toBeGreaterThan(0);
+            expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+        });
+
+        it('excludes unavailable dimensions from the weighted score and marks them noData', () => {
+            expect.hasAssertions();
+
+            const result = calcReleaseScore(allPass, undefined, {
+                passRate: true,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            });
+
+            expect(result.score).toBe(100);
+            expect((result.breakdown ?? []).filter((d) => d.noData)).toHaveLength(4);
+
+            const coverage = (result.breakdown ?? []).find((d) => d.label === 'Coverage');
+
+            expect(coverage?.noData).toBeTruthy();
+        });
+
+        it('never fabricates a critical score when NO dimension has data — grade unknown + explicit recommendation', () => {
+            expect.hasAssertions();
+
+            const result = calcReleaseScore(allFail, undefined, {
+                passRate: false,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            });
+
+            expect(result.grade).toBe('unknown');
+            expect(result.recommendation).toContain('Insufficient data');
+            expect((result.breakdown ?? []).every((d) => d.noData)).toBeTruthy();
+        });
+    });
 });

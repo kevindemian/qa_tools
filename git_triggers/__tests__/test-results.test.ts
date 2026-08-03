@@ -511,10 +511,14 @@ describe('Test Results', () => {
 
             expect(mockListPipelineArtifacts).toHaveBeenCalledWith('1');
             expect(mockDownloadArtifact).toHaveBeenCalledWith(expect.anything());
-            expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
-                tests: [{ title: 'test1', state: 'passed', duration: 100 }],
-                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-            });
+            expect(mockSaveParseResult).toHaveBeenCalledWith(
+                'PROJ',
+                {
+                    tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                },
+                1,
+            );
             expect(mockMatchResultsToTests).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
             expect(mockCreateTestExecutionFromResults).toHaveBeenCalledWith(expect.objectContaining({}));
             expect(pushHistory).toHaveBeenCalledWith('resultados', expect.stringContaining('TE-123'), 'ok');
@@ -580,10 +584,14 @@ describe('Test Results', () => {
                 jiraBaseUrl: 'https://jira.example.com',
             });
 
-            expect(mockSaveParseResult).toHaveBeenCalledWith('PROJ', {
-                tests: [{ title: 'test1', state: 'passed', duration: 100 }],
-                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
-            });
+            expect(mockSaveParseResult).toHaveBeenCalledWith(
+                'PROJ',
+                {
+                    tests: [{ title: 'test1', state: 'passed', duration: 100 }],
+                    stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                },
+                1,
+            );
             expect(mockMatchResultsToTests).not.toHaveBeenCalled();
             expect(mockCreateTestExecutionFromResults).not.toHaveBeenCalled();
             expect(pushHistory).not.toHaveBeenCalled();

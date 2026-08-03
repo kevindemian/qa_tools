@@ -1,46 +1,55 @@
 /**
- * Integration tests — Release Score (FT-14)
+ * Integration tests — Release Score (B3 SSOT)
  *
- * Validates the release readiness score calculation:
- * - Weighted composite: tasks(25%) + health(30%) + coverage(25%) + flakiness(20%)
+ * Validates the release readiness score calculation end-to-end (pure functions,
+ * no filesystem dependencies):
+ * - Weighted composite: passRate(30%) + flakyRate(20%) + coverage(25%) + executionRate(15%) + suiteSpeed(10%)
  * - Score 0-100 range
- * - Grade: excellent(≥90), good(≥70), needs_attention(≥50), critical(<50)
+ * - Grade: excellent(>=90), good(>=80), needs_attention(>=70), poor(>=60), critical(<60)
  * - Breakdown array with per-dimension scores
  * - Recommendation text generation
  * - HTML generation
- *
- * Pure function — no filesystem dependencies.
  */
 import { describe, expect, it } from 'vitest';
 
+import { calcReleaseScore } from '../../data-hub/compute/release-score.js';
+import { generateReleaseScoreHtml } from '../../quality/release-score-renderer.js';
+import type { HealthDimensions } from '../../types/data-hub.js';
+
+function allDims(score: number, status: 'pass' | 'fail'): HealthDimensions {
+    return {
+        passRate: { score, status },
+        flakyRate: { score, status },
+        coverage: { score, status },
+        suiteSpeed: { score, status },
+        executionRate: { score, status },
+    };
+}
+
 describe('Integration: Release Score', () => {
     describe('FT-14a: score calculation', () => {
-        it('returns score in 0-100 range', async () => {
+        it('returns score in 0-100 range', () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
+            const result = calcReleaseScore(allDims(80, 'pass'));
 
             expect(result.score).toBeGreaterThanOrEqual(0);
             expect(result.score).toBeLessThanOrEqual(100);
         });
 
-        it('weights: tasks=25%, health=30%, coverage=25%, flakiness=20%', async () => {
+        it('weights: passRate=30%, flakyRate=20%, coverage=25%, executionRate=15%, suiteSpeed=10%', () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            // All dimensions at 100 → score should be ~100
-            const perfect = calculateReleaseScore(100, 100, 'pass', 100, 0);
+            const perfect = calcReleaseScore(allDims(100, 'pass'));
 
             expect(perfect.score).toBe(100);
             expect(perfect.grade).toBe('excellent');
         });
 
-        it('all zeros → score 0', async () => {
+        it('all zeros → score 0', () => {
             expect.hasAssertions();
 
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
+            const result = calcReleaseScore(allDims(0, 'fail'));
 
             expect(result.score).toBe(0);
             expect(result.grade).toBe('critical');
@@ -48,72 +57,68 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14b: grade assignment', () => {
-        it('excellent ≥ 90', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
-
-            expect(result.grade).toBe('excellent');
+        it('excellent >= 90', () => {
+            expect(calcReleaseScore(allDims(95, 'pass')).grade).toBe('excellent');
         });
 
-        it('good ≥ 70', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(70, 75, 'pass', 70, 10);
-
-            expect(result.grade).toBe('good');
+        it('good >= 80', () => {
+            expect(calcReleaseScore(allDims(85, 'pass')).grade).toBe('good');
         });
 
-        it('critical < 50', async () => {
-            expect.hasAssertions();
+        it('needs_attention >= 70', () => {
+            expect(calcReleaseScore(allDims(75, 'pass')).grade).toBe('needs_attention');
+        });
 
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(30, 30, 'fail', 30, 50);
+        it('poor >= 60', () => {
+            expect(calcReleaseScore(allDims(65, 'pass')).grade).toBe('poor');
+        });
 
-            expect(result.grade).toBe('critical');
+        it('critical < 60', () => {
+            expect(calcReleaseScore(allDims(30, 'fail')).grade).toBe('critical');
         });
     });
 
     describe('FT-14c: breakdown', () => {
-        it('has 4 dimension entries', async () => {
-            expect.hasAssertions();
+        it('has 5 dimension entries', () => {
+            const result = calcReleaseScore(allDims(80, 'pass'));
 
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
-
-            expect(result.breakdown).toHaveLength(4);
-            expect(result.breakdown.map((b) => b.label)).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
+            expect(result.breakdown).toHaveLength(5);
+            expect(result.breakdown?.map((b) => b.label)).toStrictEqual([
+                'Pass Rate',
+                'Flaky Rate',
+                'Coverage',
+                'Suite Speed',
+                'Execution Rate',
+            ]);
         });
     });
 
     describe('FT-14d: recommendation', () => {
-        it('says ready when all dimensions pass', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(90, 95, 'pass', 90, 2);
+        it('says ready when all dimensions pass', () => {
+            const result = calcReleaseScore(allDims(90, 'pass'));
 
             expect(result.recommendation).toContain('Ready');
         });
 
-        it('lists failing dimensions', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(30, 50, 'fail', 40, 50);
+        it('lists failing dimensions', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: 30, status: 'fail' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 40, status: 'fail' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
+            const result = calcReleaseScore(dims);
 
             expect(result.recommendation).toContain('Improve');
+            expect(result.recommendation).toContain('Pass Rate');
+            expect(result.recommendation).toContain('Coverage');
         });
     });
 
     describe('FT-14e: HTML generation', () => {
-        it('generates valid HTML', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
+        it('generates valid HTML', () => {
+            const result = calcReleaseScore(allDims(80, 'pass'));
             const html = generateReleaseScoreHtml(result);
 
             expect(html).toContain('<!DOCTYPE html>');
@@ -122,22 +127,16 @@ describe('Integration: Release Score', () => {
     });
 
     describe('FT-14f: data attributes', () => {
-        it('includes data-part="target" with threshold values', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(80, 85, 'pass', 90, 5);
+        it('includes data-part="target" with quality-gate threshold', () => {
+            const result = calcReleaseScore(allDims(80, 'pass'));
             const html = generateReleaseScoreHtml(result);
 
             expect(html).toContain('data-part="target"');
             expect(html).toContain('target: >=80%');
         });
 
-        it('includes data-part="timestamp"', async () => {
-            expect.hasAssertions();
-
-            const { calculateReleaseScore, generateReleaseScoreHtml } = await import('../../quality/release-score.js');
-            const result = calculateReleaseScore(50, 50, 'pass', 50, 50);
+        it('includes data-part="timestamp"', () => {
+            const result = calcReleaseScore(allDims(50, 'fail'));
             const html = generateReleaseScoreHtml(result);
 
             expect(html).toContain('data-part="timestamp"');

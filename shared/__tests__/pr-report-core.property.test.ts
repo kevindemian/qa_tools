@@ -63,13 +63,48 @@ vi.mock('../data-hub/compute/metrics-trends.js', () => mockTrends);
 
 import { generatePrReport, computeDiffComparison } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
-import type { PrReportCoreOptions } from '../pr-report-core.js';
+import type { PrReportCoreOptions, PrReportStats } from '../pr-report-core.js';
 import type { DataHub } from '../types/data-hub.js';
 import { createTestHub } from './test-hub.js';
+import { calcRunPassRate } from '../data-hub/compute/run-pass-rate.js';
 
 const report = (
-    opts: Omit<PrReportCoreOptions, 'dataHub'> & { dataHub?: DataHub },
-): ReturnType<typeof generatePrReport> => generatePrReport({ ...opts, dataHub: opts.dataHub ?? createTestHub() });
+    opts: Omit<PrReportCoreOptions, 'dataHub' | 'tests' | 'stats'> & {
+        tests?: FlatTest[];
+        stats?: PrReportStats;
+        dataHub?: DataHub;
+    },
+): ReturnType<typeof generatePrReport> => {
+    const { tests, stats, dataHub, ...rest } = opts;
+    const statsForHub: PrReportStats = stats ?? { passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 };
+    const hub = dataHub ?? createTestHub();
+    hub.computed = {
+        ...hub.computed,
+        testCounts: {
+            passed: statsForHub.passed,
+            failed: statsForHub.failed,
+            skipped: statsForHub.skipped,
+            total: statsForHub.total,
+        },
+        runPassRate: calcRunPassRate({ passed: statsForHub.passed, failed: statsForHub.failed }),
+        metricsRuns:
+            tests == null
+                ? (hub.computed.metricsRuns ?? [])
+                : [
+                      {
+                          timestamp: new Date().toISOString(),
+                          project: '',
+                          passed: statsForHub.passed,
+                          failed: statsForHub.failed,
+                          skipped: statsForHub.skipped,
+                          total: statsForHub.total,
+                          duration: statsForHub.duration,
+                          tests,
+                      },
+                  ],
+    };
+    return generatePrReport({ ...rest, dataHub: hub });
+};
 
 const FlatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     title: fc.string({ minLength: 1, maxLength: 20 }),

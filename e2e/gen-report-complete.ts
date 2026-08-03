@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { parseTestResultsFile } from '../shared/result_parser.js';
 import { generateHtmlReport } from '../shared/report/report-generator.js';
+import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
 import { createHttpClient } from '../shared/infra/http-client.js';
 import JiraResource from '../jira_management/jira_resource.js';
@@ -162,10 +163,15 @@ function generateFinalReport(
     result: ReturnType<typeof parseTestResultsFile>,
 ): void {
     const sections = [ciHtml, xrayHistoryHtml].filter(Boolean).join('\n');
+    // F0-T8 (SSOT): hub dedicado refletindo o CTRF parseado — `computed` é
+    // obrigatório no gerador (report-html guard); o relatório nunca é gerado
+    // contra dados vazios ou stale.
+    const hub = createDataHubFromParseResult(result, 'qa_tools_e2e');
     const htmlBody = generateHtmlReport(result.tests, {
         title: 'E2E Complete Report - QA Tools',
         generatedAt: new Date().toISOString(),
         source: 'ctrf-report.json',
+        computed: hub.computed,
     });
     const finalHtml = sections ? htmlBody.replace('</body>', sections + '</body>') : htmlBody;
 

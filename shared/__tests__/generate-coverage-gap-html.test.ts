@@ -182,6 +182,24 @@ describe('GenerateCoverageGapHtml', () => {
         expect(html).not.toContain('GAP</span>');
     });
 
+    it('produces valid HTML for an empty result (no items, no epics, no hierarchy)', () => {
+        const empty: CoverageGapResult = {
+            items: [],
+            totals: { totalIssues: 0, covered: 0, gap: 0, weightedCoveragePct: 0, rawCoveragePct: 0 },
+            byEpic: {},
+            gateConfig: { minCoveragePct: 50, failingEpics: [] },
+            hierarchy: [],
+            trends: [],
+        };
+        const html = generateCoverageGapHtml(empty, 'Empty Coverage');
+
+        expect(html).toContain('<!DOCTYPE html>');
+        expect(html).toContain('Empty Coverage');
+        expect(html).toContain('No coverage gaps found');
+        expect(html).toContain('All epics pass');
+        expect(html).not.toContain('Error generating coverage gap report');
+    });
+
     it('uses custom title when provided', () => {
         const html = generateCoverageGapHtml(makeFixture(), 'My Report');
 
