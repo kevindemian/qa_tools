@@ -98,7 +98,14 @@ function buildEpicNodeHtml(node: TraceabilityNode): string {
 
 function buildAwarenessHtml(awareness: TraceabilityAwareness): string {
     if (!awareness.categories.length) {
-        return '';
+        // Rule 25: explicit no-data (awareness categories unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No traceability awareness data available',
+            description:
+                'Traceability awareness requires detected entities and their validation status. No categories were found.',
+            action: 'Enable traceability-aware analysis so entity coverage can be reported.',
+            icon: icon('book-open', 16),
+        });
     }
     const rows = awareness.categories
         .map((c) => {

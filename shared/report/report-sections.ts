@@ -16,7 +16,7 @@ import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './r
 import type { ComputedMetrics } from '../types/data-hub.js';
 import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
 import { buildTestTable } from './report-table.js';
-import { MetricCard, MetricGrid, Card, Badge } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Card, Badge, EmptyState } from '../primitives/index.js';
 import { FilterBar, SearchInput, Button } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../constants/thresholds.js';
 
 export function buildTabs(runs: TestRunTab[]): string {
+    // legitimate: with <=1 runs there is no tab structure to render — this is UI chrome, not a data-absence payload; EmptyState would falsely claim "no data" when a run exists (Rule 25.3).
     if (runs.length <= 1) return '';
     let html = '<div id="envTabs" class="tabs">';
     for (const [i, run] of runs.entries()) {
@@ -50,6 +51,7 @@ export function buildTabContents(
     history?: Record<string, TestHistoryRun[]>,
     flakinessMap?: Record<string, number>,
 ): string {
+    // legitimate: with <=1 runs there is no tab-panel structure to render — UI chrome, not a data-absence payload (Rule 25.3).
     if (runs.length <= 1) return '';
     let html = '<div id="tabContents">';
     let tabIdx = 0;
@@ -70,6 +72,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
         const suite = extractSuite(t);
         if (suite) suites.add(suite);
     }
+    // legitimate: no suites to hierarchically navigate — this is sidebar UI chrome derived from suite metadata, not a data-absence payload for a section; EmptyState block is inappropriate in the sidebar strip (Rule 25.3 intent).
     if (suites.size === 0) return '';
     const sorted = Array.from(suites).sort((a, b) => a.localeCompare(b));
     let html = '<div class="sidebar">';
@@ -88,7 +91,15 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
 }
 
 export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): string {
-    if (tests.length === 0) return '';
+    if (tests.length === 0) {
+        // Rule 25: explicit no-data (timing unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No timeline data available',
+            description: 'The test timeline requires per-suite execution durations. No tests were found to plot.',
+            action: 'Run a test suite so the timeline can display per-suite timing.',
+            icon: icon('clock', 16),
+        });
+    }
     const suites = computed?.suiteBreakdown ?? [];
     let maxDur = 0;
     for (const s of suites) {
@@ -161,6 +172,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number, passRate
 }
 
 export function buildLlmSection(options: ReportOptions): string {
+    // legitimate: LLM analysis section is a FEATURE TOGGLE (options.llmAnalysis), not a data-absence payload; EmptyState would falsely claim "no data" when the feature is merely disabled (Rule 25.3).
     if (!options.llmAnalysis) return '';
     let content = '';
     if (options.llmFallback) {
@@ -182,16 +194,6 @@ export function buildLlmSection(options: ReportOptions): string {
         title: 'AI Analysis',
         children: content,
         variant: 'default',
-    });
-}
-
-export function buildQualityGate(passRate: number, threshold: number): string {
-    if (passRate >= threshold) return '';
-    return Card({
-        variant: 'bordered',
-        severity: 'error',
-        children: `<div class="label qg-fail">${icon('x-circle', 16)} Quality Gate Failed</div>
-<p class="qg-fail">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
     });
 }
 
@@ -264,6 +266,7 @@ export function buildFilterBar(): string {
 }
 
 export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): string {
+    // legitimate: zero failures = condition-false (nothing to summarize) — absence IS the message, corroborated by the "Failed: 0" summary card; EmptyState would be redundant noise (Rule 25.3 intent).
     if (stats.failed === 0) return '';
     const failed = tests.filter((t) => t.state === 'failed');
     let items = '';
@@ -473,7 +476,16 @@ export function buildHealthSection(health: HealthScoreResult): string {
 
 /** Renders provenance metadata as a compact collapsible section below the health score. */
 export function buildProvenanceSection(provenance: HealthScoreProvenance): string {
-    if (provenance.length === 0) return '';
+    if (provenance.length === 0) {
+        // Rule 25: explicit no-data (methodology metadata unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No provenance data available',
+            description:
+                'Methodology and reference metadata (formulas, sources, thresholds) were not provided for the health score.',
+            action: 'Ensure the health score pipeline emits provenance entries to document how each dimension was calculated.',
+            icon: icon('book-open', 16),
+        });
+    }
 
     let rows = '';
     for (const entry of provenance) {

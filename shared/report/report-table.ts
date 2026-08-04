@@ -72,6 +72,7 @@ export function buildDetailRow(t: FlatTest, index: number, colspan: number): str
     const hasSteps = t.steps && t.steps.length > 0;
     const hasScreenshots = t.screenshots && t.screenshots.length > 0;
     const hasLogs = t.logs && t.logs.length > 0;
+    // legitimate: detail is a <tr> element — no details => the row must not exist; EmptyState (a section block) is invalid inside a table (DOM-level, Rule 25.3 intent).
     if (!hasSteps && !hasScreenshots && !hasLogs) return '';
     let html =
         '<tr class="detail-row detail-row-hidden" id="detail-row-' +
@@ -97,6 +98,7 @@ export function buildErrorCell(t: FlatTest): string {
         const attrs = isTruncated ? ' data-full="' + escapeHtml(t.error) + '"' : ' title="' + escapeHtml(t.error) + '"';
         return '<span class="' + cls + '"' + attrs + '>' + escapeHtml(truncated) + '</span>';
     }
+    // legitimate: error cell is a <td> content node — no error => empty cell is the correct DOM; EmptyState (a section block) is invalid inside a table (DOM-level, Rule 25.3 intent).
     return '';
 }
 
@@ -184,6 +186,7 @@ function buildTestCell(t: FlatTest, categories?: Record<string, string>, rowInde
 }
 
 function buildFlakyCell(t: FlatTest, flakinessMap?: Record<string, number>): string {
+    // legitimate: flaky cell is a <td> content node in the flakiness column; the outer column is only emitted when a dashboards flakiness map is configured (caller guard) — no data => dash/no cell is correct DOM, EmptyState (section block) invalid inside a table (Rule 25.3 intent).
     if (!flakinessMap) return '';
     const rate = flakinessMap[t.title] ?? flakinessMap[t.fullTitle ?? ''] ?? 0;
     return rate > 0 ? buildFlakinessBadge(rate) : '<span class="flakiness-dash">—</span>';

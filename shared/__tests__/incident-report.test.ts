@@ -124,6 +124,7 @@ describe('Incident Report', () => {
 
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('No incidents to display');
+            expect(html).toContain('No incident type data available');
         });
 
         it('supports custom title', () => {

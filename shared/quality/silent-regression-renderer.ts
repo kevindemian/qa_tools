@@ -179,6 +179,7 @@ function buildRegressions(result: RegressionDetectionResult): string {
 }
 
 function buildRecommendedActions(result: RegressionDetectionResult): string {
+    // legitimate: zero regressions = condition-false (nothing to recommend) — absence IS the message; EmptyState would be redundant noise (Rule 25.3 intent).
     if (result.regressions.length === 0) return '';
 
     const criticalCount = result.regressions.filter((r) => r.severity === 'critical' || r.severity === 'high').length;

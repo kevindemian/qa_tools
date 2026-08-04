@@ -382,4 +382,11 @@ describe('GenerateAiComparisonHtml', () => {
 
         expect(html).toContain('data-part="timestamp"');
     });
+
+    it('renders an explicit no-data panel for the version table when by-version data is empty', () => {
+        const result = sampleResult({ aiTotal: 50, manualTotal: 50, byVersion: [] });
+        const html = generateAiComparisonHtml(result);
+
+        expect(html).toContain('No version comparison data available');
+    });
 });

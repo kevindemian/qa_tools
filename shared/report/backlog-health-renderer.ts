@@ -8,6 +8,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { icon } from '../icons.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
@@ -212,7 +213,16 @@ function buildIssueListCapped(issues: BacklogHealthIssue[], limit?: number): str
 }
 
 function buildDensitySection(result: BacklogHealthResult): string {
-    if (result.densityByEpic.length === 0) return '';
+    if (result.densityByEpic.length === 0) {
+        // Rule 25: explicit no-data (bug density unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No bug density data available',
+            description:
+                'Bug density by epic requires bugs linked to epics with test counts. No epic density data was found.',
+            action: 'Link bugs to epics and associate tests so the density analysis can run.',
+            icon: icon('bar-chart', 16),
+        });
+    }
 
     // Sort by ratio (worst first) for better visibility
     const sorted = [...result.densityByEpic].sort((a, b) => {

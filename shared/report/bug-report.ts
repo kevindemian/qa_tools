@@ -100,6 +100,7 @@ function readPrompt(file: string): string {
         return fs.readFileSync(sanitizePath(PROMPT_DIR, file), 'utf8');
     } catch (err) {
         rootLogger.error('Failed to read prompt template: ' + formatErr(err));
+        // legitimate: explicit logged error path — template missing => no content; the failure is surfaced (not silent) and the caller handles ''; not a dashboard section (Rule 25.3 intent).
         return '';
     }
 }

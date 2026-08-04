@@ -51,6 +51,7 @@ export async function compareRuns(runA: MetricsRun | null, runB: MetricsRun | nu
         rootLogger.error(
             `Failed to compare runs: ${message}. Verify LLM API key (LLM_API_KEY or LLM_FAST_API_KEY) and network connectivity.`,
         );
+        // legitimate: explicit logged error path (LLM boundary) — comparison unavailable => no output; failure is surfaced; not a dashboard section (Rule 25.3 intent).
         return '';
     }
 }

@@ -247,6 +247,24 @@ describe('GenerateDefectTrendHtml', () => {
         expect(html).toContain('>3<');
     });
 
+    it('renders an explicit no-data panel for summary cards when trends exist but categories are absent', () => {
+        const result = {
+            trends: [
+                {
+                    date: '2026-06-01',
+                    categories: { ASSERTION: 3 },
+                    total: 3,
+                },
+            ],
+            topCategories: [],
+            period: { from: '2026-06-01', to: '2026-06-01' },
+            totalRecords: 3,
+        };
+        const html = generateDefectTrendHtml(result);
+
+        expect(html).toContain('No defect trend data available');
+    });
+
     it('includes data-part="target" with threshold values', () => {
         const input: FailureClassification[] = [
             { timestamp: '2026-06-01T10:00:00Z', testTitle: 't1', category: 'ASSERTION', project: 'p' },

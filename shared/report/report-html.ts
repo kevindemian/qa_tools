@@ -23,7 +23,7 @@ import {
     buildSummaryCards,
     buildFailedSummary,
     buildLlmSection,
-    buildQualityGate,
+    buildQualityGateSection,
     buildFilterBar,
     buildTabs,
     buildTabContents,
@@ -34,6 +34,43 @@ import {
 import { buildTestTable } from './report-table.js';
 import { buildDiffComparisonSection } from './report-diff.js';
 import Config from '../config-accessor.js';
+import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
+
+/**
+ * Builds a `QualityGateResult` (SSOT gate contract) from a single pass-rate gate.
+ * Rule 24/25: non-finite pass-rate/threshold surface as `unknown`/`N/A` — never a
+ * silent `pass`/`fail` based on a corrupt numeric input.
+ */
+function toQualityGateResult(passRate: number, threshold: number): QualityGateResult {
+    const passRateValid = Number.isFinite(passRate);
+    const thresholdValid = Number.isFinite(threshold);
+    const valid = passRateValid && thresholdValid;
+    const passed = valid && passRate >= threshold;
+    let status: QualityGateStatus;
+    if (!valid) {
+        status = 'unknown';
+    } else if (passed) {
+        status = 'pass';
+    } else {
+        status = 'fail';
+    }
+
+    return {
+        overall: status,
+        score: passRateValid ? passRate : Number.NaN,
+        checks: [
+            {
+                name: 'pass-rate',
+                status,
+                score: passRateValid ? passRate : Number.NaN,
+                threshold: thresholdValid ? threshold : Number.NaN,
+                details: valid
+                    ? `Pass rate ${passRate.toFixed(1)}% against configured threshold of ${threshold}%.`
+                    : 'Pass rate or threshold is non-finite. Correct the gate inputs at origin.',
+            },
+        ],
+    };
+}
 
 export function generateHtmlReport(_tests: FlatTest[], options?: ReportOptions): string {
     try {
@@ -80,9 +117,7 @@ export function generateHtmlReport(_tests: FlatTest[], options?: ReportOptions):
         bodyContent += buildTrendSection(trends);
         bodyContent += `</div>`;
         if (options.qualityGate !== undefined) {
-            bodyContent += `<div data-section="quality-gate">`;
-            bodyContent += buildQualityGate(passRate, options.qualityGate);
-            bodyContent += `</div>`;
+            bodyContent += buildQualityGateSection(toQualityGateResult(passRate, options.qualityGate));
         }
         if (options.healthScore) {
             bodyContent += `<div data-section="health">`;
@@ -122,6 +157,7 @@ export function generateHtmlReport(_tests: FlatTest[], options?: ReportOptions):
 }
 
 function _buildFlakinessLink(options: ReportOptions): string {
+    // legitimate: optional header chrome link — absent URL/map => no link; EmptyState is a section block, invalid in the header strip (Rule 25.3 intent).
     if (!options.flakinessDashboardUrl || !options.flakinessMap || Object.keys(options.flakinessMap).length === 0)
         return '';
     return (
@@ -136,6 +172,7 @@ function _buildFlakinessLink(options: ReportOptions): string {
 
 function _buildProjectMeta(): string {
     const projectName = Config.get('qaCurrentProject') || '';
+    // legitimate: <head> <meta> tag — no project name => no meta emitted; EmptyState (a section block) is invalid inside <head> (DOM-level, Rule 25.3 intent).
     if (!projectName) return '';
     return `<meta name="qa-project" content="${escapeHtml(projectName)}">`;
 }

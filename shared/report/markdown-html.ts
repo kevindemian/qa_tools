@@ -33,12 +33,14 @@ function renderInlineToken(t: InlineToken): string {
             return '<br>';
         case 'del':
             return '<del>' + renderInlineToHtml(t.tokens) + '</del>';
+        // legitimate: pure markdown token→HTML string util — unhandled token kinds render as nothing (AST contract); not a dashboard section, EmptyState inapplicable.
         default:
             return '';
     }
 }
 
 function renderInlineToHtml(tokens: InlineToken[] | undefined): string {
+    // legitimate: pure renderer — no tokens => empty fragment; not a dashboard section (Rule 25.3 intent).
     if (!tokens) return '';
     return tokens.map(renderInlineToken).join('');
 }

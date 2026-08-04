@@ -469,6 +469,15 @@ npx madge --circular shared/
 
 **Auditoria:** commit + gate; regenerar harness (Fase III) se novo `data-component`.
 
+**RESULTADO (I-5 ✅):** Conversões `return '' → EmptyState` (`data-component="empty-state"`, Rule 25):
+- report-sections.ts: `buildTimeline`/`buildProvenanceSection`; report-chart.ts: `buildTrendSection`/`buildChartSection`; backlog-health-renderer `buildDensitySection`; ai-comparison-renderer/ai-effectiveness-renderer `buildVersionTable`(+`buildTrendChart`); traceability-renderer `buildAwarenessHtml`; incident-report-renderer `buildPerTypeSummary`; defect-trend-renderer `buildSummaryCards`.
+- Exceções legítimas documentadas `// legitimate:` (condicional-falsa/UI chrome/DOM-level/catch logado): tabs/tabContents/sidebar/llmSection/failedSummary (report-sections), detailRow/errorCell/flakyCell (report-table), pctSub (report-utils), flakiness-link/project-meta (report-html), markdown-html/markdown-renderer, warnings/actions (ai-comparison), recommended-actions (silent-regression), catch logados (bug-report/test-impact/run-comparison/targeted-retry), report-diff, buildMiniTrendChart.
+- **Gate (B7/I-6.1 absorvido nesta iteração):** `report-html.ts` migrado do legado `buildQualityGate` para o SSOT `buildQualityGateSection` via helper `toQualityGateResult` (Rule 24/25: não-finito → `unknown`/`N/A`, nunca `pass`/`fail` falso; gate SEMPRE renderizado quando `qualityGate` definido); legado `buildQualityGate` removido de report-sections.ts.
+- **Testes RED→GREEN:** empty-state adicionados/atualizados (timeline, trend, buildSummaryCards defect-trend, awareness, per-type incident, version-table ai-comparison/effectiveness); gate integration em report-generator atualizado para comportamento I-6.1/B7 (SSOT: `data-component="quality-gate"` + `data-status`/`data-variant`).
+- **Gate:** tsc ✅ · vitest 536 files/7423 testes ✅ · lint ✅ · depcruise (953 módulos) ✅ · ts-prune ✅.
+- **Acceptance:** `rg "return ''" shared/report/*.ts shared/quality/*.ts` → 0 sites não-anotados (`// legitimate:` em todos os restantes).
+- Auditoria final E2E da fase ✅.
+
 ---
 
 #### I-6 — FASE F3 (B7/B8/B13 — quality gate)
@@ -586,7 +595,7 @@ npx madge --circular shared/
 | 2026-08-03 | I-2 | F0-T7 (interactive) | ✅ | `02b2c652` (SSOT/compute/D2-delete) + `1a6e6ab2` (I-2.3 gate) — interactive/schedule 100% `hub.computed.*`; D1/D2/D3/§6 trio na origem; D2-delete adapter; I-2.3 gate: `buildQualityGateSection(QualityGateResult)` em `report-sections.ts` (HTML estruturado, sem `<pre>`) nos 2 dashboards; `formatQualityGateText` mantido (tests próprios); mocks mortos removidos; docs stale (TECHDOC/03-git-triggers) corrigidos. Gate verde (tsc/vitest/lint) |
 | 2026-08-03 | I-3 | F0-T11 (duration) | ✅ | commit I-3 — `PrReportStats.duration: number \| undefined` (`pr-report-core.ts`); produtor `run?.duration` (sem `?? 0`); `renderDurationCell` renderiza `N/A` (ausência/NaN/negativo explícitos, Rule 24/25), nunca `0.0s`; `persistCurrentRun` projeta `?? 0` como agregado de dataset vazio (contrato ParseResult, documentado). RED→GREEN: 3 testes (N/A sem run, 2.5s com run, existing). Gate verde: tsc/vitest 536×7420/eslint/depcruise/ts-prune/quality-check |
 | 2026-08-03 | I-4 | F0-T12 (totalIssues) | ✅ | `backlog-health-renderer.ts:94` `\|\| 0` removido (campo OBRIGATÓRIO; masking de contrato/NaN — N5). Guard Rule 24/25: `Number.isFinite(totalIssues) && totalIssues >= 0` → `rootLogger.warn` estruturado + render no-data (`N/A`, sem `% of total`/trend fabricados). No-data efetivo = `result.noData === true \|\| !hasValidTotal`. Origem já guardada (`analyzeBacklogHealth` `issues.length`; `calculateBacklogScore` `Number.isFinite`). RED→GREEN: 4 testes (0% real vs ausente, NaN, negativo). Gate verde: tsc 0 / vitest 536×7424 / lint / depcruise 953×3889 / ts-prune |
-| 2026-08-03 | I-5 | F2 (EmptyState) | ⏳ | — |
+| 2026-08-03 | I-5 | F2 (EmptyState) | ✅ | Sem [skip ci]; gate verde (536/7423); B7/I-6.1 absorvido via SSOT `buildQualityGateSection` (sempre renderiza) |
 | 2026-08-03 | I-6 | F3 (gate) | ⏳ | — |
 | 2026-08-03 | I-7 | F4 (tabela) | ⏳ | — |
 | 2026-08-03 | I-8 | F6 (pipeline) | ⏳ | — |

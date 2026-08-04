@@ -43,10 +43,11 @@ describe('BuildMiniTrendChart', () => {
 });
 
 describe('BuildTrendSection', () => {
-    it('returns empty for <2 points', () => {
+    it('renders explicit empty-state for <2 points (I-5/F2, Rule 25)', () => {
         const html = buildTrendSection([{ label: 'Mon', passRate: 90, total: 10, failed: 1 }]);
 
-        expect(html).toBe('');
+        expect(html).toContain('data-component="empty-state"');
+        expect(html).toContain('Insufficient trend data');
     });
 
     it('returns card for >=2 points', () => {

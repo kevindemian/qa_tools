@@ -133,7 +133,7 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('My Custom Report');
     });
 
-    it('generates quality gate warning when pass rate below threshold', () => {
+    it('renders the quality gate section with a fail status when pass rate below threshold', () => {
         const tests: FlatTest[] = [
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 100 },
@@ -141,11 +141,12 @@ describe('GenerateHtmlReport', () => {
 
         const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
-        expect(html).toContain('Quality Gate Failed');
-        expect(html).toContain('below the configured threshold');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('data-variant="fail"');
+        expect(html).toContain('data-status="fail"');
     });
 
-    it('omits quality gate when pass rate meets threshold', () => {
+    it('renders the quality gate section with a pass status when pass rate meets threshold', () => {
         const tests: FlatTest[] = [
             { title: 'Pass A', state: 'passed', duration: 100 },
             { title: 'Pass B', state: 'passed', duration: 100 },
@@ -153,7 +154,8 @@ describe('GenerateHtmlReport', () => {
 
         const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
-        expect(html).not.toContain('Quality Gate Failed');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('data-status="pass"');
     });
 
     it('includes source and ci URL in footer when provided', () => {

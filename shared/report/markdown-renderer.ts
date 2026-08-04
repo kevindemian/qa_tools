@@ -72,6 +72,7 @@ function renderPipeTable(head: string[], rows: string[][], availWidth: number): 
 // ─── Inline token → ANSI string ────────────────────────────────────────────────
 
 function renderInline(tokens: InlineToken[] | undefined): string {
+    // legitimate: pure renderer — no tokens => empty fragment; not a dashboard section (Rule 25.3 intent).
     if (!tokens) return '';
     let out = '';
     for (const t of tokens) {

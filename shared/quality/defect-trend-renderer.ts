@@ -43,7 +43,15 @@ function sanitizeTrendResult(r: DefectAggregationResult): DefectAggregationResul
 }
 
 function buildSummaryCards(result: DefectAggregationResult): string {
-    if (result.topCategories.length === 0) return '';
+    // Rule 25: explicit no-data (defect summary unavailable) instead of silent omission.
+    if (result.topCategories.length === 0) {
+        return EmptyState({
+            title: 'No defect trend data available',
+            description: 'Defect trend summary requires aggregated defect categories. No category data was found.',
+            action: 'Run the defect aggregation pipeline to populate trend and category data.',
+            icon: icon('trending-up', 16),
+        });
+    }
 
     // Calculate trend direction
     const trends = result.trends;

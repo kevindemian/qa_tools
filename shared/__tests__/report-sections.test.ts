@@ -18,7 +18,6 @@ import {
     buildTimeline,
     buildSummaryCards,
     buildLlmSection,
-    buildQualityGate,
     buildQualityGateSection,
     buildFilterBar,
     buildFailedSummary,
@@ -149,8 +148,9 @@ describe('BuildHierarchySidebar', () => {
 });
 
 describe('BuildTimeline', () => {
-    it('returns empty string for empty tests', () => {
-        expect(buildTimeline([])).toBe('');
+    it('renders explicit empty-state for empty tests (I-5/F2, Rule 25)', () => {
+        expect(buildTimeline([])).toContain('data-component="empty-state"');
+        expect(buildTimeline([])).toContain('No timeline data available');
     });
 
     it('returns timeline chart aggregated by suite', () => {
@@ -260,31 +260,6 @@ describe('BuildLlmSection', () => {
         const html = buildLlmSection(opts);
 
         expect(html).not.toContain('<script>');
-    });
-});
-
-describe('BuildQualityGate', () => {
-    it('returns empty string when pass rate meets threshold', () => {
-        expect(buildQualityGate(95, 90)).toBe('');
-    });
-
-    it('warns when pass rate is below threshold', () => {
-        const html = buildQualityGate(75, 90);
-
-        expect(html).toContain('Quality Gate Failed');
-        expect(html).toContain('75.0%');
-    });
-
-    it('displays exact threshold value', () => {
-        const html = buildQualityGate(50, 75);
-
-        expect(html).toContain('75%');
-    });
-
-    it('handles zero pass rate', () => {
-        const html = buildQualityGate(0, 50);
-
-        expect(html).toContain('0.0%');
     });
 });
 

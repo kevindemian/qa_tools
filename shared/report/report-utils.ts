@@ -33,6 +33,7 @@ export function pct(value: number, total: number): string {
 }
 
 export function pctSub(value: number, total: number): string {
+    // legitimate: inline <span> metric subtitle — total===0 => percentage is undefined (division-by-zero); the raw count is already shown as the metric value, EmptyState (section block) invalid inline (Rule 25.3 intent).
     if (total === 0) return '';
     return ' <span class="metric-subtitle">(' + pct(value, total) + '%)</span>';
 }
