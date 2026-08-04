@@ -111,4 +111,27 @@ describe('ComputeArtifactScorecard', () => {
 
         expect(scorecard.artifacts.map((a) => a.specId)).toStrictEqual(['z', 'a']);
     });
+
+    it('registers non-renderable specs explicitly without fabricating a score', () => {
+        expect.hasAssertions();
+
+        const specs: ArtifactSpec[] = [makeSpec('renderable', 'Alpha')];
+        const outputs: Record<string, string> = {
+            renderable: '<div data-dashboard="renderable"><p>Alpha</p></div>',
+        };
+
+        const scorecard = computeArtifactScorecard(specs, outputs, {
+            unscored: [
+                { specId: 'schedule-handler', status: 'nao-aplicavel', note: 'orchestrator — no standalone artifact' },
+            ],
+        });
+
+        expect(scorecard.artifacts).toHaveLength(1);
+        expect(scorecard.unscored).toHaveLength(1);
+        expect(scorecard.unscored[0]).toMatchObject({
+            specId: 'schedule-handler',
+            status: 'nao-aplicavel',
+        });
+        expect(scorecard.removable).not.toContain('schedule-handler');
+    });
 });

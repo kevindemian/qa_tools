@@ -5,6 +5,8 @@ import { runScorecard } from '../artifact-scorecard-runner.js';
 import { ARTIFACT_SPECS, ADDITIONAL_ARTIFACT_SPECS } from '../../shared/types/artifact-specs.js';
 
 const HTML_RENDERABLE_SPECS = [
+    'report-html',
+    'pipeline-health',
     'ai-effectiveness',
     'ai-comparison',
     'incident-report',
@@ -51,6 +53,32 @@ describe('ArtifactScorecardRunner', () => {
             expect(a.score).toBeGreaterThanOrEqual(0);
             expect(a.score).toBeLessThanOrEqual(100);
             expect(['pass', 'warn', 'fail']).toContain(a.overall);
+        }
+    });
+
+    it('registers the 5 non-renderable specs explicitly (24 total accounted)', () => {
+        expect.hasAssertions();
+
+        const scorecard = runScorecard();
+
+        // 19 scored + 5 unscored = 24 (all specs accounted, I-9.4).
+        expect(scorecard.artifacts).toHaveLength(HTML_RENDERABLE_SPECS.length);
+        expect(scorecard.unscored).toHaveLength(5);
+
+        const unscoredIds = scorecard.unscored.map((u) => u.specId);
+        for (const id of [
+            'schedule-handler',
+            'interactive-mode',
+            'pr-report-markdown',
+            'pr-report-job-summary',
+            'pr-report-html',
+        ]) {
+            expect(unscoredIds).toContain(id);
+        }
+
+        const registeredIds = [...scorecard.artifacts.map((a) => a.specId), ...unscoredIds];
+        for (const id of ALL_SPEC_IDS) {
+            expect(registeredIds).toContain(id);
         }
     });
 

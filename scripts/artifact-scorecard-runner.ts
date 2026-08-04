@@ -38,6 +38,10 @@ import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality-re
 import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile-renderer.js';
 import { generateRequirementScoreHtml } from '../shared/quality/requirement-score-renderer.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
+import { generateHtmlReport } from '../shared/report/report-html.js';
+import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
+import { renderPipelineHealthHtml } from '../git_triggers/pipeline-health-renderer.js';
+import type { FlatTest } from '../shared/result_parser.js';
 import { loadFixture } from './artifact-fixtures.js';
 import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
 import type { AiComparisonResult } from '../shared/report/ai-comparison.js';
@@ -64,8 +68,56 @@ interface RendererEntry {
     render: () => string;
 }
 
+function makeFlatTests(): FlatTest[] {
+    return [
+        { title: 'login should succeed', fullTitle: 'Auth > login should succeed', state: 'passed', duration: 1200 },
+        {
+            title: 'payment should process',
+            fullTitle: 'Payments > payment should process',
+            state: 'failed',
+            duration: 3200,
+            error: 'Timeout waiting for element',
+        },
+        { title: 'search should filter', fullTitle: 'Search > search should filter', state: 'skipped', duration: 0 },
+    ];
+}
+
+function renderTestReportHtml(): string {
+    const tests = makeFlatTests();
+    const hub = createDataHubFromParseResult(
+        {
+            tests,
+            stats: { passed: 1, failed: 1, skipped: 1, total: 3, duration: 4400 },
+        },
+        'qa_tools',
+    );
+    return generateHtmlReport(tests, { computed: hub.computed });
+}
+
+function renderPipelineHealthOutput(): string {
+    return renderPipelineHealthHtml({
+        totalRuns: 12,
+        passRate: 66.7,
+        avgDurationSec: 1800,
+        topFailingJobs: [
+            { name: 'e2e', failCount: 4, totalCount: 10, rate: 40 },
+            { name: 'unit', failCount: 1, totalCount: 10, rate: 10 },
+        ],
+        failureReasons: ['flaky: login', 'timeout: checkout'],
+        branchBreakdown: { main: { passRate: 80, count: 8 }, dev: { passRate: 40, count: 4 } },
+    });
+}
+
 function buildRendererEntries(): RendererEntry[] {
     return [
+        {
+            specId: 'report-html',
+            render: () => renderTestReportHtml(),
+        },
+        {
+            specId: 'pipeline-health',
+            render: () => renderPipelineHealthOutput(),
+        },
         {
             specId: 'ai-effectiveness',
             render: () => generateAiEffectivenessHtml(loadFixture<AiMetricsResult>('ai-effectiveness')),
@@ -155,7 +207,17 @@ export function runScorecard(): ArtifactScorecard {
 
     // Only score specs that have a real rendered output (HTML-renderable artifacts).
     const scoreableSpecs = allSpecs.filter((spec) => rendererById.has(spec.id));
-    const scorecard = computeArtifactScorecard(scoreableSpecs, outputs);
+    // Non-renderable specs (I-9.4): orchestrators have no standalone artifact;
+    // pr-report artifacts carry their own gate (teto T2) — registered explicitly,
+    // never scored or flagged removable (the scorecard must account for all 24).
+    const unscored: Array<{ specId: string; status: 'gate-proprio' | 'nao-aplicavel'; note: string }> = [
+        { specId: 'schedule-handler', status: 'nao-aplicavel', note: 'orchestrator — não gera artefato standalone' },
+        { specId: 'interactive-mode', status: 'nao-aplicavel', note: 'orchestrator — não gera artefato standalone' },
+        { specId: 'pr-report-markdown', status: 'gate-proprio', note: 'pr-report gate próprio (teto T2)' },
+        { specId: 'pr-report-job-summary', status: 'gate-proprio', note: 'pr-report gate próprio (teto T2)' },
+        { specId: 'pr-report-html', status: 'gate-proprio', note: 'pr-report gate próprio (teto T2)' },
+    ];
+    const scorecard = computeArtifactScorecard(scoreableSpecs, outputs, { unscored });
 
     mkdirSync(OUT_DIR, { recursive: true });
     writeFileSync(join(OUT_DIR, 'artifact-scorecard.json'), JSON.stringify(scorecard, null, 4));
@@ -167,6 +229,7 @@ function main(): void {
     console.log('=== AQS scorecard (I-9.3) ===\n');
     const scorecard = runScorecard();
     console.log(`Total scored:  ${scorecard.total}`);
+    console.log(`Registered unscored: ${scorecard.unscored.length}`);
     console.log(`Passed:        ${scorecard.passed}`);
     console.log(`Failed:        ${scorecard.failed}`);
     console.log(`Removable (<60): ${scorecard.removable.length ? scorecard.removable.join(', ') : 'none'}`);
