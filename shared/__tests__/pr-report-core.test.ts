@@ -328,6 +328,22 @@ describe('Pr Report Core', () => {
             expect(createCall?.output?.summary).toContain('Dados ausentes (EIXO C)');
         });
 
+        it('pR comment markdown gate section flags incomplete items (EIXO C) — SSOT merged builder', async () => {
+            expect.hasAssertions();
+
+            await report({
+                tests: [sampleTest],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                skipQuality: false,
+            });
+
+            const commentBody = String(mockPRComment.postPrComment.mock.calls[0]?.[0]);
+
+            expect(commentBody).toContain('## Quality Gate:');
+            expect(commentBody).toContain('Dados ausentes (EIXO C)');
+            expect(commentBody).not.toContain('NaN');
+        });
+
         it('skips AI section when skipAi is true', async () => {
             expect.hasAssertions();
 

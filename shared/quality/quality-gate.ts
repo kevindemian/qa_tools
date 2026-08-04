@@ -13,7 +13,6 @@ import type { HealthScoreResult, HealthScoreDimensionResult } from '../types.js'
 import type { DataHub } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
 import { rootLogger } from '../logger.js';
-import { icon } from '../icons.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { humanizeError } from '../ui/prompt-errors.js';
 
@@ -234,45 +233,4 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
         });
         return { overall: 'fail', checks, score: 0, incompleteItems: [] };
     }
-}
-
-function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return `${icon('check-circle', 14)}`;
-    if (status === 'unknown') return `${icon('help-circle', 14)}`;
-    return `${icon('x-circle', 14)}`;
-}
-
-export function formatQualityGateJson(result: QualityGateResult): string {
-    return JSON.stringify(result, null, 2);
-}
-
-export function formatQualityGateText(result: QualityGateResult): string {
-    let output = '';
-    output += '\n=== Quality Gate ===\n';
-    const overallLabel = gateStatusIcon(result.overall) + ' ' + result.overall.toUpperCase();
-    output += 'Overall: ' + overallLabel + '\n';
-    output += 'Score: ' + result.score + '\n\n';
-    output += 'Checks:\n';
-    for (const check of result.checks) {
-        output +=
-            '  ' +
-            gateStatusIcon(check.status) +
-            ' ' +
-            check.name +
-            ' — ' +
-            check.score +
-            '/' +
-            check.threshold +
-            ' — ' +
-            check.details +
-            '\n';
-    }
-    if (result.incompleteItems && result.incompleteItems.length > 0) {
-        output += '\nIncomplete items (dados ausentes):\n';
-        for (const item of result.incompleteItems) {
-            output += '  ' + gateStatusIcon('unknown') + ' ' + item + '\n';
-        }
-    }
-    output += '\n';
-    return output;
 }

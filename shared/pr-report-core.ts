@@ -533,7 +533,10 @@ async function handleQualityGate(
     try {
         const qgResult = runQualityGate({ coverageOverride, dataHub });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
-        const checkSummary = buildQGCHeckSummary(qgResult, gradeStr, artifactUrl);
+        const checkSummary = buildQualityGateSectionMd(qgResult, {
+            grade: gradeStr,
+            ...(artifactUrl ? { artifactUrl } : {}),
+        });
 
         await createCheckRun({
             name: 'Quality Gate',
@@ -722,7 +725,7 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     let qgResult: QualityGateResult | undefined;
     if (!options.skipQuality) {
         qgResult = await handleQualityGate(healthScore, dataHub, artifactUrl, coverageResult?.coveragePct);
-        if (qgResult) sections.push(buildQualityGateSection(qgResult));
+        if (qgResult) sections.push(buildQualityGateSectionMd(qgResult));
     }
 
     if (!options.skipFlaky) {
@@ -760,12 +763,9 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     };
 }
 
-// Markdown builders for PR comment sections
-type QualityGateSummary = {
-    overall: QualityGateStatus;
-    score: number;
-    checks: Array<{ name: string; status: QualityGateStatus; score: number; threshold: number }>;
-};
+// Markdown builder for the quality-gate section — single source of truth.
+// Used for BOTH the GitHub check-run summary and the PR comment body.
+// Rule 24/25: non-finite scores surface as N/A, never NaN.
 
 function gateStatusIcon(status: QualityGateStatus): string {
     if (status === 'pass') return MARKDOWN_SYMBOLS.pass;
@@ -785,39 +785,47 @@ function gateConclusion(overall: QualityGateStatus): 'success' | 'neutral' | 'fa
     return 'failure';
 }
 
-function renderQualityGateChecksTable(result: QualityGateSummary): string {
+/** Rule 24/25: non-finite gate numbers render as `N/A` — never `NaN`. */
+function fmtGateNum(value: number): string {
+    return Number.isFinite(value) ? String(value) : 'N/A';
+}
+
+/** Escape markdown table cells (`|` would inject a new column) and inline text. */
+function escapeMarkdownCell(value: string): string {
+    return value.replace(/\|/g, '\\|');
+}
+
+function renderQualityGateChecksTable(result: QualityGateResult): string {
     const checkRows = result.checks.map(
-        (c) => `| ${c.name} | ${c.score} | ${c.threshold} | ${gateStatusIcon(c.status)} |`,
+        (c) =>
+            `| ${escapeMarkdownCell(c.name)} | ${fmtGateNum(c.score)} | ${fmtGateNum(c.threshold)} | ${gateStatusIcon(c.status)} |`,
     );
 
     return ['', '| Check | Score | Threshold | Status |', '|---|---|---|---|', ...checkRows, ''].join('\n');
 }
 
-function buildQGCHeckSummary(result: QualityGateResult, grade?: string, artifactUrl?: string): string {
+/**
+ * Render the quality gate as markdown for GitHub (check-run summary or PR comment).
+ * SSOT for gate markdown — grade, artifact link and EIXO-C items are optional extras.
+ * Non-finite scores render as `N/A` (Rule 24/25); user-derived strings are escaped.
+ */
+export function buildQualityGateSectionMd(
+    result: QualityGateResult,
+    opts?: { grade?: string; artifactUrl?: string },
+): string {
     const { icon, word } = gateOverallLabel(result.overall);
-    const lines: string[] = [`**Quality Gate: ${icon} ${word}**`, '', `**Score:** ${result.score}/100`];
-    if (grade) {
-        lines.push(`**Grade:** ${grade}`);
+    const lines: string[] = ['', `## Quality Gate: ${icon} ${word} (Score: ${fmtGateNum(result.score)}/100)`, ''];
+    if (opts?.grade) {
+        lines.push(`**Grade:** ${escapeMarkdownCell(opts.grade)}`);
     }
     lines.push(renderQualityGateChecksTable(result));
     if (result.incompleteItems && result.incompleteItems.length > 0) {
-        lines.push('', `**Dados ausentes (EIXO C):** ${result.incompleteItems.join(', ')}`);
+        lines.push('', `**Dados ausentes (EIXO C):** ${escapeMarkdownCell(result.incompleteItems.join(', '))}`);
     }
-    if (artifactUrl) {
-        lines.push('', `[link] [Download HTML report](${artifactUrl})`);
+    if (opts?.artifactUrl) {
+        lines.push('', `[link] [Download HTML report](${opts.artifactUrl})`);
     }
     return lines.join('\n');
-}
-
-function buildQualityGateSection(result: QualityGateSummary): string {
-    const { icon, word } = gateOverallLabel(result.overall);
-
-    return [
-        '',
-        `## Quality Gate: ${icon} ${word} (Score: ${result.score}/100)`,
-        '',
-        renderQualityGateChecksTable(result),
-    ].join('\n');
 }
 
 function _buildProvenanceMd(healthScore: ReturnType<typeof calculateHealthScore>): string {

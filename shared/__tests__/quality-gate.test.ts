@@ -1,4 +1,4 @@
-import { runQualityGate, formatQualityGateJson, formatQualityGateText } from '../quality/quality-gate.js';
+import { runQualityGate } from '../quality/quality-gate.js';
 
 vi.mock('../data-hub/global-hub.js', () => ({
     getDataHub: vi.fn(),
@@ -66,6 +66,23 @@ describe('RunQualityGate', () => {
         expect(result.checks[0]?.name).toBe('metrics-data');
         expect(result.checks[0]?.status).toBe('fail');
         expect(result.score).toBe(0);
+    });
+
+    it('fails explicitly with an "error" check when the gate computation throws (safety path)', () => {
+        const mockHub = createMockHub({
+            getRuns: vi.fn().mockImplementation(() => {
+                throw new Error('metrics backend unavailable');
+            }),
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
+
+        expect(result.overall).toBe('fail');
+        expect(result.score).toBe(0);
+        expect(result.checks.map((c) => c.name)).toContain('error');
+
+        const errorCheck = result.checks.find((c) => c.name === 'error');
+
+        expect(errorCheck?.status).toBe('fail');
     });
 
     it('returns pass when all gates pass', () => {
@@ -708,96 +725,5 @@ describe('RunQualityGate', () => {
         expect(categoryCheck?.score).toBe(100);
         expect(categoryCheck?.threshold).toBe(100);
         expect(categoryCheck?.details).toContain('confidence 54%');
-    });
-});
-
-describe('FormatQualityGateJson', () => {
-    it('formats result as JSON string', () => {
-        const result = {
-            overall: 'pass' as const,
-            checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'OK' }],
-            score: 100,
-        };
-        const json = formatQualityGateJson(result);
-
-        expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
-        expect(JSON.parse(json)).toHaveProperty('score', 100);
-    });
-});
-
-describe('FormatQualityGateText', () => {
-    it('formats result as human-readable text', () => {
-        const result = {
-            overall: 'pass' as const,
-            checks: [{ name: 'test', status: 'pass' as const, score: 100, threshold: 80, details: 'All good' }],
-            score: 100,
-        };
-        const text = formatQualityGateText(result);
-
-        expect(text).toContain('PASS');
-        expect(text).toContain('test');
-    });
-
-    it('shows fail icon for failing checks', () => {
-        const result = {
-            overall: 'fail' as const,
-            checks: [{ name: 'broken', status: 'fail' as const, score: 30, threshold: 80, details: 'Too low' }],
-            score: 30,
-        };
-        const text = formatQualityGateText(result);
-
-        expect(text).toContain('FAIL');
-        expect(text).toContain('broken');
-    });
-
-    it('handles empty checks array', () => {
-        const result = { overall: 'pass' as const, checks: [], score: 0 };
-        const text = formatQualityGateText(result);
-
-        expect(text).toContain('PASS');
-    });
-
-    it('renders incomplete items (EIXO C) when categories are absent', () => {
-        const mockHub = createMockHub({
-            raw: {
-                runs: [
-                    {
-                        id: 1,
-                        conclusion: 'success',
-                        head_branch: 'test',
-                        created_at: '2025-01-01T00:00:00.000Z',
-                        updated_at: '2025-01-01T00:00:00.000Z',
-                    },
-                ],
-                jobs: new Map(),
-                artifacts: new Map(),
-                failureReasons: new Map(),
-            },
-            computed: {
-                passRate: 95,
-                avgDuration: 10000,
-                suiteSpeedP95: 500,
-                flakyRate: [],
-                coverage: 85,
-                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
-                defectTrends: [],
-                branchBreakdown: {},
-                topFailingJobs: [],
-                topFailureReasons: [],
-                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
-                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
-                testPassRate: 95,
-                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
-                framework: 'vitest',
-                executionRate: 97,
-                flakyPercentage: 1,
-            },
-        }) as never;
-        const result = runQualityGate({ dataHub: mockHub });
-        const text = formatQualityGateText(result);
-
-        expect(text).toContain('Incomplete items (dados ausentes)');
-        expect(text).toContain('failureRecords');
-        expect(text).toContain('coverageFiles');
     });
 });
