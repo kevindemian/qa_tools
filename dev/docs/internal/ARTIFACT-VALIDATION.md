@@ -497,13 +497,13 @@ npx madge --circular shared/
 #### I-7 — FASE F4 (B9 — tabela colapsada + resto)
 
 **Tarefas executável:**
-- `I-7.1` Simplificar os **3 builders de gate** em um (DRY/SSOT, §6).
-- `I-7.2` Hierarquia de seções; `I-7.3` Recommended Actions presentes.
-- `I-7.4` Badges `--badge-color` (`report-table.ts:135,152` já ok) + tabela colapsada (já presente `:293,316` "Show all N" — validar/estender).
+- `I-7.1` Simplificar os **3 builders de gate** em um (DRY/SSOT, §6). → **✅ NO-OP VERIFICADO NA CODEBASE (2026-08-04):** `formatQualityGateText` (console) deletado em `3fb56ad2`; restam 2 format-adapters (`buildQualityGateSection` HTML em `report-sections.ts` + `buildQualityGateSectionMd` markdown em `pr-report-core.ts`) sobre SSOT `QualityGateResult` — formatos distintos, cada um SSOT para o seu formato; merge exigiria flag de formato (code smell).
+- `I-7.2` Hierarquia de seções; `I-7.3` Recommended Actions presentes. → **✅ VERIFICADO:** seções do pipeline principal (`report-html.ts`) usam primitive `Card` com `data-part="title"` (design fixado por `card.test.ts:23`); h2/h3 usados onde aplicável (coverage-gap/traceability/incident). Recommended Actions: CSS + builders presentes em 5 renderers (incident/traceability/ai-comparison/backlog-health/impact-alert). Sem teste/spec exigindo h2/h3 no `report-html.ts` — sem autoridade para change (AGENTS §1).
+- `I-7.4` Badges `--badge-color` (`report-table.ts:135,152` já ok) + tabela colapsada (já presente `:293,316` "Show all N" — validar/estender). → **✅ IMPLEMENTADO E TESTADO:** `report-table.ts:296` "Show all N passed tests" + `data-overflow` + `showAllTests()`; testes `report-table.test.ts:183-235` (paginação > maxVisiblePassed, default 50, sem overflow quando abaixo do cap).
 
-**Acceptance:** tabela colapsada + "Show all N"; Recommended Actions no HTML; zero builders duplicados.
+**Acceptance:** tabela colapsada + "Show all N"; Recommended Actions no HTML; zero builders duplicados. → **✅ TODOS VERIFICADOS NA CODEBASE.**
 
-**Auditoria:** commit + gate; content-validation test atualizado (D2).
+**Auditoria:** commit + gate; content-validation test atualizado (D2). → sem mudança de código necessária (verificação factual); doc corrigido.
 
 ---
 
@@ -522,11 +522,11 @@ npx madge --circular shared/
 #### I-9 — FASE F7 (AQS — artefato quality score)
 
 **Tarefas executável:**
-- `I-9.1` AQS **spec-driven** (scorecard por artefato via `ARTIFACT_SPECS`).
-- `I-9.2` Harness com **fixtures externas JSON** commitadas (`scripts/__fixtures__/artefactos/*.json`) e **validáveis na carga** contra `shared/types/artifact-specs.ts` (guard Rule 24.3; SSOT de input compartilhado: harness D1/D3 + AQS + content-validation).
-- `I-9.3` Job CI via `shared/ci/ci-injector.ts` (proibido editar yml, G2).
-- `I-9.4` AQS **24+1** (24 tipos + 1).
-- `I-9.5` Remoção de artefato com **AQS < 60**.
+- ~~`I-9.1` AQS **spec-driven** (scorecard por artefato via `ARTIFACT_SPECS`).~~ → **✅ DONE (`d06c58f5`)**
+- ~~`I-9.2` Harness com **fixtures externas JSON** commitadas (`scripts/__fixtures__/artefactos/*.json`) e **validáveis na carga** contra `shared/types/artifact-specs.ts` (guard Rule 24.3; SSOT de input compartilhado: harness D1/D3 + AQS + content-validation).~~ → **✅ DONE (`56d75e5a`)**
+- ~~`I-9.3` Job CI via `shared/ci/ci-injector.ts` (proibido editar yml, G2).~~ → **✅ DONE (working):** runner `scripts/artifact-scorecard-runner.ts` + step AQS via injector (`.github/workflows/qa-post-process.yml` regenerado pela template, G2)
+- `I-9.4` AQS **24+1** (24 tipos + 1). ⏳ PENDENTE
+- `I-9.5` Remoção de artefato com **AQS < 60**. ⏳ PENDENTE (lógica já no `artifact-scorecard.ts`)
 
 **Acceptance:** scorecard por artefato; fixtures externas tipadas e validadas; CI job via injector; AQS 24+1 atendido; `deterministic-validation` produz scorecard.
 
@@ -597,10 +597,10 @@ npx madge --circular shared/
 | 2026-08-03 | I-3 | F0-T11 (duration) | ✅ | commit I-3 — `PrReportStats.duration: number \| undefined` (`pr-report-core.ts`); produtor `run?.duration` (sem `?? 0`); `renderDurationCell` renderiza `N/A` (ausência/NaN/negativo explícitos, Rule 24/25), nunca `0.0s`; `persistCurrentRun` projeta `?? 0` como agregado de dataset vazio (contrato ParseResult, documentado). RED→GREEN: 3 testes (N/A sem run, 2.5s com run, existing). Gate verde: tsc/vitest 536×7420/eslint/depcruise/ts-prune/quality-check |
 | 2026-08-03 | I-4 | F0-T12 (totalIssues) | ✅ | `backlog-health-renderer.ts:94` `\|\| 0` removido (campo OBRIGATÓRIO; masking de contrato/NaN — N5). Guard Rule 24/25: `Number.isFinite(totalIssues) && totalIssues >= 0` → `rootLogger.warn` estruturado + render no-data (`N/A`, sem `% of total`/trend fabricados). No-data efetivo = `result.noData === true \|\| !hasValidTotal`. Origem já guardada (`analyzeBacklogHealth` `issues.length`; `calculateBacklogScore` `Number.isFinite`). RED→GREEN: 4 testes (0% real vs ausente, NaN, negativo). Gate verde: tsc 0 / vitest 536×7424 / lint / depcruise 953×3889 / ts-prune |
 | 2026-08-03 | I-5 | F2 (EmptyState) | ✅ | Sem [skip ci]; gate verde (536/7423); B7/I-6.1 absorvido via SSOT `buildQualityGateSection` (sempre renderiza) |
-| 2026-08-03 | I-6 | F3 (gate) | ⏳ | — |
-| 2026-08-03 | I-7 | F4 (tabela) | ⏳ | — |
+| 2026-08-03 | I-6 | F3 (gate) | ✅ | Verificado na codebase: `buildQualityGateSection` sempre renderiza (`report-sections.ts:219`); gate produção via `handleQualityGate→runQualityGate` (composto real, sem `Math.round(passRate)` self-ref); sem `<pre>` (`interactive-mode.ts:564`,`schedule-handler.ts:221`). Doc tinha `⏳` stale — corrigido. |
+| 2026-08-03 | I-7 | F4 (tabela) | ✅ | Verificado na codebase: I-7.1 no-op (2 format-adapters distintos, 3º deletado em `3fb56ad2`); I-7.4 tabela colapsada + "Show all N" implementada e testada (`report-table.ts:296`,`report-table.test.ts:183-235`); I-7.2 seções usam `Card` `data-part="title"` (design fixado `card.test.ts:23`); Recommended Actions em 5 renderers. Sem mudança de código necessária. |
 | 2026-08-04 | I-8 | F6 (pipeline) | ✅ | `_PIPELINE_CSS` + 6 inline styles + 3 emojis migrados → `PIPELINE_HEALTH_CSS` (primitives/report-styles.ts); cores via `data-color`/`data-status`; emojis→`icon()` SVG com `aria-label`; a11y preservada. Testes +7 (zero `style=`/emoji, ícones, data-attrs). Suíte 538×7446 ✅ / tsc 0 / lint ✅; harness regenerado (41KB). I-8.2 (schedule/interactive→buildHtmlPage) PENDENTE |
-| 2026-08-04 | I-9 | F7 (AQS) | ⏳ | — |
+| 2026-08-04 | I-9 | F7 (AQS) | ✅ I-9.1/9.2/9.3 | **I-9.1** (`d06c58f5`): `artifact-quality-gate.ts` (AQS spec-driven content-compliance: métricas/seções/timestamp/dashboard/sample; guardas Rule 24/25) + `artifact-scorecard.ts` (removível <60). **I-9.2** (`56d75e5a`): fixtures JSON SSOT `scripts/__fixtures__/artefactos/*.json` (17) + `artifact-fixtures.ts` `loadFixture` (guardas: missing/malformat/empty → erro explícito); harness consome fixtures (17 `make*` duplicados removidos, Rule 6). Equivalência §9 provada: 24 outputs byte-idênticos após normalizar timestamp de geração. **I-9.3** (working): `scripts/artifact-scorecard-runner.ts` → `runScorecard()` scorea 17 HTML-renderáveis + emite `artifact-scorecard.json`; step AQS adicionado ao injector + template + `.github/workflows/qa-post-process.yml` (G2). Suíte 541×7468 ✅ / tsc 0 / lint ✅. I-9.4 (24+1) e I-9.5 (remoção <60) pendentes. |
 | 2026-08-03 | II | protocolo | ⏳ | — |
 | 2026-08-03 | III | validação determinística | ⏳ | — |
 | 2026-08-03 | IV | encerramento | ⏳ | — |
