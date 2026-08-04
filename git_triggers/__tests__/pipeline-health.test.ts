@@ -1,6 +1,7 @@
 /** Pipeline health renderer — pure function tests with fixture data. */
 import { renderPipelineHealthHtml, extractErrorMessages, formatDuration } from '../pipeline-health-renderer.js';
 import type { PipelineHealthData } from '../pipeline-health-renderer.js';
+import { containsEmoji } from '../../shared/test-utils/assertions.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -16,7 +17,7 @@ const sampleHealthData: PipelineHealthData = {
     ],
     failureReasons: ["Module not found: 'foo'", 'Timeout: page did not load', 'Cannot connect to Docker daemon'],
     branchBreakdown: {
-        main: { passRate: 75, count: 4 },
+        main: { passRate: 85, count: 4 },
         develop: { passRate: 0, count: 1 },
     },
     period: { from: '2026-05-28', to: '2026-05-28' },
@@ -168,5 +169,41 @@ describe('RenderPipelineHealthHtml', () => {
 
         expect(html).toContain('3');
         expect(html).toContain('2');
+    });
+
+    it('contains no inline style attributes', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(html).not.toMatch(/style="/);
+    });
+
+    it('contains no raw emoji characters', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(containsEmoji(html)).toBeFalsy();
+    });
+
+    it('uses icon SVG with aria-label for section headers', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(html).toContain('aria-label="Top Failing Jobs"');
+        expect(html).toContain('aria-label="Failure Intelligence"');
+        expect(html).toContain('aria-label="Branch Breakdown"');
+    });
+
+    it('uses data-color / data-status attributes for summary card colors', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(html).toContain('data-color="info"');
+        expect(html).toContain('data-color="success"');
+        expect(html).toContain('data-color="error"');
+        expect(html).toContain('data-status="pass"');
+    });
+
+    it('uses data-status for branch pass-rate coloring', () => {
+        const html = renderPipelineHealthHtml(sampleHealthData);
+
+        expect(html).toContain('<td data-status="pass">85%</td>');
+        expect(html).toContain('<td data-status="fail">0%</td>');
     });
 });

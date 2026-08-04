@@ -69,5 +69,24 @@ describe('Report-styles', () => {
                 expect(css).toContain(token);
             }
         });
+
+        it('contains pipeline-health summary card CSS classes', () => {
+            const css = buildCss();
+
+            expect(css).toContain('.summary{');
+            expect(css).toContain('.card .num{');
+            expect(css).toContain('.card .num[data-color="info"]');
+            expect(css).toContain('.card .num[data-color="success"]');
+            expect(css).toContain('.card .num[data-color="error"]');
+            expect(css).toContain('.card .num[data-status="pass"]');
+            expect(css).toContain('.card .num[data-status="fail"]');
+            expect(css).toContain('.failure-bar{');
+        });
+
+        it('contains pipeline-health error message CSS class', () => {
+            const css = buildCss();
+
+            expect(css).toContain('.error-msg{');
+        });
     });
 });

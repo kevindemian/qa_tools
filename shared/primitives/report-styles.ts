@@ -398,6 +398,25 @@ const FORM_COMPONENT_CSS = `
 [data-component='label']{font-size:${tokens.fontSize.xs};text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:${tokens.spacing.xs}px;display:block}
 `;
 
+const PIPELINE_HEALTH_CSS = `
+/* Pipeline health dashboard */
+.summary{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.card{background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:.75rem 1rem;flex:1;min-width:120px}
+.card .num{font-size:1.5rem;font-weight:700}
+.card .lbl{font-size:.75rem;color:var(--color-text-muted)}
+.card .num[data-color="info"]{color:var(--color-info)}
+.card .num[data-color="success"]{color:var(--color-success)}
+.card .num[data-color="error"]{color:var(--color-error)}
+.card .num[data-status="pass"]{color:var(--color-success)}
+.card .num[data-status="fail"]{color:var(--color-error)}
+td[data-color="error"]{color:var(--color-error)}
+td[data-color="success"]{color:var(--color-success)}
+td[data-status="pass"]{color:var(--color-success)}
+td[data-status="fail"]{color:var(--color-error)}
+.failure-bar{font-family:monospace;font-size:0.8rem;color:var(--color-text-muted);white-space:nowrap}
+.error-msg{font-family:monospace;font-size:0.8rem}
+`;
+
 const RESPONSIVE_TABLE_CSS = `
 @media(max-width:600px){
   [data-component='data-table'] thead{display:none}
@@ -621,6 +640,7 @@ export function buildCss(): string {
         CHART_COMPONENT_CSS +
         FORM_COMPONENT_CSS +
         RESPONSIVE_TABLE_CSS +
+        PIPELINE_HEALTH_CSS +
         INLINE_STYLES_CSS +
         ACCESSIBILITY_CSS +
         CASE17_CSS +
