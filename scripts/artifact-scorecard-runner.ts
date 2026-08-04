@@ -234,9 +234,14 @@ function main(): void {
     console.log(`Failed:        ${scorecard.failed}`);
     console.log(`Removable (<60): ${scorecard.removable.length ? scorecard.removable.join(', ') : 'none'}`);
     if (scorecard.removable.length > 0) {
-        console.log('\n[aqs-runner] WARNING: removable artifacts detected (AQS < 60) — see scorecard JSON.');
+        console.log('\n[aqs-runner] WARNING: removable artifacts detected (AQS < 60) — scorecard JSON updated.');
+        console.log('I-9.5: these artifacts must be removed from the codebase or the spec must be satisfied.');
     }
     console.log(`\nScorecard written: ${join(OUT_DIR, 'artifact-scorecard.json')}`);
+
+    if (scorecard.removable.length > 0) {
+        process.exitCode = 1;
+    }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
