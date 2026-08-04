@@ -19,10 +19,6 @@ vi.mock('../../config-accessor.js', () => ({
     get: vi.fn(() => ''),
 }));
 
-vi.mock('../../date-utils.js', () => ({
-    formatDateISO: vi.fn(() => '2026-06-19'),
-}));
-
 function makeResult(overrides?: Partial<CoverageGapResult>): CoverageGapResult {
     return {
         items: [
@@ -140,17 +136,14 @@ describe('Integration: Coverage Gap (FT-18)', () => {
     });
 
     describe('FT-18c: error fallback', () => {
-        it('returns error page when formatDateISO throws', async () => {
+        it('returns error page when input is malformed (missing totals)', async () => {
             expect.hasAssertions();
 
-            const { formatDateISO } = await import('../../date-utils.js');
-            const dateMock = vi.mocked(formatDateISO);
-            dateMock.mockImplementationOnce(() => {
-                throw new Error('simulated failure');
-            });
             const { rootLogger } = await import('../../logger.js');
             const { generateCoverageGapHtml } = await import('../../report/generate-coverage-gap-html.js');
-            const result = generateCoverageGapHtml(makeResult());
+            const malformed = makeResult();
+            delete (malformed as { totals?: unknown }).totals;
+            const result = generateCoverageGapHtml(malformed);
 
             expect(result).toContain('Error generating coverage gap report');
             expect(rootLogger['error']).toHaveBeenCalledWith(

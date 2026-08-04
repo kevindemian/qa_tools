@@ -8,6 +8,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { Container, Section } from '../primitives/layout.js';
 import { MetricCard, MetricGrid } from '../primitives/card.js';
@@ -70,7 +71,11 @@ function buildRecommendedActions(result: OptimizationResult): string {
     });
 }
 
-export function generateOptimizationHtml(result: OptimizationResult | null | undefined, title?: string): string {
+export function generateOptimizationHtml(
+    result: OptimizationResult | null | undefined,
+    title?: string,
+    generatedAt?: string,
+): string {
     const pageTitle = title || 'Suite Optimization Report';
     if (!result) {
         rootLogger.error('generateOptimizationHtml: optimization result is missing.');
@@ -89,7 +94,7 @@ export function generateOptimizationHtml(result: OptimizationResult | null | und
     let bodyContent =
         `<div data-dashboard="suite-optimization">` +
         `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-        `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+        `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
         Section({
             dataSection: 'summary',
             title: 'Summary',

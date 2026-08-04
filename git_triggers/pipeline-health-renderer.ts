@@ -1,6 +1,7 @@
 /** Pipeline health HTML renderer — accepts pre-computed metrics from DataHub.
  *  Pure rendering logic — no I/O, no side effects. */
 import { sanitizeHtml } from '../shared/escape.js';
+import { resolveGeneratedAt } from '../shared/date-utils.js';
 import { buildHtmlPage } from '../shared/report/html-factory.js';
 import { buildCss } from '../shared/report/report-styles.js';
 import { icon } from '../shared/icons.js';
@@ -111,8 +112,12 @@ export function formatDuration(sec: number): string {
 
 /** Render a complete HTML report from a PipelineHealthData object.
  *  Pure function — no I/O, no side effects. */
-export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipeline Health Report'): string {
-    const ts = new Date().toISOString();
+export function renderPipelineHealthHtml(
+    data: PipelineHealthData,
+    title = 'Pipeline Health Report',
+    generatedAt?: string,
+): string {
+    const ts = resolveGeneratedAt(generatedAt);
     const safePassRate = sanitizeNumber(data.passRate);
     const safeAvgDuration = sanitizeNumber(data.avgDurationSec);
     const periodLabel = data.period ? `${data.period.from} to ${data.period.to}` : 'N/A';

@@ -63,6 +63,9 @@ import type { CoverageGapResult } from '../shared/types/coverage.js';
 
 const OUT_DIR = join(import.meta.dirname, '..', 'reports', 'validation');
 
+/** Fixed generation instant (ISO-8601) for deterministic scoring. */
+const GENERATED_AT = '2026-08-04T00:00:00.000Z';
+
 interface RendererEntry {
     specId: string;
     render: () => string;
@@ -91,21 +94,25 @@ function renderTestReportHtml(): string {
         },
         'qa_tools',
     );
-    return generateHtmlReport(tests, { computed: hub.computed });
+    return generateHtmlReport(tests, { computed: hub.computed, generatedAt: GENERATED_AT });
 }
 
 function renderPipelineHealthOutput(): string {
-    return renderPipelineHealthHtml({
-        totalRuns: 12,
-        passRate: 66.7,
-        avgDurationSec: 1800,
-        topFailingJobs: [
-            { name: 'e2e', failCount: 4, totalCount: 10, rate: 40 },
-            { name: 'unit', failCount: 1, totalCount: 10, rate: 10 },
-        ],
-        failureReasons: ['flaky: login', 'timeout: checkout'],
-        branchBreakdown: { main: { passRate: 80, count: 8 }, dev: { passRate: 40, count: 4 } },
-    });
+    return renderPipelineHealthHtml(
+        {
+            totalRuns: 12,
+            passRate: 66.7,
+            avgDurationSec: 1800,
+            topFailingJobs: [
+                { name: 'e2e', failCount: 4, totalCount: 10, rate: 40 },
+                { name: 'unit', failCount: 1, totalCount: 10, rate: 10 },
+            ],
+            failureReasons: ['flaky: login', 'timeout: checkout'],
+            branchBreakdown: { main: { passRate: 80, count: 8 }, dev: { passRate: 40, count: 4 } },
+        },
+        undefined,
+        GENERATED_AT,
+    );
 }
 
 function buildRendererEntries(): RendererEntry[] {
@@ -138,7 +145,13 @@ function buildRendererEntries(): RendererEntry[] {
             specId: 'traceability',
             render: () => generateTraceabilityHtml(loadFixture<TraceabilityResult>('traceability')),
         },
-        { specId: 'flakiness', render: () => generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness')) },
+        {
+            specId: 'flakiness',
+            render: () =>
+                generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), undefined, {
+                    generatedAt: GENERATED_AT,
+                }),
+        },
         {
             specId: 'backlog-health',
             render: () => generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health')),
@@ -149,15 +162,21 @@ function buildRendererEntries(): RendererEntry[] {
         },
         {
             specId: 'suite-optimization',
-            render: () => generateOptimizationHtml(loadFixture<OptimizationResult>('suite-optimization')),
+            render: () =>
+                generateOptimizationHtml(
+                    loadFixture<OptimizationResult>('suite-optimization'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         },
         {
             specId: 'cross-squad-benchmark',
-            render: () => generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark')),
+            render: () =>
+                generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark'), undefined, GENERATED_AT),
         },
         {
             specId: 'release-score',
-            render: () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score')),
+            render: () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score'), GENERATED_AT),
         },
         {
             specId: 'silent-regression',
@@ -165,11 +184,17 @@ function buildRendererEntries(): RendererEntry[] {
         },
         {
             specId: 'defect-trend',
-            render: () => generateDefectTrendHtml(loadFixture<DefectAggregationResult>('defect-trend')),
+            render: () =>
+                generateDefectTrendHtml(loadFixture<DefectAggregationResult>('defect-trend'), undefined, GENERATED_AT),
         },
         {
             specId: 'defect-seasonality',
-            render: () => generateSeasonalityHtml(loadFixture<SeasonalityAggregationResult>('defect-seasonality')),
+            render: () =>
+                generateSeasonalityHtml(
+                    loadFixture<SeasonalityAggregationResult>('defect-seasonality'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         },
         {
             specId: 'developer-profile',
@@ -177,11 +202,23 @@ function buildRendererEntries(): RendererEntry[] {
         },
         {
             specId: 'requirement-score',
-            render: () => generateRequirementScoreHtml(loadFixture<RequirementScoreResult>('requirement-score')),
+            render: () =>
+                generateRequirementScoreHtml(
+                    loadFixture<RequirementScoreResult>('requirement-score'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         },
         {
             specId: 'coverage-gap',
-            render: () => generateCoverageGapHtml(loadFixture<CoverageGapResult>('coverage-gap')),
+            render: () =>
+                generateCoverageGapHtml(
+                    loadFixture<CoverageGapResult>('coverage-gap'),
+                    undefined,
+                    undefined,
+                    undefined,
+                    GENERATED_AT,
+                ),
         },
     ];
 }

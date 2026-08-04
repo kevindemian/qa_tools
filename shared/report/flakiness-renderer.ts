@@ -10,6 +10,7 @@
 import type { FlakinessEntry, DataHub } from '../types/data-hub.js';
 import { rootLogger } from '../logger.js';
 import { sanitizeHtml } from '../escape.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import {
@@ -41,7 +42,7 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
 
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>
-            <div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>
+            <div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(options?.generatedAt))}</div>
             ${sourceBanner}
             ${hasTotalTests ? '' : buildNoDataBanner()}
             ${buildFlakinessSummary(high, flaky, thresholds, totalTests)}

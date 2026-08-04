@@ -8,6 +8,7 @@
  */
 
 import { rootLogger } from '../logger.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
@@ -209,7 +210,11 @@ function buildRecommendedActions(result: DefectAggregationResult): string {
     });
 }
 
-export function generateDefectTrendHtml(result: DefectAggregationResult | null | undefined, title?: string): string {
+export function generateDefectTrendHtml(
+    result: DefectAggregationResult | null | undefined,
+    title?: string,
+    generatedAt?: string,
+): string {
     if (!result) {
         rootLogger.error('generateDefectTrendHtml: defect aggregation result is missing.');
         return buildErrorPage('Error generating dashboard', 'Defect trend data is unavailable.');
@@ -239,7 +244,7 @@ export function generateDefectTrendHtml(result: DefectAggregationResult | null |
         const bodyContent =
             `<div data-dashboard="defect-trend">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+            `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
             buildSummaryCards(result) +
             buildTrendTable(result) +
             buildRecommendedActions(result) +

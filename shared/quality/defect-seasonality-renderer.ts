@@ -8,6 +8,7 @@
  */
 
 import { rootLogger } from '../logger.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
@@ -151,6 +152,7 @@ function buildRecommendedActions(result: SeasonalityAggregationResult): string {
 export function generateSeasonalityHtml(
     result: SeasonalityAggregationResult | null | undefined,
     title?: string,
+    generatedAt?: string,
 ): string {
     try {
         const pageTitle = title || 'Defect Seasonality Dashboard';
@@ -184,7 +186,7 @@ export function generateSeasonalityHtml(
         const bodyContent =
             `<div data-dashboard="defect-seasonality">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+            `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
             Section({
                 dataSection: 'summary',
                 title: 'Summary',

@@ -21,10 +21,6 @@ vi.mock('../../config.js', () => ({
     get: vi.fn(() => ''),
 }));
 
-vi.mock('../date-utils', () => ({
-    formatDateISO: vi.fn(() => '2026-06-19'),
-}));
-
 const safeString = (min: number, max: number) =>
     fc
         .string({ minLength: min, maxLength: max })

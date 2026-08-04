@@ -56,6 +56,10 @@ import type { FlatTest } from '../shared/result_parser.js';
 
 const OUT_DIR = join(import.meta.dirname, '..', 'reports', 'validation');
 
+/** Fixed generation instant (ISO-8601) for deterministic D1/D3 output.
+ *  Fase II/III: same SHA + command -> byte-identical artifacts (sha256 proof). */
+const GENERATED_AT = '2026-08-04T00:00:00.000Z';
+
 function write(name: string, html: string): void {
     mkdirSync(OUT_DIR, { recursive: true });
     writeFileSync(join(OUT_DIR, name), html);
@@ -98,26 +102,50 @@ function run(): void {
         ['incident-report.html', () => generateIncidentReportHtml(loadFixture<IncidentReport>('incident-report'))],
         ['impact-alert.html', () => generateImpactAlertHtml(loadFixture<ImpactAlertResult>('impact-alert'))],
         ['traceability.html', () => generateTraceabilityHtml(loadFixture<TraceabilityResult>('traceability'))],
-        ['flakiness.html', () => generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'))],
+        [
+            'flakiness.html',
+            () =>
+                generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), undefined, {
+                    generatedAt: GENERATED_AT,
+                }),
+        ],
         ['backlog-health.html', () => generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health'))],
         ['pipeline-cost.html', () => generatePipelineCostHtml(loadFixture<PipelineCostResult>('pipeline-cost'))],
         [
             'suite-optimization.html',
-            () => generateOptimizationHtml(loadFixture<OptimizationResult>('suite-optimization')),
+            () =>
+                generateOptimizationHtml(
+                    loadFixture<OptimizationResult>('suite-optimization'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         ],
         [
             'cross-squad-benchmark.html',
-            () => generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark')),
+            () =>
+                generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark'), undefined, GENERATED_AT),
         ],
-        ['release-score.html', () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score'))],
+        [
+            'release-score.html',
+            () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score'), GENERATED_AT),
+        ],
         [
             'silent-regression.html',
             () => generateSilentRegressionHtml(loadFixture<RegressionDetectionResult>('silent-regression')),
         ],
-        ['defect-trend.html', () => generateDefectTrendHtml(loadFixture<DefectAggregationResult>('defect-trend'))],
+        [
+            'defect-trend.html',
+            () =>
+                generateDefectTrendHtml(loadFixture<DefectAggregationResult>('defect-trend'), undefined, GENERATED_AT),
+        ],
         [
             'defect-seasonality.html',
-            () => generateSeasonalityHtml(loadFixture<SeasonalityAggregationResult>('defect-seasonality')),
+            () =>
+                generateSeasonalityHtml(
+                    loadFixture<SeasonalityAggregationResult>('defect-seasonality'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         ],
         [
             'developer-profile.html',
@@ -125,9 +153,24 @@ function run(): void {
         ],
         [
             'requirement-score.html',
-            () => generateRequirementScoreHtml(loadFixture<RequirementScoreResult>('requirement-score')),
+            () =>
+                generateRequirementScoreHtml(
+                    loadFixture<RequirementScoreResult>('requirement-score'),
+                    undefined,
+                    GENERATED_AT,
+                ),
         ],
-        ['coverage-gap.html', () => generateCoverageGapHtml(loadFixture<CoverageGapResult>('coverage-gap'))],
+        [
+            'coverage-gap.html',
+            () =>
+                generateCoverageGapHtml(
+                    loadFixture<CoverageGapResult>('coverage-gap'),
+                    undefined,
+                    undefined,
+                    undefined,
+                    GENERATED_AT,
+                ),
+        ],
         [
             'test-report.html',
             () => {
@@ -141,7 +184,7 @@ function run(): void {
                     },
                     'qa_tools',
                 );
-                return generateHtmlReport(tests, { computed: hub.computed });
+                return generateHtmlReport(tests, { computed: hub.computed, generatedAt: GENERATED_AT });
             },
         ],
         ['export.csv', () => exportTestsCsv(makeFlatTests())],
@@ -170,13 +213,15 @@ function run(): void {
             failureReasons: ['flaky: login', 'timeout: checkout'],
             branchBreakdown: { main: { passRate: 80, count: 8 }, dev: { passRate: 40, count: 4 } },
         };
-        write('pipeline-health.html', renderPipelineHealthHtml(pipelineData));
+        write('pipeline-health.html', renderPipelineHealthHtml(pipelineData, undefined, GENERATED_AT));
     } catch (err) {
         console.log(`pipeline-health.html${' '.repeat(27)} ERROR: ${(err as Error).message}`);
     }
 
     try {
-        const flakyNoHub = generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), 'Flakiness (no DataHub)');
+        const flakyNoHub = generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), 'Flakiness (no DataHub)', {
+            generatedAt: GENERATED_AT,
+        });
         write('flakiness-no-datahub.html', flakyNoHub);
     } catch (err) {
         console.log(`flakiness-no-datahub.html${' '.repeat(23)} ERROR: ${(err as Error).message}`);
