@@ -8,7 +8,7 @@ vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn() },
 }));
 
-import { makeDataHubGetters } from '../test-utils/factories/data-hub-mock.js';
+import { makeDataHubGetters, makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 
 function createMockHub(overrides: Record<string, unknown> = {}) {
     return {
@@ -107,7 +107,7 @@ describe('RunQualityGate', () => {
         const result = runQualityGate({ dataHub: mockHub });
 
         expect(result.overall).toBe('pass');
-        expect(result.checks.length).toBeGreaterThan(1);
+        expect(result.checks.length).toBeGreaterThanOrEqual(1);
 
         const failChecks = result.checks.filter((c) => c.status === 'fail');
 
@@ -154,9 +154,9 @@ describe('RunQualityGate', () => {
 
         expect(result.overall).toBe('fail');
 
-        const passRateCheck = result.checks.find((c) => c.name === 'pass-rate');
+        const healthCheck = result.checks.find((c) => c.name === 'health-score');
 
-        expect(passRateCheck?.status).toBe('fail');
+        expect(healthCheck?.status).toBe('fail');
     });
 
     it('filters by project when project option is passed', () => {
@@ -254,16 +254,17 @@ describe('RunQualityGate', () => {
         const repoGate = runQualityGate({ dataHub: mockHub });
         const branchGate = runQualityGate({ project: 'feature/x', dataHub: mockHub });
 
-        const repoPass = repoGate.checks.find((c) => c.name === 'pass-rate');
-        const branchPass = branchGate.checks.find((c) => c.name === 'pass-rate');
+        const repoHealth = repoGate.checks.find((c) => c.name === 'health-score');
+        const branchHealth = branchGate.checks.find((c) => c.name === 'health-score');
 
-        // 'feature/x' pass rate = 100% (2/2 success) → dimension score 100.
-        expect(branchPass?.score).toBe(100);
-        expect(branchPass?.status).toBe('pass');
-        // Repo aggregate = 2/3 = 66.7% → dimension score below 100 (not the branch's 100).
-        expect(repoPass?.score).not.toBe(100);
-        expect(repoPass?.score).toBeGreaterThan(0);
-        expect(repoPass?.score).toBeLessThan(100);
+        // 'feature/x' pass rate = 100% (2/2 success), repo = 66.7% → branch health
+        // must be higher AND scoped to the branch (never the repo aggregate).
+        expect(branchHealth).toBeDefined();
+        expect(repoHealth).toBeDefined();
+        expect(branchHealth?.score).toBeGreaterThan(repoHealth?.score ?? 0);
+        expect(branchHealth?.score).toBeGreaterThan(0);
+        expect(branchHealth?.score).toBeLessThanOrEqual(100);
+        expect(repoHealth?.score).toBeLessThan(100);
         // The branch gate must NOT equal the repo gate (proves real scoping, not aggregate reuse).
         expect(branchGate.overall).not.toBe(repoGate.overall);
     });
@@ -312,12 +313,12 @@ describe('RunQualityGate', () => {
             },
         }) as never;
         const result = runQualityGate({ dataHub: mockHub });
-        const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+        const healthCheck = result.checks.find((c) => c.name === 'health-score');
 
-        expect(flakyCheck).toBeDefined();
-        // 1 flaky test out of 2 considered (both appear in 2+ runs) = 50% flaky
-        expect(flakyCheck?.status).toBe('fail');
-        expect(flakyCheck?.score).toBe(50);
+        expect(healthCheck).toBeDefined();
+        // 1 flaky test out of 2 considered (both appear in 2+ runs) = 50% flaky >
+        // MAX_FLAKY_GATE (5%) → the strict health gate fails.
+        expect(healthCheck?.status).toBe('fail');
     });
 
     it('passes flaky rate when no flaky tests exist', () => {
@@ -364,10 +365,10 @@ describe('RunQualityGate', () => {
             },
         }) as never;
         const result = runQualityGate({ dataHub: mockHub });
-        const flakyCheck = result.checks.find((c) => c.name === 'flaky-rate');
+        const healthCheck = result.checks.find((c) => c.name === 'health-score');
 
-        expect(flakyCheck).toBeDefined();
-        expect(flakyCheck?.status).toBe('pass');
+        expect(healthCheck).toBeDefined();
+        expect(healthCheck?.status).toBe('pass');
     });
 
     it('handles errors gracefully', () => {
@@ -568,6 +569,146 @@ describe('RunQualityGate', () => {
         expect(frCheck?.status).toBe('fail');
         expect(frCheck?.score).toBe(0);
     });
+
+    it('emits only health-score + data-quality checks (D1: no per-dimension gate checks)', () => {
+        const mockHub = makeDataHubMock({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+                securityFindings: [{ id: 1 }],
+                failureRecords: [{ name: 'auth.test.ts', status: 'failed' }],
+                deployments: [{ id: 1 }],
+                releases: [{ id: 1 }],
+                doraMetrics: { deployFrequency: 1, leadTime: 1, changeFailureRate: 0, mtbf: 1 },
+                pmIssues: [{ id: 1 }],
+                coverageFiles: [{ path: 'src/a.ts' }],
+                performanceMetrics: { p95: 100 },
+            } as never,
+            computed: {
+                passRate: 95,
+                coverage: 85,
+                executionRate: 95,
+                suiteSpeedP95: 500,
+                flakyPercentage: 1,
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+            },
+        });
+        const result = runQualityGate({ dataHub: mockHub });
+
+        const names = result.checks.map((c) => c.name);
+        const dataQualityNames = names.filter((n) => n.startsWith('data-quality:'));
+
+        expect(names).toContain('health-score');
+        expect(dataQualityNames).toStrictEqual(
+            expect.arrayContaining([
+                'data-quality:securityFindings',
+                'data-quality:failureRecords',
+                'data-quality:deployments',
+                'data-quality:releases',
+                'data-quality:doraMetrics',
+                'data-quality:pmIssues',
+                'data-quality:coverageFiles',
+                'data-quality:performanceMetrics',
+            ]),
+        );
+        expect(
+            names.filter((n) => n === 'pass-rate' || n === 'flaky-rate' || n === 'coverage' || n === 'suite-speed'),
+        ).toHaveLength(0);
+        expect(result.incompleteItems ?? []).toHaveLength(0);
+    });
+
+    it('reports N/A for unavailable dimensions in health-score details (D1 breakdown)', () => {
+        const mockHub = makeDataHubMock({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 95,
+                coverage: 85,
+                executionRate: 95,
+                suiteSpeedP95: 500,
+                flakyPercentage: 1,
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+                dataAvailability: {
+                    passRate: false,
+                    flaky: true,
+                    coverage: true,
+                    executionRate: true,
+                    suiteSpeed: true,
+                },
+            },
+        });
+        const result = runQualityGate({ dataHub: mockHub });
+        const healthCheck = result.checks.find((c) => c.name === 'health-score');
+
+        expect(healthCheck?.details).toContain('Pass Rate: N/A (UNKNOWN)');
+        expect(healthCheck?.details).toContain('Flaky Rate:');
+        expect(healthCheck?.details).toContain('Coverage:');
+        expect(healthCheck?.details).toContain('Suite Speed:');
+        expect(healthCheck?.details).toContain('Execution Rate:');
+    });
+
+    it('passes a valid low-confidence category with score 100 and confidence in details (F1)', () => {
+        const mockHub = makeDataHubMock({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+                coverageFiles: [{ path: 'src/a.ts' }],
+            } as never,
+            computed: {
+                passRate: 95,
+                coverage: 85,
+                executionRate: 95,
+                suiteSpeedP95: 500,
+                flakyPercentage: 1,
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+            },
+            quality: { coverageFiles: { valid: true, issues: [] } },
+            provenance: new Map([['coverageFiles', { confidence: 0.54, source: 'manual', timestamp: '2026-01-01' }]]),
+        });
+        const result = runQualityGate({ dataHub: mockHub });
+        const categoryCheck = result.checks.find((c) => c.name === 'data-quality:coverageFiles');
+
+        expect(categoryCheck).toBeDefined();
+        expect(categoryCheck?.status).toBe('pass');
+        expect(categoryCheck?.score).toBe(100);
+        expect(categoryCheck?.threshold).toBe(100);
+        expect(categoryCheck?.details).toContain('confidence 54%');
+    });
 });
 
 describe('FormatQualityGateJson', () => {
@@ -614,5 +755,49 @@ describe('FormatQualityGateText', () => {
         const text = formatQualityGateText(result);
 
         expect(text).toContain('PASS');
+    });
+
+    it('renders incomplete items (EIXO C) when categories are absent', () => {
+        const mockHub = createMockHub({
+            raw: {
+                runs: [
+                    {
+                        id: 1,
+                        conclusion: 'success',
+                        head_branch: 'test',
+                        created_at: '2025-01-01T00:00:00.000Z',
+                        updated_at: '2025-01-01T00:00:00.000Z',
+                    },
+                ],
+                jobs: new Map(),
+                artifacts: new Map(),
+                failureReasons: new Map(),
+            },
+            computed: {
+                passRate: 95,
+                avgDuration: 10000,
+                suiteSpeedP95: 500,
+                flakyRate: [],
+                coverage: 85,
+                pipelineCost: { totalMinutes: 0, estimatedCost: 0 },
+                defectTrends: [],
+                branchBreakdown: {},
+                topFailingJobs: [],
+                topFailureReasons: [],
+                releaseScore: { score: 0, dimensions: {} as never, grade: 'critical' },
+                quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
+                testPassRate: 95,
+                testCounts: { passed: 95, failed: 2, skipped: 3, total: 100 },
+                framework: 'vitest',
+                executionRate: 97,
+                flakyPercentage: 1,
+            },
+        }) as never;
+        const result = runQualityGate({ dataHub: mockHub });
+        const text = formatQualityGateText(result);
+
+        expect(text).toContain('Incomplete items (dados ausentes)');
+        expect(text).toContain('failureRecords');
+        expect(text).toContain('coverageFiles');
     });
 });

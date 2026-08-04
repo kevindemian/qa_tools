@@ -4,7 +4,7 @@
  * Validates the quality gate orchestrator:
  * - runQualityGate with/without metrics data
  * - Pass/fail overall based on threshold combination
- * - Individual checks: health-score, pass-rate, flaky-rate, coverage, suite-speed
+ * - Checks: health-score (single dimension rule) + data-quality categories
  * - Project filtering
  * - formatQualityGateJson / formatQualityGateText output
  * - DataHub parameter acceptance
@@ -188,7 +188,8 @@ describe('Integration: Quality Gate', () => {
             const result = runQualityGate({ project: 'test-project', dataHub: mockHub });
 
             expect(result.overall).toBe('pass');
-            expect(result.checks).toHaveLength(5);
+            expect(result.checks).toHaveLength(1);
+            expect(result.checks[0]?.name).toBe('health-score');
             expect(result.score).toBeGreaterThan(0);
         });
     });

@@ -24,8 +24,6 @@ export const COVERAGE_FLOOR = 30;
 export const COVERAGE_GATE_DEFAULT = 50;
 
 /* ── Flakiness ─────────────────────────────────────────────────────────── */
-/** Maximum flaky test percentage allowed by quality gate. */
-export const MAX_FLAKY_PCT = 30;
 /** Maximum flaky rate for health score gate. */
 export const MAX_FLAKY_GATE = 5;
 /** Flaky threshold for health score calculation (percentage). */
@@ -52,8 +50,6 @@ export const SCORE_QUALITY_GATE = 80;
 export const SCORE_CRITICAL = 50;
 
 /* ── Pipeline / Suite Speed ────────────────────────────────────────────── */
-/** Maximum suite speed (seconds per test) for quality gate. */
-export const MAX_SUITE_SPEED = 8;
 /** Maximum suite speed gate for health score (ms). */
 export const MAX_SUITE_SPEED_GATE = 3000;
 

@@ -239,6 +239,14 @@ export function buildQualityGateSection(result: QualityGateResult): string {
             );
         })
         .join('');
+    const incomplete =
+        result.incompleteItems && result.incompleteItems.length > 0
+            ? '<p data-part="quality-gate-incomplete" role="note">' +
+              icon('help-circle', 14) +
+              ' Dados ausentes (EIXO C): ' +
+              escapeHtml(result.incompleteItems.join(', ')) +
+              '</p>'
+            : '';
     return (
         '<div data-section="quality-gate" data-component="quality-gate" role="region" aria-label="Quality Gate">' +
         '<div data-part="quality-gate-overall">' +
@@ -251,7 +259,9 @@ export function buildQualityGateSection(result: QualityGateResult): string {
         '/100</span></div>' +
         '<ul data-part="quality-gate-checks" role="list">' +
         checks +
-        '</ul></div>'
+        '</ul>' +
+        incomplete +
+        '</div>'
     );
 }
 
@@ -464,7 +474,7 @@ export function buildHealthSection(health: HealthScoreResult): string {
             '<div class="health-grid">' +
             `<div class="score-value"><div class="health-overall-value" style="--overall-color:${overallColor}">${health.overall}</div>` +
             `<div class="health-grade-text">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
+            `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Health Gate: ${qc.text}</span>` +
             `<span class="health-meta">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
             partialBanner +
             `</div>` +

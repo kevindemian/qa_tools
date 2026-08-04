@@ -470,13 +470,48 @@ describe('BuildHealthSection', () => {
     it('shows passing quality gate for healthy suite', () => {
         const html = buildHealthSection(passingHealth);
 
-        expect(html).toContain('Quality Gate: Pass');
+        expect(html).toContain('Health Gate: Pass');
     });
 
     it('shows failing quality gate for unhealthy suite', () => {
         const html = buildHealthSection(failingHealth);
 
-        expect(html).toContain('Quality Gate: Fail');
+        expect(html).toContain('Health Gate: Fail');
+    });
+
+    it('renders incomplete items note in gate section (F2)', () => {
+        const result: QualityGateResult = {
+            overall: 'pass',
+            checks: [
+                {
+                    name: 'health-score',
+                    status: 'pass',
+                    score: 85,
+                    threshold: 70,
+                    details: 'Health score: 85',
+                },
+            ],
+            score: 85,
+            incompleteItems: ['failureRecords', 'coverageFiles'],
+        };
+        const html = buildQualityGateSection(result);
+
+        expect(html).toContain('data-part="quality-gate-incomplete"');
+        expect(html).toContain('Dados ausentes (EIXO C)');
+        expect(html).toContain('failureRecords');
+        expect(html).toContain('coverageFiles');
+    });
+
+    it('omits incomplete items note when list is empty', () => {
+        const result: QualityGateResult = {
+            overall: 'pass',
+            checks: [],
+            score: 85,
+            incompleteItems: [],
+        };
+        const html = buildQualityGateSection(result);
+
+        expect(html).not.toContain('data-part="quality-gate-incomplete"');
     });
 
     it('renders dimension bars for each metric', () => {

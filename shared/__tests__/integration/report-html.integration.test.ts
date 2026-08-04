@@ -120,7 +120,7 @@ describe('Integration: HTML Report (FT-17)', () => {
             const html = generateHtmlReport(tests, { computed: computedFor(tests), title: 'Health', healthScore });
 
             expect(html).toContain('Test Suite Health');
-            expect(html).toContain('Quality Gate: Pass');
+            expect(html).toContain('Health Gate: Pass');
         });
 
         it('includes quality gate section when gate fails', async () => {

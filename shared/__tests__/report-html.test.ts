@@ -113,7 +113,43 @@ describe('GenerateHtmlReport', () => {
         });
 
         expect(html).toContain('Test Suite Health');
-        expect(html).toContain('Quality Gate: Pass');
+        expect(html).toContain('Health Gate: Pass');
+    });
+
+    it('renders composite quality gate section with incomplete items when qualityGateResult provided', () => {
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'QG',
+            qualityGateResult: {
+                overall: 'pass',
+                checks: [
+                    {
+                        name: 'health-score',
+                        status: 'pass',
+                        score: 85,
+                        threshold: 70,
+                        details: 'Health score: 85 (good)',
+                    },
+                ],
+                score: 85,
+                incompleteItems: ['failureRecords', 'deployments'],
+            },
+        });
+
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('health-score');
+        expect(html).toContain('Dados ausentes (EIXO C)');
+        expect(html).toContain('failureRecords');
+        expect(html).toContain('deployments');
+    });
+
+    it('renders NO quality gate section when neither qualityGateResult nor qualityGate provided (D2/Q3)', () => {
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'NoGate',
+        });
+
+        expect(html).not.toContain('data-component="quality-gate"');
     });
 
     it('includes flakiness dashboard link when url and map provided', () => {

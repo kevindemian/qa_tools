@@ -1,5 +1,6 @@
 import os from 'os';
 import path from 'path';
+import fs from 'node:fs';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { generatePrReport } from '../pr-report-core.js';
 import type { FlatTest } from '../result_parser.js';
@@ -277,6 +278,54 @@ describe('Pr Report Core', () => {
             });
 
             expect(mockCheckRun.createCheckRun).not.toHaveBeenCalled();
+        });
+
+        it('writes composite quality-gate section into HTML when gate runs', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-gate-composite.html');
+            await report({
+                tests: [sampleTest],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                htmlOutputPath: tmp,
+                skipQuality: false,
+            });
+
+            const html = fs.readFileSync(tmp, 'utf8');
+
+            expect(html).toContain('data-component="quality-gate"');
+            expect(html).toContain('health-score');
+        });
+
+        it('skipQuality: HTML report has no quality-gate section (D2/Q3)', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-gate-skipped.html');
+            await report({
+                tests: [sampleTest],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                htmlOutputPath: tmp,
+                skipQuality: true,
+            });
+
+            const html = fs.readFileSync(tmp, 'utf8');
+
+            expect(html).not.toContain('data-component="quality-gate"');
+        });
+
+        it('check-run summary flags incomplete items (EIXO C) when categories are absent', async () => {
+            expect.hasAssertions();
+
+            await report({
+                tests: [sampleTest],
+                stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+                skipQuality: false,
+            });
+
+            const createCall = mockCheckRun.createCheckRun.mock.calls[0]?.[0] as
+                { output?: { summary: string } } | undefined;
+
+            expect(createCall?.output?.summary).toContain('Dados ausentes (EIXO C)');
         });
 
         it('skips AI section when skipAi is true', async () => {

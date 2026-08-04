@@ -116,7 +116,9 @@ export function generateHtmlReport(_tests: FlatTest[], options?: ReportOptions):
         bodyContent += `<div data-section="trends">`;
         bodyContent += buildTrendSection(trends);
         bodyContent += `</div>`;
-        if (options.qualityGate !== undefined) {
+        if (options.qualityGateResult) {
+            bodyContent += buildQualityGateSection(options.qualityGateResult);
+        } else if (options.qualityGate !== undefined) {
             bodyContent += buildQualityGateSection(toQualityGateResult(passRate, options.qualityGate));
         }
         if (options.healthScore) {

@@ -31,6 +31,10 @@ export interface ReportOptions {
     ciUrl?: string;
     branch?: string;
     qualityGate?: number;
+    /** Composite quality gate result (SSOT) — when present, rendered instead of
+     *  the pass-rate-only `qualityGate` number. In the PR report this mirrors the
+     *  GitHub check-run semantics exactly. */
+    qualityGateResult?: import('../quality/quality-gate.js').QualityGateResult;
     testHistory?: Record<string, TestHistoryRun[]>;
     theme?: 'dark' | 'light';
     runs?: TestRunTab[];

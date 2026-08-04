@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
-import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
+import { makeDataHubPersistenceMock, makeDataHubGetters } from '../../test-utils/factories/data-hub-mock.js';
 
 /* ── Mock DataProvider ──────────────────────────────────────────────────── */
 
@@ -145,6 +145,7 @@ describe('Integration: CI Data Hub', () => {
 
             // Mock store with low pass rate — dataHub overrides to 100%
             const lowHub = {
+                ...makeDataHubGetters(),
                 raw: { runs: [], jobs: new Map(), failureReasons: new Map(), artifacts: new Map() },
                 computed: {
                     passRate: 10,

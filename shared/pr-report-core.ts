@@ -31,7 +31,7 @@ import { formatErr } from './errors.js';
 import { getDataHub, setDataHub, isDataHubInitialized } from './data-hub/global-hub.js';
 import { getCiRunId } from './ci/run-id.js';
 import { runQualityGate } from './quality/quality-gate.js';
-import type { QualityGateStatus } from './quality/quality-gate.js';
+import type { QualityGateResult, QualityGateStatus } from './quality/quality-gate.js';
 import { createCheckRun } from './ci/github-check-run.js';
 import { postPrComment } from './ci/github-pr-comment.js';
 import { generateHtmlReport } from './report/report-html.js';
@@ -529,7 +529,7 @@ async function handleQualityGate(
     dataHub: DataHub,
     artifactUrl?: string,
     coverageOverride?: number,
-): Promise<string | undefined> {
+): Promise<QualityGateResult | undefined> {
     try {
         const qgResult = runQualityGate({ coverageOverride, dataHub });
         const gradeStr = healthScore.grade.replace(/_/g, ' ').toUpperCase();
@@ -545,7 +545,7 @@ async function handleQualityGate(
             },
         });
 
-        return buildQualityGateSection(qgResult);
+        return qgResult;
     } catch (err) {
         rootLogger.warn(`createCheckRun error: ${String(err)}`);
         return undefined;
@@ -588,13 +588,13 @@ function resolveCoverageForReport(
  * @returns Path to generated HTML file, or undefined on failure
  */
 function generateHtmlReportFile(
-    passRate: number,
     tests: FlatTest[],
     options: PrReportCoreOptions,
     dataHub: DataHub,
     coverageResult: ReturnType<typeof resolveCoverageForReport>,
     healthScore: ReturnType<typeof calculateHealthScore>,
     workflowUrl?: string,
+    qgResult?: QualityGateResult,
 ): string | undefined {
     try {
         const flakyEntries = dataHub.computed.flakinessEntries ?? [];
@@ -608,7 +608,10 @@ function generateHtmlReportFile(
         const branchLabel = ghBranch ? ` (${ghBranch})` : '';
         const htmlOptions: ReportOptions = {
             title: `QA Tools — PR Report${branchLabel}`,
-            qualityGate: Math.round(passRate),
+            // D2/Q3: the PR report gate section exists ONLY when the composite
+            // gate ran (qgResult present). Pass rate is already shown in the
+            // summary cards — never a weaker pass-rate-only pseudo-gate here.
+            ...(qgResult ? { qualityGateResult: qgResult } : {}),
             healthScore,
             computed: dataHub.computed,
             includeChart: true,
@@ -716,9 +719,10 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
         sections.push(buildAiAnalysisSection(llmAvailable));
     }
 
+    let qgResult: QualityGateResult | undefined;
     if (!options.skipQuality) {
-        const qgSection = await handleQualityGate(healthScore, dataHub, artifactUrl, coverageResult?.coveragePct);
-        if (qgSection) sections.push(qgSection);
+        qgResult = await handleQualityGate(healthScore, dataHub, artifactUrl, coverageResult?.coveragePct);
+        if (qgResult) sections.push(buildQualityGateSection(qgResult));
     }
 
     if (!options.skipFlaky) {
@@ -727,13 +731,13 @@ export async function generatePrReport(options: PrReportCoreOptions): Promise<Pr
     }
 
     const htmlPath = generateHtmlReportFile(
-        passRate,
         tests,
         options,
         dataHub,
         coverageResult,
         healthScore,
         workflowUrl,
+        qgResult,
     );
 
     const dqSection = buildDataQualitySection(dataQuality);
@@ -789,13 +793,16 @@ function renderQualityGateChecksTable(result: QualityGateSummary): string {
     return ['', '| Check | Score | Threshold | Status |', '|---|---|---|---|', ...checkRows, ''].join('\n');
 }
 
-function buildQGCHeckSummary(result: QualityGateSummary, grade?: string, artifactUrl?: string): string {
+function buildQGCHeckSummary(result: QualityGateResult, grade?: string, artifactUrl?: string): string {
     const { icon, word } = gateOverallLabel(result.overall);
     const lines: string[] = [`**Quality Gate: ${icon} ${word}**`, '', `**Score:** ${result.score}/100`];
     if (grade) {
         lines.push(`**Grade:** ${grade}`);
     }
     lines.push(renderQualityGateChecksTable(result));
+    if (result.incompleteItems && result.incompleteItems.length > 0) {
+        lines.push('', `**Dados ausentes (EIXO C):** ${result.incompleteItems.join(', ')}`);
+    }
     if (artifactUrl) {
         lines.push('', `[link] [Download HTML report](${artifactUrl})`);
     }
