@@ -1,0 +1,18 @@
+{
+    "events": [
+        {
+            "date": "2026-07-25T10:00:00Z",
+            "type": "failure",
+            "title": "Pipeline failure on main",
+            "description": "CI pipeline failed 3 times consecutively",
+            "severity": "high"
+        }
+    ],
+    "eventCount": 1,
+    "highCount": 1,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "summary": "1 high severity incident detected",
+    "overallSeverity": "high",
+    "timestamp": "2026-07-25T10:00:00Z"
+}

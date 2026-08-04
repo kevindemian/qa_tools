@@ -34,6 +34,7 @@ import { generateHtmlReport } from '../shared/report/report-html.js';
 import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
 import { mdToHtml } from '../shared/report/markdown.js';
+import { loadFixture } from './artifact-fixtures.js';
 import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
 import type { AiComparisonResult } from '../shared/report/ai-comparison.js';
 import type { IncidentReport } from '../shared/report/incident-report.js';
@@ -64,446 +65,6 @@ function write(name: string, html: string): void {
     console.log(`${name.padEnd(45)} ${kb.padStart(8)}KB  doctype=${doctype} ${err}`);
 }
 
-function makeAiMetrics(): AiMetricsResult {
-    return {
-        acceptanceRate: 75,
-        totalRecords: 50,
-        totalGenerated: 50,
-        totalKept: 35,
-        totalModified: 10,
-        totalDeleted: 5,
-        topPromptVersion: 'v2.1',
-        byVersion: [
-            { version: 'v2.1', count: 30, acceptanceRate: 80 },
-            { version: 'v1.0', count: 20, acceptanceRate: 65 },
-        ],
-        trend: [
-            { date: '2026-07-01', acceptanceRate: 70, generated: 25 },
-            { date: '2026-07-02', acceptanceRate: 80, generated: 25 },
-        ],
-        requirementScores: { 'REQ-001': 90, 'REQ-002': 60 },
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeAiComparison(): AiComparisonResult {
-    return {
-        aiTotal: 30,
-        aiPassRate: 80,
-        aiFlakinessAvg: 0.1,
-        aiAcceptanceRate: 75,
-        manualTotal: 20,
-        manualPassRate: 65,
-        manualFlakinessAvg: 0.2,
-        manualAcceptanceRate: 60,
-        aiAdvantage: 'pass_rate',
-        byVersion: [
-            { version: 'v2.1', count: 20, passRate: 85 },
-            { version: 'v1.0', count: 10, passRate: 70 },
-        ],
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeIncidentReport(): IncidentReport {
-    return {
-        events: [
-            {
-                date: '2026-07-25T10:00:00Z',
-                type: 'failure',
-                title: 'Pipeline failure on main',
-                description: 'CI pipeline failed 3 times consecutively',
-                severity: 'high',
-            },
-        ],
-        eventCount: 1,
-        highCount: 1,
-        mediumCount: 0,
-        lowCount: 0,
-        summary: '1 high severity incident detected',
-        overallSeverity: 'high',
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeImpactAlert(): ImpactAlertResult {
-    return {
-        alerts: [
-            {
-                severity: 'critical',
-                title: 'Critical pipeline failure',
-                message: 'Pipeline main failed 3 times consecutively',
-                affectedArea: 'CI/CD Pipeline',
-                recommendation: 'Check recent commits and rollback if necessary',
-            },
-        ],
-        criticalCount: 1,
-        warningCount: 0,
-        infoCount: 0,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeTraceability(): TraceabilityResult {
-    return {
-        nodes: [
-            {
-                epic: 'AUTH',
-                coverage: 80,
-                health: 75,
-                flakiness: 0.1,
-                stories: [
-                    {
-                        key: 'LOGIN',
-                        coverage: 100,
-                        health: 100,
-                        flakiness: 0,
-                        tests: [
-                            { title: 'test-login-1', status: 'passed', duration: 100, flakiness: 0 },
-                            { title: 'test-login-2', status: 'passed', duration: 120, flakiness: 0 },
-                        ],
-                    },
-                ],
-            },
-            {
-                epic: 'PAYMENT',
-                coverage: 50,
-                health: 60,
-                flakiness: 0.2,
-                stories: [],
-            },
-        ],
-        totalEpics: 2,
-        totalTests: 5,
-        overallCoverage: 65,
-        timestamp: '2026-07-25T10:00:00Z',
-        awareness: {
-            categories: [
-                {
-                    category: 'coverageFiles',
-                    entities: [{ id: 'AUTH', confidence: 0.9, valid: true }],
-                },
-            ],
-            minConfidence: 0.7,
-        },
-    };
-}
-
-function makeFlakiness(): FlakinessEntry[] {
-    return [
-        {
-            title: 'test-login',
-            project: 'auth',
-            passCount: 7,
-            failCount: 3,
-            skipCount: 0,
-            totalRuns: 10,
-            rate: 0.3,
-        },
-        {
-            title: 'test-checkout',
-            project: 'payments',
-            passCount: 5,
-            failCount: 5,
-            skipCount: 0,
-            totalRuns: 10,
-            rate: 0.5,
-        },
-    ];
-}
-
-function makeBacklogHealth(): BacklogHealthResult {
-    return {
-        unassignedIssues: [],
-        staleIssues: [
-            {
-                key: 'JIRA-1',
-                summary: 'Old bug',
-                assignee: 'unassigned',
-                updated: '2026-04-01T10:00:00Z',
-                type: 'bug',
-                priority: 'High',
-                linkedTestCount: 0,
-                epic: 'AUTH',
-            },
-        ],
-        bugsWithoutTests: [],
-        densityByEpic: [{ epic: 'AUTH', bugCount: 5, testCount: 20 }],
-        totalIssues: 50,
-        score: 72,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makePipelineCost(): PipelineCostResult {
-    return {
-        totalCost: 125.5,
-        avgCostPerRun: 25.1,
-        totalDurationSec: 3600,
-        costPerMinute: 0.21,
-        costByRun: [{ timestamp: '2026-07-25T10:00:00Z', durationSec: 720, cost: 25.1, status: 'success' }],
-        runCount: 5,
-        period: { from: '2026-07-20', to: '2026-07-25' },
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeOptimization(): OptimizationResult {
-    return {
-        optimizations: [
-            {
-                testTitle: 'test-slow-integration',
-                duration: 300,
-                flakiness: 0.3,
-                impact: 'high',
-                action: 'parallelize',
-                reason: 'Long duration and high flakiness',
-            },
-        ],
-        totalTests: 50,
-        totalDuration: 3600,
-        potentialSavings: 600,
-        slowThreshold: 60,
-        flakyThreshold: 0.2,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeCrossSquad(): CrossSquadResult {
-    return {
-        benchmarks: [
-            {
-                project: 'Frontend',
-                healthScore: 85,
-                grade: 'A',
-                passRate: 90,
-                flakyRate: 5,
-                coveragePct: 80,
-                runCount: 50,
-                trend: 'up',
-            },
-            {
-                project: 'Backend',
-                healthScore: 72,
-                grade: 'B',
-                passRate: 80,
-                flakyRate: 10,
-                coveragePct: 65,
-                runCount: 40,
-                trend: 'stable',
-            },
-        ],
-        topSquad: 'Frontend',
-        bottomSquad: 'Backend',
-        averageScore: 78.5,
-        stdDev: 9.2,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeReleaseScore(): ReleaseScoreResult {
-    return {
-        score: 82,
-        dimensions: {
-            passRate: { score: 85, status: 'pass' },
-            flakyRate: { score: 90, status: 'pass' },
-            coverage: { score: 75, status: 'pass' },
-            suiteSpeed: { score: 80, status: 'pass' },
-            executionRate: { score: 80, status: 'pass' },
-        },
-        grade: 'good',
-        breakdown: [
-            { label: 'Pass Rate', score: 85, status: 'pass' },
-            { label: 'Flaky Rate', score: 90, status: 'pass' },
-            { label: 'Coverage', score: 75, status: 'pass' },
-            { label: 'Suite Speed', score: 80, status: 'pass' },
-            { label: 'Execution Rate', score: 80, status: 'pass' },
-        ],
-        recommendation: 'Release is ready with good quality metrics',
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeSilentRegression(): RegressionDetectionResult {
-    return {
-        regressions: [
-            {
-                title: 'test-login',
-                meanDuration: 100,
-                currentDuration: 200,
-                stdDev: 10,
-                zScore: 10,
-                severity: 'high',
-                previousDurations: [100, 105, 95, 110, 100],
-            },
-        ],
-        totalTests: 50,
-        threshold: 2,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeDefectTrend(): DefectAggregationResult {
-    return {
-        trends: [
-            { date: '2026-07-20', categories: { bug: 5, vulnerability: 1 }, total: 6 },
-            { date: '2026-07-21', categories: { bug: 3, vulnerability: 0 }, total: 3 },
-        ],
-        topCategories: [{ category: 'bug', count: 8 }],
-        period: { from: '2026-07-20', to: '2026-07-25' },
-        totalRecords: 9,
-    };
-}
-
-function makeSeasonality(): SeasonalityAggregationResult {
-    return {
-        byDayOfWeek: [
-            { dayOfWeek: 'Mon', total: 10, categories: { bug: 8, vulnerability: 2 } },
-            { dayOfWeek: 'Tue', total: 5, categories: { bug: 5 } },
-        ],
-        byHour: [
-            { hour: 9, total: 8, categories: { bug: 6, vulnerability: 2 } },
-            { hour: 14, total: 7, categories: { bug: 7 } },
-        ],
-        peakDay: 'Mon',
-        peakHour: 9,
-        totalRecords: 50,
-        period: { from: '2026-07-20', to: '2026-07-25' },
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeDeveloperProfile(): DeveloperProfileResult {
-    return {
-        authors: [
-            {
-                author: 'Alice',
-                totalFailures: 10,
-                categories: { bug: 8, vulnerability: 2 },
-                testsTouched: 50,
-                failureRate: 0.2,
-                topFailureCategory: 'bug',
-            },
-            {
-                author: 'Bob',
-                totalFailures: 5,
-                categories: { bug: 5 },
-                testsTouched: 30,
-                failureRate: 0.17,
-                topFailureCategory: 'bug',
-            },
-        ],
-        totalAuthors: 2,
-        totalFailures: 15,
-        topContributor: 'Alice',
-        topFailureAuthor: 'Alice',
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeRequirementScore(): RequirementScoreResult {
-    return {
-        entries: [
-            {
-                requirementId: 'REQ-001',
-                userStory: 'As a user I want to login',
-                totalTests: 10,
-                keptTests: 8,
-                modifiedTests: 1,
-                deletedTests: 1,
-                acceptanceRate: 85,
-                score: 90,
-                scoreGrade: 'A',
-                promptVersion: 'v2.1',
-            },
-        ],
-        totalRequirements: 1,
-        overallScore: 90,
-        overallGrade: 'A',
-        averageAcceptanceRate: 85,
-        totalGenerated: 10,
-        totalKept: 8,
-        totalModified: 1,
-        totalDeleted: 1,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeCoverageGap(): CoverageGapResult {
-    return {
-        items: [
-            {
-                issueKey: 'AUTH-100',
-                summary: 'Implement 2FA enrollment flow',
-                type: 'Story',
-                status: 'In Progress',
-                epicKey: 'AUTH',
-                epicSummary: 'Auth coverage',
-                hasTest: false,
-                linkedTestKeys: [],
-                priority: 'High',
-                coverageWeight: 3,
-            },
-            {
-                issueKey: 'PAY-200',
-                summary: 'Payment webhook retry on 5xx',
-                type: 'Task',
-                status: 'Done',
-                epicKey: 'PAYMENT',
-                epicSummary: 'Payment coverage',
-                hasTest: false,
-                linkedTestKeys: [],
-                priority: 'Medium',
-                coverageWeight: 2,
-            },
-        ],
-        totals: { totalIssues: 50, covered: 35, gap: 15, weightedCoveragePct: 70, rawCoveragePct: 65 },
-        byEpic: {
-            AUTH: {
-                epicSummary: 'Auth coverage',
-                total: 20,
-                covered: 18,
-                weightedPct: 90,
-                rawPct: 85,
-                gatePass: true,
-                issues: [],
-            },
-            PAYMENT: {
-                epicSummary: 'Payment coverage',
-                total: 15,
-                covered: 10,
-                weightedPct: 67,
-                rawPct: 60,
-                gatePass: false,
-                issues: [],
-            },
-        },
-        gateConfig: { minCoveragePct: 70, failingEpics: ['PAYMENT'] },
-        hierarchy: [
-            {
-                key: 'EPIC-AUTH',
-                summary: 'Authentication Module',
-                type: 'Epic',
-                totalIssues: 20,
-                coveredIssues: 18,
-                coveragePct: 90,
-                children: [
-                    {
-                        key: 'STORY-LOGIN',
-                        summary: 'Login flows',
-                        type: 'Story',
-                        totalIssues: 10,
-                        coveredIssues: 8,
-                        coveragePct: 80,
-                        children: [],
-                    },
-                ],
-            },
-        ],
-        trends: [],
-    };
-}
-
 function makeFlatTests(): FlatTest[] {
     return [
         {
@@ -532,23 +93,41 @@ function run(): void {
     console.log('=== D1/D3 artifact validation harness ===\n');
 
     const artifacts: Array<[string, () => string]> = [
-        ['ai-effectiveness.html', () => generateAiEffectivenessHtml(makeAiMetrics())],
-        ['ai-comparison.html', () => generateAiComparisonHtml(makeAiComparison())],
-        ['incident-report.html', () => generateIncidentReportHtml(makeIncidentReport())],
-        ['impact-alert.html', () => generateImpactAlertHtml(makeImpactAlert())],
-        ['traceability.html', () => generateTraceabilityHtml(makeTraceability())],
-        ['flakiness.html', () => generateFlakinessHtml(makeFlakiness())],
-        ['backlog-health.html', () => generateBacklogHealthHtml(makeBacklogHealth())],
-        ['pipeline-cost.html', () => generatePipelineCostHtml(makePipelineCost())],
-        ['suite-optimization.html', () => generateOptimizationHtml(makeOptimization())],
-        ['cross-squad-benchmark.html', () => generateBenchmarkHtml(makeCrossSquad())],
-        ['release-score.html', () => generateReleaseScoreHtml(makeReleaseScore())],
-        ['silent-regression.html', () => generateSilentRegressionHtml(makeSilentRegression())],
-        ['defect-trend.html', () => generateDefectTrendHtml(makeDefectTrend())],
-        ['defect-seasonality.html', () => generateSeasonalityHtml(makeSeasonality())],
-        ['developer-profile.html', () => generateDeveloperProfileHtml(makeDeveloperProfile())],
-        ['requirement-score.html', () => generateRequirementScoreHtml(makeRequirementScore())],
-        ['coverage-gap.html', () => generateCoverageGapHtml(makeCoverageGap())],
+        ['ai-effectiveness.html', () => generateAiEffectivenessHtml(loadFixture<AiMetricsResult>('ai-effectiveness'))],
+        ['ai-comparison.html', () => generateAiComparisonHtml(loadFixture<AiComparisonResult>('ai-comparison'))],
+        ['incident-report.html', () => generateIncidentReportHtml(loadFixture<IncidentReport>('incident-report'))],
+        ['impact-alert.html', () => generateImpactAlertHtml(loadFixture<ImpactAlertResult>('impact-alert'))],
+        ['traceability.html', () => generateTraceabilityHtml(loadFixture<TraceabilityResult>('traceability'))],
+        ['flakiness.html', () => generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'))],
+        ['backlog-health.html', () => generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health'))],
+        ['pipeline-cost.html', () => generatePipelineCostHtml(loadFixture<PipelineCostResult>('pipeline-cost'))],
+        [
+            'suite-optimization.html',
+            () => generateOptimizationHtml(loadFixture<OptimizationResult>('suite-optimization')),
+        ],
+        [
+            'cross-squad-benchmark.html',
+            () => generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark')),
+        ],
+        ['release-score.html', () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score'))],
+        [
+            'silent-regression.html',
+            () => generateSilentRegressionHtml(loadFixture<RegressionDetectionResult>('silent-regression')),
+        ],
+        ['defect-trend.html', () => generateDefectTrendHtml(loadFixture<DefectAggregationResult>('defect-trend'))],
+        [
+            'defect-seasonality.html',
+            () => generateSeasonalityHtml(loadFixture<SeasonalityAggregationResult>('defect-seasonality')),
+        ],
+        [
+            'developer-profile.html',
+            () => generateDeveloperProfileHtml(loadFixture<DeveloperProfileResult>('developer-profile')),
+        ],
+        [
+            'requirement-score.html',
+            () => generateRequirementScoreHtml(loadFixture<RequirementScoreResult>('requirement-score')),
+        ],
+        ['coverage-gap.html', () => generateCoverageGapHtml(loadFixture<CoverageGapResult>('coverage-gap'))],
         [
             'test-report.html',
             () => {
@@ -597,7 +176,7 @@ function run(): void {
     }
 
     try {
-        const flakyNoHub = generateFlakinessHtml(makeFlakiness(), 'Flakiness (no DataHub)');
+        const flakyNoHub = generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), 'Flakiness (no DataHub)');
         write('flakiness-no-datahub.html', flakyNoHub);
     } catch (err) {
         console.log(`flakiness-no-datahub.html${' '.repeat(23)} ERROR: ${(err as Error).message}`);

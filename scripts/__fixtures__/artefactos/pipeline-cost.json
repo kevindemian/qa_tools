@@ -1,0 +1,10 @@
+{
+    "totalCost": 125.5,
+    "avgCostPerRun": 25.1,
+    "totalDurationSec": 3600,
+    "costPerMinute": 0.21,
+    "costByRun": [{ "timestamp": "2026-07-25T10:00:00Z", "durationSec": 720, "cost": 25.1, "status": "success" }],
+    "runCount": 5,
+    "period": { "from": "2026-07-20", "to": "2026-07-25" },
+    "timestamp": "2026-07-25T10:00:00Z"
+}

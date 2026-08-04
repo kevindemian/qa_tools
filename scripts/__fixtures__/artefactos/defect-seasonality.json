@@ -1,0 +1,15 @@
+{
+    "byDayOfWeek": [
+        { "dayOfWeek": "Mon", "total": 10, "categories": { "bug": 8, "vulnerability": 2 } },
+        { "dayOfWeek": "Tue", "total": 5, "categories": { "bug": 5 } }
+    ],
+    "byHour": [
+        { "hour": 9, "total": 8, "categories": { "bug": 6, "vulnerability": 2 } },
+        { "hour": 14, "total": 7, "categories": { "bug": 7 } }
+    ],
+    "peakDay": "Mon",
+    "peakHour": 9,
+    "totalRecords": 50,
+    "period": { "from": "2026-07-20", "to": "2026-07-25" },
+    "timestamp": "2026-07-25T10:00:00Z"
+}

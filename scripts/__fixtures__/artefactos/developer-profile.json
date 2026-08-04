@@ -1,0 +1,25 @@
+{
+    "authors": [
+        {
+            "author": "Alice",
+            "totalFailures": 10,
+            "categories": { "bug": 8, "vulnerability": 2 },
+            "testsTouched": 50,
+            "failureRate": 0.2,
+            "topFailureCategory": "bug"
+        },
+        {
+            "author": "Bob",
+            "totalFailures": 5,
+            "categories": { "bug": 5 },
+            "testsTouched": 30,
+            "failureRate": 0.17,
+            "topFailureCategory": "bug"
+        }
+    ],
+    "totalAuthors": 2,
+    "totalFailures": 15,
+    "topContributor": "Alice",
+    "topFailureAuthor": "Alice",
+    "timestamp": "2026-07-25T10:00:00Z"
+}

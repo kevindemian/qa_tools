@@ -1,0 +1,15 @@
+{
+    "alerts": [
+        {
+            "severity": "critical",
+            "title": "Critical pipeline failure",
+            "message": "Pipeline main failed 3 times consecutively",
+            "affectedArea": "CI/CD Pipeline",
+            "recommendation": "Check recent commits and rollback if necessary"
+        }
+    ],
+    "criticalCount": 1,
+    "warningCount": 0,
+    "infoCount": 0,
+    "timestamp": "2026-07-25T10:00:00Z"
+}

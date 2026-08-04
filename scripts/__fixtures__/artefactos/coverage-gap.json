@@ -1,0 +1,72 @@
+{
+    "items": [
+        {
+            "issueKey": "AUTH-100",
+            "summary": "Implement 2FA enrollment flow",
+            "type": "Story",
+            "status": "In Progress",
+            "epicKey": "AUTH",
+            "epicSummary": "Auth coverage",
+            "hasTest": false,
+            "linkedTestKeys": [],
+            "priority": "High",
+            "coverageWeight": 3
+        },
+        {
+            "issueKey": "PAY-200",
+            "summary": "Payment webhook retry on 5xx",
+            "type": "Task",
+            "status": "Done",
+            "epicKey": "PAYMENT",
+            "epicSummary": "Payment coverage",
+            "hasTest": false,
+            "linkedTestKeys": [],
+            "priority": "Medium",
+            "coverageWeight": 2
+        }
+    ],
+    "totals": { "totalIssues": 50, "covered": 35, "gap": 15, "weightedCoveragePct": 70, "rawCoveragePct": 65 },
+    "byEpic": {
+        "AUTH": {
+            "epicSummary": "Auth coverage",
+            "total": 20,
+            "covered": 18,
+            "weightedPct": 90,
+            "rawPct": 85,
+            "gatePass": true,
+            "issues": []
+        },
+        "PAYMENT": {
+            "epicSummary": "Payment coverage",
+            "total": 15,
+            "covered": 10,
+            "weightedPct": 67,
+            "rawPct": 60,
+            "gatePass": false,
+            "issues": []
+        }
+    },
+    "gateConfig": { "minCoveragePct": 70, "failingEpics": ["PAYMENT"] },
+    "hierarchy": [
+        {
+            "key": "EPIC-AUTH",
+            "summary": "Authentication Module",
+            "type": "Epic",
+            "totalIssues": 20,
+            "coveredIssues": 18,
+            "coveragePct": 90,
+            "children": [
+                {
+                    "key": "STORY-LOGIN",
+                    "summary": "Login flows",
+                    "type": "Story",
+                    "totalIssues": 10,
+                    "coveredIssues": 8,
+                    "coveragePct": 80,
+                    "children": []
+                }
+            ]
+        }
+    ],
+    "trends": []
+}

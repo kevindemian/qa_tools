@@ -1,0 +1,20 @@
+{
+    "unassignedIssues": [],
+    "staleIssues": [
+        {
+            "key": "JIRA-1",
+            "summary": "Old bug",
+            "assignee": "unassigned",
+            "updated": "2026-04-01T10:00:00Z",
+            "type": "bug",
+            "priority": "High",
+            "linkedTestCount": 0,
+            "epic": "AUTH"
+        }
+    ],
+    "bugsWithoutTests": [],
+    "densityByEpic": [{ "epic": "AUTH", "bugCount": 5, "testCount": 20 }],
+    "totalIssues": 50,
+    "score": 72,
+    "timestamp": "2026-07-25T10:00:00Z"
+}

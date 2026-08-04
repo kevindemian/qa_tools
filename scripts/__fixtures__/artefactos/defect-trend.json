@@ -1,0 +1,9 @@
+{
+    "trends": [
+        { "date": "2026-07-20", "categories": { "bug": 5, "vulnerability": 1 }, "total": 6 },
+        { "date": "2026-07-21", "categories": { "bug": 3, "vulnerability": 0 }, "total": 3 }
+    ],
+    "topCategories": [{ "category": "bug", "count": 8 }],
+    "period": { "from": "2026-07-20", "to": "2026-07-25" },
+    "totalRecords": 9
+}
