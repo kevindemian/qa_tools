@@ -151,6 +151,14 @@ describe('GeneratePostProcessWorkflowYaml', () => {
         expect(yaml).toContain('git_triggers/main.ts pr-report');
         expect(yaml).toContain('--project ${{ inputs.project-name }}');
     });
+
+    it('includes the AQS scorecard generation + upload steps', () => {
+        const yaml = generatePostProcessWorkflowYaml({ projectName: 'p' });
+
+        expect(yaml).toContain('scripts/artifact-scorecard-runner.ts');
+        expect(yaml).toContain('artifact-scorecard');
+        expect(yaml).toContain('reports/validation/artifact-scorecard.json');
+    });
 });
 
 /* ── extractArtifactProducerJobName ───────────────────────────────────── */

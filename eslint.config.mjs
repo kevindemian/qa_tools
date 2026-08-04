@@ -334,6 +334,7 @@ export default defineConfig(
             '.shared/',
             'scripts/validation-hook.ts',
             'scripts/artifact-validation-harness.ts',
+            'scripts/artifact-scorecard-runner.ts',
         ],
     },
     prettier,
