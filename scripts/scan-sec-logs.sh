@@ -43,8 +43,11 @@ report ""
 
 # 1. Scan warden audit log
 if [[ -f "$WARDEN_LOG" ]]; then
-  VIOLATIONS=$(grep -c '"action":"block"' "$WARDEN_LOG" 2>/dev/null || echo 0)
-  SECRETS=$(grep -c '"type":"secret"' "$WARDEN_LOG" 2>/dev/null || echo 0)
+  # `|| true` (not `|| echo 0`): grep -c prints "0" AND exits 1 when there are
+  # no matches; `|| echo 0` would append a second "0" line, corrupting the
+  # numeric comparison below ("0\n0" is not a valid [[ -gt ]] operand).
+  VIOLATIONS=$(grep -c '"action":"block"' "$WARDEN_LOG" 2>/dev/null || true)
+  SECRETS=$(grep -c '"type":"secret"' "$WARDEN_LOG" 2>/dev/null || true)
   report "Warden audit found: $VIOLATIONS blocked actions, $SECRETS secret detections"
   if [[ "$VIOLATIONS" -gt 0 || "$SECRETS" -gt 0 ]]; then
     EXIT_CODE=1
