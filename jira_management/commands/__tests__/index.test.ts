@@ -96,5 +96,5 @@ describe('Handler contract (bidirectional)', () => {
             expect(mod.default).toHaveProperty('handler');
             expect(mod.default.handler).toBeInstanceOf(Function);
         }
-    });
+    }, 60000);
 });

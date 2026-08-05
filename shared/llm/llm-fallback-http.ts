@@ -233,11 +233,30 @@ export async function sendToProvider(
         if (typeof errPayload === 'string') throw new LlmProviderError('LLM API error: ' + errPayload);
         const errResult = LlmErrorPayloadSchema.safeParse(errPayload);
         if (errResult.success) {
-            throw new LlmProviderError('LLM API error: ' + (errResult.data.message ?? JSON.stringify(errResult.data)));
+            throw new LlmProviderError(
+                'LLM API error: ' + (errResult.data.message ?? summarizeLlmError(errResult.data)),
+            );
         }
-        throw new LlmProviderError('LLM API error: ' + JSON.stringify(errPayload));
+        throw new LlmProviderError('LLM API error: ' + summarizeLlmError(errPayload));
     }
 
     _trackUsage(data, configUniqueKey(cfg), tier ?? 'main');
     return extractContent(data, cfg.format);
+}
+
+/** Compact human-readable summary of an unknown LLM error payload (never a raw dump). */
+function summarizeLlmError(payload: unknown): string {
+    if (payload === null || payload === undefined) return 'erro desconhecido';
+    if (typeof payload === 'string') return payload;
+    if (typeof payload !== 'object') return String(payload);
+    const obj = payload as Record<string, unknown>;
+    const message = obj['message'] ?? obj['error'] ?? obj['type'];
+    if (typeof message === 'string' && message.length > 0) return message;
+    try {
+        const json = JSON.stringify(payload);
+        const max = 200;
+        return json.length > max ? json.slice(0, max - 3) + '...' : json;
+    } catch {
+        return '[objeto não serializável]';
+    }
 }

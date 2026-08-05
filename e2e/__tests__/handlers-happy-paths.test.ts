@@ -639,12 +639,11 @@ describe('Handlers Happy Paths', () => {
 
             const { api, xray } = freshScope();
             // createTestsFromJson creates 1 test from JSON fixture:
-            // 1. POST /issue to create the test case
             // 1a. GET /search (skipExisting check in createIssue)
             api.get('/search').query(true).reply(200, { issues: [] });
-            // 2. POST /issue to create the test case
+            // 1. POST /issue to create the test case
             api.post('/issue').reply(201, { key: 'TEST-1', id: '10001' });
-            // 3. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
+            // 2. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)
             xray.post('/test/TEST-1/steps').reply(201);
             // Then TE creation (confirm=true):
             // findExistingTe in TestExecutionCreator.create() → GET /search

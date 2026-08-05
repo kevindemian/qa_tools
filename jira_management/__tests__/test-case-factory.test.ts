@@ -6,17 +6,11 @@ const mockPrompt = vi.hoisted(() => ({
     confirm: vi.fn().mockReturnValue(true),
     onError: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
-    ProgressBar: vi.fn<(...args: [total: number, options?: { width?: number }]) => { update: Mock; stop: Mock }>(
-        function () {
-            return { update: vi.fn(), stop: vi.fn() };
-        },
-    ),
 }));
 
 vi.mock('../../shared/ui/prompt.js', () => mockPrompt);
 
 import { createMockJiraResource } from '../../shared/test-utils/factories/jira-resource-factory.js';
-import type { Mock } from 'vitest';
 import TestCaseFactory from '../test-case-factory.js';
 import Config from '../../shared/config-accessor.js';
 
@@ -34,9 +28,6 @@ describe('TestCaseFactory', () => {
         mockImporter = createMockImporter();
         factory = new TestCaseFactory(mockJiraResource, mockImporter);
         mockPrompt.isQuiet.mockReturnValue(true);
-        mockPrompt.ProgressBar.mockImplementation(function () {
-            return { update: vi.fn(), stop: vi.fn() };
-        });
     });
 
     afterEach(() => {
@@ -481,21 +472,19 @@ describe('TestCaseFactory', () => {
             expect(mockImporter.importStep).toHaveBeenCalledTimes(2);
         });
 
-        it('calls update on ProgressBar when not quiet', async () => {
+        it('logs step progress when not quiet (no progress bar)', async () => {
             expect.hasAssertions();
 
-            const update = vi.fn();
-            const stop = vi.fn();
-            mockPrompt.ProgressBar.mockImplementation(function () {
-                return { update, stop };
-            });
             mockImporter.importStep.mockResolvedValue({});
             mockPrompt.isQuiet.mockReturnValue(false);
+            mockPrompt.info.mockClear();
             await factory.postSteps(issueKey, test, opLog);
 
-            expect(update).toHaveBeenCalledWith(1);
-            expect(update).toHaveBeenCalledWith(2);
-            expect(stop).toHaveBeenCalledWith();
+            expect(mockPrompt.info).toHaveBeenCalledWith(
+                '  Importando ' + test.steps.length + ' passo(s) de "' + test.title + '"...',
+            );
+            expect(mockPrompt.info).toHaveBeenCalledWith('  Step 1/' + test.steps.length + ' ok');
+            expect(mockPrompt.info).toHaveBeenCalledWith('  Step 2/' + test.steps.length + ' ok');
         });
 
         it('aborts on step error when handler returns abort', async () => {

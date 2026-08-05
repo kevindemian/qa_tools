@@ -164,9 +164,24 @@ export class XrayCloudClient {
                 }
                 const axiosErr = err as { response?: { status?: number; data?: unknown } };
                 if (axiosErr.response) {
+                    let detail = '';
+                    const data = axiosErr.response.data;
+                    if (data && typeof data === 'object') {
+                        const errs = (data as { errors?: Array<{ message?: string }> }).errors;
+                        const msgs = errs?.map((e) => e.message).filter((m): m is string => !!m);
+                        detail = msgs && msgs.length > 0 ? msgs.join('; ') : '';
+                    }
+                    const max = 300;
+                    const fallback = (() => {
+                        try {
+                            const json = JSON.stringify(data);
+                            return json.length > max ? json.slice(0, max - 3) + '...' : json;
+                        } catch {
+                            return String(data);
+                        }
+                    })();
                     rootLogger.warn(
-                        `Xray Cloud GraphQL HTTP ${axiosErr.response.status}: ` +
-                            JSON.stringify(axiosErr.response.data),
+                        `Xray Cloud GraphQL HTTP ${axiosErr.response.status}: ${detail || fallback || 'sem detalhes'}`,
                     );
                 } else {
                     rootLogger.warn('Xray Cloud GraphQL call failed: ' + formatErr(err));

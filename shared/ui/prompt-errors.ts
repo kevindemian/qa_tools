@@ -187,7 +187,15 @@ function _showErrorDetails(err: unknown): void {
     const axiosErr = err as { response?: { status?: number; data?: unknown }; stack?: string };
     output.print(`  Status: ${axiosErr.response?.status || 'N/A'}`);
     if (axiosErr.response?.data) {
-        output.print(`  Resposta: ${JSON.stringify(axiosErr.response.data, null, 2)}`);
+        const data = axiosErr.response.data;
+        let detail: string;
+        try {
+            detail = JSON.stringify(data, null, 2);
+        } catch {
+            detail = String(data);
+        }
+        const max = 400;
+        output.print(`  Resposta: ${detail.length > max ? detail.slice(0, max - 3) + '...' : detail}`);
     }
     if (err instanceof Error && err.stack) {
         const lines = err.stack.split('\n').slice(0, STACK_TRACE_LINES);

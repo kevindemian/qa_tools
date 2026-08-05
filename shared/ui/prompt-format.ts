@@ -148,14 +148,24 @@ function buildCliTable3Config(keys: string[]): {
     };
 }
 
+function cellValue(v: unknown): string {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    let json: string;
+    try {
+        json = JSON.stringify(v);
+    } catch {
+        return String(v);
+    }
+    const max = 60;
+    return json.length > max ? json.slice(0, max - 1) + '\u2026' : json;
+}
+
 function colorizeRowCells(keys: string[], row: Record<string, unknown>, statusColIdx: number): string[] {
     const rowEntries = Object.entries(row);
     return keys.map((k, i) => {
         const entry = rowEntries.find(([ek]) => ek === k);
-        const v = entry?.[1];
-        if (v === null || v === undefined) return '';
-        if (typeof v === 'object') return JSON.stringify(v);
-        const cell: string = typeof v === 'string' ? v : JSON.stringify(v);
+        const cell = cellValue(entry?.[1]);
         if (i === statusColIdx) {
             if (/✓|pass|ok|sucesso/i.test(cell)) return palette.green(cell);
             if (/✗|fail|error|erro/i.test(cell)) return palette.red(cell);

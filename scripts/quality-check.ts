@@ -208,11 +208,11 @@ export async function checkEslintBaseline(): Promise<{ result: CheckResult; warn
 
 function parseRegisteredHandlers(indexSource: string): Set<string> {
     const registered = new Set<string>();
-    for (const m of indexSource.matchAll(/'(\d+|d)'\s*:\s*\{/g)) {
+    for (const m of indexSource.matchAll(/'(\d+|d)'\s*:/g)) {
         registered.add(m[1] ?? '');
     }
-    for (const m of indexSource.matchAll(/(?:\b)(d)\s*:\s*\{/g)) {
-        registered.add(m[1] ?? '');
+    if (!registered.has('d') && /(?<![\w])d\s*:\s*\(\)\s*=>/g.test(indexSource)) {
+        registered.add('d');
     }
     return registered;
 }
@@ -572,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:a70f4997b705e29000c1d2d995b5acff36d70c8bfffa7141a08201d4538edb9c */
+        /* HASH:75b227dc0fec907db53e93ec05d4695f0c56ace10e2a2d798a56eab12a075003 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

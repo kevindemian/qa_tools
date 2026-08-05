@@ -1,77 +1,52 @@
-/** Command registry — maps case IDs (01-23 + exit) to handler modules. */
+/** Command registry — maps case IDs (01-29 + exit) to handler modules.
+ * Handlers are loaded lazily (`() => import()`) so the heavy per-command
+ * dependency graphs (xlsx, axios, csv) are NOT resolved at CLI startup. */
+
 import type { CommandContext } from './context.js';
-import case01 from './case01.js';
-import case02 from './case02.js';
-import case03 from './case03.js';
-import case04 from './case04.js';
-import case05 from './case05.js';
-import case06 from './case06.js';
-import case07 from './case07.js';
-import case08 from './case08.js';
-import case09 from './case09.js';
-import case10 from './case10.js';
-import case11 from './case11.js';
-import case12 from './case12.js';
-import case13 from './case13.js';
-import case14 from './case14.js';
-import case15 from './case15.js';
-import case16 from './case16.js';
-import case17 from './case17.js';
-import case18 from './case18.js';
-import case19 from './case19.js';
-import case20 from './case20.js';
-import case21 from './case21.js';
-import case22 from './case22.js';
-import case23 from './case23.js';
-import case24 from './case24.js';
-import case25 from './case25.js';
-import case26 from './case26.js';
-import case27 from './case27.js';
-import case28 from './case28.js';
-import case29 from './case29.js';
-import caseD from './case-d.js';
 
 type HandlerFn = (ctx: CommandContext) => Promise<boolean | void> | boolean | void;
+type HandlerLoader = () => Promise<{ handler: HandlerFn }>;
 
-const handlers: Record<string, { handler: HandlerFn }> = {
-    '1': { handler: case01.handler },
-    '2': { handler: case02.handler },
-    '3': { handler: case03.handler },
-    '4': { handler: case04.handler },
-    '5': { handler: case05.handler },
-    '6': { handler: case06.handler },
-    '7': { handler: case07.handler },
-    '8': { handler: case08.handler },
-    '9': { handler: case09.handler },
-    '10': { handler: case10.handler },
-    '11': { handler: case11.handler },
-    '12': { handler: case12.handler },
-    '13': { handler: case13.handler },
-    '14': { handler: case14.handler },
-    '15': { handler: case15.handler },
-    '16': { handler: case16.handler },
-    '17': { handler: case17.handler },
-    '18': { handler: case18.handler },
-    '19': { handler: case19.handler },
-    '20': { handler: case20.handler },
-    '21': { handler: case21.handler },
-    '22': { handler: case22.handler },
-    '23': { handler: case23.handler },
-    '24': { handler: case24.handler },
-    '25': { handler: case25.handler },
-    '26': { handler: case26.handler },
-    '27': { handler: case27.handler },
-    '28': { handler: case28.handler },
-    '29': { handler: case29.handler },
-    d: { handler: caseD.handler },
+const loaders: Record<string, HandlerLoader> = {
+    '1': () => import('./case01.js').then((m) => m.default),
+    '2': () => import('./case02.js').then((m) => m.default),
+    '3': () => import('./case03.js').then((m) => m.default),
+    '4': () => import('./case04.js').then((m) => m.default),
+    '5': () => import('./case05.js').then((m) => m.default),
+    '6': () => import('./case06.js').then((m) => m.default),
+    '7': () => import('./case07.js').then((m) => m.default),
+    '8': () => import('./case08.js').then((m) => m.default),
+    '9': () => import('./case09.js').then((m) => m.default),
+    '10': () => import('./case10.js').then((m) => m.default),
+    '11': () => import('./case11.js').then((m) => m.default),
+    '12': () => import('./case12.js').then((m) => m.default),
+    '13': () => import('./case13.js').then((m) => m.default),
+    '14': () => import('./case14.js').then((m) => m.default),
+    '15': () => import('./case15.js').then((m) => m.default),
+    '16': () => import('./case16.js').then((m) => m.default),
+    '17': () => import('./case17.js').then((m) => m.default),
+    '18': () => import('./case18.js').then((m) => m.default),
+    '19': () => import('./case19.js').then((m) => m.default),
+    '20': () => import('./case20.js').then((m) => m.default),
+    '21': () => import('./case21.js').then((m) => m.default),
+    '22': () => import('./case22.js').then((m) => m.default),
+    '23': () => import('./case23.js').then((m) => m.default),
+    '24': () => import('./case24.js').then((m) => m.default),
+    '25': () => import('./case25.js').then((m) => m.default),
+    '26': () => import('./case26.js').then((m) => m.default),
+    '27': () => import('./case27.js').then((m) => m.default),
+    '28': () => import('./case28.js').then((m) => m.default),
+    '29': () => import('./case29.js').then((m) => m.default),
+    d: () => import('./case-d.js').then((m) => m.default),
 };
 
 function getHandler(caseNumber: string): HandlerFn | null {
-    const mod: unknown = Reflect.get(handlers, caseNumber);
-    if (mod !== undefined && mod !== null && typeof mod === 'object' && 'handler' in mod) {
-        return (mod as { handler: HandlerFn }).handler;
-    }
-    return null;
+    const loader: unknown = Reflect.get(loaders, caseNumber);
+    if (typeof loader !== 'function') return null;
+    return async (ctx: CommandContext): Promise<boolean | void> => {
+        const mod = await (loader as HandlerLoader)();
+        return mod.handler(ctx);
+    };
 }
 
 export { getHandler };

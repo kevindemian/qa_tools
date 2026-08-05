@@ -5,7 +5,6 @@ import type CsvResource from './csv_resource.js';
 import { showSplash } from '../shared/ui/splash.js';
 import type { JiraMode } from '../shared/jira/jira-auth.js';
 import { info, title, prompt, printError, warn } from '../shared/ui/prompt.js';
-import { withSpinner } from '../shared/ui/spinner.js';
 import {
     mask,
     createValidateEnv,
@@ -17,15 +16,13 @@ import {
 import { rootLogger } from '../shared/logger.js';
 import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/ui/breadcrumbs.js';
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
-import { getDataHub } from '../shared/data-hub/global-hub.js';
-import { palette, applyPalette } from '../shared/ui/palette.js';
+import { getDataHub, isDataHubInitialized } from '../shared/data-hub/global-hub.js';
 import type { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
 import type { CommandContext } from './commands/context.js';
 import { ensureDirs, registerCleanup } from '../shared/infra/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
-import { maybeRunFirstRunWizard } from '../shared/ui/first-run.js';
 import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
 
@@ -50,19 +47,6 @@ export interface RuntimeResources {
     ctx: SessionContext;
     pushHistory: (op: string, detail: string, status: string) => void;
     printSessionSummary: () => void;
-}
-
-// ─── Gap analysis badge ───────────────────────────────────────────────────────
-
-const _badgeCache = new Map<string, { totalCount: number; timestamp: number }>();
-const BADGE_CACHE_TTL_MS = 5 * 60 * 1000;
-
-function _isBatchOrCI(): boolean {
-    if (process.env['CI'] === 'true') return true;
-    if (process.env['AUTO_CONFIRM'] === 'true') return true;
-    const args = process.argv.slice(2).join(' ');
-    if (args.includes('--batch') || args.includes('--auto')) return true;
-    return false;
 }
 
 /** Extract the CSV path from `--csv <path>`; falls back to CSV_PATH env (used with --auto). */
@@ -246,32 +230,6 @@ export async function runAssociateTe(res: RuntimeResources, teKey: string, testK
     }
 }
 
-/** Show a compact coverage badge on Jira module entry.
- *  Makes 1 JQL call (total count), reads cached coverage snapshot from metrics.
- *  Skip if Jira is not configured, or in batch/CI mode. Cached 5 min per project.
- *  Uses withSpinner to give visual feedback during the API call. */
-async function showGapBadge(jiraResource: JiraResource, project: string): Promise<void> {
-    if (_isBatchOrCI()) return;
-    if (!_isJiraConfigured()) return;
-    const cacheKey = 'gap-badge:' + project;
-    const cached = _badgeCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < BADGE_CACHE_TTL_MS) {
-        _displayBadge(cached.totalCount, project);
-        return;
-    }
-    try {
-        const jql = 'project = ' + project + ' AND issuetype in (Story, Task, Bug, Epic)';
-        const response = await withSpinner('Verificando métricas do projeto...', () =>
-            jiraResource.searchJiraIssues(jql, 0),
-        );
-        const totalCount = response.total;
-        _badgeCache.set(cacheKey, { totalCount, timestamp: Date.now() });
-        _displayBadge(totalCount, project);
-    } catch (err) {
-        rootLogger.debug('Gap badge fetch failed: ' + String(err));
-    }
-}
-
 /** Returns true when Jira base URL and personal token are configured with real values
  *  (non-empty, non-placeholder). Used to skip non-critical startup calls. */
 function _isJiraConfigured(): boolean {
@@ -280,32 +238,6 @@ function _isJiraConfigured(): boolean {
     if (!url || !token) return false;
     if (url.includes('seu-jira-server') || token === 'seu-token-aqui') return false;
     return true;
-}
-
-function _displayBadge(totalCount: number, project: string): void {
-    const dataHub = getDataHub();
-    const snapshot = dataHub.raw.coverageHistory?.filter((s) => s.project === project).pop();
-    const pct = snapshot?.coveragePct;
-    const gapCount = snapshot ? snapshot.totalIssues - snapshot.mappedIssues : null;
-    let color: (s: string) => string;
-    if (pct !== undefined) {
-        if (pct >= 70) {
-            color = palette.green;
-        } else if (pct >= 40) {
-            color = palette.yellow;
-        } else {
-            color = palette.red;
-        }
-    } else {
-        color = palette.muted;
-    }
-    const badge =
-        pct !== undefined
-            ? applyPalette('bold')(
-                  '📊 Cobertura: ' + color(pct + '%') + ' · ' + gapCount + ' gaps · ' + totalCount + ' issues',
-              )
-            : applyPalette('bold')('📊 ' + totalCount + ' issues');
-    info(badge);
 }
 
 const base_url: string = Config.get('jiraBaseUrl');
@@ -392,15 +324,10 @@ async function initializeSession() {
     }
 
     if (_isJiraConfigured() && ctx.project_name) {
-        rootLogger.debug('[init] Validating project: getJiraResource(project/' + ctx.project_name + ')');
-        try {
-            await jiraResource.getJiraResource('project/' + ctx.project_name);
-            rootLogger.debug('[init] project lookup OK');
-        } catch (err) {
-            rootLogger.debug('[init] project lookup FAILED: ' + String(err));
-            rootLogger.error('[init] Jira project validation failed: ' + String(err));
-            warn('Projeto "' + ctx.project_name + '" não encontrado no Jira. Verifique se o nome está correto.');
-        }
+        // Project validation is intentionally deferred to command execution:
+        // a startup network call here delays menu render and, on a bad project
+        // key, prints an ERR line before the menu appears.
+        rootLogger.debug('[init] project validation deferred to command execution');
     }
 
     function printSessionSummary(): void {
@@ -452,7 +379,7 @@ function buildCommandContext(res: RuntimeResources): CommandContext {
         printSessionSummary,
         base_url,
         sessionLog,
-        dataHub: getDataHub(),
+        ...(isDataHubInitialized() ? { dataHub: getDataHub() } : {}),
     };
 }
 
@@ -676,12 +603,6 @@ async function initStartup(): Promise<void> {
     if (offerEnvSetup(envResult)) {
         /* env setup offered */
     }
-    try {
-        await maybeRunFirstRunWizard();
-    } catch (err) {
-        rootLogger.debug('[startup] Setup wizard failed:', err);
-        rootLogger.error('Setup wizard failed: ' + String(err));
-    }
 }
 
 async function main(): Promise<void> {
@@ -701,10 +622,7 @@ async function main(): Promise<void> {
     parseArgs();
     await initStartup();
 
-    const _earlyHandler = () => {};
-    process.on('SIGINT', _earlyHandler);
     const res = await initializeSession();
-    process.removeListener('SIGINT', _earlyHandler);
     setupSigint(
         () => res.ctx.isBusy,
         () => res.printSessionSummary(),
@@ -726,7 +644,6 @@ async function main(): Promise<void> {
         return;
     }
 
-    await showGapBadge(res.jiraResource, res.ctx.project_name);
     await runMainLoop(res);
 }
 
@@ -751,4 +668,4 @@ main().catch((err: unknown) => {
     rootLogger.error('Main error', { error: String(err) });
 });
 
-export { main, showSplash, dispatchChoice, dispatchAndHandleResult, showGapBadge, _isJiraConfigured };
+export { main, showSplash, dispatchChoice, dispatchAndHandleResult, _isJiraConfigured };

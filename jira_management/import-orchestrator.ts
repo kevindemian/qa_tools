@@ -10,14 +10,12 @@ import { update as updateState } from '../shared/state.js';
 import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
-import { info, warn, isQuiet, print, printSummary, prompt, showSelect } from '../shared/ui/prompt.js';
+import { info, warn, isQuiet, print, printSummary, prompt } from '../shared/ui/prompt.js';
 import Config from '../shared/config-accessor.js';
 import { createStepImporter, type XrayStepImporter } from './xray-client.js';
-import type { TransientErrorHandler, TransientErrorAction } from '../shared/jira/xray-cloud-client.js';
 import { XrayCloudClient } from '../shared/jira/xray-cloud-client.js';
 import type { SnapshotContext } from './issue-snapshot.js';
-import type { StepFailureHandler } from '../shared/types/clean-slate.js';
-import { showStepError, buildAutoRollbackHandler, buildAutoConfirmHandler } from '../shared/ui/error-report.js';
+import { buildAutoConfirmHandler } from '../shared/ui/error-report.js';
 import { deduplicateLinkedIssues, type LinkedIssue } from '../shared/issue-link-utils.js';
 
 interface CreateTestsFromTestCasesParams {
@@ -299,26 +297,6 @@ async function postProcessCheckpoint(opts: PostProcessCheckpointOptions): Promis
     updateFinalState(sourceType, sourcePath, projectName, jiraLabels);
 }
 
-function buildInteractiveTransientHandler(): TransientErrorHandler {
-    return async (error: Error, operation: string, attempt: number): Promise<TransientErrorAction> => {
-        warn(`[${operation}] Falha persistente após ${attempt} tentativas: ${error.message}`);
-        const choice = await showSelect(`O que desejar com "${operation}"?`, [
-            { name: 'Pular (skip) — continuar sem esta operação', value: 'skip' },
-            { name: 'Abortar — parar toda a importação', value: 'abort' },
-            { name: 'Tentar novamente (retry) — reiniciar retries automáticos', value: 'retry' },
-        ]);
-        if (choice === 'skip') return 'skip';
-        if (choice === 'abort') return 'abort';
-        return 'retry';
-    };
-}
-
-function buildInteractiveStepHandler(): StepFailureHandler {
-    return async (error: Error, stepInfo) => {
-        return showStepError(error, stepInfo);
-    };
-}
-
 function buildSnapshotContext(jiraResource: JiraResourceLike, linkManager: JiraLinkManager): SnapshotContext | null {
     const isCloud = (() => {
         try {
@@ -373,28 +351,15 @@ function testCreationSetup(
     linkManager: JiraLinkManager,
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
     const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
-    const isInteractive = !Config.get<boolean>('autoConfirm');
-    if (isInteractive && stepImporter.setTransientErrorHandler) {
-        stepImporter.setTransientErrorHandler(buildInteractiveTransientHandler());
-    }
-    if (isInteractive) {
-        linkManager.preconditionHandler.setTransientErrorHandler(buildInteractiveTransientHandler());
-    }
     const factory = new TestCaseFactory(jiraResource, stepImporter);
     const snapshotCtx = buildSnapshotContext(jiraResource, linkManager);
     if (snapshotCtx) {
         factory.setSnapshotContext(snapshotCtx);
     }
-    // Wire step failure handler. AUTO_CONFIRM=true resolves via ON_ERROR config
-    // (legacy handleAutoConfirm behavior); otherwise interactive when TTY,
-    // auto-retry/rollback in CI (no TTY).
-    const autoConfirm = Config.get<boolean>('autoConfirm');
-    const isTTY = !!(process.stdout.isTTY && !Config.get<boolean>('quiet'));
-    const stepFailureHandler = autoConfirm
-        ? buildAutoConfirmHandler()
-        : isTTY
-          ? buildInteractiveStepHandler()
-          : buildAutoRollbackHandler();
+    // Single-path failure handling (Rule 3/7): always deterministic via ON_ERROR
+    // config. No interactive menu, no TTY dependency — manual and --auto share the
+    // same tested handler. Transient errors use the xray client's embedded retry.
+    const stepFailureHandler = buildAutoConfirmHandler();
     factory.setStepFailureHandler(stepFailureHandler);
     return {
         stepImporter,

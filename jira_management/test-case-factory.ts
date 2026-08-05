@@ -1,5 +1,5 @@
 /** Test-case factory — creates test issues in Jira via Xray REST API. */
-import { success, warn, info, isQuiet, ProgressBar, confirm, prompt } from '../shared/ui/prompt.js';
+import { success, warn, info, isQuiet, confirm, prompt } from '../shared/ui/prompt.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
 import type { JsonObject, LogContext, TestCase } from '../shared/types.js';
@@ -305,10 +305,10 @@ class TestCaseFactory {
     }
 
     private async _importStepsIndividually(issueKey: string, test: TestCase): Promise<StepsResult | null> {
-        const stepBar = !isQuiet() ? new ProgressBar(test.steps.length, { width: 15 }) : null;
         const totalSteps = test.steps.length;
         const completedSteps: StepResult[] = [];
         let failedSteps = 0;
+        if (!isQuiet()) info('  Importando ' + totalSteps + ' passo(s) de "' + test.title + '"...');
         for (let i = 0; i < totalSteps; i++) {
             const stepIndex = i + 1;
             const stepInput = Reflect.get(test.steps, i);
@@ -329,23 +329,20 @@ class TestCaseFactory {
                 },
             });
             if (outcome.ok) {
-                if (stepBar) stepBar.update(stepIndex);
+                if (!isQuiet()) info('  Step ' + stepIndex + '/' + totalSteps + ' ok');
                 continue;
             }
             if (outcome.decision === 'abort') {
                 failedSteps++;
-                if (stepBar) stepBar.stop();
                 return { action: 'abort', failedSteps, totalSteps };
             }
             if (outcome.decision === 'rollback') {
                 failedSteps++;
-                if (stepBar) stepBar.stop();
                 return { action: 'rollback', failedSteps, totalSteps };
             }
             // skip: onSkip already counted the failure — continue with next step
-            if (stepBar) stepBar.update(stepIndex);
+            if (!isQuiet()) info('  Step ' + stepIndex + '/' + totalSteps + ' pulado');
         }
-        if (stepBar) stepBar.stop();
         if (failedSteps > 0) return { failedSteps, totalSteps };
         return null;
     }

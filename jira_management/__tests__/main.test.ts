@@ -161,7 +161,6 @@ interface MainModule {
         ctx: { results: Array<{ status: string }>; sessionCounters?: Array<unknown> },
     ): Promise<'continue'>;
     _isJiraConfigured(): boolean;
-    showGapBadge(jiraResource: unknown, project: string): Promise<void>;
 }
 
 // ── Module load ────────────────────────────────────────────────────────────
@@ -332,14 +331,6 @@ describe('Main.ts', () => {
         });
     });
 
-    describe('ShowGapBadge', () => {
-        it('resolves without error when config has placeholder values (skips API)', async () => {
-            expect.hasAssertions();
-
-            await expect(mod.showGapBadge({}, 'TESTPROJ')).resolves.toBeUndefined();
-        });
-    });
-
     describe('Module-level main error handler', () => {
         it('module exports main function', () => {
             expect(typeof mod.main).toBe('function');
@@ -445,21 +436,6 @@ describe('Main.ts', () => {
                 .mockReturnValueOnce('seu-token-aqui');
 
             expect(mod._isJiraConfigured()).toBeFalsy();
-        });
-    });
-
-    describe('ShowGapBadge with config', () => {
-        it('caches and displays badge after first call', async () => {
-            expect.hasAssertions();
-
-            process.env['CI'] = 'false';
-            const configMod = await import('../../shared/config-accessor.js');
-            vi.spyOn(configMod.default, 'get').mockReturnValue('https://jira.example.com');
-
-            const mockJiraResource = { searchJiraIssues: vi.fn().mockResolvedValue({ total: 42 }) };
-            await mod.showGapBadge(mockJiraResource, 'TESTPROJ');
-
-            expect(mockJiraResource.searchJiraIssues).toHaveBeenCalledWith(expect.stringContaining('TESTPROJ'), 0);
         });
     });
 
