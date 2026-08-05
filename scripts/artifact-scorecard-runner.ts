@@ -154,7 +154,8 @@ function buildRendererEntries(): RendererEntry[] {
         },
         {
             specId: 'backlog-health',
-            render: () => generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health')),
+            render: () =>
+                generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health'), undefined, GENERATED_AT),
         },
         {
             specId: 'pipeline-cost',

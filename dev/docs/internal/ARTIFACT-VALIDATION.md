@@ -6,6 +6,19 @@
 
 ---
 
+## 0. Decisões de execução (2026-08-04, autoridade: usuário, "solução tecnicamente superior")
+
+| # | Questão | Decisão |
+|---|---------|---------|
+| D1 | I-8.2/F6-T2-T3 (schedule/interactive → `buildHtmlPage`) | **ATACAR AGORA.** `interactive-mode.ts` `_dashboardQualityGate` (único HTML cru `<html><body>` em 17 dashboards) → `buildHtmlPage` + `buildCss` + `resolveGeneratedAt`; `schedule-handler.ts` weekly-quality `styles:''` → `buildCss()` + seed. Mesmo padrão dos 16 irmãos (Rule 6). |
+| D2 | "+1" do 24+1 (Q2) | **Metamétrico `VALIDATION-REPORT.md`.** Não fabrica 25º artefato (Rule 25); é a prova da Fase III. Scorecard expõe `total: 24`; o "+1" é o relatório. |
+| D3 | Escopo dos hashes (Q3) | **19 scoreados com sha256 + 5 unscored como N/A explícito** (coluna `observed-output: hash | N/A`) na matriz 24×3. Sem hash fabricado (Rule 25.3). |
+| D4 | Commit do relatório (Q4) | **Versionar `VALIDATION-REPORT.md` + `GOLDEN-REFERENCE.md`; `reports/*` permanece ignorado** (Rule 6: sem cópias paralelas). Hashes sha256 = evidência. |
+| D5 | Determinismo como regra (Q5) | **`resolveGeneratedAt(seed)` canônico** (I-9.6). Teste de arquitetura: scan renderers → `new Date()` cru no output falha. `VALIDATION-PLAN.md` exige o invariante. |
+| D6 | CI green na Fase IV (Q6) | **Gate local completo como evidência** (tsc + vitest + lint + depcruise + madge + type-coverage); declarar "gate local green + CI real postergado pós-mutation-testing" (não "CI green" literal, Rule 14). Desvio autorizado pelo usuário. |
+
+---
+
 ## 1. Método
 
 | Dimensão | Critério | Evidência |
@@ -599,7 +612,8 @@ npx madge --circular shared/
 | 2026-08-03 | I-5 | F2 (EmptyState) | ✅ | Sem [skip ci]; gate verde (536/7423); B7/I-6.1 absorvido via SSOT `buildQualityGateSection` (sempre renderiza) |
 | 2026-08-03 | I-6 | F3 (gate) | ✅ | Verificado na codebase: `buildQualityGateSection` sempre renderiza (`report-sections.ts:219`); gate produção via `handleQualityGate→runQualityGate` (composto real, sem `Math.round(passRate)` self-ref); sem `<pre>` (`interactive-mode.ts:564`,`schedule-handler.ts:221`). Doc tinha `⏳` stale — corrigido. |
 | 2026-08-03 | I-7 | F4 (tabela) | ✅ | Verificado na codebase: I-7.1 no-op (2 format-adapters distintos, 3º deletado em `3fb56ad2`); I-7.4 tabela colapsada + "Show all N" implementada e testada (`report-table.ts:296`,`report-table.test.ts:183-235`); I-7.2 seções usam `Card` `data-part="title"` (design fixado `card.test.ts:23`); Recommended Actions em 5 renderers. Sem mudança de código necessária. |
-| 2026-08-04 | I-8 | F6 (pipeline) | ✅ | `_PIPELINE_CSS` + 6 inline styles + 3 emojis migrados → `PIPELINE_HEALTH_CSS` (primitives/report-styles.ts); cores via `data-color`/`data-status`; emojis→`icon()` SVG com `aria-label`; a11y preservada. Testes +7 (zero `style=`/emoji, ícones, data-attrs). Suíte 538×7446 ✅ / tsc 0 / lint ✅; harness regenerado (41KB). I-8.2 (schedule/interactive→buildHtmlPage) PENDENTE |
+| 2026-08-04 | I-8 | F6 (pipeline) | ✅ | `_PIPELINE_CSS` + 6 inline styles + 3 emojis migrados → `PIPELINE_HEALTH_CSS` (primitives/report-styles.ts); cores via `data-color`/`data-status`; emojis→`icon()` SVG com `aria-label`; a11y preservada. Testes +7 (zero `style=`/emoji, ícones, data-attrs). Suíte 538×7446 ✅ / tsc 0 / lint ✅; harness regenerado (41KB). I-8.2 (schedule/interactive→buildHtmlPage) ✅ (ver linha I-8.2) |
+| 2026-08-05 | I-8.2 | F6-T2/T3 (schedule/interactive → `buildHtmlPage`) | ✅ | **F6-T2** (`interactive-mode.ts` `_dashboardQualityGate`): último HTML cru `<html><body>` → `buildHtmlPage` + `buildCss` + `resolveGeneratedAt` (padrão dos 16 irmãos). **F6-T3** (`schedule-handler.ts`): `styles:''`→`buildCss()`, timestamp→`resolveGeneratedAt()`. **Anti-mock-theater:** removido `vi.mock` de `quality-gate.js` → `runQualityGate` REAL roda com `createTestHub` (shape fiel, Rule 26.1); assert `metrics-data` fail explícito (Rule 25) no HTML real. **D5 (arquitetura):** `report-html.ts` fallbacks `|| new Date().toISOString()` → `resolveGeneratedAt`; `backlog-health-renderer.ts` stale age derivado do seed `now` (era não-determinístico entre dias — prova intra-dia não o pegava) + teste determinístico (13 days/15 days); teste de arquitetura `report-determinism.architecture.test.ts` (19 renderers AQS scan, `new Date()` cru falha). Harness/runner seed `GENERATED_AT` p/ backlog-health. **Gate:** tsc 0 / vitest 543×7481 / lint 0 / determinismo PROVEN (sha256 idêntico 2 runs) / scorecard 19 scoreados 0 failed |
 | 2026-08-04 | I-9 | F7 (AQS) | ✅ I-9.1..9.5 | **I-9.1** (`d06c58f5`): `artifact-quality-gate.ts` (AQS spec-driven) + `artifact-scorecard.ts` (removível <60). **I-9.2** (`56d75e5a`): fixtures JSON SSOT `scripts/__fixtures__/artefactos/*.json` (17) + `artifact-fixtures.ts` `loadFixture`; harness consume fixtures (17 `make*` removidos, Rule 6); equivalência §9 provada (24 outputs byte-idênticos pós normalizar timestamp). **I-9.3** (`969783ae`): runner `scripts/artifact-scorecard-runner.ts` → scorea 17 + emite `artifact-scorecard.json`; step AQS no injector + template + deployed yml (G2). **I-9.4** (`35f430cf`): 24 specs contabilizados — 19 scoreados (report-html/pipeline-health + 17) + 5 `unscored` documentados (2 orquestradores `nao-aplicavel`; 3 pr-report `gate-proprio` T2); campo `unscored` aditivo. **I-9.5** (`78da8725`): runner exit≠0 quando há removível; hoje 19 ≥75 → nenhum. Suíte 542×7474 ✅ / tsc 0 / lint ✅. I-9.4 "24+1" complete; Fase II/III determinística pendente. |
 | 2026-08-03 | II | protocolo | ⏳ | — |
 | 2026-08-03 | III | validação determinística | ⏳ | — |

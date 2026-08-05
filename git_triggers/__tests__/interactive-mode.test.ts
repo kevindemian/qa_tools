@@ -12,7 +12,10 @@ vi.mock('../../shared/config-accessor.js', () => ({ default: { get: vi.fn(() => 
 vi.mock('../../shared/ui/splash.js', () => ({ showSplash: vi.fn() }));
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        computed: { metricsRuns: [] },
+        computed: { metricsRuns: [], passRate: 0, coverage: 0, executionRate: 0, suiteSpeedP95: 0 },
+        getRuns: () => [],
+        getQuality: () => null,
+        getProvenance: () => undefined,
     }),
 }));
 
@@ -89,7 +92,10 @@ vi.mock('../session-state', () => ({
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getDataHub: vi.fn().mockReturnValue({
-        computed: { metricsRuns: [] },
+        computed: { metricsRuns: [], passRate: 0, coverage: 0, executionRate: 0, suiteSpeedP95: 0 },
+        getRuns: () => [],
+        getQuality: () => null,
+        getProvenance: () => undefined,
     }),
     setDataHub: vi.fn(),
     ensureDataHub: vi.fn(() => undefined),
@@ -284,9 +290,6 @@ vi.mock('../../shared/quality/requirement-score.js', () => ({
     generateRequirementScoreHtml: vi.fn(() => ''),
     calculateRequirementScores: vi.fn(() => []),
 }));
-vi.mock('../../shared/quality/quality-gate.js', () => ({
-    runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
-}));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
 vi.mock('../../shared/report/coverage-gap.js', () => ({
@@ -323,6 +326,7 @@ import { getCurrentProject } from '../../shared/project-context.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
 import { DataHubImpl } from '../../shared/data-hub/hub.js';
 import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
+import { createTestHub } from '../../shared/__tests__/test-hub.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
@@ -790,12 +794,39 @@ describe('Interactive-mode test exports', () => {
             expect(mockWarn).toHaveBeenCalledWith('Nenhum projeto selecionado.');
         });
 
-        it('generates quality gate dashboard', async () => {
+        it('generates quality gate dashboard via buildHtmlPage (no raw <html><body>)', async () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            // Fronteira de sessão (anti-mock-theater): hub com shape fiel (createTestHub)
+            // para o runQualityGate REAL rodar o caminho `metrics-data` (Rule 25: sem dados
+            // históricos → fail explícito, nunca pass silencioso).
+            mockGetDataHub.mockReturnValue(
+                createTestHub({
+                    metricsRuns: [],
+                    passRate: 0,
+                    coverage: 0,
+                    executionRate: 0,
+                    suiteSpeedP95: 0,
+                    raw: { runs: [] },
+                }),
+            );
             await _testExports._dashboardQualityGate();
 
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            // I-8.2 / F6-T2 (B13): HTML cru substituído por buildHtmlPage + CSS (Rule 6 — mesmo padrão dos 16 irmãos).
+            expect(writtenHtml).toMatch(/^<!DOCTYPE html>/);
+            expect(writtenHtml).toContain('data-dashboard="quality-gate"');
+            expect(writtenHtml).not.toMatch(/<html[^>]*>\s*<body[^>]*>/);
+            expect(writtenHtml).toContain('<style>');
+            expect(writtenHtml).toContain('skip-link');
+            // Anti-mock-theater: runQualityGate real roda com o DataHub (sem dados
+            // históricos) → gate fail explícito com check `metrics-data` (Rule 25:
+            // dados ausentes NUNCA viram pass silencioso).
+            expect(writtenHtml).toContain('metrics-data');
             expect(mockOpenWithFallback).toHaveBeenCalledWith(expect.any(String), 'Quality Gate', expect.any(Function));
         });
     });

@@ -109,7 +109,11 @@ function run(): void {
                     generatedAt: GENERATED_AT,
                 }),
         ],
-        ['backlog-health.html', () => generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health'))],
+        [
+            'backlog-health.html',
+            () =>
+                generateBacklogHealthHtml(loadFixture<BacklogHealthResult>('backlog-health'), undefined, GENERATED_AT),
+        ],
         ['pipeline-cost.html', () => generatePipelineCostHtml(loadFixture<PipelineCostResult>('pipeline-cost'))],
         [
             'suite-optimization.html',

@@ -8,6 +8,7 @@
  */
 
 import { rootLogger } from '../logger.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { sanitizeUrl } from '../ui/cli_base.js';
 import { escapeHtml, statsFromMetricsRun } from './report-utils.js';
 import { icon } from '../icons.js';
@@ -95,7 +96,7 @@ export function generateHtmlReport(_tests: FlatTest[], options?: ReportOptions):
         const passRate = computed.passRate;
         const title = options.title || DEFAULT_TITLE;
         const categories = computed.failureClassifications ?? {};
-        const timestamp = options.generatedAt || new Date().toISOString();
+        const timestamp = resolveGeneratedAt(options.generatedAt);
         const dashboardId = options.dashboardId || 'coverage-report';
         const trends = computed.metricsTrends ?? [];
 
@@ -180,7 +181,7 @@ function _buildProjectMeta(): string {
 }
 
 function _buildReportFooter(options?: ReportOptions): string {
-    const generatedAt = options?.generatedAt || new Date().toISOString();
+    const generatedAt = resolveGeneratedAt(options?.generatedAt);
     const source = options?.source || Config.get('CI_JOB_NAME') || Config.get('GITHUB_WORKFLOW') || '';
     const ciUrl = options?.ciUrl || Config.get('CI_JOB_URL') || Config.get('GITHUB_SERVER_URL') || '';
     const branch = options?.branch || Config.get('CI_COMMIT_BRANCH') || Config.get('GITHUB_REF_NAME') || '';

@@ -9,6 +9,7 @@
 
 import { sanitizeHtml } from '../escape.js';
 import { icon } from '../icons.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
@@ -29,7 +30,11 @@ const SUMMARY_TRUNCATE_LENGTH = 80;
 const SCORE_THRESHOLD_SUCCESS = 80;
 const SCORE_THRESHOLD_WARN = 50;
 
-export function generateBacklogHealthHtml(result: BacklogHealthResult | null | undefined, title?: string): string {
+export function generateBacklogHealthHtml(
+    result: BacklogHealthResult | null | undefined,
+    title?: string,
+    now?: string,
+): string {
     try {
         const pageTitle = title || 'Backlog Health Dashboard';
 
@@ -37,6 +42,9 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult | null | u
             rootLogger.error('generateBacklogHealthHtml: backlog health result is missing.');
             return buildErrorPage('Error generating dashboard', 'Backlog health data is unavailable.');
         }
+
+        const referenceNow = resolveGeneratedAt(now);
+        const nowMs = Date.parse(referenceNow);
 
         const bodyContent = wrapContainer(
             pageTitle,
@@ -49,9 +57,9 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult | null | u
                           action: 'Configure Jira/issue tracker integration and run the backlog analysis pipeline to generate data.',
                       })
                     : '') +
-                buildIssueCards(result) +
+                buildIssueCards(result, nowMs) +
                 buildDensitySection(result) +
-                buildRecommendedActions(result),
+                buildRecommendedActions(result, nowMs),
             result.timestamp,
         );
 
@@ -143,7 +151,7 @@ function buildMetricSummary(result: BacklogHealthResult): string {
     });
 }
 
-function buildIssueCards(result: BacklogHealthResult): string {
+function buildIssueCards(result: BacklogHealthResult, nowMs: number): string {
     let html = '';
 
     if (result.unassignedIssues.length > 0) {
@@ -156,12 +164,11 @@ function buildIssueCards(result: BacklogHealthResult): string {
     }
 
     if (result.staleIssues.length > 0) {
-        // Calculate how stale the issues are
-        const now = new Date();
+        // Calculate how stale the issues are (deterministic: nowMs derived from resolveGeneratedAt)
         const staleAges = result.staleIssues
             .map((issue) => {
                 const updated = new Date(issue.updated);
-                const daysSinceUpdate = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+                const daysSinceUpdate = Math.floor((nowMs - updated.getTime()) / (1000 * 60 * 60 * 24));
                 return daysSinceUpdate;
             })
             .filter((days) => days >= 0);
@@ -276,7 +283,7 @@ function buildDensitySection(result: BacklogHealthResult): string {
     });
 }
 
-function buildRecommendedActions(result: BacklogHealthResult): string {
+function buildRecommendedActions(result: BacklogHealthResult, nowMs: number): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Low score
@@ -289,7 +296,6 @@ function buildRecommendedActions(result: BacklogHealthResult): string {
 
     // Action 2: Stale issues with context
     if (result.staleIssues.length > 0) {
-        const now = new Date();
         const oldestStale = result.staleIssues.reduce((oldest, issue) => {
             if (!oldest) return issue;
             const updated = new Date(issue.updated);
@@ -298,7 +304,7 @@ function buildRecommendedActions(result: BacklogHealthResult): string {
 
         if (oldestStale) {
             const daysSinceUpdate = Math.floor(
-                (now.getTime() - new Date(oldestStale.updated).getTime()) / (1000 * 60 * 60 * 24),
+                (nowMs - new Date(oldestStale.updated).getTime()) / (1000 * 60 * 60 * 24),
             );
             actions.push({
                 severity: 'warn',
