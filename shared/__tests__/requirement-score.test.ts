@@ -2,8 +2,9 @@
  * Tests for requirement-score — Requirement Quality Score.
  */
 
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../quality/requirement-score.js';
-import type { RequirementScoreResult } from '../quality/requirement-score.js';
+import { calculateRequirementScores } from '../data-hub/compute/requirement-score.js';
+import { generateRequirementScoreHtml } from '../quality/requirement-score.js';
+import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import type { AiGenerationRecord } from '../types/llm.js';
 import { nullAs, undefinedAs } from '../test-utils.js';
 import { rootLogger } from '../logger.js';

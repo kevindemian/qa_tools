@@ -415,9 +415,9 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
         { file: 'shared/data-hub/compute/regression-detection.ts', export_: 'detectSilentRegressions' },
         { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
-        { file: 'shared/report/ai-comparison.ts', export_: 'compareAiVsManual' },
+        { file: 'shared/data-hub/compute/ai-comparison.ts', export_: 'compareAiVsManual' },
         { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
-        { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
+        { file: 'shared/data-hub/compute/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
         { file: 'shared/quality/developer-profile.ts', export_: 'generateDeveloperProfileHtml' },
@@ -430,7 +430,7 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/report/impact-alert.ts', export_: 'analyzePipelineImpact' },
         { file: 'shared/report/impact-alert-renderer.ts', export_: 'generateImpactAlertHtml' },
         { file: 'shared/data-hub/compute/pipeline-cost.ts', export_: 'calcPipelineCost' },
-        { file: 'shared/quality/requirement-score.ts', export_: 'calculateRequirementScores' },
+        { file: 'shared/data-hub/compute/requirement-score.ts', export_: 'calculateRequirementScores' },
         { file: 'shared/quality/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
     ];
     for (const d of dashboards) {
@@ -572,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:ff73d0daf5e3de5c9138d84b2b2b7389143db976784455ea0daa322befab28f5 */
+        /* HASH:59d0207107b8117d46de98a565127d802645597450e2b7467b5e7bc2908c95cb */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });

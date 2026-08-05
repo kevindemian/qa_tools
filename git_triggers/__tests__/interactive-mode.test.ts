@@ -288,6 +288,8 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
     generateRequirementScoreHtml: vi.fn(() => ''),
+}));
+vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
     calculateRequirementScores: vi.fn(() => []),
 }));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));

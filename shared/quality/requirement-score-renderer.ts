@@ -22,7 +22,7 @@ import {
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
-import type { RequirementScoreResult } from './requirement-score.js';
+import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import { icon } from '../icons.js';
 
 const OVERALL_SCORE_ERROR = 40;

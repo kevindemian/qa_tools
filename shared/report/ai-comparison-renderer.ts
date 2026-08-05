@@ -22,7 +22,7 @@ import {
     RecommendedActions,
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
-import type { AiComparisonResult } from './ai-comparison.js';
+import type { AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 
 const PASS_RATE_TARGET = 80;
 const FLAKINESS_TARGET = 0.1;

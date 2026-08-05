@@ -803,7 +803,7 @@ export interface ComputedMetrics {
     /** Traceability tree: epic > story > test mapping with coverage and health. */
     traceabilityTree?: TraceabilityResult | undefined;
     /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
-    crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
+    crossSquad?: import('../data-hub/compute/cross-squad-benchmark.js').CrossSquadResult | undefined;
     // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────
     /** Coverage gap analysis result. */
     coverageGap?: import('./coverage.js').CoverageGapResult | undefined;
@@ -812,7 +812,7 @@ export interface ComputedMetrics {
     /** Developer profile from failure classifications (SSOT — N6 hub-first). */
     developerProfile?: import('../quality/developer-profile.js').DeveloperProfileResult | undefined;
     /** AI vs manual test comparison from aiRecords (SSOT — N6 hub-first). */
-    aiComparison?: import('../report/ai-comparison.js').AiComparisonResult | undefined;
+    aiComparison?: import('../data-hub/compute/ai-comparison.js').AiComparisonResult | undefined;
     /** Pipeline cost analytics result — SSOT projection over perRunCosts (I-1). */
     pipelineCostResult?: PipelineCostResult | undefined;
     /** Suite-level aggregation: passed/failed/skipped/duration per suite. */

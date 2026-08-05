@@ -92,7 +92,7 @@ import { generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
 import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
-import { calculateRequirementScores } from '../shared/quality/requirement-score.js';
+import { calculateRequirementScores } from '../shared/data-hub/compute/requirement-score.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
 import { runQualityGate } from '../shared/quality/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';

@@ -24,7 +24,8 @@ import { generateOptimizationHtml } from '../shared/quality/suite-optimization.j
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
+import { calculateRequirementScores } from '../shared/data-hub/compute/requirement-score.js';
+import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
 import { runQualityGate } from '../shared/quality/quality-gate.js';
 import { buildQualityGateSection } from '../shared/report/report-sections.js';
 

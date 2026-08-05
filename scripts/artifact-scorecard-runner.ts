@@ -44,7 +44,7 @@ import { renderPipelineHealthHtml } from '../git_triggers/pipeline-health-render
 import type { FlatTest } from '../shared/result_parser.js';
 import { loadFixture } from './artifact-fixtures.js';
 import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
-import type { AiComparisonResult } from '../shared/report/ai-comparison.js';
+import type { AiComparisonResult } from '../shared/data-hub/compute/ai-comparison.js';
 import type { IncidentReport } from '../shared/report/incident-report.js';
 import type { ImpactAlertResult } from '../shared/report/impact-alert.js';
 import type { TraceabilityResult } from '../shared/report/traceability-matrix.js';
@@ -52,13 +52,13 @@ import type { FlakinessEntry } from '../shared/types/data-hub.js';
 import type { BacklogHealthResult } from '../shared/report/backlog-health.js';
 import type { PipelineCostResult } from '../shared/quality/pipeline-cost.js';
 import type { OptimizationResult } from '../shared/types/data-hub-extensions.js';
-import type { CrossSquadResult } from '../shared/quality/cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../shared/data-hub/compute/cross-squad-benchmark.js';
 import type { ReleaseScoreResult } from '../shared/types/data-hub.js';
 import type { RegressionDetectionResult } from '../shared/types/data-hub-extensions.js';
 import type { DefectAggregationResult } from '../shared/types/data-hub-extensions.js';
 import type { SeasonalityAggregationResult } from '../shared/types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../shared/quality/developer-profile.js';
-import type { RequirementScoreResult } from '../shared/quality/requirement-score.js';
+import type { RequirementScoreResult } from '../shared/data-hub/compute/requirement-score.js';
 import type { CoverageGapResult } from '../shared/types/coverage.js';
 
 const OUT_DIR = join(import.meta.dirname, '..', 'reports', 'validation');

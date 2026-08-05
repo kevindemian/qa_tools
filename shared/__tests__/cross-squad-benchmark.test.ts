@@ -1,5 +1,6 @@
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
-import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
+import { computeCrossSquadBenchmark } from '../data-hub/compute/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
 
 function makeSquads() {
     return [

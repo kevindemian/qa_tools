@@ -18,8 +18,8 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('returns complete HTML document with data', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const projects = [
                 {
                     name: 'Squad Alpha',
@@ -56,8 +56,8 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('shows empty state for no benchmarks', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark([]);
             const html = generateBenchmarkHtml(result);
 
@@ -68,8 +68,8 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('uses custom title', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark([]);
             const html = generateBenchmarkHtml(result, 'Sprint 11 Review');
 
@@ -102,7 +102,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('handles null projects', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark } = await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(null);
 
             expect(result.benchmarks).toStrictEqual([]);
@@ -112,7 +112,7 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('handles undefined projects', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark } = await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark(undefined);
 
             expect(result.benchmarks).toStrictEqual([]);
@@ -124,8 +124,8 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('includes data-part="target" with threshold values', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const projects = [
                 {
                     name: 'Alpha',
@@ -156,8 +156,8 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
         it('includes data-part="timestamp"', async () => {
             expect.hasAssertions();
 
-            const { computeCrossSquadBenchmark, generateBenchmarkHtml } =
-                await import('../../quality/cross-squad-benchmark.js');
+            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
+            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
             const result = computeCrossSquadBenchmark([]);
             const html = generateBenchmarkHtml(result);
 

@@ -33,7 +33,7 @@ import { generateRequirementScoreHtml } from '../quality/requirement-score-rende
 import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 
 import type { AiMetricsResult } from '../types/data-hub-extensions.js';
-import type { AiComparisonResult } from '../report/ai-comparison.js';
+import type { AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 import type { IncidentReport } from '../report/incident-report.js';
 import type { ImpactAlertResult } from '../report/impact-alert.js';
 import type { TraceabilityResult } from '../report/traceability-matrix.js';
@@ -41,13 +41,13 @@ import type { FlakinessEntry } from '../types/data-hub.js';
 import type { BacklogHealthResult } from '../report/backlog-health.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
 import type { OptimizationResult } from '../types/data-hub-extensions.js';
-import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
 import type { ReleaseScoreResult } from '../types/data-hub.js';
 import type { RegressionDetectionResult } from '../types/data-hub-extensions.js';
 import type { DefectAggregationResult } from '../types/data-hub-extensions.js';
 import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../quality/developer-profile.js';
-import type { RequirementScoreResult } from '../quality/requirement-score.js';
+import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import type { CoverageGapResult } from '../types/coverage.js';
 
 const ALL_SPECS: ArtifactSpec[] = [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS];

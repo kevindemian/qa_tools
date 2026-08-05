@@ -88,7 +88,6 @@ import {
     computeImpactAlerts,
     computeIncidentEvents,
     computeTraceabilityTree,
-    computeCrossSquad,
     computeCoverageGap,
     computeSuiteBreakdown,
     computeFailureClassifications,
@@ -96,7 +95,6 @@ import {
 } from './compute/index.js';
 import { mapJiraIssuesToBacklogHealth, analyzeBacklogHealth } from '../report/backlog-health.js';
 import { buildDeveloperProfile } from '../quality/developer-profile.js';
-import { compareAiVsManual } from '../report/ai-comparison.js';
 
 /** Options for creating a DataHub. */
 export interface DataHubOptions {
@@ -913,10 +911,6 @@ export class DataHubImpl implements DataHub {
             metricsRuns,
             flakyRate,
         } as ComputedMetrics);
-        const crossSquad = computeCrossSquad(raw, {
-            passRate,
-            coverage,
-        } as ComputedMetrics);
         // ─── Coverage gap computation ──────────────────────────────────────
         const coverageGap =
             raw.jiraIssues != null && raw.jiraIssues.length > 0 ? computeCoverageGap(raw.jiraIssues) : undefined;
@@ -926,10 +920,10 @@ export class DataHubImpl implements DataHub {
         // ─── N6 / I-1 — hub-first SSOT (hub computa, renderers nunca) ─────
         const backlogHealth = analyzeBacklogHealth(mapJiraIssuesToBacklogHealth(raw.jiraIssues ?? []));
         const developerProfile = buildDeveloperProfile(raw.failureClassifications ?? []);
-        // raw.aiRecords é AiGenerationRecord[] — não carrega os campos de
-        // AiComparisonRecord (accepted/passed/duration/flakiness). No-data explícito
-        // (Rule 25): nunca fabricar comparação; equivale ao compareAiVsManual([]).
-        const aiComparison = compareAiVsManual(null);
+        // aiComparison/crossSquad permanecem undefined (ausência explícita,
+        // Rule 25.2): raw não carrega AiComparisonRecord nem dados de squad e o
+        // wrapper fabricador de cross-squad foi removido (Q3/F0.3). Nunca
+        // fabricar comparação de AI-vs-manual (Rule 25).
         const pipelineCostResult = computePipelineCostResult(raw.runs, perRunCosts, options.costPerMinute);
 
         return {
@@ -969,14 +963,12 @@ export class DataHubImpl implements DataHub {
             impactAlerts,
             incidentEvents,
             traceabilityTree,
-            crossSquad,
             coverageGap,
             suiteBreakdown,
             failureClassifications,
             dataAvailability,
             backlogHealth,
             developerProfile,
-            aiComparison,
             pipelineCostResult,
         };
     }

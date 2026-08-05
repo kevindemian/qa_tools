@@ -203,8 +203,10 @@ vi.mock('../../shared/quality/pipeline-cost.js', () => ({
     generatePipelineCostHtml: vi.fn(() => '<section>pipelinecost</section>'),
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
-    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
     generateRequirementScoreHtml: vi.fn(() => '<section>reqscore</section>'),
+}));
+vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
+    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
 }));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),

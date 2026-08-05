@@ -361,18 +361,12 @@ describe('DataHubImpl', () => {
         expect(hub.computed.developerProfile?.authors[0]?.author).toBe('Unknown');
     });
 
-    it('computes aiComparison as explicit no-data (raw não carrega AiComparisonRecord)', () => {
+    it('leaves aiComparison as explicit no-data — undefined (P-3; raw não carrega AiComparisonRecord)', () => {
         expect.hasAssertions();
 
         const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
 
-        const cmp = hub.computed.aiComparison;
-
-        expect(cmp).toBeDefined();
-        expect(cmp?.aiTotal).toBe(0);
-        expect(cmp?.manualTotal).toBe(0);
-        expect(cmp?.aiAdvantage).toBe('none');
-        expect(cmp?.byVersion).toStrictEqual([]);
+        expect(hub.computed.aiComparison).toBeUndefined();
     });
 
     it('computes pipelineCostResult from runs and perRunCosts (SSOT projection)', async () => {

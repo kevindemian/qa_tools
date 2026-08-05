@@ -23,7 +23,7 @@ import {
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
 import { icon } from '../icons.js';
-import type { CrossSquadResult } from './cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
 import { SCORE_QUALITY_GATE, GRADE_POOR } from '../constants/thresholds.js';
 
 const BOTTOM_SQUAD_SCORE_ERROR = GRADE_POOR;
