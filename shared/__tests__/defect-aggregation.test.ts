@@ -213,6 +213,29 @@ describe('AggregateDefectTrends', () => {
             expect(r.period.from).toBe('');
             expect(r.period.to).toBe('');
         });
+
+        it('non-string timestamp is guarded and grouped under Unknown (no throw)', () => {
+            expect.hasAssertions();
+
+            const r = aggregateDefectTrends([
+                makeRecord({ timestamp: 123 as unknown as string }),
+                makeRecord({ timestamp: '2026-03-15T10:00:00Z' }),
+            ]);
+
+            expect(r.totalRecords).toBe(2);
+            expect(r.trends.some((t) => t.date === 'Unknown' && t.total === 1)).toBeTruthy();
+            expect(r.trends.some((t) => t.date === '2026-03-15')).toBeTruthy();
+        });
+
+        it('exact YYYY-MM-DD (10-char) timestamp is a valid date', () => {
+            expect.hasAssertions();
+
+            const r = aggregateDefectTrends([makeRecord({ timestamp: '2026-03-15' })]);
+
+            expect(r.trends[0]?.date).toBe('2026-03-15');
+            expect(r.period.from).toBe('2026-03-15');
+            expect(r.period.to).toBe('2026-03-15');
+        });
     });
 });
 
@@ -328,6 +351,35 @@ describe('AggregateDefectSeasonality', () => {
             const unknownDay = r.byDayOfWeek.find((d) => d.dayOfWeek === 'Unknown');
 
             expect(unknownDay?.total).toBe(1);
+        });
+
+        it('all-invalid timestamps → Unknown day present and period stays empty (no fabricated range)', () => {
+            expect.hasAssertions();
+
+            const r = aggregateDefectSeasonality([
+                makeRecord({ timestamp: 'garbage' }),
+                makeRecord({ timestamp: 'x' }),
+            ]);
+
+            expect(r.totalRecords).toBe(2);
+            expect(r.period.from).toBe('');
+            expect(r.period.to).toBe('');
+
+            const unknownDay = r.byDayOfWeek.find((d) => d.dayOfWeek === 'Unknown');
+
+            expect(unknownDay?.total).toBe(2);
+        });
+
+        it('valid timestamps populate the period range', () => {
+            expect.hasAssertions();
+
+            const r = aggregateDefectSeasonality([
+                makeRecord({ timestamp: '2026-01-01T10:00:00Z' }),
+                makeRecord({ timestamp: '2026-12-31T10:00:00Z' }),
+            ]);
+
+            expect(r.period.from).toBe('2026-01-01');
+            expect(r.period.to).toBe('2026-12-31');
         });
     });
 });

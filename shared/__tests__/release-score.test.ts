@@ -181,6 +181,67 @@ describe('CalcReleaseScore (B3 SSOT — 5-dimension model)', () => {
                 'Improve Pass Rate, Flaky Rate, Coverage before release.',
             );
         });
+
+        it('all dimensions unavailable -> cannot be assessed (no partial scoring)', () => {
+            const availability = {
+                passRate: false,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(allDims(100, 'pass'), DEFAULT_WEIGHTS, availability);
+
+            expect(result.score).toBe(0);
+            expect(result.grade).toBe('unknown');
+            expect(result.recommendation).toBe('Insufficient data — release score could not be assessed.');
+            expect((result.breakdown ?? []).every((d) => d.noData && d.status === 'fail')).toBeTruthy();
+        });
+
+        it('partial data -> names the missing dimensions in the recommendation', () => {
+            const availability = {
+                passRate: true,
+                flakyRate: false,
+                coverage: true,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(allDims(70, 'pass'), DEFAULT_WEIGHTS, availability);
+
+            expect(result.recommendation).toBe(
+                'Insufficient data for Flaky Rate, Suite Speed, Execution Rate — assessment is partial.',
+            );
+            expect((result.breakdown ?? []).filter((d) => d.noData).map((d) => d.label)).toStrictEqual([
+                'Flaky Rate',
+                'Suite Speed',
+                'Execution Rate',
+            ]);
+        });
+
+        it('failing AND missing dimensions -> both parts present, space-joined', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: 30, status: 'fail' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 100, status: 'pass' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
+            const availability = {
+                passRate: true,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(dims, DEFAULT_WEIGHTS, availability);
+
+            expect(result.recommendation).toBe(
+                'Improve Pass Rate before release. Insufficient data for Flaky Rate, Coverage, Suite Speed, Execution Rate — assessment is partial.',
+            );
+        });
     });
 
     describe('Edge cases', () => {
@@ -317,5 +378,100 @@ describe('GenerateReleaseScoreHtml (renderer)', () => {
 
     it('includes theme script', () => {
         expect(generateReleaseScoreHtml(result)).toContain('qa-report-theme');
+    });
+});
+
+describe('GenerateReleaseScoreHtml — availability rendering (B3/§25)', () => {
+    function renderResult(overrides: Partial<ReleaseScoreResult>): string {
+        return generateReleaseScoreHtml({
+            score: 0,
+            dimensions: allDims(0, 'fail'),
+            grade: 'unknown',
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 40, status: 'fail' },
+            ],
+            recommendation: 'All dimensions meet the release threshold. Ready for release.',
+            ...overrides,
+        });
+    }
+
+    it('null result renders the explicit no-data empty state', () => {
+        expect.hasAssertions();
+
+        const html = generateReleaseScoreHtml(null);
+
+        expect(html).toContain('No release score data available');
+        expect(html).toContain('Run the release score analysis with valid pipeline and quality data.');
+    });
+
+    it('all-noData result renders the insufficient-data empty state, never a fabricated score', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({
+            score: 0,
+            breakdown: [
+                { label: 'Coverage', score: 0, status: 'fail', noData: true },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('Insufficient data for release score');
+        expect(html).toContain('<h1>Release Readiness Score</h1>');
+        expect(html).toContain('No dimension had a data source');
+        expect(html).toContain('Run the release score analysis with valid pipeline and quality data.');
+        expect(html).toContain('data-icon="info"');
+    });
+
+    it('counts checks over available dimensions only (noData excluded from numerator and denominator)', () => {
+        expect.hasAssertions();
+
+        // Domínio: 2 disponíveis passam, 1 disponível falha, 2 sem fonte de dados.
+        // Checks Passed = 2/3 (noData fora do denominador); a única falha disponível
+        // é nomeada na ação de correção. Score 85 (>= GATE) mantém Score/Grade/Gate
+        // em success — o único metric-card warn é o Checks Passed, isolando a
+        // severidade baseada em failedChecks.
+        const html = renderResult({
+            score: 85,
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 40, status: 'fail' },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+                { label: 'Execution Rate', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('2/3');
+        expect(html).toContain('<h1>Release Readiness Score</h1>');
+        expect(html).toContain('1 check(s) failed: Coverage');
+        expect(html).toContain('data-component="metric-card" data-severity="warn"');
+    });
+
+    it('keeps the checks card success when only noData dimensions are failing', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({
+            score: 0,
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 0, status: 'fail', noData: true },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('data-component="metric-card" data-severity="success"');
+        expect(html).not.toContain('data-component="metric-card" data-severity="warn"');
+        expect(html).not.toContain('check(s) failed');
+    });
+
+    it('falls back to a default recommendation when the recommendation is blank', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({ score: 90, recommendation: '   ' });
+
+        expect(html).toContain('No recommendation available.');
     });
 });

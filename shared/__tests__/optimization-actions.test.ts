@@ -197,6 +197,34 @@ describe('ComputeOptimizationActions', () => {
     });
 
     describe('Edge cases', () => {
+        it('averages multi-element durations (not the sum)', () => {
+            expect.hasAssertions();
+
+            // avg = (1000 + 3000) / 2 = 2000ms = 2s < 5s threshold -> none.
+            // A mutant computing sum*length = 8000ms = 8s would classify as speed_up.
+            const r = computeOptimizationActions({ t: [1000, 3000] }, { t: 0 });
+
+            expect(r.optimizations[0]?.action).toBe('none');
+            expect(r.optimizations[0]?.duration).toBe(2);
+        });
+
+        it('negative flakiness is clamped to 0 (never emitted)', () => {
+            expect.hasAssertions();
+
+            // Negative flakiness violates the [0,1] domain → must not surface.
+            const r = computeOptimizationActions({ t: [1000] }, { t: -0.5 });
+
+            expect(r.optimizations[0]?.flakiness).toBe(0);
+        });
+
+        it('naN flakiness is clamped to 0', () => {
+            expect.hasAssertions();
+
+            const r = computeOptimizationActions({ t: [1000] }, { t: NaN });
+
+            expect(r.optimizations[0]?.flakiness).toBe(0);
+        });
+
         it('potentialSavings accumulates across tests', () => {
             expect.hasAssertions();
 

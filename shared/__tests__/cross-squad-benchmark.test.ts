@@ -246,6 +246,63 @@ describe('ComputeCrossSquadBenchmark', () => {
         expect(result.benchmarks.find((b) => b.project === 'Invalid Squad')).toBeUndefined();
     });
 
+    it('filters out squad with negative coveragePct (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'Neg Coverage',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: 5,
+                coveragePct: -1,
+                runCount: 20,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'Neg Coverage')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
+    it('filters out squad with negative runCount (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'Neg RunCount',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: 5,
+                coveragePct: 40,
+                runCount: -3,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'Neg RunCount')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
+    it('filters out squad with NaN flakyRate (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'NaN Flaky',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: NaN,
+                coveragePct: 40,
+                runCount: 20,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'NaN Flaky')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
     it('handles null projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(null);
 

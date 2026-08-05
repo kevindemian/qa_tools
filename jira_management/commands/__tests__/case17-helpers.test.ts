@@ -266,6 +266,27 @@ describe('ParseCliExtra', () => {
         expect(result.extraRuns[0]).toStrictEqual({ name: 'chrome', file: 'results.json' });
     });
 
+    it('does not treat a plain --run value as a publish target', () => {
+        process.argv = ['node', 'script', '--run', 'chrome=results.json'];
+
+        expect(parseCliExtra().publishTarget).toBeUndefined();
+    });
+
+    it('parses --publish not in first position (flag order independent)', () => {
+        process.argv = ['node', 'script', '--run', 'chrome=results.json', '--publish', 's3'];
+
+        expect(parseCliExtra().publishTarget).toBe('s3');
+    });
+
+    it('parses --run not in first position (flag order independent)', () => {
+        process.argv = ['node', 'script', '--publish', 's3', '--run', 'chrome=results.json'];
+        const result = parseCliExtra();
+
+        expect(result.publishTarget).toBe('s3');
+        expect(result.extraRuns).toHaveLength(1);
+        expect(result.extraRuns[0]).toStrictEqual({ name: 'chrome', file: 'results.json' });
+    });
+
     it('skips empty --publish value', () => {
         process.argv = ['node', 'script', '--publish', ''];
 
@@ -285,5 +306,136 @@ describe('ParseCliExtra', () => {
 
         expect(result.publishTarget).toBeUndefined();
         expect(result.extraRuns).toHaveLength(0);
+    });
+});
+
+describe('Case17Helpers — exact rendered markup (mutation coverage)', () => {
+    const makeRun = (timestamp: string, passed: number, failed: number): MetricsRun => ({
+        timestamp,
+        project: 'test-project',
+        passed,
+        failed,
+        skipped: 0,
+        total: passed + failed,
+        duration: 1000,
+        tests: [],
+    });
+
+    it('renders the runs-chart scaffolding with bar columns', () => {
+        const html = buildGitTrendHtml(
+            '',
+            [makeRun('2024-01-15T00:00:00Z', 10, 0), makeRun('2024-02-20T00:00:00Z', 5, 5)],
+            [],
+        );
+
+        expect(html).toContain('<div class="runs-chart">');
+        expect(html).toContain('<div class="runs-chart-label">Pass Rate — Last 2 Runs</div>');
+        expect(html).toContain('<div class="runs-chart-bars">');
+        expect(html).toContain('<div class="runs-chart-col">');
+        expect(html).toContain('<div class="runs-chart-bar" style="--bar-h:');
+        expect(html).toContain('px;--bar-color:');
+        expect(html).toContain('data-icon="trending-up"');
+    });
+
+    it('renders per-run titles with rate and date', () => {
+        const html = buildGitTrendHtml(
+            '',
+            [makeRun('2024-01-15T00:00:00Z', 10, 0), makeRun('2024-02-20T00:00:00Z', 5, 5)],
+            [],
+        );
+
+        expect(html).toContain('" title="Run 1: 100.0% (10/10)"');
+        expect(html).toContain('" title="Run 2: 50.0% (5/10)"');
+        expect(html).toContain('<span class="runs-chart-date">');
+    });
+
+    it('renders the flaky-tests table container and headers', () => {
+        const html = buildGitTrendHtml('', [], [makeFlakyEntry('Flaky Test', 3, 3)]);
+
+        expect(html).toContain('<div class="chart-box case17-box">');
+        expect(html).toContain('<div class="label case17-label">');
+        expect(html).toContain(' Git Pipeline Context</div>');
+        expect(html).toContain('<table class="case17-table">');
+        expect(html).toContain('<th class="case17-th">Test</th>');
+        expect(html).toContain('<th class="case17-th case17-th-right">Passes</th>');
+        expect(html).toContain('<th class="case17-th case17-th-right">Failures</th>');
+        expect(html).toContain('<th class="case17-th case17-th-right">Rate</th>');
+    });
+
+    it('renders the flaky-tests row and details markup', () => {
+        const html = buildGitTrendHtml('', [], [makeFlakyEntry('Flaky Test', 3, 3)]);
+
+        expect(html).toContain('<td class="case17-td">');
+        expect(html).toContain(
+            '<tr><td class="case17-td">Flaky Test</td><td class="case17-td case17-td-right">3</td><td class="case17-td case17-td-right">3</td><td class="case17-td case17-td-right">50.0%</td></tr>',
+        );
+        expect(html).toContain('<details class="case17-details">');
+        expect(html).toContain('<summary class="case17-summary case17-summary-flaky">');
+        expect(html).toContain('data-icon="alert-triangle"');
+    });
+
+    it('renders the commits details markup', () => {
+        const html = buildGitTrendHtml('- fix login (user, 2024-01-15)', [], []);
+
+        expect(html).toContain('<details class="case17-details case17-details-commits">');
+        expect(html).toContain('<summary class="case17-summary case17-summary-commits">');
+        expect(html).toContain('data-icon="file-text"');
+        expect(html).toContain('<pre class="case17-pre">');
+    });
+
+    it('renders the jira context box markup', () => {
+        const html = buildJiraContextHtml('- BUG-1 (Open): Login fails\n');
+
+        expect(html).toContain('<div class="chart-box case17-box-jira">');
+        expect(html).toContain('<div class="label case17-label">');
+        expect(html).toContain(' Related Jira Issues</div>');
+        expect(html).toContain('data-icon="link"');
+        expect(html).toContain('<pre class="case17-pre-flat">');
+        expect(html).toContain('Login fails\n</pre></div>');
+    });
+
+    it('escapes < in jira context before rendering', () => {
+        const html = buildJiraContextHtml('- BUG-1: check a < b\n');
+
+        expect(html).toContain('- BUG-1: check a &lt; b');
+        expect(html).not.toContain('- BUG-1: check a < b');
+    });
+
+    it('injects the analysis section before </body> with escaped content', () => {
+        const result = injectAnalysisSection('<html><body>content</body></html>', 'A<B');
+
+        expect(result).toContain(
+            '<div class="chart-box"><h2>Failure Analysis</h2><pre class="case17-pre-flat">A&lt;B</pre></div></body>',
+        );
+    });
+
+    it('renders the diff summary failures markup', () => {
+        const html = buildDiffSummary({
+            newFailures: [{ title: 'Fail A', state: 'failed', duration: 100, error: 'timeout' }],
+            newPasses: [{ title: 'Pass B', state: 'passed', duration: 50 }],
+            flaky: [],
+        });
+
+        expect(html).toContain('<div class="chart-box case17-box">');
+        expect(html).toContain('<div class="label case17-label">');
+        expect(html).toContain('data-icon="bar-chart"');
+        expect(html).toContain(' Differential vs Last Run</div>');
+        expect(html).toContain('<p class="case17-diff-fail">');
+        expect(html).toContain('data-icon="x-circle"');
+        expect(html).toContain(' <b>');
+        expect(html).toContain('<b>1 new failure(s):</b></p>');
+    });
+
+    it('renders the diff summary passes markup', () => {
+        const html = buildDiffSummary({
+            newFailures: [{ title: 'Fail A', state: 'failed', duration: 100, error: 'timeout' }],
+            newPasses: [{ title: 'Pass B', state: 'passed', duration: 50 }],
+            flaky: [],
+        });
+
+        expect(html).toContain('<p class="case17-diff-pass">');
+        expect(html).toContain('data-icon="check-circle"');
+        expect(html).toContain(' <b>');
+        expect(html).toContain('<b>1 new pass(es):</b>');
     });
 });

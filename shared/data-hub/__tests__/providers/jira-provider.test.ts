@@ -6,6 +6,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { JiraDataProvider } from '../../providers/jira-provider.js';
 import type { JiraResourceLike } from '../../../types/jira.js';
+import { rootLogger } from '../../../logger.js';
+
+vi.mock('../../../logger', () => ({
+    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
+}));
 
 /* ── Mock JiraResourceLike ─────────────────────────────────────────────── */
 
@@ -32,6 +37,7 @@ describe('JiraDataProvider', () => {
     let searchJiraIssuesMock: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
+        vi.clearAllMocks();
         const created = createMockJira();
         mockJira = created.mock;
         searchJiraIssuesMock = created.searchMock;
@@ -191,6 +197,56 @@ describe('JiraDataProvider', () => {
         expect(bug?.key).toBe('TEST-1');
         expect(bug?.linkedTestKeys).toStrictEqual([]);
         expect(bug?.linkedTestCount).toBe(0);
+
+        const errorSpy = vi.spyOn(rootLogger, 'error');
+
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to fetch linked tests for Jira issues'));
+    });
+
+    it('resolves linked test keys when the test is the OUTWARD endpoint (link root is the target bug)', async () => {
+        expect.hasAssertions();
+
+        // Link where the Test is the outward endpoint: the "other side" is the bug.
+        vi.mocked(mockJira)
+            .searchJiraIssues.mockResolvedValueOnce({
+                issues: [
+                    {
+                        key: 'TEST-1',
+                        fields: {
+                            summary: 'Bug',
+                            status: { name: 'To Do' },
+                            issuetype: { name: 'Bug' },
+                            labels: [],
+                        },
+                    },
+                ],
+                total: 1,
+            })
+            .mockResolvedValueOnce({
+                issues: [
+                    {
+                        key: 'TEST-3',
+                        fields: {
+                            issuetype: { name: 'Test' },
+                            issuelinks: [
+                                {
+                                    type: { name: 'Test' },
+                                    inwardIssue: { key: 'TEST-1' },
+                                    outwardIssue: { key: 'TEST-3' },
+                                },
+                            ],
+                        },
+                    },
+                ],
+                total: 1,
+            });
+
+        const result = await provider.fetchRawData({ repo: 'TEST', count: 10 });
+
+        const bug = result.jiraIssues?.find((i) => i.key === 'TEST-1');
+
+        expect(bug?.linkedTestKeys).toStrictEqual(['TEST-3']);
+        expect(bug?.linkedTestCount).toBe(1);
     });
 
     it('returns empty runs and maps', async () => {
