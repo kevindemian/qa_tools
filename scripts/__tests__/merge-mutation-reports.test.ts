@@ -31,7 +31,8 @@ function makeReport(fileNames: string[]): MutationTestResult {
 }
 
 function setStatus(report: MutationTestResult, fileName: string, status: 'Survived' | 'CompileError'): void {
-    const mutant = report.files[fileName]?.mutants[0];
+    const entry = Object.entries(report.files).find(([name]) => name === fileName);
+    const mutant = entry?.[1]?.mutants[0];
     if (!mutant) {
         throw new Error(`Fixture invariant broken: file "${fileName}" has no mutants.`);
     }

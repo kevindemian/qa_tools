@@ -19,12 +19,12 @@ const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const FULL_DAY_ORDER = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /**
- * Create a prototype-free counter bucket. A category name such as '__proto__'
- * becomes an own data property instead of hitting a prototype accessor
- * (prototype-pollution guard).
+ * Create an empty category counter bucket. A Map has no prototype chain, so a
+ * category name such as '__proto__' can never resolve to a prototype accessor
+ * (prototype-pollution guard — Map.get/set is fully safe).
  */
-function createBucket(): Record<string, number> {
-    return Object.create(null) as Record<string, number>;
+function createBucket(): Map<string, number> {
+    return new Map<string, number>();
 }
 
 /**
@@ -47,38 +47,38 @@ function updateMinMax(date: string, currentMin: string, currentMax: string): { m
     };
 }
 
-function addToCategoryMap(map: Map<string, Record<string, number>>, key: string, category: string): void {
+function addToCategoryMap(map: Map<string, Map<string, number>>, key: string, category: string): void {
     const existing = map.get(key);
     const bucket = existing ?? createBucket();
-    const current = bucket[category];
-    bucket[category] = (typeof current === 'number' && Number.isFinite(current) ? current : 0) + 1;
+    const current = bucket.get(category);
+    bucket.set(category, (typeof current === 'number' && Number.isFinite(current) ? current : 0) + 1);
     map.set(key, bucket);
 }
 
-function mapToDayArray(map: Map<string, Record<string, number>>): SeasonalityDay[] {
+function mapToDayArray(map: Map<string, Map<string, number>>): SeasonalityDay[] {
     return DAY_ORDER.map((d) => {
         const cats = map.get(d) ?? createBucket();
         return {
             dayOfWeek: d,
-            total: Object.values(cats).reduce((s, v) => s + v, 0),
+            total: [...cats.values()].reduce((s, v) => s + v, 0),
             categories: mapToCategoryCounts(cats),
         };
     });
 }
 
-function mapToHourArray(map: Map<number, Record<string, number>>): SeasonalityHour[] {
+function mapToHourArray(map: Map<number, Map<string, number>>): SeasonalityHour[] {
     return Array.from({ length: 24 }, (_, i) => {
         const cats = map.get(i) ?? createBucket();
         return {
             hour: i,
-            total: Object.values(cats).reduce((s, v) => s + v, 0),
+            total: [...cats.values()].reduce((s, v) => s + v, 0),
             categories: mapToCategoryCounts(cats),
         };
     });
 }
 
-function mapToCategoryCounts(cats: Record<string, number>): Record<string, number> {
-    return Object.fromEntries(Object.entries(cats));
+function mapToCategoryCounts(cats: Map<string, number>): Record<string, number> {
+    return Object.fromEntries(cats);
 }
 
 function findPeakDay(days: SeasonalityDay[]): string {
@@ -117,7 +117,7 @@ export function aggregateDefectTrends(records: FailureClassification[] | null | 
         return { trends: [], topCategories: [], period: { from: '', to: '' }, totalRecords: 0 };
     }
 
-    const dailyMap = new Map<string, Record<string, number>>();
+    const dailyMap = new Map<string, Map<string, number>>();
     const categoryTotals = new Map<string, number>();
     let minDate = '9999-12-31';
     let maxDate = '0000-01-01';
@@ -141,7 +141,7 @@ export function aggregateDefectTrends(records: FailureClassification[] | null | 
         .map(([date, categories]) => ({
             date,
             categories: mapToCategoryCounts(categories),
-            total: Object.values(categories).reduce((s, v) => s + v, 0),
+            total: [...categories.values()].reduce((s, v) => s + v, 0),
         }));
 
     const topCategories = [...categoryTotals.entries()]
@@ -177,8 +177,8 @@ export function aggregateDefectSeasonality(
         };
     }
 
-    const dayMap = new Map<string, Record<string, number>>();
-    const hourMap = new Map<number, Record<string, number>>();
+    const dayMap = new Map<string, Map<string, number>>();
+    const hourMap = new Map<number, Map<string, number>>();
     let minDate = '9999-12-31';
     let maxDate = '0000-01-01';
     let hasValidDate = false;
@@ -205,7 +205,7 @@ export function aggregateDefectSeasonality(
             const hour = ts.getUTCHours();
             addToCategoryMap(dayMap, dayOfWeek, category);
             const hourBucket = hourMap.get(hour);
-            if (hourBucket) hourBucket[category] = (hourBucket[category] ?? 0) + 1;
+            if (hourBucket) hourBucket.set(category, (hourBucket.get(category) ?? 0) + 1);
         } else {
             // Rule 25: records with unparseable timestamps are surfaced under
             // 'Unknown' on the day axis (no hour axis) instead of being silently
@@ -220,7 +220,7 @@ export function aggregateDefectSeasonality(
         const unknownCats = dayMap.get('Unknown') ?? createBucket();
         byDayOfWeek.push({
             dayOfWeek: 'Unknown',
-            total: Object.values(unknownCats).reduce((s, v) => s + v, 0),
+            total: [...unknownCats.values()].reduce((s, v) => s + v, 0),
             categories: mapToCategoryCounts(unknownCats),
         });
     }

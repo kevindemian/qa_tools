@@ -42,6 +42,7 @@ export function computeOptimizationActions(
         Number.isFinite(flakyThreshold) && flakyThreshold >= 0 && flakyThreshold <= 1
             ? flakyThreshold
             : DEFAULT_FLAKY_THRESHOLD;
+    const flakinessByTitle = new Map(Object.entries(flakinessMap));
 
     const optimizations: OptimizationEntry[] = [];
     let totalDuration = 0;
@@ -53,7 +54,7 @@ export function computeOptimizationActions(
         const rawAvg = durations.reduce((s, v) => s + v, 0) / durations.length;
         const avgDuration = Number.isFinite(rawAvg) && rawAvg > 0 ? rawAvg : 0;
         const durationSec = avgDuration / 1000;
-        const rawFlakiness = flakinessMap[title] ?? 0;
+        const rawFlakiness = flakinessByTitle.get(title) ?? 0;
         const flakiness = Number.isFinite(rawFlakiness) && rawFlakiness >= 0 ? rawFlakiness : 0;
 
         totalDuration += durationSec;

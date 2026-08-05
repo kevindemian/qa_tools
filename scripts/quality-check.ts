@@ -469,7 +469,7 @@ function buildTemplateLineSet(lines: string[]): Set<number> {
     const templateLines = new Set<number>();
     let inTemplate = false;
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+        const [line] = lines.slice(i, i + 1);
         if (line === undefined) continue;
         for (const ch of line) {
             if (ch === '`') inTemplate = !inTemplate;
@@ -572,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:59d0207107b8117d46de98a565127d802645597450e2b7467b5e7bc2908c95cb */
+        /* HASH:141958d4ee415b84ab668eb10c5c3e53d0d57bb6f4ebb77ce42f6b0fd44d0a22 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -635,7 +635,8 @@ function readRatchetThreshold(checkKey: string): number {
         const raw = readFileSync(RATCHET_FILE, 'utf-8');
         const parsed: unknown = JSON.parse(raw);
         const data = parsed as RatchetData;
-        const n = data.checks?.[checkKey]?.threshold;
+        const entry = data.checks ? Object.entries(data.checks).find(([k]) => k === checkKey) : undefined;
+        const n = entry?.[1]?.threshold;
         return typeof n === 'number' && n >= 0 ? n : Infinity;
     } catch {
         return Infinity;
@@ -650,7 +651,9 @@ function writeRatchetThreshold(checkKey: string, count: number, description: str
         rootLogger.warn('quality-check: ratchet file not found, creating new one');
     }
     if (!data.checks) data.checks = {};
-    data.checks[checkKey] = { threshold: count, description };
+    const checks = new Map(Object.entries(data.checks));
+    checks.set(checkKey, { threshold: count, description });
+    data.checks = Object.fromEntries(checks);
     writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 

@@ -64,10 +64,6 @@ export function listBucketNames(): string[] {
     return MUTATION_BUCKETS.map((bucket) => bucket.name);
 }
 
-function allBucketPredicates(buckets: BucketDefinition[]): Array<(filePath: string) => boolean> {
-    return buckets.map((bucket) => buildDirFilter(bucket.specs));
-}
-
 /**
  * Valida que a partição de buckets cobre exatamente todos os arquivos-fonte
  * sob MUTATE_DIRS (Rule 25). Retorna true se válida; lança Error com a lista
@@ -103,13 +99,13 @@ export function validateBucketCoverage(allFiles: string[], buckets: BucketDefini
     const sourceFiles = allFiles.filter(
         (path) => isSourceFile(path) && MUTATE_DIRS.some((dir) => path.startsWith(dir)),
     );
-    const predicates = allBucketPredicates(buckets);
+    const predicates = new Map(buckets.map((bucket) => [bucket.name, buildDirFilter(bucket.specs)] as const));
     const uncovered: string[] = [];
     const overlaps: Array<{ path: string; buckets: string[] }> = [];
 
     for (const file of sourceFiles) {
         const matched = buckets
-            .filter((_bucket, index) => predicates[index]?.(file) === true)
+            .filter((bucket) => predicates.get(bucket.name)?.(file) === true)
             .map((bucket) => bucket.name);
         if (matched.length === 0) {
             uncovered.push(file);

@@ -149,14 +149,14 @@ function buildTrend(dateMap: Map<string, DateBucket>): AiTrendPoint[] {
 }
 
 function buildScores(reqMap: Map<string, AggBucket>): Record<string, number> {
-    const scores: Record<string, number> = {};
+    const scores = new Map<string, number>();
     for (const [reqId, data] of reqMap) {
         const acceptanceScore = data.count > 0 ? Math.round((data.kept / data.count) * 100) : 0;
         const retentionRate = data.count > 0 ? Math.min(100, ((data.kept + data.modified) / data.count) * 100) : 0;
         const volumeScore = Math.min(100, (data.count / 10) * 100);
-        scores[reqId] = Math.round(acceptanceScore * 0.5 + retentionRate * 0.3 + volumeScore * 0.2);
+        scores.set(reqId, Math.round(acceptanceScore * 0.5 + retentionRate * 0.3 + volumeScore * 0.2));
     }
-    return scores;
+    return Object.fromEntries(scores);
 }
 
 function extractDate(timestamp: string | undefined): string | undefined {

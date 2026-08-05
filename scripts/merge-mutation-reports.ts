@@ -37,7 +37,7 @@ export interface GateDecision {
 }
 
 export function mergeMutationReports(reports: MutationTestResult[]): MutationTestResult {
-    const mergedFiles: MutationTestResult['files'] = {};
+    const mergedFiles = new Map<string, MutationTestResult['files'][string]>();
     let schemaVersion: string | undefined;
 
     for (const report of reports) {
@@ -49,17 +49,17 @@ export function mergeMutationReports(reports: MutationTestResult[]): MutationTes
             );
         }
         for (const [name, file] of Object.entries(report.files)) {
-            if (mergedFiles[name] !== undefined) {
+            if (mergedFiles.has(name)) {
                 throw new Error(`Duplicate file across reports (overlap would hide a defect): ${name}`);
             }
-            mergedFiles[name] = file;
+            mergedFiles.set(name, file);
         }
     }
 
     return {
         schemaVersion: schemaVersion ?? '1.0',
         thresholds: reports[0]?.thresholds ?? ({ high: 80, low: 60, break: 60 } as MutationTestResult['thresholds']),
-        files: mergedFiles,
+        files: Object.fromEntries(mergedFiles),
     };
 }
 
@@ -114,7 +114,7 @@ function parseArgs(argv: string[]): { breakThreshold: number; output: string | u
     const reports: string[] = [];
 
     for (let index = 0; index < argv.length; index += 1) {
-        const arg = argv[index];
+        const [arg] = argv.slice(index);
         if (arg === undefined) {
             break;
         }

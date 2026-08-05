@@ -11,7 +11,7 @@ function buildRunsBarChartHtml(runs: MetricsRun[]): string {
     html += '<div class="runs-chart-label">Pass Rate — Last ' + runs.length + ' Runs</div>';
     html += '<div class="runs-chart-bars">';
     for (let i = 0; i < runs.length; i++) {
-        const run = runs[i];
+        const [run] = runs.slice(i, i + 1);
         if (!run) continue;
         const passRate = calcRunPassRate({ passed: run.passed, failed: run.failed });
         const h = Math.max(4, (passRate / 100) * 46);
@@ -192,8 +192,9 @@ function parsePublishArg(
     i: number,
     result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
 ): number {
-    if (args[i] !== '--publish' || i + 1 >= args.length) return i;
-    const val = Reflect.get(args, i + 1);
+    const [current] = args.slice(i);
+    if (current !== '--publish' || i + 1 >= args.length) return i;
+    const [val] = args.slice(i + 1);
     if (val) {
         result.publishTarget = val;
         return i + 1;
@@ -206,7 +207,8 @@ function parseRunArg(
     i: number,
     result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
 ): number {
-    if (args[i] !== '--run' || i + 1 >= args.length) return i;
+    const [cur] = args.slice(i);
+    if (cur !== '--run' || i + 1 >= args.length) return i;
     const val = args[i + 1];
     if (!val) return i;
     const eqIdx = val.indexOf('=');

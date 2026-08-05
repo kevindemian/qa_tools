@@ -21,7 +21,8 @@ export function calcTestDurationP95(runs: MetricsRun[]): number {
     if (durations.length === 0) return 0;
     durations.sort((a, b) => a - b);
     const idx = Math.max(0, Math.ceil(durations.length * 0.95) - 1);
-    return durations[idx] ?? 0;
+    const [p95] = durations.slice(idx);
+    return p95 ?? 0;
 }
 
 function collectTestDurations(runs: MetricsRun[]): number[] {

@@ -194,15 +194,15 @@ function buildPerTypeSummary(report: IncidentReport): string {
         typeCounts[event.type] = (typeCounts[event.type] ?? 0) + 1;
     }
 
-    const labels: Record<string, string> = {
-        failure: 'Failures',
-        regression: 'Regressions',
-        coverage_gap: 'Coverage Gaps',
-        seasonality: 'Seasonality Events',
-    };
+    const labels = new Map<string, string>([
+        ['failure', 'Failures'],
+        ['regression', 'Regressions'],
+        ['coverage_gap', 'Coverage Gaps'],
+        ['seasonality', 'Seasonality Events'],
+    ]);
 
     const children = Object.entries(typeCounts)
-        .map(([type, count]) => MetricCard({ label: labels[type] ?? type, value: String(count) }))
+        .map(([type, count]) => MetricCard({ label: labels.get(type) ?? type, value: String(count) }))
         .join('');
 
     // Rule 25: explicit no-data (no per-type counts) instead of silent omission.
