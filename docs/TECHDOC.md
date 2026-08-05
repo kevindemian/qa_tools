@@ -1141,7 +1141,7 @@ pre-push hook. Prompts for an optional Jira project key.
 **CSV/JSON Import:** `CSV_DEFAULT_PATH`, `CSV_PATH`, `CSV_LABELS`, `JSON_PATH`, `JSON_LABELS`
 
 **Behavior:**
-`AUTO_CHOICE`, `AUTO_CONFIRM`, `DRY_RUN`, `DEBUG`, `QUIET`, `ON_ERROR` (abort|skip|continue),
+`AUTO_CHOICE`, `AUTO_CONFIRM`, `DRY_RUN`, `DEBUG`, `QUIET`, `ON_ERROR` (abort|skip|continue|retry|rollback),
 `SKIP_FIRST_RUN`, `NO_COLOR`, `QA_TOOLS_NO_CLEAR`
 
 **QA Tools:**

@@ -97,7 +97,7 @@ Todas as variáveis de ambiente lidas por `shared/config.ts`:
 | `DRY_RUN`              | Simula requisições sem executar (`true`/`false`)  | —          |
 | `AUTO_CONFIRM`         | Pula confirmações interativas (`true`/`false`)    | —          |
 | `AUTO_CHOICE`          | Seleção automática no menu interativo             | —          |
-| `ON_ERROR`             | Ação ao encontrar erro (`abort`/`skip`)           | `abort`    |
+| `ON_ERROR`             | Ação ao encontrar erro (`abort`/`skip`/`continue`/`retry`/`rollback`) | `abort`    |
 | `XDG_STATE_HOME`       | Diretório de estado (cache/state)                 | —          |
 | `QA_TOOLS_TEMP_DIR`    | Diretório temporário (previews, cache, docs HTML) | `temp/`    |
 | `QA_TOOLS_REPORTS_DIR` | Diretório de relatórios gerados (HTML, flakiness) | `reports/` |

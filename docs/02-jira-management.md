@@ -407,7 +407,7 @@ Define o diretório padrão para arquivos JSON usados na opção 15. Permite usa
 | `AUTO_CONFIRM`         | Pular confirmações (true/false)                         | Não         |
 | `DRY_RUN`              | Simular requisições sem executar                        | Não         |
 | `QUIET`                | Suprimir output informativo                             | Não         |
-| `ON_ERROR`             | Ação em erro: `abort` ou `skip`                         | Não         |
+| `ON_ERROR`             | Ação em erro: `abort`/`skip`/`continue`/`retry`/`rollback` | Não         |
 | `XDG_STATE_HOME`       | Diretório de estado persistente                         | Não         |
 | `QA_TOOLS_TEMP_DIR`    | Diretório temporário (previews, cache, docs HTML)       | Não         |
 | `QA_TOOLS_REPORTS_DIR` | Diretório de relatórios gerados (HTML, flakiness)       | Não         |

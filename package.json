@@ -14,6 +14,7 @@
         "typecheck": "tsc --noEmit",
         "lint": "node --import tsx/esm scripts/quality-check.ts",
         "unused-exports": "ts-prune -p tsconfig.json -i \"__mocks__|/index.ts|shared/validation/.*schema.ts|mock-types.ts|providers/types.ts|compute/types.ts\" | grep -v \"(used in module)\" | grep -q . && exit 1 || exit 0",
+        "benchmark:case18": "npx tsx scripts/benchmark-case18.ts",
         "format": "prettier --write '**/*.{ts,js,json,md}'",
         "build": "node scripts/build.mjs",
         "docs": "echo 'Documentation generation removed (docs-archive/)'",

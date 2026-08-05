@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { rootLogger } from '../../logger.js';
 import { migrateLegacyProjects, parseLegacyEntry, legacyProjectsPath } from '../../migration/migrate-projects.js';
-import { listProjects, removeProject } from '../../project-registry.js';
+import { listProjects } from '../../project-registry.js';
 
 /** Cria um diretório temporário isolado (não usa cwd do repo). */
 function makeTempDir(): string {
@@ -17,20 +16,16 @@ describe('Migrate-projects (Fase 8)', () => {
 
     beforeEach(() => {
         tmp = makeTempDir();
+        // Isolamento obrigatório: sem XDG_CONFIG_HOME, listProjects/removeProject
+        // operariam no registry real (~/.config/qa-tools), e o cleanup abaixo
+        // apagaria projetos do usuário (data-loss).
+        process.env['XDG_CONFIG_HOME'] = tmp;
         fs.mkdirSync(path.join(tmp, 'config'), { recursive: true });
     });
 
     afterEach(() => {
+        delete process.env['XDG_CONFIG_HOME'];
         fs.rmSync(tmp, { recursive: true, force: true });
-        for (const p of listProjects()) {
-            try {
-                removeProject(p.name);
-            } catch (err) {
-                rootLogger.warn(
-                    `cleanup: failed to remove project ${p.name}: ${err instanceof Error ? err.message : String(err)}`,
-                );
-            }
-        }
     });
 
     it('retorna migrated=0 quando não há legado', () => {

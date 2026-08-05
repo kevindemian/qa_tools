@@ -75,7 +75,7 @@ export function migrateLegacyProjects(baseDir: string = process.cwd()): Migratio
     const legacyPath = legacyProjectsPath(baseDir);
 
     if (!fs.existsSync(legacyPath)) {
-        rootLogger.info('Migração legado: nenhum config/projects.json encontrado — nada a migrar.');
+        rootLogger.writeFileOnly('INFO', 'Migração legado: nenhum config/projects.json encontrado — nada a migrar.');
         return { migrated: 0, skipped: 0, renamed: false };
     }
 

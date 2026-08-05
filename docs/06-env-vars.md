@@ -62,7 +62,7 @@ Todas as variáveis são carregadas do arquivo `.env` na raiz do projeto.
 | `DRY_RUN`              | `Config.dryRun`       | Não          | `false`    | Simular sem executar                              |
 | `AUTO_CONFIRM`         | `Config.autoConfirm`  | Não          | `false`    | Pular prompts de confirmação                      |
 | `AUTO_CHOICE`          | `Config.autoChoice`   | Não          | —          | Auto-selecionar opção do menu                     |
-| `ON_ERROR`             | `Config.onError`      | Não          | `abort`    | Ação em erro (`abort` / `skip`)                   |
+| `ON_ERROR`             | `Config.onError`      | Não          | `abort`    | Ação em erro (`abort`/`skip`/`continue`/`retry`/`rollback`) |
 | `XDG_STATE_HOME`       | `Config.xdgStateHome` | Não          | —          | Diretório de estado persistente                   |
 | `QA_TOOLS_TEMP_DIR`    | (via `temp-dir.ts`)   | Não          | `temp/`    | Diretório temporário (previews, cache, docs HTML) |
 | `QA_TOOLS_REPORTS_DIR` | (via `temp-dir.ts`)   | Não          | `reports/` | Diretório de relatórios gerados (HTML, flakiness) |
