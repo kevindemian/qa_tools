@@ -9,8 +9,12 @@
  * os padrões de `mutate` do Stryker com ranges de linha (`path:inicio-fim`,
  * coalescidos).
  *
- * Uso: npx tsx scripts/mutation-scope.ts --base <git-ref>
+ * Uso: npx tsx scripts/mutation-scope.ts --base <git-ref> [--dir <bucket>]
  *   --base : ref de diff (base.sha do PR ou HEAD~1 no push)
+ *   --dir  : bucket opcional (Estratégia B) — lista de prefixes separada por
+ *            vírgula (ex.: "shared/ui,shared/primitives" ou "shared/root"
+ *            para apenas arquivos de topo de shared/). Filtro autoritativo em
+ *            TS sobre o diff completo (MUTATE_DIRS); git não é restringido.
  *
  * Saída: padrões separados por vírgula (formato `--mutate` do Stryker).
  * Exit code 2: nenhum arquivo-fonte de produção alterado com linhas adicionadas
@@ -238,10 +242,48 @@ export function parseGitDiff(diff: string): Array<Omit<DiffFile, 'lineSet'>> {
     }));
 }
 
-export function buildMutatePatterns(diff: string): string[] {
+export function buildMutatePatterns(diff: string, dirSpecs?: string[]): string[] {
+    const filter = dirSpecs && dirSpecs.length > 0 ? buildDirFilter(dirSpecs) : undefined;
     return parseGitDiff(diff)
         .filter((file) => file.isSource && !file.isTest && !file.isBinary && file.status !== 'deleted')
+        .filter((file) => !filter || filter(file.path))
         .flatMap((file) => coalesceRanges(file.ranges, 0).map((range) => `${file.path}:${range.start}-${range.end}`));
+}
+
+/**
+ * Build a path predicate for a list of bucket prefixes (Estratégia B — split
+ * paralelo, ver dev/docs/internal/MUTATION-TESTING-PERF.md).
+ *
+ * Each spec is either:
+ * - `<dir>` — matches the directory itself and everything under it (recursive);
+ * - `<dir>/root` — matches only files directly inside `<dir>` (top-level, no
+ *   nested path), used for buckets that group top-level source files.
+ *
+ * The git diff still fetches the full MUTATE_DIRS superset; this predicate is
+ * the authoritative bucket scoping (TS-side, testable, no git pathspec glob
+ * semantics to depend on).
+ */
+function stripTrailingSlashes(value: string): string {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 47) {
+        end -= 1;
+    }
+    return value.slice(0, end);
+}
+
+export function buildDirFilter(dirSpecs: string[]): (filePath: string) => boolean {
+    const predicates = dirSpecs.map((spec) => {
+        const normalized = stripTrailingSlashes(toPosix(spec));
+        if (normalized.endsWith('/root')) {
+            const base = normalized.slice(0, -'/root'.length);
+            return (path: string): boolean => {
+                const rest = path.startsWith(`${base}/`) ? path.slice(base.length + 1) : '';
+                return rest !== '' && !rest.includes('/');
+            };
+        }
+        return (path: string): boolean => path === normalized || path.startsWith(`${normalized}/`);
+    });
+    return (filePath: string): boolean => predicates.some((predicate) => predicate(toPosix(filePath)));
 }
 
 function readGitDiff(baseRef: string): string {
@@ -268,18 +310,21 @@ function readGitDiff(baseRef: string): string {
     }
 }
 
-function parseArgs(argv: string[]): string {
+function parseArgs(argv: string[]): { baseRef: string; dirs: string[] } {
     const baseIndex = argv.indexOf('--base');
     const baseRef = baseIndex >= 0 ? argv[baseIndex + 1] : undefined;
     if (!baseRef) {
         throw new Error('Missing required --base <git-ref>');
     }
-    return baseRef;
+    const dirIndex = argv.indexOf('--dir');
+    const dirValue = dirIndex >= 0 ? argv[dirIndex + 1] : undefined;
+    const dirs = dirValue ? dirValue.split(',').map((spec) => spec.trim()) : [];
+    return { baseRef, dirs };
 }
 
 function main(): void {
-    const baseRef = parseArgs(process.argv.slice(2));
-    const patterns = buildMutatePatterns(readGitDiff(baseRef));
+    const { baseRef, dirs } = parseArgs(process.argv.slice(2));
+    const patterns = buildMutatePatterns(readGitDiff(baseRef), dirs);
     if (patterns.length === 0) {
         process.exit(2);
     }

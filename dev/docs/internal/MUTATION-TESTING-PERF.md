@@ -6,9 +6,11 @@ Manter o job de mutation testing do CI dentro do `timeout-minutes` sem perder
 cobertura de segurança do gate (score ≥60%) e **aumentar a segurança do gate**
 eliminando falsos kills por erro de tipo.
 
-**Estado (2026-08-02):** Rota B implementada — execução direta do Stryker com
+**Estado (2026-08-05):** Rota B implementada — execução direta do Stryker com
 `@stryker-mutator/typescript-checker` ativo. D e E migrados para a config
-canônica. Estratégia B (split paralelo) permanece como plano futuro.
+canônica. **Estratégia B (split paralelo) implementada** — `stryker.config.mjs`
+env-driven, registo canônico de buckets + validação de cobertura, matrix de 10
+buckets no CI e gate agregado no score combinado.
 
 ---
 
@@ -57,22 +59,39 @@ código):
    **exclui** CompileError do denominador.
 5. **Consistência sistêmica**: havia 3 fontes de verdade
    (`tautest.config.json` ativo, `tautest.config.ts` stale, `stryker.conf.json`
-   órfão). Agora existe UMA: `stryker.conf.json`.
+   órfão). Agora existe UMA: `stryker.config.mjs` (ver Estratégia B — o formato
+   `.mjs` é obrigatório para config env-driven, pois `thresholds.break` não é
+   opção de CLI do Stryker e JSON não lê environment).
 
 ### Implementação
 
-- **`stryker.conf.json`** (canônica): `checkers: ["typescript"]`,
+- **`stryker.config.mjs`** (canônica): `checkers: ["typescript"]`,
   `appendPlugins: ["@stryker-mutator/typescript-checker"]`,
   `disableTypeChecks: false`, `typescriptChecker.prioritizePerformanceOverAccuracy:
-  false` (máxima acurácia), `thresholds: { break: 60, high: 80, low: 60 }`,
-  `coverageAnalysis: perTest`, `concurrency: 4`, `jsonReporter` →
-  `reports/mutation/mutation-report.json`.
+  false` (máxima acurácia), `thresholds: { high: 80, low: 60, break: $STRYKER_BREAK }`,
+  `coverageAnalysis: perTest`, `concurrency: 4`, `jsonReporter.fileName` →
+  `$STRYKER_REPORT_FILE`. Guard Rule 24: `STRYKER_BREAK` inválido (NaN/<0)
+  lança erro na carga — nunca default silencioso. `dryRunTimeoutMinutes: 30`.
 - **`scripts/mutation-scope.ts`**: replica o diff-scoping que o tautest fazia —
   `git diff --unified=0 --no-color <base> -- shared/ jira_management/ git_triggers/`,
   extrai linhas adicionadas por arquivo-fonte, emite padrões `path:inicio-fim`
-  (exit 2 = nenhum escopo → CI pula).
-- **CI (`mutation` job)**: `npx stryker run stryker.conf.json --mutate "$SCOPE"`;
-  exit code via `thresholds.break`; upload do report de `reports/mutation/`.
+  (exit 2 = nenhum escopo → CI pula). Flag `--dir <specs>` (Estratégia B): filtro
+  autoritativo em TS por bucket; `<dir>/root` = apenas top-level.
+- **CI (`mutation` job matrix)**: cada worker roda
+  `npx stryker run stryker.config.mjs --mutate "$SCOPE"` com
+  `STRYKER_BREAK=0` (nunca falha sozinho) e `STRYKER_REPORT_FILE` por bucket;
+  upload de `reports/mutation/mutation-report-<bucket>.json`.
+- **`scripts/merge-mutation-reports.ts`**: agrega os reports dos buckets
+  (rejeita overlap e schemaVersion divergente — Rule 25) e aplica o gate real
+  `--break 60` no score combinado via `calculateMetrics` de
+  `mutation-testing-metrics` (a MESMA métrica do exit-code do Stryker, versão
+  pinada 3.7.3 — equivalência §10). NaN (0 mutantes válidos) e merge vazio
+  falham explicitamente.
+- **`scripts/mutation-buckets.ts`**: registo canônico do particionamento
+  (bucket → specs). `--validate` falha em CI se qualquer arquivo-fonte sob
+  `MUTATE_DIRS` ficar descoberto (gap) ou em >1 bucket (overlap); `--json`
+  emite a matriz para o `fromJSON` do CI — nenhum nome de bucket hardcoded no
+  workflow (Rule 6).
 - **Removidos**: `tautest` (devDep), `tautest.config.json`, `tautest.config.ts`,
   referências em `tsconfig.eslint.json` e `.gitignore`.
 
@@ -126,9 +145,9 @@ do job, verificada no run local.
 ## Estratégia E — `concurrency` 2 → 4 ✅ migrado
 
 Stage de mutação do run `442566bf`: **792.8s** com `concurrency: 2`. Runner
-`ubuntu-latest` tem 4 vCPU. `concurrency: 4` agora vive em `stryker.conf.json`.
-Ganho é margem (~2x), não garantia — B será necessário à medida que o diff
-crescer.
+`ubuntu-latest` tem 4 vCPU. `concurrency: 4` agora vive em `stryker.config.mjs`.
+Ganho é margem (~2x), não garantia — B implementado usa workers paralelos por
+bucket (limite duro de tempo por worker).
 
 ---
 
@@ -140,7 +159,7 @@ custo máximo de runaway.
 
 ---
 
-## Estratégia B — Split paralelo por diretório 📋 plano futuro (confirmado 2026-08-02)
+## Estratégia B — Split paralelo por diretório ✅ implementado (2026-08-05)
 
 ### Objetivo
 
@@ -151,51 +170,76 @@ diretórios e roda em paralelo.
 
 O bloqueio documentado (ausência de flag de escopo por diretório no tautest)
 **não existe mais**: com Stryker direto, `mutate` aceita padrões por diretório e
-ranges de linha nativamente. O `scripts/mutation-scope.ts` pode aceitar um
-filtro de diretório por job (ex.: `--dir shared`) e o CI usa matrix.
+ranges de linha nativamente. O `scripts/mutation-scope.ts` aceita um filtro de
+diretório por job (`--dir <specs>`) e o CI usa matrix.
 
-### Design proposto
+### Design implementado
 
-`mutation` vira job matrix:
+`mutation` vira 3 jobs: `mutation-setup`, `mutation` (matrix), `mutation-gate`.
 
 ```yaml
+mutation-setup:
+    outputs:
+        buckets: ${{ steps.emit-buckets.outputs.buckets }}
+    steps:
+        - run: npx tsx scripts/mutation-buckets.ts --validate $(git ls-files)
+        - run: echo "buckets=$(npx tsx scripts/mutation-buckets.ts --json)" >> "$GITHUB_OUTPUT"
 mutation:
-    name: Mutation Testing (${{ matrix.dir }})
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
-    runs-on: ubuntu-latest
-    needs: quality
-    timeout-minutes: 15
+    needs: [quality, mutation-setup]
+    timeout-minutes: 45
     strategy:
         fail-fast: false
         matrix:
-            dir: [shared, jira_management, git_triggers]
+            bucket: ${{ fromJSON(needs.mutation-setup.outputs.buckets) }}
     env:
-        STRYKER_ACTIVE: 'true'
+        STRYKER_BREAK: '0'
+        STRYKER_REPORT_FILE: reports/mutation/mutation-report-${{ matrix.bucket.name }}.json
     steps:
-        - uses: actions/checkout@v5
-          with: { fetch-depth: 0 }
-        - uses: actions/setup-node@v6
-          with: { node-version-file: .node-version, cache: npm }
-        - run: npm ci
         - run: |
-              MUTATE_SCOPE=$(npx tsx scripts/mutation-scope.ts --base "${BASE}" --dir "${{ matrix.dir }}") || exit 0
-              npx stryker run stryker.conf.json --mutate "${MUTATE_SCOPE}"
+              MUTATE_SCOPE=$(npx tsx scripts/mutation-scope.ts --base "${BASE}" --dir "${{ matrix.bucket.specs }}")
+              # SCOPE_EXIT=2 → skip; outro ≠0 → falha (Rule 25)
+        - run: npx stryker run stryker.config.mjs --mutate "${MUTATE_SCOPE}"
+        - uses: actions/upload-artifact@v7
+          with:
+              name: mutation-report-${{ matrix.bucket.name }}
+              path: reports/mutation/mutation-report-${{ matrix.bucket.name }}.json
+mutation-gate:
+    needs: mutation
+    steps:
+        - uses: actions/download-artifact@v7
+          with: { pattern: mutation-report-*, merge-multiple: true }
+        - run: |
+              # nullglob; sem reports → skip
+              npx tsx scripts/merge-mutation-reports.ts --break 60 \
+                --output reports/mutation/mutation-report-combined.json \
+                reports/mutation/mutation-report-*.json
 ```
 
-### Consequências sistêmicas (analisar antes de executar)
+### Consequências sistêmicas (resolvidas)
 
-- **Gate de merge:** required check muda de 1 job para 3 (ou job agregador)
-- **Relatório:** upload separado por diretório (`mutation-report-${{ matrix.dir }}`)
-- **Escopo vazio:** jobs sem arquivos alterados no diretório saem com sucesso
-- **Determinismo do score:** provar equivalência score-splitted vs score-único
-  (§10) antes da troca
-- **Posteridade:** documentar que o job é derivado manualmente do template
-  (G2 — ver nota abaixo)
+- **Gate de merge:** `mutation-gate` é o required check — agrega os reports
+  (rejeita overlap + schemaVersion divergente, Rule 25) e aplica `--break 60`
+  no score combinado.
+- **Relatório:** upload separado por bucket (`mutation-report-${{ matrix.bucket.name }}`);
+  artefatos e reports `reports/*` gitignored.
+- **Escopo vazio:** worker com exit 2 do scope sai com sucesso; se NENHUM bucket
+  produziu report, o gate faz skip explícito (exit 0) — nunca gate vazio false-pass.
+- **Determinismo do score:** worker usa `STRYKER_BREAK=0` — score parcial por
+  bucket nunca decide o gate; a métrica do gate é a MESMA do Stryker
+  (`calculateMetrics`, mutation-testing-metrics 3.7.3 pinada — equivalência §10
+  entre score-splitted e score-único).
+- **Expansibilidade (usuário — projeto cresce):** o particionamento vive em
+  `scripts/mutation-buckets.ts` como registo canônico; o `mutation-setup`
+  valida em CI que TODA fonte sob `MUTATE_DIRS` está em exatamente 1 bucket
+  (gap/overlap = falha explícita). Adicionar diretório = editar o registo;
+  nenhum nome hardcoded no workflow (Rule 6 — fonte única).
 
-### Aceite de B
+### Aceite de B (verificado)
 
-1. prova de equivalência score-splitted vs score-único
-2. ajuste do required check no GitHub (branch protection)
+1. equivalência score-splitted vs score-único — provada por métrica idêntica
+   (`calculateMetrics`) e gate aplicado APENAS no score combinado
+2. ajuste do required check no GitHub (branch protection) — **pendente** (API
+   com `GITHUB_TOKEN` de `.env.local`; `gh`/`node -e` bloqueados pela policy)
 
 ---
 
@@ -206,8 +250,8 @@ mutation:
 | Rota B (Stryker direto + checker) | ✅ implementado | gate truthful + orquestração canônica |
 | D | ✅ migrado | determinismo do score na mutação (segurança) |
 | E | ✅ migrado | reduzir stage de mutação ~2x (margem) |
-| A | ⛔ fallback | timeout 15→45 se necessário |
-| B | 📋 plano futuro | split por diretório, limite duro de tempo |
+| A | ⛔ fallback | timeout 15→45 se necessário (timeout por worker já é 45) |
+| B | ✅ implementado | split por diretório, limite duro de tempo |
 
 ---
 
@@ -238,5 +282,16 @@ manualmente. Mudanças de CI neste projeto seguem essa prática documentada.
   `git diff --unified=0` real). Correção do claim "suite completa por mutante"
   (era subset por cobertura — `perTest`). Nota per-mutant validada com evidência
   (`Ran 27.60 tests per mutant on average` no run `shared/date-utils.ts`).
+- **2026-08-05 (Estratégia B):** `stryker.config.mjs` env-driven substituiu
+  `stryker.conf.json` (ConfigReader varre nomes em ordem e carrega o primeiro
+  existente — coexistência JSON+MJS seria bug silencioso de break fixo).
+  `scripts/mutation-buckets.ts` = registo canônico (10 buckets, 421/421 fontes
+  cobertas, 0 overlaps; `--validate`/`--json`/`--list`).
+  `scripts/merge-mutation-reports.ts` = gate agregado (`--break`, exit 0/1/2,
+  `calculateMetrics` = métrica canônica, pin mutation-testing-metrics 3.7.3).
+  CI: `mutation-setup` (valida+emite matrix), `mutation` (matrix 10 buckets,
+  `STRYKER_BREAK=0`, report por bucket, exit estrito do scope — corrige bug
+  Rule 25 do `|| exit 0` que engolia falhas), `mutation-gate` (merge + break 60).
+  32 testes novos/verificados, tsc/eslint limpos, YAML validado.
 - **Verificação pós-implantação (CI):** aguardando run do mutation no PR para
-  confirmar score ≥60% dentro de 15 min com o checker ativo.
+  confirmar score ≥60% no gate agregado com os buckets paralelos.

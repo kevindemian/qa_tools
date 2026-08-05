@@ -65,7 +65,7 @@ gemini-code-*
 .container/
 
 # === Config (Stryker canonical; diff-scoped via scripts/mutation-scope.ts) ===
-# stryker.conf.json is the single mutation config source (tracked).
+# stryker.config.mjs is the single mutation config source (tracked; env-driven STRYKER_BREAK/STRYKER_REPORT_FILE).
 
 # === Windows artifacts ===
 nul

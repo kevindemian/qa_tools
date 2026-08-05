@@ -8,6 +8,7 @@ import {
     compactLines,
     normalizeRange,
     parseHunkHeader,
+    buildDirFilter,
 } from '../mutation-scope.js';
 
 const DIFF = `diff --git a/git_triggers/two.ts b/git_triggers/two.ts
@@ -179,6 +180,77 @@ describe('Mutation-scope parsing (git diff --unified=0)', () => {
 
         expect(buildMutatePatterns('')).toStrictEqual([]);
         expect(buildMutatePatterns('diff --git a/x.ts b/x.ts\n@@ -1 +1 @@\n-old\n+new\n')).toStrictEqual(['x.ts:1-1']);
+    });
+});
+
+describe('Dir bucket scoping (--dir)', () => {
+    it('matches files strictly under the directory prefix', () => {
+        expect.hasAssertions();
+
+        const filter = buildDirFilter(['shared/data-hub']);
+
+        expect(filter('shared/data-hub/hub.ts')).toBeTruthy();
+        expect(filter('shared/data-hub/compute/coverage-gap.ts')).toBeTruthy();
+        expect(filter('shared/data-hub/hub.test.ts')).toBeTruthy();
+        expect(filter('shared/report/report-html.ts')).toBeFalsy();
+        expect(filter('shared/data-hub-extra/x.ts')).toBeFalsy();
+    });
+
+    it('matches the special "root" bucket for top-level files only', () => {
+        expect.hasAssertions();
+
+        const filter = buildDirFilter(['shared/root']);
+
+        expect(filter('shared/env-loader.ts')).toBeTruthy();
+        expect(filter('shared/pr-report-core.ts')).toBeTruthy();
+        expect(filter('shared/icons.ts')).toBeTruthy();
+        expect(filter('shared/data-hub/hub.ts')).toBeFalsy();
+        expect(filter('shared/report/report-html.ts')).toBeFalsy();
+    });
+
+    it('matches the jira_management and git_triggers top-level buckets', () => {
+        expect.hasAssertions();
+
+        const filterJira = buildDirFilter(['jira_management/root']);
+
+        expect(filterJira('jira_management/main.ts')).toBeTruthy();
+        expect(filterJira('jira_management/handlers/jira-handler.ts')).toBeFalsy();
+
+        const filterGit = buildDirFilter(['git_triggers/root']);
+
+        expect(filterGit('git_triggers/main.ts')).toBeTruthy();
+        expect(filterGit('git_triggers/__tests__/main.test.ts')).toBeFalsy();
+    });
+
+    it('matches any of several prefixes in a single bucket', () => {
+        expect.hasAssertions();
+
+        const filter = buildDirFilter(['shared/ui', 'shared/primitives']);
+
+        expect(filter('shared/ui/badge.ts')).toBeTruthy();
+        expect(filter('shared/primitives/report-styles.ts')).toBeTruthy();
+        expect(filter('shared/report/report-html.ts')).toBeFalsy();
+    });
+});
+
+describe('Build mutate patterns with dir scoping', () => {
+    it('filters patterns to the requested directory bucket', () => {
+        expect.hasAssertions();
+
+        expect(buildMutatePatterns(DIFF, ['jira_management/root'])).toStrictEqual(['jira_management/one.ts:4-4']);
+        expect(buildMutatePatterns(DIFF, ['shared/root'])).toStrictEqual([
+            'shared/date-utils.ts:2-3',
+            'shared/date-utils.ts:5-5',
+            'shared/new-file.ts:1-2',
+            'shared/renamed.ts:1-1',
+        ]);
+        expect(buildMutatePatterns(DIFF, ['shared/data-hub'])).toStrictEqual([]);
+    });
+
+    it('returns empty list when a bucket has no changed files (job skips)', () => {
+        expect.hasAssertions();
+
+        expect(buildMutatePatterns(DIFF, ['shared/validation'])).toStrictEqual([]);
     });
 });
 
