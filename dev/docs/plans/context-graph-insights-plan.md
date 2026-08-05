@@ -363,13 +363,13 @@ npm run lint
 
 ---
 
-### 0.4 — Remover cases Jira (case25 deletar; case17/21/27 refatorar)
+### 0.4 — Remover cases Jira (case25 deletar; case17 manter; case21/27 sem mudança)
 
-**Rationale:** `case25.ts` é wrapper puro do artefato `traceability` (deletado) — não tem função própria, deletar inteiro. `case17/21/27` têm função própria além do HTML (auto-criação de bug, CLI) — preservar a função, remover apenas o export HTML.
+**Rationale:** `case25.ts` é wrapper puro do artefato `traceability` (deletado) — não tem função própria, deletar inteiro. `case17` tem função própria (auto-criação de bug + PR comment) — F-1: manter inteiro. **Premissa original corrigida 2026-08-05 (F0.4 executado):** `case21`/`case27` NÃO têm "export HTML" próprio — exportam apenas `default { handler }` e consomem `generateCoverageGapHtml` (renderer PRESERVADO — `coverage-gap` é bucket RECONSTRUIR, não deletado) inline no handler. Remover esse consumo agora criaria estado parcial/transitório até F1.2 (viola Rule 7) → **nenhuma mudança**.
 
-**Arquivo(s):** `jira_management/commands/case25.ts` (deletar), `case17.ts`, `case21.ts`, `case27.ts`
+**Arquivo(s):** `jira_management/commands/case25.ts` (deletar) + cascata: `commands/index.ts` (import/registro '25'), `commands/case-d.ts` (import + entry de dashboard '25'), `menu-data.ts` (alias `traceability-matrix: '25'`), testes `dashboard-handlers.test.ts` + `integration-menu-connectivity.test.ts`. `case17.ts`, `case21.ts`, `case27.ts` sem mudança.
 
-**Mudança:** `case25.ts` (traceability) deletado inteiro. `case17` mantém auto-criação de bug + PR comment (F-1: manter inteiro — nenhum import dos 9 deletados; `report-html` é infra preservada). `case21`/`case27` mantêm CLI própria, removem export HTML.
+**Mudança:** `case25.ts` (traceability) deletado inteiro. `case17` mantém auto-criação de bug + PR comment (F-1: manter inteiro — nenhum import dos 9 deletados; `report-html` é infra preservada). `case21`/`case27` mantêm CLI própria e consumo inline do renderer preservado — sem alteração.
 
 **TDD (RED):** para cada refactor, teste de CLI que falha antes.
 
@@ -388,7 +388,7 @@ npx vitest run jira_management/commands/__tests__/case17-helpers.test.ts jira_ma
 
 **Testes:** testes existentes atualizados; novos casos de borda da CLI
 
-**Commit:** `refactor(jira): case25 removido, case17/21/27 mantêm função própria (F0.4)`
+**Commit:** `refactor(jira): case25 removido; case17/21/27 sem mudança (premissa §0.4 corrigida) (F0.4)`
 
 ---
 

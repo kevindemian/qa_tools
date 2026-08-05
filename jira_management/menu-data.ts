@@ -98,7 +98,6 @@ export const ALIASES: Record<string, string> = {
     documentação: 'docs',
     docs: 'docs',
     dashboards: 'd',
-    'traceability-matrix': '25',
     'release-score': '26',
     'coverage-dashboard': '27',
     sair: '0',

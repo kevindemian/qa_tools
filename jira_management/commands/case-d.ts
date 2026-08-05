@@ -1,6 +1,5 @@
 import { showDashboardMenu, type DashboardDef } from '../../shared/ui/dashboard-menu.js';
 import type { CommandContext } from './context.js';
-import case25 from './case25.js';
 import case26 from './case26.js';
 import case27 from './case27.js';
 
@@ -9,13 +8,6 @@ async function handler(ctx: CommandContext): Promise<boolean | void> {
     if (!projectName) return;
 
     const dashboards: DashboardDef[] = [
-        {
-            id: '25',
-            label: 'Traceability Matrix',
-            handler: async () => {
-                await case25.handler(ctx);
-            },
-        },
         {
             id: '26',
             label: 'Release Score',

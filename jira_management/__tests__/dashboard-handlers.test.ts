@@ -2,7 +2,6 @@ import os from 'os';
 import path from 'path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockContext } from '../../shared/test-utils/factories/context-factory.js';
-import type { TraceabilityResult } from '../../shared/report/traceability-matrix.js';
 import type { ReleaseScoreResult } from '../../shared/types/data-hub.js';
 
 vi.mock('../../shared/ui/prompt.js', () => ({
@@ -23,10 +22,6 @@ vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn(),
-}));
-vi.mock('../../shared/report/traceability-matrix.js', () => ({
-    buildTraceabilityMatrix: vi.fn(),
-    generateTraceabilityHtml: vi.fn(),
 }));
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(),
@@ -68,18 +63,6 @@ function makeRun(
         skipped: overrides?.skipped ?? 0,
         duration: overrides?.duration ?? tests.reduce((s, t) => s + t.duration, 0),
         tests,
-    };
-}
-
-function makeTraceabilityResult(overrides?: Partial<TraceabilityResult>): TraceabilityResult {
-    return {
-        nodes: [{ epic: 'EPIC-1', coverage: 85, health: 90, flakiness: 5, stories: [] }],
-        totalEpics: 1,
-        totalTests: 10,
-        overallCoverage: 85,
-        timestamp: '2026-06-14T10:00:00Z',
-        awareness: { categories: [], minConfidence: null },
-        ...overrides,
     };
 }
 
@@ -179,22 +162,16 @@ describe('Case-d — dashboard menu', () => {
         expect(showSelect).toHaveBeenCalledTimes(1);
     });
 
-    it('executes case25 when user selects traceability', async () => {
+    it('does not execute traceability when user selects 25', async () => {
         expect.hasAssertions();
 
         const { showSelect } = await import('../../shared/ui/prompt.js');
         vi.mocked(showSelect).mockResolvedValue('25');
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: [] },
-        } as never);
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
         const ctx = createMockContext();
         const { default: caseD } = await import('../commands/case-d.js');
         await caseD.handler(ctx);
 
-        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
+        expect(ctx.pushHistory).not.toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
     });
 
     it('executes case26 when user selects release score', async () => {
@@ -233,158 +210,6 @@ describe('Case-d — dashboard menu', () => {
         await caseD.handler(ctx);
 
         expect(ctx.pushHistory).toHaveBeenCalledWith('coverage-dashboard', '75% coverage, 2 gaps', 'ok');
-    });
-});
-
-describe('Case25 — Traceability Matrix', () => {
-    beforeEach(() => vi.clearAllMocks());
-
-    it('warns and returns early if no project name', async () => {
-        expect.hasAssertions();
-
-        const ctx = createMockContext();
-        ctx.ctx.project_name = '';
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(ctx.pushHistory).not.toHaveBeenCalled();
-
-        const { warn } = await import('../../shared/ui/prompt.js');
-
-        expect(vi.mocked(warn)).toHaveBeenCalledWith('Nenhum projeto Jira selecionado.');
-    });
-
-    it('loads metrics from store', async () => {
-        expect.hasAssertions();
-
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-            await import('../../shared/report/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        const runs = [makeRun('TEST')];
-        vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: runs },
-        } as never);
-        vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
-        vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
-        const ctx = createMockContext();
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(getDataHub).toHaveBeenCalledWith();
-        expect(buildTraceabilityMatrix).toHaveBeenCalledWith(runs, undefined, expect.anything());
-    });
-
-    it('generates HTML with project name in title', async () => {
-        expect.hasAssertions();
-
-        const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-            await import('../../shared/report/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(buildTraceabilityMatrix).mockReturnValue(makeTraceabilityResult());
-        vi.mocked(generateTraceabilityHtml).mockReturnValue(HTML_WITH_DOCTYPE);
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        ctx.ctx.project_name = 'MY_PROJECT';
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(generateTraceabilityHtml).toHaveBeenCalledWith(expect.anything(), 'Traceability Matrix — MY_PROJECT');
-    });
-
-    it('writes report with correct filename pattern', async () => {
-        expect.hasAssertions();
-
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        ctx.ctx.project_name = 'PROJ-XYZ';
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(writeReport).toHaveBeenCalledWith('traceability-matrix-PROJ-XYZ.html', HTML_WITH_DOCTYPE);
-    });
-
-    it('opens report in browser', async () => {
-        expect.hasAssertions();
-
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        const { openWithFallback } = await import('../../shared/open.js');
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'));
-        vi.mocked(openWithFallback).mockResolvedValue(undefined);
-        const ctx = createMockContext();
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(openWithFallback).toHaveBeenCalledWith(
-            path.join(os.tmpdir(), 'qa-traceability-matrix-TEST.html'),
-            'Traceability Matrix',
-            expect.any(Function),
-        );
-    });
-
-    it('pushes history with project name on success', async () => {
-        expect.hasAssertions();
-
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        ctx.ctx.project_name = 'AUDIT-PROJ';
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-
-        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'AUDIT-PROJ', 'ok');
-    });
-
-    it('handles empty metrics store gracefully', async () => {
-        expect.hasAssertions();
-
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        const { buildTraceabilityMatrix } = await import('../../shared/report/traceability-matrix.js');
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(getDataHub).mockReturnValue({
-            computed: { metricsRuns: [] },
-        } as never);
-        vi.mocked(buildTraceabilityMatrix).mockReturnValue(
-            makeTraceabilityResult({ nodes: [], totalEpics: 0, totalTests: 0, overallCoverage: 0 }),
-        );
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        const { default: case25 } = await import('../commands/case25.js');
-
-        await expect(case25.handler(ctx)).resolves.not.toThrow();
-        expect(ctx.pushHistory).toHaveBeenCalledWith('traceability-matrix', 'TEST', 'ok');
-    });
-
-    it('handles loadMetrics error gracefully', async () => {
-        expect.hasAssertions();
-
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        vi.mocked(getDataHub).mockImplementation(() => {
-            throw new Error('disk error');
-        });
-        const ctx = createMockContext();
-        const { default: case25 } = await import('../commands/case25.js');
-
-        await expect(case25.handler(ctx)).resolves.not.toThrow();
-
-        const { printError } = await import('../../shared/ui/prompt.js');
-
-        expect(vi.mocked(printError)).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls title with correct label', async () => {
-        expect.hasAssertions();
-
-        const { writeReport } = await import('../../shared/infra/temp-dir.js');
-        vi.mocked(writeReport).mockReturnValue(path.join(os.tmpdir(), 'qa-test-report.html'));
-        const ctx = createMockContext();
-        const { default: case25 } = await import('../commands/case25.js');
-        await case25.handler(ctx);
-        const { title } = await import('../../shared/ui/prompt.js');
-
-        expect(vi.mocked(title)).toHaveBeenCalledWith('Traceability Matrix');
     });
 });
 
