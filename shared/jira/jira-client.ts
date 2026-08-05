@@ -205,20 +205,25 @@ class JiraClient implements JiraResourceLike {
     }
 
     async searchJiraIssues(jql: string, maxResults = 200): Promise<SearchIssuesResponse> {
+        // Jira API validates maxResults: v2 and v3 reject 0 with HTTP 400
+        // ("max results parameter has to be between 1 and 5,000"), and v3 caps at 5000.
+        // Clamp at the API boundary so count-only callers (maxResults=0) never hit a 400.
+        const effectiveMaxResults = Number.isFinite(maxResults) && maxResults > 0 ? Math.floor(maxResults) : 1;
+        const clampedMaxResults = Math.min(5000, effectiveMaxResults);
         if (this.jiraMode === 'cloud') {
             // Jira Cloud removed GET/POST /rest/api/2/search (CHANGE-2046).
             // The supported endpoint is POST /rest/api/3/search/jql.
             // v3 response: { issues, nextPageToken, isLast } — no `total` field.
             const res = await this.postToApiRoot('/rest/api/3/search/jql', {
                 jql: normalizeJqlForCloud(jql),
-                maxResults,
+                maxResults: clampedMaxResults,
             });
             const data = (res ?? {}) as Record<string, unknown>;
             const issues = Array.isArray(data['issues']) ? data['issues'] : [];
             // v3 has no `total`; use issues.length (accurate when result < maxResults).
             return { issues: issues as SearchIssuesResponse['issues'], total: issues.length };
         }
-        const query = `search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}`;
+        const query = `search?jql=${encodeURIComponent(jql)}&maxResults=${clampedMaxResults}`;
         return this.getJiraResource<SearchIssuesResponse>(query);
     }
 

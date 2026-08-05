@@ -75,4 +75,24 @@ describe('BUG 11: Cloud API missing fields[] in POST body', () => {
         expect(result.issues).toHaveLength(1);
         expect(result.issues[0]?.key).toBe('TEST-1');
     });
+
+    it('red: maxResults=0 is rejected by Cloud v3 (400) and must be sanitized to >=1', async () => {
+        expect.hasAssertions();
+
+        let capturedBody: Record<string, unknown> = {};
+        const mockResource: JiraResourceLike = {
+            baseUrl: 'https://example.atlassian.net/rest/api/3',
+            jiraMode: 'cloud',
+            postToApiRoot: vi.fn().mockImplementation((_url: string, body: Record<string, unknown>) => {
+                capturedBody = body;
+                return { issues: [], isLast: true };
+            }),
+            getJiraResource: vi.fn(),
+        } as unknown as JiraResourceLike;
+
+        // Caller passing 0 (count-only intent) must never reach the Jira API as 0.
+        await searchJiraIssuesCore(mockResource, rootLogger, 'project = TEST', 0);
+
+        expect(capturedBody['maxResults']).toBe(1);
+    });
 });

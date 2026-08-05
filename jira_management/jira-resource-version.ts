@@ -3,7 +3,7 @@ import { formatDateISO } from '../shared/date-utils.js';
 import { success, info, extractErrorMessage, ProgressBar } from '../shared/ui/prompt.js';
 import type { Logger } from '../shared/logger.js';
 import type { VersionData, JiraIssue, SearchResponse, JiraResourceLike } from './jira-resource-types.js';
-import { rootLogger } from "../shared/logger.js";
+import { rootLogger } from '../shared/logger.js';
 import {
     noIssuesFoundForVersion,
     noVersionFoundForProject,
@@ -89,6 +89,11 @@ export async function searchJiraIssuesCore(
     jql: string,
     maxResults = 200,
 ): Promise<SearchResponse> {
+    // Jira API validates maxResults: v2 and v3 reject 0 with HTTP 400
+    // ("max results parameter has to be between 1 and 5,000"), and v3 caps at 5000.
+    // Clamp at the API boundary so count-only callers (maxResults=0) never hit a 400.
+    const effectiveMaxResults = Number.isFinite(maxResults) && maxResults > 0 ? Math.floor(maxResults) : 1;
+    const clampedMaxResults = Math.min(5000, effectiveMaxResults);
     try {
         const allIssues: JiraIssue[] = [];
         let startAt = 0;
@@ -99,16 +104,16 @@ export async function searchJiraIssuesCore(
         const isCloud = resource.jiraMode === 'cloud' || isAtlassianCloudGateway(resource.baseUrl);
 
         while (pages < MAX_PAGES && allIssues.length < MAX_TOTAL) {
-            const page = await fetchSearchPage(resource, jql, startAt, maxResults, cloudToken);
+            const page = await fetchSearchPage(resource, jql, startAt, clampedMaxResults, cloudToken);
             pages++;
 
-            const decision = classifySearchPage(page, startAt, maxResults, allIssues, total, log);
+            const decision = classifySearchPage(page, startAt, clampedMaxResults, allIssues, total, log);
             total = decision.total;
             allIssues.push(...page.issues);
             if (decision.stop) break;
 
             cloudToken = page.nextPageToken;
-            startAt += maxResults;
+            startAt += clampedMaxResults;
 
             // Cloud (API v3) uses nextPageToken for pagination. When the token is null,
             // Cloud has no more pages — but may still set isLast=false. Break to avoid
