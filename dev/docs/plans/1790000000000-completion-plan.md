@@ -1352,7 +1352,7 @@ A fase R2 garantiu que os renderers consomem `dataHub.computed` (SSOT) e exibem 
 
 ### Objetivo
 
-Validar que CADA um dos 28 artefatos entrega EXATAMENTE o conteudo especificado. Cada tarefa gera um relatorio de validacao (pass/fail por campo) e corrige gaps encontrados.
+Validar que CADA um dos 24 artefatos entrega EXATAMENTE o conteudo especificado. Cada tarefa gera um relatorio de validacao (pass/fail por campo) e corrige gaps encontrados.
 
 ### Ordem de Execucao
 
@@ -1372,7 +1372,7 @@ Executar em sequencia: R8.1 → R8.2 → R8.3 → R8.4 → R8.5 → R8.6
 5. Verificar que `metric.severity` e `metric.threshold` estao implementados
 
 **Critério de Aceitação:**
-- 28/28 artefatos com 100% das metricas obrigatórias presentes
+- 24/24 artefatos com 100% das metricas obrigatórias presentes
 - Nenhuma metrica hardcoded (todas vêm de `dataHub.computed`)
 - Output: relatório de validação com pass/fail por artefato
 
@@ -1398,7 +1398,7 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "metr
 4. Verificar que conteudo obrigatório de cada seção está presente (ex: "Events Timeline" tem cards com data, tipo, severidade)
 
 **Critério de Aceitação:**
-- 28/28 artefatos com 100% das seções obrigatórias
+- 24/24 artefatos com 100% das seções obrigatórias
 - Nenhuma seção ausente ou com tipo incorreto
 - Output: relatório de validação com pass/fail por seção
 
@@ -1424,7 +1424,7 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "sect
 4. Verificar que mensagens sao EXATAMENTE as especificadas (nao paráfrases)
 
 **Critério de Aceitação:**
-- 28/28 artefatos com todas as ações condicionais implementadas
+- 24/24 artefatos com todas as ações condicionais implementadas
 - Cada condição testada com dados que a acionam
 - Mensagens EXATAS conforme especificação
 
@@ -1450,7 +1450,7 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "acti
 4. Verificar que badges de severidade usam as cores corretas (error=red, warn=yellow, info=blue, success=green)
 
 **Critério de Aceitação:**
-- 28/28 artefatos com thresholds corretos
+- 24/24 artefatos com thresholds corretos
 - Severidades correspondem à especificação
 - Sample-size warnings funcionam
 
@@ -1476,8 +1476,8 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "thre
 4. Verificar que `ssot` corresponde ao campo real consumido (nao recalculado localmente)
 
 **Critério de Aceitação:**
-- 28/28 artefatos com timestamp correto (onde obrigatório)
-- 28/28 artefatos com `data-dashboard` correto
+- 24/24 artefatos com timestamp correto (onde obrigatório)
+- 24/24 artefatos com `data-dashboard` correto
 - Nenhum artefato recalcula dados do DataHub
 
 **Comando de Verificação:**
@@ -1495,7 +1495,7 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "time
 
 **Arquivo(s):** `dev/docs/internal/content-validation-report.md` (novo)
 
-**Mudanca:** Gerar relatório consolidado de validacao de conteudo para todos os 28 artefatos:
+**Mudanca:** Gerar relatório consolidado de validacao de conteudo para todos os 24 artefatos:
 1. Tabela com status de cada artefato (pass/fail por categoria)
 2. Lista de gaps encontrados e corrigidos
 3. Métricas de cobertura: % de artefatos com 100% das métricas, seções, ações
@@ -1503,7 +1503,7 @@ npx vitest run shared/__tests__/artifact-content-validation.test.ts --grep "time
 
 **Critério de Aceitação:**
 - Relatório existe em `dev/docs/internal/content-validation-report.md`
-- Todos os 28 artefatos validados (pass ou fail documentado)
+- Todos os 24 artefatos validados (pass ou fail documentado)
 - Nenhum gap aberto (todos corrigidos ou documentados como tech debt)
 
 **Comando de Verificação:**
@@ -1536,7 +1536,7 @@ grep -c "PASS\|FAIL" dev/docs/internal/content-validation-report.md
 
 > **R2 tem 24 sub-artefatos (21 dashboards + coverage-gap + orchestrator + git_triggers HTML + 3 pr-report artifacts). Nota: coverage-gap e git_triggers cada um conta como 1 tarefa R2.**
 >
-> **R8 valida que CADA um dos 28 artefatos entrega EXATAMENTE o conteudo definido em CONTENT-SPECIFICATION.md (metricas, secoes, acoes, thresholds, timestamps).**
+> **R8 valida que CADA um dos 24 artefatos entrega EXATAMENTE o conteudo definido em CONTENT-SPECIFICATION.md (metricas, secoes, acoes, thresholds, timestamps).**
 
 ## Notas Finais
 
@@ -1571,7 +1571,7 @@ Auditoria completa de execução do plano `1790000000000-completion-plan.md` rea
 - **Fase R5 (Auditoria CSS & Validação Visual):** Parcial — `HTML-CSS-HOOKS-AUDIT.md` criado; hooks test existe, mas testa fragmentos inline (não output real de render) e não cobre orquestradores/seções. Checklist R5.3 não inclui arquivos HTML orquestradores para verificação de emojis/inline styles.
 - **Fase R6 (Documentação de Arquitetura):** 100% Concluída (`TECHDOC.md`, `11-pr-report.md`, `08-fluxos-completos.md` e `show-docs.ts` atualizados).
 - **Fase R7 (Auditoria Final & Integridade):** 100% Concluída (build, lint, vitest e audit totalmente validados).
-- **Fase R8 (Validação de Conteúdo por CONTENT-SPECIFICATION.md):** Parcial — `artifact-specs.ts` está completo e `artifact-content-validation.test.ts` (189 linhas) valida apenas que as definições de spec são estruturalmente corretas (campos preenchidos). NÃO valida que o output renderizado real dos renderers/orquestradores corresponde às specs. "28/28 validados" = 28 specs completas, NÃO 28 artefacts renderizados conforme spec.
+- **Fase R8 (Validação de Conteúdo por CONTENT-SPECIFICATION.md):** Parcial — `artifact-specs.ts` está completo e `artifact-content-validation.test.ts` (189 linhas) valida apenas que as definições de spec são estruturalmente corretas (campos preenchidos). NÃO valida que o output renderizado real dos renderers/orquestradores corresponde às specs. "24/24 validados" = 24 specs completas, NÃO 24 artefacts renderizados conforme spec.
 
 ### 2. Resultados dos Testes e Quality Gates
 - **TypeScript (`npx tsc --noEmit`):** 0 erros de compilação.
@@ -1583,7 +1583,7 @@ Auditoria completa de execução do plano `1790000000000-completion-plan.md` rea
 - **Inconformidades / Gaps Identificados:**
 
   **[ALTO] R8 — Validação de conteúdo é superficial.**
-  `artifact-content-validation.test.ts` (189 linhas) valida que `artifact-specs.ts` tem campos obrigatórios preenchidos internamente (name, source, format, severity, etc.). NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "28/28 artifacts validated" = "28 spec definitions existem e são internamente consistentes", NÃO "28 artefacts renderizados produzem output conforme spec". Não há teste de ponta-a-ponta que gere o HTML/Markdown real do pr-report e valide cada métrica/section/action.
+  `artifact-content-validation.test.ts` (189 linhas) valida que `artifact-specs.ts` tem campos obrigatórios preenchidos internamente (name, source, format, severity, etc.). NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "24/24 artifacts validated" = "24 spec definitions existem e são internamente consistentes", NÃO "24 artefacts renderizados produzem output conforme spec". Não há teste de ponta-a-ponta que gere o HTML/Markdown real do pr-report e valide cada métrica/section/action.
 
   **[ALTO] report-html.ts (orquestrador principal) não consome `dataHub.computed` para cards de resumo — contradiz R2.18.**
   `report-html.ts:102` usa `statsFromTests(tests)` (computação local de raw test data) e `calcRunPassRate(stats)` em vez de ler `dataHub.computed`. As seções Summary, Failed Summary, Quality Gate do HTML artifact são todas calculadas localmente. R2.18 exige explicitamente que o orquestrador consuma DataHub.computed onde aplicável e não recalcule métricas já computadas.
@@ -1671,7 +1671,7 @@ R4.2 extraiu `renderQualityGateTable()` como função compartilhada e `buildSumm
 
 #### C1. R8 — Validação de conteúdo superficial (falso positivo)
 **Arquivos:** `shared/__tests__/artifact-content-validation.test.ts`, `dev/docs/internal/content-validation-report.md`
-**Problema:** O teste de validação R8 verifica apenas que `artifact-specs.ts` tem campos internamente consistentes. NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "28/28 validated" é verdadeiro apenas para especificações, não para implementação.
+**Problema:** O teste de validação R8 verifica apenas que `artifact-specs.ts` tem campos internamente consistentes. NÃO renderiza HTML/Markdown real e NÃO compara output contra `CONTENT-SPECIFICATION.md`. "24/24 validated" é verdadeiro apenas para especificações, não para implementação.
 **Correção aplicada:** `artifact-content-validation.test.ts` renderiza output real de 17 renderers via `buildRendererEntries()` e valida que cada métrica, secção, data-dashboard, data-part, timestamp definido em CONTENT-SPECIFICATION.md está presente no output real (137 tests).
 **Status:** ✅ Implementado.
 
@@ -1793,7 +1793,7 @@ Auditoria atualizada realizada em 29/Jul/2026 após aplicação de correções C
 ### 2. Gaps Confirmados (Atualizados)
 
 **[ALTO] R8 — Validação de conteúdo é superficial.**
-`artifact-content-validation.test.ts` (759 linhas) valida que spec definitions são internamente consistentes. NÃO renderiza HTML/Markdown real de orquestradores nem compara output contra `CONTENT-SPECIFICATION.md` para todos os 21 artefatos R2 + 3 pr-report. "28/28 validated" = specs definidas, NÃO output renderizado conforme spec.
+`artifact-content-validation.test.ts` (759 linhas) valida que spec definitions são internamente consistentes. NÃO renderiza HTML/Markdown real de orquestradores nem compara output contra `CONTENT-SPECIFICATION.md` para todos os 21 artefatos R2 + 3 pr-report. "24/24 validated" = specs definidas, NÃO output renderizado conforme spec.
 
 **[ALTO] report-html.ts não consome `dataHub.computed` full (R2.18).**
 `report-html.ts:107-109` usa `options?.computed?.metricsRuns?.[0]` MAS apenas para passRate. Não consome flakiness, health score, trends. Quando chamado sem `computed`, recai em cálculo local. R2.18 exige que orquestrador consuma `dataHub.computed` onde aplicável.
