@@ -180,7 +180,8 @@ export async function llmPrompt<S extends ZodSchema = never>(
     const { tier, system, user, callerId, responseFormat, schema } = opts;
     type T = [S] extends [never] ? string : InferSchemaData<NonNullable<S>>;
     const typedSchema = schema !== undefined && typedSchemaOf<T>(schema) ? schema : undefined;
-    const cfgKey = configUniqueKey(tierToConfig(tier));
+    const cfg = tierToConfig(tier);
+    const cfgKey = configUniqueKey(cfg);
     const cKey = cacheKey(tier, cfgKey, system, user, callerId, responseFormat);
 
     const memResult = checkMemoryCache(cKey, tier, callerId, typedSchema, responseFormat);
@@ -193,6 +194,8 @@ export async function llmPrompt<S extends ZodSchema = never>(
     rootLogger.info(
         'LLM request tier=' +
             tier +
+            ' model=' +
+            (cfg.model || 'unknown') +
             ' system_len=' +
             system.length +
             ' user_len=' +

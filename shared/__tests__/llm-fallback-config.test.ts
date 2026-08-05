@@ -82,6 +82,8 @@ import {
     LLM_ERROR_BODY_TRUNCATION,
     LlmErrorPayloadSchema,
     estimateCostUSD,
+    assertJudgeIndependence,
+    inferFormatFromBaseUrl,
 } from '../llm/llm-fallback-config.js';
 import Config from '../config-accessor.js';
 
@@ -113,14 +115,24 @@ describe('Llm Fallback Config', () => {
             expect(cfg.format).toBe('openai');
         });
 
-        it('returns reviewer tier config with gemini format (explicit)', () => {
+        it('derives reviewer format from the reviewer base URL (gemini)', () => {
             Config.set('llmReviewApiKey', 'AIza-review');
             Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+            Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
             const cfg = tierToConfig('reviewer');
 
             expect(cfg.apiKey).toBe('AIza-review');
             expect(cfg.model).toBe('gemini-2.0-flash-exp');
             expect(cfg.format).toBe('gemini');
+        });
+
+        it('derives reviewer format from the reviewer base URL (openai-compatible)', () => {
+            Config.set('llmReviewApiKey', 'sk-review');
+            Config.set('llmReviewModel', 'gpt-4o-mini');
+            Config.set('llmReviewBaseUrl', 'https://openrouter.ai/api/v1');
+            const cfg = tierToConfig('reviewer');
+
+            expect(cfg.format).toBe('openai');
         });
 
         it('returns report tier config with json responseFormat (explicit)', () => {
@@ -370,6 +382,104 @@ describe('Llm Fallback Config', () => {
             const large = estimateCostUSD('google/gemini-2.0-flash-exp', 2000, 1000);
 
             expect(large).toBeCloseTo(small * 2, 5);
+        });
+    });
+
+    describe('InferFormatFromBaseUrl', () => {
+        it('derives gemini format from Gemini base URL', () => {
+            expect(inferFormatFromBaseUrl('https://generativelanguage.googleapis.com/v1beta')).toBe('gemini');
+        });
+
+        it('derives anthropic format from Anthropic base URL', () => {
+            expect(inferFormatFromBaseUrl('https://api.anthropic.com/v1')).toBe('anthropic');
+        });
+
+        it('derives openai format from OpenRouter base URL', () => {
+            expect(inferFormatFromBaseUrl('https://openrouter.ai/api/v1')).toBe('openai');
+        });
+
+        it('defaults unknown/empty base URLs to openai', () => {
+            expect(inferFormatFromBaseUrl('https://custom.example.com/v1')).toBe('openai');
+            expect(inferFormatFromBaseUrl('')).toBe('openai');
+        });
+    });
+
+    describe('AssertJudgeIndependence', () => {
+        it('blocks when main (generator) model is not configured', () => {
+            Config.set('llmProvider', 'custom');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('main');
+        });
+
+        it('blocks when generator family is unknown', () => {
+            Config.set('llmModel', 'some-future-model-xyz');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('unknown');
+        });
+
+        it('blocks when reviewer (judge) model is not configured', () => {
+            Config.set('llmProvider', 'openai');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4o');
+            Config.set('llmReviewApiKey', 'sk-review');
+            Config.set('llmReviewModel', '');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('reviewer');
+        });
+
+        it('blocks when judge family equals generator family', () => {
+            Config.set('llmProvider', 'openai');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4o');
+            Config.set('llmReviewApiKey', 'sk-review');
+            Config.set('llmReviewModel', 'gpt-4o-mini');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('not independent');
+        });
+
+        it('blocks when judge family is unknown and LLM_JUDGE_FAMILY is not declared', () => {
+            Config.set('llmProvider', 'openai');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4o');
+            Config.set('llmReviewApiKey', 'sk-review');
+            Config.set('llmReviewModel', 'some-future-judge-xyz');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('LLM_JUDGE_FAMILY');
+        });
+
+        it('allows unknown judge model when LLM_JUDGE_FAMILY is declared and differs', () => {
+            Config.set('llmProvider', 'openai');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4o');
+            Config.set('llmReviewApiKey', 'sk-review');
+            Config.set('llmReviewModel', 'some-future-judge-xyz');
+            Config.set('llmJudgeFamily', 'anthropic');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(true);
+        });
+
+        it('returns ok when generator and judge families differ', () => {
+            Config.set('llmProvider', 'openai');
+            Config.set('llmApiKey', 'sk-test');
+            Config.set('llmModel', 'gpt-4o');
+            Config.set('llmReviewApiKey', 'AIza-review');
+            Config.set('llmReviewModel', 'gemini-2.0-flash-exp');
+            Config.set('llmReviewBaseUrl', 'https://generativelanguage.googleapis.com/v1beta');
+            const result = assertJudgeIndependence();
+
+            expect(result.ok).toBe(true);
+            expect(result.reason).toBeUndefined();
         });
     });
 });

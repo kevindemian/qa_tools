@@ -52,7 +52,15 @@ vi.mock('../config-accessor.js', () => {
                 Reflect.set(mockConfig, key, value);
             },
             get(key: string) {
-                return Reflect.get(mockConfig, key);
+                const configured = Reflect.get(mockConfig, key);
+                if (configured !== undefined) return configured;
+                const defaults: Record<string, string> = {
+                    llmReviewBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+                    llmFastBaseUrl: 'https://api.groq.com/openai/v1',
+                    llmFallbackBaseUrl: 'https://nv.api.com/v1',
+                    llmBatchBaseUrl: 'https://models.inference.ai.azure.com',
+                };
+                return defaults[key] ?? '';
             },
             resetInstance() {
                 Object.keys(mockConfig).forEach((k) => Reflect.deleteProperty(mockConfig, k));

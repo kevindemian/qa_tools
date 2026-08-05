@@ -13,10 +13,15 @@ import Config from '../config-accessor.js';
 import { rootLogger } from '../logger.js';
 import { z } from 'zod';
 import type { LlmTier, ResponseFormat } from '../types.js';
-import { getProviderProfile, inferProviderFromKey, isKnownProvider } from './llm-provider-profiles.js';
-import type { LlmProvider } from './llm-provider-profiles.js';
+import {
+    getProviderProfile,
+    inferProviderFromKey,
+    isKnownProvider,
+    PROVIDER_PROFILES,
+} from './llm-provider-profiles.js';
+import type { LlmProvider, ProviderFormat } from './llm-provider-profiles.js';
 import { resolveModel } from './model-resolver.js';
-import type { ProviderFormat } from './llm-provider-profiles.js';
+import { familyOf, UNKNOWN_FAMILY } from './model-family.js';
 
 export interface ProviderConfig {
     apiKey: string;
@@ -242,10 +247,27 @@ function tierKey(tier: LlmTier, prop: string): string {
 }
 
 /**
+ * Infer the provider wire format from a base URL.
+ * Agnostic to provider/model family: derives from known provider profile base
+ * URLs first, then falls back to URL markers, then defaults to OpenAI-compatible.
+ */
+export function inferFormatFromBaseUrl(baseUrl: string): ProviderFormat {
+    if (!baseUrl) return 'openai';
+    const profileEntry = Object.entries(PROVIDER_PROFILES).find(([, p]) => p.baseUrl && baseUrl.startsWith(p.baseUrl));
+    if (profileEntry) return profileEntry[1].format;
+    if (baseUrl.includes('generativelanguage.googleapis.com')) return 'gemini';
+    if (baseUrl.includes('api.anthropic.com')) return 'anthropic';
+    return 'openai';
+}
+
+/**
  * Build a ProviderConfig from explicit tier-specific env vars.
  * Used when the user has set LLM_{TIER}_API_KEY (fast, reviewer, fallback, batch).
  * Main and report tiers always resolve through the provider profile path
  * since they share LLM_API_KEY.
+ *
+ * The wire format is DERIVED from the tier base URL (format-agnostic), never
+ * hard-coded per tier: a reviewer may be hosted on any provider/format.
  */
 function configFromExplicit(tier: LlmTier): ProviderConfig | null {
     if (tier === 'main' || tier === 'report') return null;
@@ -258,7 +280,7 @@ function configFromExplicit(tier: LlmTier): ProviderConfig | null {
         apiKey,
         model,
         baseUrl,
-        format: tier === 'reviewer' ? 'gemini' : 'openai',
+        format: inferFormatFromBaseUrl(baseUrl),
         temperature: temp,
     };
 }
@@ -336,4 +358,79 @@ export function tierToConfig(tier: LlmTier): ProviderConfig {
 
     // 3. Fallback: empty config (should not happen with valid provider)
     return { apiKey: '', model: '', baseUrl: '', format: 'openai', temperature: temp };
+}
+
+/**
+ * Result of a judge-independence check.
+ * `ok: true` → generator and judge are provably different families.
+ * `ok: false` → judge MUST NOT run; `reason` explains why and how to fix.
+ */
+export interface JudgeIndependenceResult {
+    ok: boolean;
+    reason?: string;
+}
+
+/**
+ * Assert that the judge (reviewer tier) is independent of the generator
+ * (main tier): different declared families, both resolvable.
+ *
+ * Family independence is the ONLY guarantee that a judge is not echoing the
+ * generator's own biases. When the guarantee cannot be proven, the judge must
+ * NOT run — explicit block, never a silent default (Rule 25).
+ *
+ * Resolution order:
+ *  1. main model missing → block (explicit error).
+ *  2. generator family `unknown` → block (cannot prove independence).
+ *  3. reviewer model missing → block with actionable reason (LLM_REVIEW_MODEL).
+ *  4. judge family == generator family → block (same lineage).
+ *  5. judge family `unknown` and LLM_JUDGE_FAMILY not declared → block
+ *     (user must declare the judge family explicitly).
+ *  6. otherwise → ok.
+ */
+export function assertJudgeIndependence(): JudgeIndependenceResult {
+    const mainConfig = tierToConfig('main');
+    if (!mainConfig.model) {
+        return { ok: false, reason: 'main (generator) model is not configured; set LLM_MODEL' };
+    }
+
+    const generatorFamily = familyOf(mainConfig.model);
+    if (generatorFamily === UNKNOWN_FAMILY) {
+        return {
+            ok: false,
+            reason:
+                `generator family for "${mainConfig.model}" is unknown; ` +
+                'independence from the judge cannot be proven',
+        };
+    }
+
+    const reviewerConfig = tierToConfig('reviewer');
+    if (!reviewerConfig.model) {
+        return {
+            ok: false,
+            reason: 'reviewer (judge) model is not configured; set LLM_REVIEW_MODEL',
+        };
+    }
+
+    const declaredJudgeFamily = Config.get('llmJudgeFamily');
+    const judgeFamily = declaredJudgeFamily || familyOf(reviewerConfig.model);
+
+    if (judgeFamily === generatorFamily) {
+        return {
+            ok: false,
+            reason:
+                `judge family "${judgeFamily}" is the same as the generator family; ` +
+                'judge is not independent — choose a different-family reviewer model',
+        };
+    }
+
+    if (judgeFamily === UNKNOWN_FAMILY) {
+        return {
+            ok: false,
+            reason:
+                `judge family for "${reviewerConfig.model}" is unknown; ` +
+                'set LLM_JUDGE_FAMILY to declare the judge family explicitly',
+        };
+    }
+
+    return { ok: true };
 }
