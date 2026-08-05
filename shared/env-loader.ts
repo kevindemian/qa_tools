@@ -99,7 +99,7 @@ export function ensureDotenv(projectRoot: string = path.resolve(import.meta.dirn
     const envPath = path.join(projectRoot, '.env');
 
     try {
-        dotenv.config({ path: localPath });
+        dotenv.config({ path: localPath, quiet: true });
     } catch (err) {
         process.stderr.write(
             '[env-loader] Failed to load .env.local (optional): ' +
@@ -109,7 +109,7 @@ export function ensureDotenv(projectRoot: string = path.resolve(import.meta.dirn
     }
 
     try {
-        dotenv.config({ path: envPath });
+        dotenv.config({ path: envPath, quiet: true });
     } catch (err) {
         process.stderr.write(
             '[env-loader] Failed to load .env (optional): ' + (err instanceof Error ? err.message : String(err)) + '\n',
@@ -140,7 +140,7 @@ function loadTestEnv(projectRoot: string): void {
 
     for (const filePath of [testLocalPath, testPath]) {
         try {
-            dotenv.config({ path: filePath });
+            dotenv.config({ path: filePath, quiet: true });
         } catch (err) {
             // §24 safeguard: dotenv.config returns `{ error }` for a missing file (does not throw).
             // This arm defends only against an unexpected I/O fault; not reachable with real inputs.
