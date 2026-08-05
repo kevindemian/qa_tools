@@ -10,6 +10,8 @@
  *      — unmatched → create in Jira
  *   4. output JSON with resolved preConditions */
 import { formatErr } from '../../shared/errors.js';
+import { z } from '../../shared/validation/validation.js';
+import { ImportJsonItemSchema } from '../csv-import-schema.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -32,7 +34,74 @@ import { recordAiGeneration } from '../../shared/quality/ai-feedback.js';
 import type { CommandContext } from './context.js';
 import { TestCaseArraySchema } from './case18.schema.js';
 import { matchPreconditionByDualThreshold } from '../jira_link_manager.js';
-import type { AiGenerationRecord, PreConditionSummary, TestCase, TestStep } from '../../shared/types.js';
+import type {
+    AiGenerationRecord,
+    AiQualityMetric,
+    PreConditionSummary,
+    TestCase,
+    TestStep,
+} from '../../shared/types.js';
+import type { GeneratedTestCase } from '../../shared/quality/case18-types.js';
+import { evaluateCase18, generateEvaluationReport } from '../../shared/quality/case18-evaluator.js';
+import type { EvaluationResult } from '../../shared/quality/case18-types.js';
+import {
+    buildCoverageTable,
+    coverageTableToHtml,
+    coverageTableToJson,
+} from '../../shared/quality/case18-coverage-table.js';
+import { writeReport } from '../../shared/infra/temp-dir.js';
+
+/** Maximum number of LLM generation attempts in a single case18 run. Guards
+ *  against unbounded cost when the user re-generates with feedback. */
+export const CASE18_MAX_GENERATION_ATTEMPTS = 3;
+
+/** Build the "CORRECTIONS REQUIRED" block for a re-generation attempt.
+ *  Consumes the deterministic evaluation's per-metric `failed`/`warnings`
+ *  arrays so the re-generation targets the exact defects (Rule 4 — root cause,
+ *  not a blind retry). Returns an empty string when nothing actionable exists. */
+export function buildCorrectionsBlock(evaluation: EvaluationResult): string {
+    const corrections: string[] = [];
+    for (const [metricKey, metric] of Object.entries(evaluation.layers.deterministic.metrics)) {
+        if (metric.failed.length > 0) {
+            corrections.push(`## ${metricKey}`);
+            for (const f of metric.failed) {
+                corrections.push(`- FAIL: ${f}`);
+            }
+        }
+        if (metric.warnings.length > 0) {
+            for (const w of metric.warnings) {
+                corrections.push(`- WARN: ${w}`);
+            }
+        }
+    }
+    if (corrections.length === 0) return '';
+    return (
+        '## CORRECTIONS REQUIRED\n' +
+        'The previous generation failed the deterministic quality evaluation. ' +
+        'Revise the test suite to address EVERY item below. Do not repeat these defects.\n' +
+        corrections.join('\n')
+    );
+}
+
+/** Persist an AiGenerationRecord for the given attempt outcome. */
+function recordAttempt(
+    input: { userStory: string; acceptanceCriteria: string },
+    testCases: TestCaseData[],
+    preconditionMatches: Array<{ summary: string; matchType: string }>,
+    evaluation: EvaluationResult,
+    gateAction: 'created' | 'regenerated' | 'rejected',
+    attempt: number,
+): void {
+    const generationRecord = _buildGenerationRecord(
+        input,
+        testCases,
+        preconditionMatches,
+        evaluation,
+        gateAction,
+        attempt,
+    );
+    recordAiGeneration(generationRecord);
+}
 
 async function handler(c: CommandContext): Promise<boolean | void> {
     const input = await gatherInput(c);
@@ -50,35 +119,97 @@ async function handler(c: CommandContext): Promise<boolean | void> {
     const userMsg = 'User Story:\n' + input.userStory + '\n\nAcceptance Criteria:\n' + input.acceptanceCriteria;
     const safeUserMsg = sanitizeForLlm(userMsg);
 
-    title('Gerando testes com IA...');
-    let testCases;
-    try {
-        testCases = await llmPrompt({
-            tier: 'fast',
-            system: input.system,
-            user: safeUserMsg,
-            callerId: 'case18',
-            schema: TestCaseArraySchema,
-        });
-    } catch (err: unknown) {
-        rootLogger.warn('case18: Falha ao gerar casos de teste com IA: ' + formatErr(err));
-        printError('Falha ao gerar casos de teste com IA', err);
+    let testCases: TestCaseData[];
+    let resolvedPreConditions: TestCasePreCondition[][] = [];
+    let summariesToCreate: string[] = [];
+    let preconditionMatches: Array<{ summary: string; matchType: string }> = [];
+    let evaluation: EvaluationResult | null = null;
+
+    for (let attempt = 1; attempt <= CASE18_MAX_GENERATION_ATTEMPTS; attempt++) {
+        title(`Gerando testes com IA (tentativa ${attempt}/${CASE18_MAX_GENERATION_ATTEMPTS})...`);
+
+        const system =
+            attempt > 1 && evaluation ? input.system + '\n\n' + buildCorrectionsBlock(evaluation) : input.system;
+
+        try {
+            testCases = await llmPrompt({
+                tier: 'main',
+                system,
+                user: safeUserMsg,
+                callerId: 'case18',
+                schema: TestCaseArraySchema,
+            });
+        } catch (err: unknown) {
+            rootLogger.warn('case18: Falha ao gerar casos de teste com IA: ' + formatErr(err));
+            printError('Falha ao gerar casos de teste com IA', err);
+            return;
+        }
+
+        const resolved = resolvePreconditionMatches(testCases, preconditions);
+        resolvedPreConditions = resolved.resolvedPreConditions;
+        summariesToCreate = resolved.summariesToCreate;
+        preconditionMatches = resolved.preconditionMatches;
+
+        // Layer 1 (deterministic floor): evaluate quality of the generated suite.
+        evaluation = evaluateCase18(
+            toGeneratedTestCases(testCases, resolvedPreConditions, new Map()),
+            input.acceptanceCriteria,
+        );
+        displayQualityScore(evaluation);
+        if (summariesToCreate.length > 0) {
+            info(`${summariesToCreate.length} pre-condition(s) a criar no Jira:`);
+            for (const s of summariesToCreate) {
+                info(`  - ${s}`);
+            }
+        }
+
+        const isLastAttempt = attempt >= CASE18_MAX_GENERATION_ATTEMPTS;
+        const gateChoices = [
+            { name: 'Criar pre-conditions no Jira e gerar a suíte', value: 'create' },
+            ...(isLastAttempt ? [] : [{ name: 'Re-gerar com feedback da avaliação', value: 'regenerate' as const }]),
+            { name: 'Rejeitar e abortar', value: 'reject' },
+        ];
+        const gateChoice = await showSelect(
+            `Qualidade avaliada: ${evaluation.score}/100 (grade ${evaluation.grade}). Como prosseguir?`,
+            gateChoices,
+        );
+
+        if (gateChoice === 'regenerate') {
+            recordAttempt(input, testCases, preconditionMatches, evaluation, 'regenerated', attempt);
+            warn('Regenerando com feedback da avaliação determinística...');
+            continue;
+        }
+
+        if (gateChoice === 'reject') {
+            recordAttempt(input, testCases, preconditionMatches, evaluation, 'rejected', attempt);
+            warn('Geração rejeitada. Nenhuma pre-condition foi criada no Jira.');
+            c.pushHistory(
+                'ai-generate-tests',
+                `user story: ${input.userStory.slice(0, 60)} — rejeitado pelo usuário (${evaluation.grade})`,
+                'error',
+            );
+            return;
+        }
+
+        if (gateChoice !== 'create') {
+            recordAttempt(input, testCases, preconditionMatches, evaluation, 'rejected', attempt);
+            warn(`Decisão de gate não reconhecida ("${String(gateChoice)}"). Geração abortada sem criar no Jira.`);
+            return;
+        }
+
+        const createdKeys = await createMissingPreconditions(c.linkManager, input.project, summariesToCreate);
+        const converted = convertTestCases(testCases, resolvedPreConditions, createdKeys);
+
+        recordAttempt(input, testCases, preconditionMatches, evaluation, 'created', attempt);
+        writeTestOutput(converted, summariesToCreate.length);
+        writeQualityArtifacts(evaluation, testCases, input.acceptanceCriteria);
+        c.pushHistory(
+            'ai-generate-tests',
+            `user story: ${input.userStory.slice(0, 60)} — ${converted.length} testes (${evaluation.grade})`,
+            'ok',
+        );
         return;
     }
-    const { resolvedPreConditions, summariesToCreate, preconditionMatches } = resolvePreconditionMatches(
-        testCases,
-        preconditions,
-    );
-    const createdKeys = await createMissingPreconditions(c.linkManager, input.project, summariesToCreate);
-    const converted = convertTestCases(testCases, resolvedPreConditions, createdKeys);
-    const generationRecord = _buildGenerationRecord(input, testCases, preconditionMatches);
-    recordAiGeneration(generationRecord);
-    writeTestOutput(converted, summariesToCreate.length);
-    c.pushHistory(
-        'ai-generate-tests',
-        `user story: ${input.userStory.slice(0, 60)} — ${converted.length} testes`,
-        'ok',
-    );
 }
 
 /** Ask user for story, criteria, and project; load prompt template.
@@ -248,11 +379,14 @@ function _buildGenerationRecord(
     input: { userStory: string; acceptanceCriteria: string },
     testCases: TestCaseData[],
     preconditionMatches: Array<{ summary: string; matchType: string }>,
+    evaluation?: EvaluationResult,
+    gateAction?: 'created' | 'regenerated' | 'rejected',
+    attempt?: number,
 ): AiGenerationRecord {
-    return {
+    const record: AiGenerationRecord = {
         id: crypto.randomUUID(),
         generatedAt: new Date().toISOString(),
-        promptVersion: 'v2',
+        promptVersion: computePromptVersion(),
         userStory: input.userStory,
         acceptanceCriteria: input.acceptanceCriteria,
         generatedTests: testCases.map((tc) => ({
@@ -262,19 +396,102 @@ function _buildGenerationRecord(
         })),
         preconditionMatches,
     };
+    if (evaluation && Number.isFinite(evaluation.score)) {
+        record.qualityScore = evaluation.score;
+        record.qualityGrade = evaluation.grade;
+        const qualityMetrics: Record<string, AiQualityMetric> = {};
+        for (const [metricKey, metric] of Object.entries(evaluation.layers.deterministic.metrics)) {
+            qualityMetrics[metricKey] = {
+                score: metric.score,
+                weight: metric.weight,
+                failed: metric.failed,
+                warnings: metric.warnings,
+            };
+        }
+        record.qualityMetrics = qualityMetrics;
+    }
+    if (gateAction) record.gateAction = gateAction;
+    if (attempt !== undefined) record.attempt = attempt;
+    return record;
 }
 
-/** Write test cases JSON to disk and log summary to console. */
+/** Display the deterministic quality score to the user with failed metrics. */
+function displayQualityScore(evaluation: EvaluationResult): void {
+    divider();
+    info(`Qualidade da geração (Camada 1 determinística): ${evaluation.score}/100 — grade ${evaluation.grade}`);
+    const failedMetrics = Object.entries(evaluation.layers.deterministic.metrics).filter(
+        ([, m]) => m.failed.length > 0,
+    );
+    if (failedMetrics.length > 0) {
+        warn('Métricas com falha:');
+        for (const [key, m] of failedMetrics) {
+            info(`  - ${key}: ${m.failed.slice(0, 2).join('; ')}`);
+        }
+    } else {
+        info('Nenhuma métrica com falha detectada.');
+    }
+    divider();
+}
+
+/** Write the evaluation report (HTML) and coverage table (JSON+HTML) to
+ *  reports/<date>/ for auditability. Failures are logged explicitly, never
+ *  silently swallowed (Rule 25). */
+function writeQualityArtifacts(
+    evaluation: EvaluationResult,
+    testCases: TestCaseData[],
+    acceptanceCriteria: string,
+): void {
+    try {
+        writeReport('case18-quality-evaluation.html', generateEvaluationReport(evaluation));
+    } catch (err: unknown) {
+        rootLogger.warn('case18: Falha ao salvar relatório de qualidade: ' + formatErr(err));
+    }
+
+    try {
+        const generated = toGeneratedTestCases(testCases, [], new Map());
+        const table = buildCoverageTable(generated, acceptanceCriteria, computePromptVersion());
+        writeReport('case18-coverage-table.json', coverageTableToJson(table));
+        writeReport('case18-coverage-table.html', coverageTableToHtml(table));
+    } catch (err: unknown) {
+        rootLogger.warn('case18: Falha ao salvar tabela de cobertura: ' + formatErr(err));
+    }
+}
+
+/** Compute a content hash of the prompt template as the prompt version.
+ *  Any edit to the prompt file yields a new version automatically. */
+export function computePromptVersion(): string {
+    const templatePath = path.join(import.meta.dirname, '../../shared/prompts/user-story-to-tests.md');
+    try {
+        const content = fs.readFileSync(templatePath, 'utf8');
+        return 'v' + crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+    } catch (err: unknown) {
+        rootLogger.warn('case18: Falha ao calcular versão do prompt: ' + formatErr(err));
+        return 'unknown';
+    }
+}
+
+/** Write test cases JSON to disk and log summary to console.
+ *  The file is serialized in the import-compatible format (ImportJsonItemSchema) so
+ *  that `parseJsonFile` (menu 15) can re-import it without data loss. */
 function writeTestOutput(converted: TestCase[], createdCount: number): void {
     const outDir = path.join(process.cwd(), 'reports', formatDateISO());
     fs.mkdirSync(path.resolve(outDir), { recursive: true });
     const outPath = path.join(outDir, 'llm-generated-tests.json');
-    fs.writeFileSync(path.resolve(outPath), JSON.stringify(converted, null, 2), 'utf8');
+    const serialized = serializeForImport(converted);
+    fs.writeFileSync(path.resolve(outPath), JSON.stringify(serialized, null, 2), 'utf8');
 
     divider();
-    info(`Testes gerados (${converted.length}) — salvos em ${outPath}:`);
+    info(`Testes gerados (${serialized.length}) — salvos em ${outPath}:`);
     divider();
-    info(sanitizeTerminal(JSON.stringify(converted, null, 2)));
+    for (const tc of serialized) {
+        const stepCount = Array.isArray(tc.steps) ? tc.steps.length : 0;
+        const pre = tc.precondition
+            ? Array.isArray(tc.precondition)
+                ? tc.precondition.length + ' pre-condition(s)'
+                : '1 pre-condition'
+            : 'sem pre-condition';
+        info('  • ' + sanitizeTerminal(tc.title) + ' (' + stepCount + ' step(s), ' + pre + ')');
+    }
     divider();
 
     if (createdCount > 0) {
@@ -287,11 +504,47 @@ function writeTestOutput(converted: TestCase[], createdCount: number): void {
     }
 }
 
+/** Import-compatible JSON item (flat steps, precondition as string | string[]). */
+type ImportJsonItem = z.infer<typeof ImportJsonItemSchema>;
+
+/** Serialize `TestCase[]` into the import-compatible JSON format.
+ *
+ * The import pipeline (`parseJsonFile` → `_mapJsonItems`) expects flat steps
+ * `{ Action, Data, 'Expected Result' }` and `precondition: string | string[]`.
+ * `convertTestCases()` produces the internal Xray shape (`steps[].fields` and
+ * `precondition: [{type, value}]`). This serializer converts the internal shape
+ * back to the import format so the round-trip case18 → menu 15 is lossless.
+ *
+ * References are emitted as precondition keys (e.g. `PC-NEW-1`); inline values
+ * are emitted as their text. `isPreconditionKey` reclassifies keys as references
+ * on import, so the type is preserved. */
+export function serializeForImport(tests: TestCase[]): ImportJsonItem[] {
+    return tests.map((tc) => {
+        const steps = tc.steps.map((s) => ({
+            ...(s.fields.Action !== undefined ? { Action: s.fields.Action } : {}),
+            ...(s.fields.Data !== undefined ? { Data: s.fields.Data } : {}),
+            ...(s.fields['Expected Result'] !== undefined ? { 'Expected Result': s.fields['Expected Result'] } : {}),
+        }));
+        const precondition = tc.precondition ? tc.precondition.map((p) => p.value) : undefined;
+        return {
+            title: tc.title,
+            description: tc.description ?? '',
+            steps,
+            ...(precondition && precondition.length > 0 ? { precondition } : {}),
+            ...(tc.environment ? { environment: tc.environment } : {}),
+            ...(tc.components ? { components: tc.components } : {}),
+            ...(tc.priority ? { priority: tc.priority } : {}),
+        };
+    });
+}
+
 interface TestCaseData {
     title: string;
     steps: string[];
     expectedResult: string;
     preConditions?: Array<{ type: string; key?: string | undefined; summary?: string | undefined }> | undefined;
+    coverage?: Array<{ criterionId: string; criterionText: string }> | undefined;
+    evidence?: string[] | undefined;
     environment?: string | undefined;
     components?: string[] | undefined;
     priority?: string | undefined;
@@ -347,6 +600,30 @@ function resolvePrecondition(
     }
 
     return [];
+}
+
+/** Convert LLM output into the evaluator's input shape (`GeneratedTestCase`),
+ *  preserving the coverage/evidence fields the schema now declares. */
+export function toGeneratedTestCases(
+    llmOutput: TestCaseData[],
+    resolvedPreConditions: TestCasePreCondition[][],
+    createdKeys: Map<string, string>,
+): GeneratedTestCase[] {
+    return llmOutput.map((item, idx) => {
+        const pcs = (Reflect.get(resolvedPreConditions, idx) as TestCasePreCondition[] | undefined) ?? [];
+        const preConditions = pcs.map((pc) => {
+            const entry = resolvePrecondition(pc, createdKeys)[0];
+            return { type: entry?.type ?? 'inline', description: entry?.value ?? pc.summary ?? pc.type };
+        });
+        return {
+            title: item.title,
+            steps: item.steps,
+            expectedResult: item.expectedResult,
+            ...(preConditions.length > 0 ? { preConditions } : {}),
+            ...(item.coverage ? { coverage: item.coverage } : {}),
+            ...(item.evidence ? { evidence: item.evidence } : {}),
+        };
+    });
 }
 
 export default { handler };

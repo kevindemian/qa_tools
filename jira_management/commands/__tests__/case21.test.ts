@@ -13,10 +13,6 @@ vi.mock('../../../shared/report/generate-coverage-gap-html.js', () => ({
 
 vi.mock('../../../shared/open', () => ({ openWithFallback: vi.fn() }));
 
-vi.mock('../../../shared/quality/ai-feedback.js', () => ({
-    recordAiGeneration: vi.fn(),
-}));
-
 vi.mock('../case18');
 
 vi.mock('crypto', () => ({

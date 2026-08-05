@@ -7,11 +7,18 @@ export const PreConditionInputSchema = z.object({
     summary: z.string().optional(),
 });
 
+export const CoverageItemSchema = z.object({
+    criterionId: z.string().min(1, 'criterionId must be non-empty'),
+    criterionText: z.string().min(1, 'criterionText must be non-empty'),
+});
+
 export const TestCaseDataSchema = z.object({
     title: z.string().min(5, 'title must be at least 5 characters'),
     steps: z.array(z.string()).min(1, 'steps array must not be empty'),
     expectedResult: z.string().min(10, 'expectedResult must be at least 10 characters'),
     preConditions: z.array(PreConditionInputSchema).optional(),
+    coverage: z.array(CoverageItemSchema).optional(),
+    evidence: z.array(z.string()).optional(),
     environment: z.string().optional(),
     components: z.array(z.string()).optional(),
     priority: z.string().optional(),

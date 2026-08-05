@@ -27,6 +27,7 @@ export interface DeterministicResult {
         stepConcreteness: MetricResult;
         preconditionSpecificity: MetricResult;
         bvaApplication: MetricResult;
+        epApplication: MetricResult;
         evidenceCitations: MetricResult;
         redundancy: MetricResult;
     };

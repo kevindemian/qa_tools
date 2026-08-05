@@ -35,28 +35,24 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-vi.mock('../../../shared/quality/ai-feedback.js', () => ({
-    recordAiGeneration: vi.fn(),
-}));
-
-vi.mock('crypto', () => ({
-    default: {
-        randomUUID: vi.fn().mockReturnValue('mock-uuid'),
-    },
-}));
+vi.mock('crypto', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('crypto')>();
+    return {
+        default: {
+            ...actual,
+            randomUUID: vi.fn().mockReturnValue('mock-uuid'),
+        },
+    };
+});
 
 vi.mock('fs');
 
-vi.mock('../../jira_link_manager', () => ({
-    matchPreconditionByDualThreshold: vi.fn(),
-}));
-
 import * as promptModule from '../../../shared/ui/prompt.js';
 import * as llmClientModule from '../../../shared/llm/llm-client.js';
-import * as jiraLinkManagerModule from '../../jira_link_manager.js';
-import * as aiFeedbackModule from '../../../shared/quality/ai-feedback.js';
 import * as fsModule from 'fs';
-import case18Module from '../case18.js';
+import os from 'os';
+import path from 'path';
+import case18Module, { toGeneratedTestCases } from '../case18.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
@@ -74,7 +70,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline
                 .mockResolvedValueOnce('User wants to login')
                 .mockResolvedValueOnce('Must validate credentials');
@@ -93,7 +89,7 @@ describe('Case18', () => {
             await mod.handler(baseContext);
 
             expect(llm.llmPrompt).toHaveBeenCalledWith({
-                tier: 'fast',
+                tier: 'main',
                 system: expect.stringContaining('You are a QA engineer') as string,
                 user: expect.stringContaining('User wants to login') as string,
                 callerId: 'case18',
@@ -106,7 +102,7 @@ describe('Case18', () => {
             expect.hasAssertions();
 
             const prompt = vi.mocked(promptModule);
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('');
 
             const mod = case18Module;
@@ -122,7 +118,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
             fs.readFileSync.mockReturnValueOnce('template');
@@ -141,7 +137,7 @@ describe('Case18', () => {
             const prompt = vi.mocked(promptModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
 
             fs.readFileSync.mockImplementationOnce(() => {
@@ -161,7 +157,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
@@ -187,7 +183,7 @@ describe('Case18', () => {
             const prompt = vi.mocked(promptModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
 
@@ -206,7 +202,7 @@ describe('Case18', () => {
             const origProjectName = baseContext.ctx.project_name;
             baseContext.ctx.project_name = '';
 
-            prompt.showSelect.mockResolvedValueOnce('manual'); // pagination
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create'); // pagination
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Acceptance criteria');
             prompt.ask.mockResolvedValueOnce('');
 
@@ -226,7 +222,7 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline
                 .mockResolvedValueOnce('User wants to login')
                 .mockResolvedValueOnce('Must validate credentials');
@@ -253,12 +249,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -272,21 +267,12 @@ describe('Case18', () => {
                     preConditions: [{ type: 'create', summary: 'New precondition needed' }],
                 },
             ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'New precondition needed',
-                matchType: 'create',
-            });
 
             createPrecondSpy.mockResolvedValue('PC-NEW-1');
 
             const mod = case18Module;
             await mod.handler(baseContext);
 
-            expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith(
-                'New precondition needed',
-                expect.any(Array),
-            );
             expect(createPrecondSpy).toHaveBeenCalledWith('TEST', 'New precondition needed');
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Pre-condition criada'));
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('pre-conditions foram criadas'));
@@ -297,12 +283,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -316,19 +301,10 @@ describe('Case18', () => {
                     preConditions: [{ type: 'create', summary: 'User must be logged in' }],
                 },
             ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: 'PC-1',
-                summary: 'User must be logged in',
-                matchType: 'exact',
-            });
 
             const mod = case18Module;
             await mod.handler(baseContext);
 
-            expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledWith(
-                'User must be logged in',
-                expect.any(Array),
-            );
             expect(createPrecondSpy).not.toHaveBeenCalled();
             expect(prompt.info).toHaveBeenCalledWith(expect.stringContaining('Nenhuma pre-condition nova foi criada'));
         });
@@ -341,7 +317,7 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -369,7 +345,7 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -406,12 +382,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -425,11 +400,6 @@ describe('Case18', () => {
                     preConditions: [{ type: 'create', summary: 'New precondition' }],
                 },
             ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'New precondition',
-                matchType: 'create',
-            });
 
             createPrecondSpy.mockRejectedValue(new Error('Jira error'));
 
@@ -444,12 +414,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -469,11 +438,6 @@ describe('Case18', () => {
                     preConditions: [{ type: 'reference' }],
                 },
             ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'Newly created PC',
-                matchType: 'create',
-            });
 
             createPrecondSpy.mockResolvedValue('PC-NEW-1');
 
@@ -488,12 +452,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
 
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
 
@@ -513,12 +476,6 @@ describe('Case18', () => {
                 },
             ]);
 
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'any',
-                matchType: 'create',
-            });
-
             createPrecondSpy.mockResolvedValueOnce('PC-NEW-1').mockResolvedValueOnce('PC-NEW-2');
 
             const mod = case18Module;
@@ -535,7 +492,7 @@ describe('Case18', () => {
 
             const written = JSON.parse(content) as Array<{
                 title: string;
-                precondition?: Array<{ type: string; value: string }>;
+                precondition?: string[];
             }>;
 
             const converted = written.find((t) => t.title === 'Test with multiple preconditions');
@@ -546,10 +503,7 @@ describe('Case18', () => {
 
             expect(converted?.precondition).toHaveLength(2);
 
-            expect(converted?.precondition).toStrictEqual([
-                { type: 'reference', value: 'PC-NEW-1' },
-                { type: 'reference', value: 'PC-NEW-2' },
-            ]);
+            expect(converted?.precondition).toStrictEqual(['PC-NEW-1', 'PC-NEW-2']);
         });
 
         it('deduplicates identical summaries across test cases', async () => {
@@ -557,12 +511,11 @@ describe('Case18', () => {
 
             const prompt = vi.mocked(promptModule);
             const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
             const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
 
@@ -582,11 +535,6 @@ describe('Case18', () => {
                     preConditions: [{ type: 'create', summary: 'User must be logged in' }],
                 },
             ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'User must be logged in',
-                matchType: 'create',
-            });
 
             createPrecondSpy.mockResolvedValue('PC-NEW-1');
 
@@ -594,54 +542,237 @@ describe('Case18', () => {
             await mod.handler(baseContext);
 
             /* Deduplicated: same summary → only one createPrecondition call */
-            expect(jiraLM.matchPreconditionByDualThreshold).toHaveBeenCalledTimes(1);
             expect(createPrecondSpy).toHaveBeenCalledTimes(1);
         });
 
         it('records AI generation after successful test generation', async () => {
             expect.hasAssertions();
 
-            const prompt = vi.mocked(promptModule);
-            const llm = vi.mocked(llmClientModule);
-            const jiraLM = vi.mocked(jiraLinkManagerModule);
-            const aiFeedback = vi.mocked(aiFeedbackModule);
-            const fs = vi.mocked(fsModule);
-            const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
-            const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
+            const prevXdg = process.env['XDG_STATE_HOME'];
+            process.env['XDG_STATE_HOME'] = path.join(os.tmpdir(), 'qa-tools-case18-feedback');
+            try {
+                const prompt = vi.mocked(promptModule);
+                const llm = vi.mocked(llmClientModule);
+                const fs = vi.mocked(fsModule);
+                const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+                const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
-            prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
-            fs.readFileSync.mockReturnValue('You are a QA engineer.');
-            listPrecondSpy.mockResolvedValue([]);
+                prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
+                prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+                fs.readFileSync.mockReturnValue('You are a QA engineer.');
+                listPrecondSpy.mockResolvedValue([]);
 
-            llm.llmPrompt.mockResolvedValue([
-                {
-                    title: 'Generated Test',
-                    steps: ['Step 1'],
-                    expectedResult: 'Expected result',
-                    preConditions: [{ type: 'create', summary: 'Precondition A' }],
-                },
-            ]);
-            jiraLM.matchPreconditionByDualThreshold.mockReturnValue({
-                key: '__create__',
-                summary: 'Precondition A',
-                matchType: 'create',
-            });
-            createPrecondSpy.mockResolvedValue('PC-NEW-1');
+                llm.llmPrompt.mockResolvedValue([
+                    {
+                        title: 'Generated Test',
+                        steps: ['Step 1'],
+                        expectedResult: 'Expected result',
+                        preConditions: [{ type: 'create', summary: 'Precondition A' }],
+                    },
+                ]);
+                createPrecondSpy.mockResolvedValue('PC-NEW-1');
 
-            const mod = case18Module;
-            await mod.handler(baseContext);
+                const mod = case18Module;
+                await mod.handler(baseContext);
 
-            expect(aiFeedback.recordAiGeneration).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    promptVersion: 'v2',
-                    userStory: 'User story text',
-                    acceptanceCriteria: 'Some criteria',
-                    generatedTests: expect.arrayContaining([
-                        expect.objectContaining({ title: 'Generated Test', stepCount: 1 }),
-                    ]) as Array<{ title: string; stepCount: number }>,
-                }),
-            );
+                const feedbackWrite = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
+                    (call) => typeof call[0] === 'string' && call[0].endsWith('ai-feedback.json.tmp'),
+                );
+
+                expect(feedbackWrite).toBeDefined();
+
+                const content = (feedbackWrite ? feedbackWrite[1] : '') as string;
+                const parsed = JSON.parse(content) as {
+                    records: Array<{
+                        promptVersion: string;
+                        userStory: string;
+                        generatedTests: Array<{ stepCount: number }>;
+                    }>;
+                };
+
+                const firstRecord = parsed.records[0];
+
+                expect(firstRecord).toBeDefined();
+                expect(firstRecord?.userStory).toBe('User story text');
+
+                const firstGeneratedTest = firstRecord?.generatedTests[0];
+
+                expect(firstGeneratedTest?.stepCount).toBe(1);
+            } finally {
+                if (prevXdg === undefined) delete process.env['XDG_STATE_HOME'];
+                else process.env['XDG_STATE_HOME'] = prevXdg;
+            }
+        });
+
+        it('records gateAction rejected when the user rejects at the gate', async () => {
+            expect.hasAssertions();
+
+            const prevXdg = process.env['XDG_STATE_HOME'];
+            process.env['XDG_STATE_HOME'] = path.join(os.tmpdir(), 'qa-tools-case18-gate-reject');
+            try {
+                const prompt = vi.mocked(promptModule);
+                const llm = vi.mocked(llmClientModule);
+                const fs = vi.mocked(fsModule);
+                const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+                const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
+
+                prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValueOnce('reject');
+                prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+                fs.readFileSync.mockReturnValue('You are a QA engineer.');
+                listPrecondSpy.mockResolvedValue([]);
+
+                llm.llmPrompt.mockResolvedValue([
+                    {
+                        title: 'Generated Test',
+                        steps: ['Step 1'],
+                        expectedResult: 'Expected result',
+                        preConditions: [{ type: 'create', summary: 'Precondition A' }],
+                    },
+                ]);
+
+                const mod = case18Module;
+                await mod.handler(baseContext);
+
+                expect(createPrecondSpy).not.toHaveBeenCalled();
+                expect(baseContext.pushHistory).toHaveBeenCalledWith(
+                    'ai-generate-tests',
+                    expect.stringContaining('rejeitado'),
+                    'error',
+                );
+
+                const feedbackWrite = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
+                    (call) => typeof call[0] === 'string' && call[0].endsWith('ai-feedback.json.tmp'),
+                );
+
+                expect(feedbackWrite).toBeDefined();
+                const content = (feedbackWrite ? feedbackWrite[1] : '') as string;
+                const parsed = JSON.parse(content) as {
+                    records: Array<{ gateAction?: string; qualityMetrics?: Record<string, unknown> }>;
+                };
+                expect(parsed.records[0]?.gateAction).toBe('rejected');
+                expect(parsed.records[0]?.qualityMetrics).toBeDefined();
+                expect(Object.keys(parsed.records[0]?.qualityMetrics ?? {})).not.toHaveLength(0);
+            } finally {
+                if (prevXdg === undefined) delete process.env['XDG_STATE_HOME'];
+                else process.env['XDG_STATE_HOME'] = prevXdg;
+            }
+        });
+
+        it('re-generates with a CORRECTIONS REQUIRED feedback block and records gateAction regenerated', async () => {
+            expect.hasAssertions();
+
+            const prevXdg = process.env['XDG_STATE_HOME'];
+            process.env['XDG_STATE_HOME'] = path.join(os.tmpdir(), 'qa-tools-case18-gate-regenerate');
+            try {
+                const prompt = vi.mocked(promptModule);
+                const llm = vi.mocked(llmClientModule);
+                const fs = vi.mocked(fsModule);
+                const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+                const createPrecondSpy = vi.spyOn(baseContext.linkManager, 'createPrecondition');
+
+                prompt.showSelect
+                    .mockResolvedValueOnce('manual')
+                    .mockResolvedValueOnce('regenerate')
+                    .mockResolvedValueOnce('create');
+                prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+                fs.readFileSync.mockReturnValue('You are a QA engineer.');
+                listPrecondSpy.mockResolvedValue([]);
+
+                llm.llmPrompt.mockResolvedValue([
+                    {
+                        title: 'Generated Test',
+                        steps: ['Step 1'],
+                        expectedResult: 'Expected result',
+                        preConditions: [{ type: 'create', summary: 'Precondition A' }],
+                    },
+                ]);
+                createPrecondSpy.mockResolvedValue('PC-NEW-1');
+
+                const mod = case18Module;
+                await mod.handler(baseContext);
+
+                expect(llm.llmPrompt).toHaveBeenCalledTimes(2);
+                const secondCall = llm.llmPrompt.mock.calls[1]?.[0];
+                expect(secondCall?.system).toContain('CORRECTIONS REQUIRED');
+                expect(secondCall?.system).toContain('## CORRECTIONS REQUIRED');
+                expect(createPrecondSpy).toHaveBeenCalledTimes(1);
+                expect(baseContext.pushHistory).toHaveBeenCalledWith(
+                    'ai-generate-tests',
+                    expect.stringContaining('1 testes'),
+                    'ok',
+                );
+
+                const feedbackWrites = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.filter(
+                    (call) => typeof call[0] === 'string' && call[0].endsWith('ai-feedback.json.tmp'),
+                );
+
+                expect(feedbackWrites.length).toBe(2);
+                const firstContent = (feedbackWrites[0]?.[1] ?? '') as string;
+                const lastContent = (feedbackWrites[feedbackWrites.length - 1]?.[1] ?? '') as string;
+                const firstParsed = JSON.parse(firstContent) as {
+                    records: Array<{ gateAction?: string; attempt?: number }>;
+                };
+                const lastParsed = JSON.parse(lastContent) as {
+                    records: Array<{ gateAction?: string; attempt?: number }>;
+                };
+                expect(firstParsed.records[0]?.gateAction).toBe('regenerated');
+                expect(firstParsed.records[0]?.attempt).toBe(1);
+                expect(lastParsed.records[0]?.gateAction).toBe('created');
+                expect(lastParsed.records[0]?.attempt).toBe(2);
+            } finally {
+                if (prevXdg === undefined) delete process.env['XDG_STATE_HOME'];
+                else process.env['XDG_STATE_HOME'] = prevXdg;
+            }
+        });
+
+        it('refuses the regenerate option on the last attempt', async () => {
+            expect.hasAssertions();
+
+            const prevXdg = process.env['XDG_STATE_HOME'];
+            process.env['XDG_STATE_HOME'] = path.join(os.tmpdir(), 'qa-tools-case18-gate-last');
+            try {
+                const prompt = vi.mocked(promptModule);
+                const llm = vi.mocked(llmClientModule);
+                const fs = vi.mocked(fsModule);
+                const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
+
+                const gateChoicesCalls: Array<Array<{ name: string; value: string }>> = [];
+                let gateCallIndex = 0;
+                prompt.showSelect.mockImplementation(async (_message, options) => {
+                    if (Array.isArray(options) && options.length > 0 && options[0]?.value === 'create') {
+                        const current = gateCallIndex;
+                        gateCallIndex += 1;
+                        gateChoicesCalls.push(options as Array<{ name: string; value: string }>);
+                        return current < 2 ? 'regenerate' : 'create';
+                    }
+                    return 'manual';
+                });
+                prompt.askMultiline.mockResolvedValueOnce('User story text').mockResolvedValueOnce('Some criteria');
+                fs.readFileSync.mockReturnValue('You are a QA engineer.');
+                listPrecondSpy.mockResolvedValue([]);
+
+                llm.llmPrompt.mockResolvedValue([
+                    {
+                        title: 'Generated Test',
+                        steps: ['Step 1'],
+                        expectedResult: 'Expected result',
+                        preConditions: [{ type: 'create', summary: 'Precondition A' }],
+                    },
+                ]);
+
+                const mod = case18Module;
+                await mod.handler(baseContext);
+
+                expect(gateChoicesCalls).toHaveLength(3);
+                const lastAttemptChoices = gateChoicesCalls[2] ?? [];
+                const regenerateOption = lastAttemptChoices.find((o) => o.value === 'regenerate');
+                expect(regenerateOption).toBeUndefined();
+                const rejectOption = lastAttemptChoices.find((o) => o.value === 'reject');
+                expect(rejectOption).toBeDefined();
+            } finally {
+                if (prevXdg === undefined) delete process.env['XDG_STATE_HOME'];
+                else process.env['XDG_STATE_HOME'] = prevXdg;
+            }
         });
 
         it('fetches user story from Jira successfully', async () => {
@@ -651,7 +782,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('jira'); // pagination
+            prompt.showSelect.mockResolvedValueOnce('jira').mockResolvedValue('create'); // pagination
             prompt.ask.mockResolvedValueOnce('PROJ-123');
             const getJiraResourceMock = vi.fn().mockResolvedValueOnce({
                 fields: { description: 'As a user, I want to login', summary: 'Login feature' },
@@ -684,7 +815,7 @@ describe('Case18', () => {
             const llm = vi.mocked(llmClientModule);
             const fs = vi.mocked(fsModule);
 
-            prompt.showSelect.mockResolvedValueOnce('jira');
+            prompt.showSelect.mockResolvedValueOnce('jira').mockResolvedValue('create');
             prompt.ask.mockResolvedValueOnce('PROJ-456');
             baseContext.jiraResource.getJiraResource = vi.fn().mockRejectedValueOnce(new Error('Issue not found'));
             prompt.askMultiline.mockResolvedValueOnce('Manual user story').mockResolvedValueOnce('Criteria');
@@ -714,7 +845,7 @@ describe('Case18', () => {
             const fs = vi.mocked(fsModule);
             const listPrecondSpy = vi.spyOn(baseContext.linkManager, 'listPreconditions');
 
-            prompt.showSelect.mockResolvedValueOnce('manual');
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
             prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
             fs.readFileSync.mockReturnValue('You are a QA engineer.');
             listPrecondSpy.mockResolvedValue([]);
@@ -736,6 +867,7 @@ describe('Case18', () => {
             const writeCall = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(
                 (call) => typeof call[0] === 'string' && call[0].endsWith('llm-generated-tests.json'),
             );
+
             expect(writeCall).toBeDefined();
 
             const content = (writeCall ? writeCall[1] : '') as string;
@@ -745,6 +877,39 @@ describe('Case18', () => {
             expect(converted?.['environment']).toBe('staging');
             expect(converted?.['components']).toStrictEqual(['API', 'Frontend']);
             expect(converted?.['priority']).toBe('High');
+        });
+    });
+
+    describe('ToGeneratedTestCases (evaluator input)', () => {
+        it('preserves coverage and evidence from LLM output', () => {
+            const llmOutput = [
+                {
+                    title: 'Login test with valid credentials',
+                    steps: ['Enter user', 'Enter password'],
+                    expectedResult: 'User is redirected to dashboard',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'User can log in with valid credentials' }],
+                    evidence: ['Login flow authenticates valid users'],
+                },
+            ];
+
+            const result = toGeneratedTestCases(llmOutput, [[]], new Map());
+
+            expect(result[0]?.coverage).toStrictEqual([
+                { criterionId: 'C-1', criterionText: 'User can log in with valid credentials' },
+            ]);
+            expect(result[0]?.evidence).toStrictEqual(['Login flow authenticates valid users']);
+            expect(result[0]?.title).toBe('Login test with valid credentials');
+        });
+
+        it('omits coverage/evidence when absent', () => {
+            const result = toGeneratedTestCases(
+                [{ title: 'Basic test', steps: ['Enter user'], expectedResult: 'User is redirected to dashboard' }],
+                [[]],
+                new Map(),
+            );
+
+            expect(result[0]?.coverage).toBeUndefined();
+            expect(result[0]?.evidence).toBeUndefined();
         });
     });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateDeterministic } from '../quality/case18-deterministic.js';
+import { evaluateDeterministic, CASE18_FLOOR_PROVENANCE } from '../quality/case18-deterministic.js';
 import { evaluateCase18, generateEvaluationReport } from '../quality/case18-evaluator.js';
 import { ECSPOL960_BASELINE, ECSPOL960_STORY } from '../quality/case18-benchmarks.js';
 import type { GeneratedTestCase } from '../quality/case18-types.js';
@@ -163,6 +163,53 @@ describe('evaluateDeterministic', () => {
         });
     });
 
+    describe('EP application', () => {
+        it('returns 100 when no constrained fields in criteria', () => {
+            const result = evaluateDeterministic(PERFECT_TEST, 'No specific constraints here');
+            expect(result.metrics.epApplication.score).toBe(100);
+        });
+
+        it('scores 100 when constrained field has an invalid-partition test', () => {
+            const epTest: GeneratedTestCase[] = [
+                {
+                    title: 'Email must be valid',
+                    steps: ['Enter email invalid@bad', 'Submit form'],
+                    expectedResult: 'Validation error shown for invalid email',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'Email must be valid' }],
+                },
+            ];
+            const result = evaluateDeterministic(epTest, 'Email must be valid');
+            expect(result.metrics.epApplication.score).toBe(100);
+        });
+
+        it('penalizes constrained field without invalid-partition test', () => {
+            const onlyValidTest: GeneratedTestCase[] = [
+                {
+                    title: 'Email valid case',
+                    steps: ['Enter valid email user@example.com', 'Submit form'],
+                    expectedResult: 'Form accepted',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'Email must be valid' }],
+                },
+            ];
+            const result = evaluateDeterministic(onlyValidTest, 'Email must be valid');
+            expect(result.metrics.epApplication.score).toBeLessThan(100);
+            expect(result.metrics.epApplication.failed.length).toBeGreaterThan(0);
+        });
+
+        it('detects null/empty partitions as invalid coverage', () => {
+            const emptyTest: GeneratedTestCase[] = [
+                {
+                    title: 'Password cannot be empty',
+                    steps: ['Enter empty password', 'Submit form'],
+                    expectedResult: 'Validation error shown',
+                    coverage: [{ criterionId: 'C-1', criterionText: 'Password cannot be empty' }],
+                },
+            ];
+            const result = evaluateDeterministic(emptyTest, 'Password cannot be empty');
+            expect(result.metrics.epApplication.score).toBe(100);
+        });
+    });
+
     describe('evidence citations', () => {
         it('scores 100 when all tests have evidence', () => {
             const result = evaluateDeterministic(PERFECT_TEST, '');
@@ -197,6 +244,12 @@ describe('evaluateDeterministic', () => {
             expect(result.score).toBeGreaterThanOrEqual(75);
             expect(result.score).toBeLessThanOrEqual(100);
         });
+
+        it('provenance weights sum to 1.0', () => {
+            const weights = Object.values(CASE18_FLOOR_PROVENANCE.weights);
+            const sum = weights.reduce((s, w) => s + w.value, 0);
+            expect(Math.abs(sum - 1.0)).toBeLessThanOrEqual(0.001);
+        });
     });
 });
 
@@ -209,7 +262,9 @@ describe('evaluateCase18', () => {
 
     it('returns low grade for low-quality tests', () => {
         const result = evaluateCase18(VAGUE_TEST, 'Some criterion');
-        expect(result.score).toBeLessThan(50);
+        // Score correction (Rule 19.5, weight-bug fix): EP metric (10%) was added,
+        // weights now sum to 100%. VAGUE_TEST scores 55 → grade D (40 ≤ 55 < 60).
+        expect(result.score).toBeLessThan(60);
         expect(['D', 'F']).toContain(result.grade);
     });
 

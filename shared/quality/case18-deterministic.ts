@@ -4,16 +4,73 @@
  * 100% deterministic checks for AI-generated test case quality.
  * Based on: ISTQB CTFL, ISO 29119-4, Project Kaleidoscope (arXiv:2607.14673).
  *
- * Metrics:
+ * Metrics (weights sum to 100%):
  * 1. Coverage completeness (25%) — all acceptance criteria cited
  * 2. Step concreteness (20%) — imperative verbs, not vague
  * 3. Precondition specificity (15%) — specific, not generic
  * 4. BVA application (15%) — boundary tests for numeric ranges
- * 5. Evidence citations (10%) — non-empty evidence arrays
- * 6. Redundancy (5%) — no duplicate steps (Jaccard ≥ 80%)
- * 7. EP application (10%) — invalid partitions tested
+ * 5. EP application (10%) — invalid partitions tested
+ * 6. Evidence citations (10%) — non-empty evidence arrays
+ * 7. Redundancy (5%) — no duplicate steps (Jaccard ≥ 80%)
  */
 import type { GeneratedTestCase, DeterministicResult, MetricResult } from './case18-types.js';
+
+/**
+ * Dimension Provenance — documents the source and justification for each
+ * weight and threshold (pattern mirrored from `requirement-score.ts`).
+ */
+export const CASE18_FLOOR_PROVENANCE = {
+    weights: {
+        coverage: {
+            value: 0.25,
+            source: 'ISTQB CTFL — requirement coverage as primary test design driver',
+            standard: 'ISTQB',
+        },
+        stepConcreteness: {
+            value: 0.2,
+            source: 'ISO/IEC 29119-4 — test procedure step concreteness (executable, imperative)',
+            standard: 'ISO/IEC 29119-4',
+        },
+        preconditionSpecificity: {
+            value: 0.15,
+            source: 'ISTQB CTFL — precondition identification as test design prerequisite',
+            standard: 'ISTQB',
+        },
+        bvaApplication: {
+            value: 0.15,
+            source: 'ISTQB CTFL — Boundary Value Analysis technique',
+            standard: 'ISTQB',
+        },
+        epApplication: {
+            value: 0.1,
+            source: 'ISTQB CTFL — Equivalence Partitioning technique',
+            standard: 'ISTQB',
+        },
+        evidenceCitations: {
+            value: 0.1,
+            source: 'Kaleidoscope (arXiv:2607.14673) — evidence-grounded generation',
+            standard: 'Kaleidoscope',
+        },
+        redundancy: {
+            value: 0.05,
+            source: 'SLR Test Case Quality (Barraood 2021) — minimality/absence of duplicates',
+            standard: 'SLR',
+        },
+    },
+    gradeThresholds: {
+        A: { min: 90, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        B: { min: 75, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        C: { min: 60, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+        D: { min: 40, source: 'ISO/IEC 25010 product-quality grade bands', standard: 'ISO/IEC 25010' },
+    },
+} as const;
+
+// Guard (Rule 24): provenance weights must sum to 1.0, else the evaluator is
+// reporting an invalid score — fail loudly instead of silently under-scoring.
+const _floorWeightSum = Object.values(CASE18_FLOOR_PROVENANCE.weights).reduce((s, w) => s + w.value, 0);
+if (Math.abs(_floorWeightSum - 1.0) > 0.001) {
+    throw new Error(`case18 floor: weights must sum to 1.0, got ${_floorWeightSum}`);
+}
 
 // --- Verb lists ---
 
@@ -156,7 +213,7 @@ function extractNumbers(text: string): number[] {
 // --- Metric evaluators ---
 
 function evaluateCoverage(testCases: GeneratedTestCase[], acceptanceCriteria: string): MetricResult {
-    const weight = 0.25;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.coverage.value;
 
     // Extract criteria identifiers from the input text
     // Look for numbered items, bullet points, or lines that look like criteria
@@ -223,7 +280,7 @@ function evaluateCoverage(testCases: GeneratedTestCase[], acceptanceCriteria: st
 }
 
 function evaluateStepConcreteness(testCases: GeneratedTestCase[]): MetricResult {
-    const weight = 0.2;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.stepConcreteness.value;
     let totalSteps = 0;
     let concreteSteps = 0;
     const vagueExamples: string[] = [];
@@ -251,7 +308,7 @@ function evaluateStepConcreteness(testCases: GeneratedTestCase[]): MetricResult 
 }
 
 function evaluatePreconditionSpecificity(testCases: GeneratedTestCase[]): MetricResult {
-    const weight = 0.15;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.preconditionSpecificity.value;
     let total = 0;
     let specific = 0;
     const genericExamples: string[] = [];
@@ -287,7 +344,7 @@ function evaluatePreconditionSpecificity(testCases: GeneratedTestCase[]): Metric
 }
 
 function evaluateBVA(testCases: GeneratedTestCase[], acceptanceCriteria: string): MetricResult {
-    const weight = 0.15;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.bvaApplication.value;
 
     const ranges = detectNumericRanges(acceptanceCriteria);
     if (ranges.length === 0) {
@@ -335,8 +392,125 @@ function evaluateBVA(testCases: GeneratedTestCase[], acceptanceCriteria: string)
     };
 }
 
+/**
+ * Equivalence Partitioning application — detects whether test cases cover
+ * invalid partitions of constrained fields.
+ *
+ * Heuristic (deterministic, ISTQB CTFL EP technique):
+ * 1. Detect fields with constraints from acceptance criteria (e.g. "Email must
+ *    be valid", "Age must be positive", "Field must not be empty").
+ * 2. A field is constrained when a constraint verb ("must be", "should be",
+ *    "cannot", "must not") or a quality adjective ("valid", "invalid") appears
+ *    near a candidate field name.
+ * 3. For each constrained field, check whether ANY test case exercises an
+ *    INVALID value for that field (invalid = negation of the constraint, or
+ *    explicit "invalid/empty/null/wrong/missing" language).
+ * 4. Score = fraction of constrained fields with at least one invalid-partition
+ *    test. When no constrained fields are detected, EP is not applicable and
+ *    the metric returns 100 (like BVA when no numeric ranges exist).
+ */
+function evaluateEP(testCases: GeneratedTestCase[], acceptanceCriteria: string): MetricResult {
+    const weight = CASE18_FLOOR_PROVENANCE.weights.epApplication.value;
+
+    const constrainedFields = detectConstrainedFields(acceptanceCriteria);
+
+    if (constrainedFields.length === 0) {
+        return {
+            score: 100,
+            weight,
+            passed: ['No constrained fields detected in criteria (EP not applicable)'],
+            failed: [],
+            warnings: [],
+        };
+    }
+
+    let coveredFields = 0;
+    const uncoveredFields: string[] = [];
+
+    for (const field of constrainedFields) {
+        if (hasInvalidPartitionTest(testCases, field)) {
+            coveredFields++;
+        } else {
+            uncoveredFields.push(field);
+        }
+    }
+
+    const total = constrainedFields.length;
+    const score = total === 0 ? 100 : Math.round((coveredFields / total) * 100);
+
+    return {
+        score,
+        weight,
+        passed: coveredFields > 0 ? [`${coveredFields}/${total} constrained fields have invalid-partition tests`] : [],
+        failed:
+            uncoveredFields.length > 0
+                ? [`No invalid-partition tests for: ${uncoveredFields.slice(0, 5).join(', ')}`]
+                : [],
+        warnings: [],
+    };
+}
+
+/** Detect field names in acceptance criteria that carry a validation constraint. */
+function detectConstrainedFields(criteria: string): string[] {
+    if (!criteria || typeof criteria !== 'string') return [];
+
+    const constraintPatterns = [
+        /(\b[A-Za-z][A-Za-z ]{1,39}\b)\s+(?:must|should|needs? to|has to|is required to|cannot|can not|must not)\s+(?:be|have|contain|accept|start|end)/gi,
+        /(\b[A-Za-z][A-Za-z ]{1,39}\b)\s+(?:must be|should be|is|must)\s+(?:valid|invalid|non[- ]?empty|positive|numeric|greater|less|between|at least|at most)/gi,
+    ];
+
+    const fields = new Set<string>();
+    for (const pattern of constraintPatterns) {
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(criteria)) !== null) {
+            const raw = match[1];
+            if (raw) {
+                const field = raw.trim().toLowerCase();
+                if (field.length >= 2 && !isGenericFieldName(field)) {
+                    fields.add(field);
+                }
+            }
+        }
+    }
+    return [...fields];
+}
+
+/** Skip overly generic tokens that would create false positives (e.g. "the user", "a value"). */
+function isGenericFieldName(field: string): boolean {
+    const GENERIC = new Set(['the user', 'the system', 'a value', 'the field', 'the page', 'an error']);
+    if (GENERIC.has(field)) return true;
+    if (/^(the|a|an)\s+/.test(field)) return true;
+    return field.length < 2;
+}
+
+/** Check whether any test case exercises an INVALID partition of the given field. */
+function hasInvalidPartitionTest(testCases: GeneratedTestCase[], field: string): boolean {
+    const INVALID_MARKERS = [
+        'invalid',
+        'empty',
+        'null',
+        'missing',
+        'wrong',
+        'malformed',
+        'too short',
+        'too long',
+        'not valid',
+        'does not',
+    ];
+    const fieldTokens = tokenize(field);
+
+    for (const tc of testCases) {
+        const text = [tc.title, ...tc.steps, tc.expectedResult].join(' ').toLowerCase();
+        const hasField = fieldTokens.every((t) => text.includes(t));
+        if (!hasField) continue;
+        const hasInvalidMarker = INVALID_MARKERS.some((m) => text.includes(m));
+        if (hasInvalidMarker) return true;
+    }
+    return false;
+}
+
 function evaluateEvidenceCitations(testCases: GeneratedTestCase[]): MetricResult {
-    const weight = 0.1;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.evidenceCitations.value;
     let withEvidence = 0;
 
     for (const tc of testCases) {
@@ -358,7 +532,7 @@ function evaluateEvidenceCitations(testCases: GeneratedTestCase[]): MetricResult
 }
 
 function evaluateRedundancy(testCases: GeneratedTestCase[]): MetricResult {
-    const weight = 0.05;
+    const weight = CASE18_FLOOR_PROVENANCE.weights.redundancy.value;
     const redundantPairs: Array<[number, number, number]> = [];
 
     for (let i = 0; i < testCases.length; i++) {
@@ -397,18 +571,20 @@ export function evaluateDeterministic(testCases: GeneratedTestCase[], acceptance
     const stepConcreteness = evaluateStepConcreteness(testCases);
     const preconditionSpecificity = evaluatePreconditionSpecificity(testCases);
     const bvaApplication = evaluateBVA(testCases, acceptanceCriteria);
+    const epApplication = evaluateEP(testCases, acceptanceCriteria);
     const evidenceCitations = evaluateEvidenceCitations(testCases);
     const redundancy = evaluateRedundancy(testCases);
 
-    // Weighted average
-    const score = Math.round(
+    // Weighted average (weights sourced from CASE18_FLOOR_PROVENANCE — sum validated = 1.0)
+    const scoreValue =
         coverage.score * coverage.weight +
-            stepConcreteness.score * stepConcreteness.weight +
-            preconditionSpecificity.score * preconditionSpecificity.weight +
-            bvaApplication.score * bvaApplication.weight +
-            evidenceCitations.score * evidenceCitations.weight +
-            redundancy.score * redundancy.weight,
-    );
+        stepConcreteness.score * stepConcreteness.weight +
+        preconditionSpecificity.score * preconditionSpecificity.weight +
+        bvaApplication.score * bvaApplication.weight +
+        epApplication.score * epApplication.weight +
+        evidenceCitations.score * evidenceCitations.weight +
+        redundancy.score * redundancy.weight;
+    const score = Math.round(Number.isFinite(scoreValue) ? scoreValue : 0);
 
     return {
         score,
@@ -417,6 +593,7 @@ export function evaluateDeterministic(testCases: GeneratedTestCase[], acceptance
             stepConcreteness,
             preconditionSpecificity,
             bvaApplication,
+            epApplication,
             evidenceCitations,
             redundancy,
         },

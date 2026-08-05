@@ -95,6 +95,46 @@ describe('PreConditionInputSchema', () => {
 
         expect(TestCaseDataSchema.parse(data).preConditions).toBeUndefined();
     });
+
+    it('accepts and preserves coverage array', () => {
+        const data = {
+            title: 'Login with valid credentials',
+            steps: ['Enter user'],
+            expectedResult: 'User is redirected to dashboard',
+            coverage: [{ criterionId: 'C-1', criterionText: 'User can log in with valid credentials' }],
+        };
+
+        const parsed = TestCaseDataSchema.parse(data);
+
+        expect(parsed.coverage).toBeDefined();
+        expect(nonNull(parsed.coverage)).toStrictEqual([
+            { criterionId: 'C-1', criterionText: 'User can log in with valid credentials' },
+        ]);
+    });
+
+    it('accepts and preserves evidence array', () => {
+        const data = {
+            title: 'Login with valid credentials',
+            steps: ['Enter user'],
+            expectedResult: 'User is redirected to dashboard',
+            evidence: ['Login flow authenticates valid users'],
+        };
+
+        const parsed = TestCaseDataSchema.parse(data);
+
+        expect(parsed.evidence).toStrictEqual(['Login flow authenticates valid users']);
+    });
+
+    it('rejects coverage item without text', () => {
+        expect(() =>
+            TestCaseDataSchema.parse({
+                title: 'Login with valid credentials',
+                steps: ['Enter user'],
+                expectedResult: 'User is redirected to dashboard',
+                coverage: [{ criterionId: 'C-1' }],
+            }),
+        ).toThrow(/./i);
+    });
 });
 
 describe('TestCaseArraySchema', () => {

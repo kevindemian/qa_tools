@@ -42,6 +42,9 @@ import type { Mock } from 'vitest';
 import type { ParseResult } from '../result_parser.js';
 import type { BugReport } from '../types.js';
 import { nonNull } from '../test-utils.js';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
 import { makeDataHubMock } from '../test-utils/factories/data-hub-mock.js';
 import type { DataSource, FailureRecord } from '../types/data-hub.js';
 import type { QualityCategory, QualityReport } from '../data-hub/quality.js';
@@ -639,7 +642,7 @@ vi.mock('fs', async () => {
     };
 });
 
-import { generateBugReportFromDescription } from '../report/bug-report.js';
+import { generateBugReportFromDescription, computeBugReportPromptVersion } from '../report/bug-report.js';
 
 let mockLlmPrompt: Mock;
 
@@ -717,5 +720,177 @@ describe('GenerateBugReportFromDescription', () => {
         const result = await generateBugReportFromDescription('test');
 
         expect(result).toBeNull();
+    });
+});
+
+describe('T4.B bug report prompt versioning', () => {
+    it('computes a content hash for the prompt version', () => {
+        expect.hasAssertions();
+
+        const version = computeBugReportPromptVersion();
+
+        expect(version).toMatch(/^v[0-9a-f]{10}$/);
+    });
+
+    it('attaches promptVersion to llmEnrichment of generated report', async () => {
+        expect.hasAssertions();
+
+        mockLlmPrompt.mockResolvedValue({
+            summary: 'Login fails',
+            description: 'Request times out',
+            stepsToReproduce: ['Open /login'],
+            expectedResult: 'Redirect',
+            actualResult: 'Timeout',
+            severity: 'major',
+        });
+
+        const result = await generateBugReportFromDescription('login fails');
+
+        expect(nonNull(result).llmEnrichment?.promptVersion).toBe(computeBugReportPromptVersion());
+    });
+
+    it('changes version when prompt content changes (hash sensitivity)', async () => {
+        expect.hasAssertions();
+
+        const fsMod = await import('fs');
+        const readMock = vi.spyOn(fsMod, 'readFileSync');
+        readMock.mockImplementationOnce((p: unknown) => {
+            if (String(p).includes('bug-report-from-description.md')) return 'completely different prompt v2';
+            return fs.readFileSync(p as Parameters<typeof fs.readFileSync>[0], 'utf8');
+        });
+
+        expect(computeBugReportPromptVersion()).not.toBe(computeBugReportPromptVersion());
+    });
+});
+
+describe('T4.B bug report acceptance feedback', () => {
+    let configModule: Awaited<typeof import('../config-accessor.js')>;
+    let storeDir: string;
+    let storePath: string;
+
+    beforeAll(async () => {
+        configModule = await import('../config-accessor.js');
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        storeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-ai-feedback-'));
+        fs.mkdirSync(path.join(storeDir, 'qa-tools', 'feedback'), { recursive: true });
+        storePath = path.join(storeDir, 'qa-tools', 'feedback', 'ai-feedback.json');
+        // Point the (real) ai-feedback store to the isolated temp dir via the config mock.
+        (configModule.default as unknown as Record<string, unknown>)['xdgStateHome'] = storeDir;
+    });
+
+    afterEach(() => {
+        (configModule.default as unknown as Record<string, unknown>)['xdgStateHome'] = undefined;
+        fs.rmSync(storeDir, { recursive: true, force: true });
+    });
+
+    it('records kept feedback when bug is created', async () => {
+        expect.hasAssertions();
+
+        const promptModule = await import('../ui/prompt.js');
+        const prompt = vi.mocked(promptModule);
+        prompt.askConfirm.mockResolvedValueOnce(true);
+
+        const report: BugReport = {
+            summary: 'Bug X',
+            description: 'Desc X',
+            source: 'manual',
+            stepsToReproduce: ['Step 1'],
+            severity: 'major',
+            llmEnrichment: { enrichedAt: new Date().toISOString(), model: 'fast', promptVersion: 'vabc' },
+        };
+        const jira = {
+            postJiraResource: vi.fn().mockResolvedValue({ id: '1', key: 'BUG-1' }),
+            getJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            putJiraResource: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
+        } as unknown as Parameters<typeof interactiveBugReportFlow>[0];
+
+        await interactiveBugReportFlow(jira, 'TEST', report);
+
+        // Side-effect: the record must be persisted to disk, not just logged.
+        expect(fs.existsSync(storePath)).toBeTruthy();
+
+        const persisted = JSON.parse(fs.readFileSync(storePath, 'utf8')) as {
+            records: Array<{ promptVersion: string; feedback?: Array<{ action: string; reason: string }> }>;
+        };
+
+        expect(persisted.records).toHaveLength(1);
+        expect(persisted.records[0]?.promptVersion).toBe('vabc');
+
+        const firstAction = persisted.records[0]?.feedback?.[0]?.action;
+
+        expect(firstAction).toBe('kept');
+    });
+
+    it('records deleted feedback when bug is discarded', async () => {
+        expect.hasAssertions();
+
+        const promptModule = await import('../ui/prompt.js');
+        const prompt = vi.mocked(promptModule);
+        prompt.askConfirm.mockResolvedValueOnce(false);
+
+        const report: BugReport = {
+            summary: 'Bug Y',
+            description: 'Desc Y',
+            source: 'manual',
+            stepsToReproduce: ['Step 1'],
+            severity: 'major',
+            llmEnrichment: { enrichedAt: new Date().toISOString(), model: 'fast', promptVersion: 'vdef' },
+        };
+        const jira = {
+            postJiraResource: vi.fn(),
+            getJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            putJiraResource: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
+        } as unknown as Parameters<typeof interactiveBugReportFlow>[0];
+
+        await interactiveBugReportFlow(jira, 'TEST', report);
+
+        expect(fs.existsSync(storePath)).toBeTruthy();
+
+        const persisted = JSON.parse(fs.readFileSync(storePath, 'utf8')) as {
+            records: Array<{ feedback: Array<{ action: string }> }>;
+        };
+
+        const firstRecord = persisted.records[0];
+        const firstAction = firstRecord?.feedback[0]?.action;
+
+        expect(firstAction).toBe('deleted');
+    });
+
+    it('does not persist feedback for manual reports (no promptVersion)', async () => {
+        expect.hasAssertions();
+
+        const promptModule = await import('../ui/prompt.js');
+        const prompt = vi.mocked(promptModule);
+        prompt.askConfirm.mockResolvedValueOnce(true);
+
+        const report: BugReport = {
+            summary: 'Manual bug',
+            description: 'Manual desc',
+            source: 'manual',
+            stepsToReproduce: ['Step 1'],
+            severity: 'major',
+        };
+        const jira = {
+            postJiraResource: vi.fn().mockResolvedValue({ id: '1', key: 'BUG-1' }),
+            getJiraResource: vi.fn(),
+            searchJiraIssues: vi.fn(),
+            putJiraResource: vi.fn(),
+            getTransitionsForIssue: vi.fn(),
+            transitionIssue: vi.fn(),
+        } as unknown as Parameters<typeof interactiveBugReportFlow>[0];
+
+        await interactiveBugReportFlow(jira, 'TEST', report);
+
+        // No promptVersion → no AI feedback record may be written.
+        expect(fs.existsSync(storePath)).toBeFalsy();
     });
 });

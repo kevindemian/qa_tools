@@ -1,4 +1,5 @@
 import { formatErr } from '../errors.js';
+import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { sanitizePath } from '../path-utils.js';
@@ -7,6 +8,7 @@ import { rootLogger } from '../logger.js';
 import { classifyFailure, crossReferenceFailures } from '../validation/failure-analysis.js';
 import { llmPrompt } from '../llm/llm-client.js';
 import { AiBugReportSchema } from '../validation/bug-report.schema.js';
+import { recordAiGeneration, recordAiModification } from '../quality/ai-feedback.js';
 import Config from '../config-accessor.js';
 import { executeOperation } from '../ui/operation-executor.js';
 import { showStepError } from '../ui/error-report.js';
@@ -173,11 +175,26 @@ export async function generateBugReportFromDescription(raw: string): Promise<Bug
                 enrichedAt: new Date().toISOString(),
                 model: 'fast',
                 confidence: 0.5,
+                promptVersion: computeBugReportPromptVersion(),
             },
         };
     } catch (err) {
         rootLogger.warn('AI bug report generation failed: ' + formatErr(err));
         return null;
+    }
+}
+
+/** Compute a content hash of the bug-report prompt template as the prompt
+ *  version. Any edit to the prompt file yields a new version automatically
+ *  (mirrors case18's `computePromptVersion`). */
+export function computeBugReportPromptVersion(): string {
+    try {
+        const templatePath = path.resolve(import.meta.dirname, '..', 'prompts', 'bug-report-from-description.md');
+        const content = fs.readFileSync(templatePath, 'utf8');
+        return 'v' + crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+    } catch (err: unknown) {
+        rootLogger.warn('bug-report: Falha ao calcular versão do prompt: ' + formatErr(err));
+        return 'unknown';
     }
 }
 
@@ -399,6 +416,7 @@ export async function interactiveBugReportFlow(
     info('');
 
     if (!(await askConfirm('Criar bug no Jira?', true))) {
+        recordBugAcceptance(report, false);
         info('Bug report cancelado.');
         return null;
     }
@@ -412,9 +430,45 @@ export async function interactiveBugReportFlow(
             info(`${report.linkedIssues.length} linked issue(s) vinculados`);
         }
 
+        recordBugAcceptance(report, true);
         return { status: 'ok', label: key, message: report.summary };
     } catch (err) {
         printError('Falha ao criar bug no Jira', err);
         return { status: 'error', label: '', message: formatErr(err) };
+    }
+}
+
+/** Record acceptance feedback for an LLM-generated bug report.
+ *  Only recorded when the report was produced by the LLM (has promptVersion);
+ *  manual reports are not part of AI calibration. Failures are logged, never
+ *  silently swallowed (Rule 25). */
+function recordBugAcceptance(report: BugReport, accepted: boolean): void {
+    const version = report.llmEnrichment?.promptVersion;
+    if (!version) return;
+    try {
+        const recordId = crypto.randomUUID();
+        recordAiGeneration({
+            id: recordId,
+            generatedAt: new Date().toISOString(),
+            promptVersion: version,
+            userStory: report.description,
+            acceptanceCriteria: report.summary,
+            generatedTests: [
+                {
+                    title: report.summary,
+                    preConditions: [],
+                    stepCount: report.stepsToReproduce?.length ?? 0,
+                },
+            ],
+            preconditionMatches: [],
+        });
+        recordAiModification(recordId, {
+            testKey: report.summary,
+            recordedAt: new Date().toISOString(),
+            action: accepted ? 'kept' : 'deleted',
+            reason: accepted ? 'bug created in Jira' : 'bug report discarded',
+        });
+    } catch (err) {
+        rootLogger.warn('bug-report: Falha ao registrar feedback de aceitação: ' + formatErr(err));
     }
 }

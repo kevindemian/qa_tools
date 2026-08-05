@@ -1,10 +1,14 @@
+import { warn, tableView, showSelect } from '../../../shared/ui/prompt.js';
+import { recordAiGeneration } from '../../../shared/quality/ai-feedback.js';
+import { makeMockCommandContext } from '../../../shared/test-utils.js';
+import case23Handler from '../case23.js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import type { AiGenerationRecord } from '../../../shared/types.js';
+
 vi.mock('../../../shared/ui/prompt.js');
 vi.mock('../../../shared/logger');
-
-vi.mock('../../../shared/quality/ai-feedback.js', () => ({
-    getAiFeedbackSummary: vi.fn(),
-    getRecentAiRecords: vi.fn(),
-}));
 
 vi.mock('../../../shared/logger', () => ({
     rootLogger: {
@@ -13,19 +17,36 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-import { warn, tableView, showSelect } from '../../../shared/ui/prompt.js';
-import { getAiFeedbackSummary, getRecentAiRecords } from '../../../shared/quality/ai-feedback.js';
-
-const mockGetSummary = vi.mocked(getAiFeedbackSummary);
-const mockGetRecent = vi.mocked(getRecentAiRecords);
 const mockShowSelect = vi.mocked(showSelect);
-import { makeMockCommandContext } from '../../../shared/test-utils.js';
-import case23Handler from '../case23.js';
+let storeDir: string;
+let recordSeq = 0;
+
+function buildRecord(overrides: Partial<AiGenerationRecord> = {}): AiGenerationRecord {
+    recordSeq += 1;
+    return {
+        id: 'rec-' + String(recordSeq),
+        generatedAt: '2026-05-29T00:00:00.000Z',
+        promptVersion: 'v2',
+        userStory: 'As a user',
+        acceptanceCriteria: 'some criteria',
+        generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }],
+        preconditionMatches: [],
+        ...overrides,
+    };
+}
 
 describe('Case23', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockShowSelect.mockResolvedValue('0');
+        storeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-tools-case23-'));
+        process.env['XDG_STATE_HOME'] = storeDir;
+        recordSeq = 0;
+    });
+
+    afterEach(() => {
+        delete process.env['XDG_STATE_HOME'];
+        fs.rmSync(storeDir, { recursive: true, force: true });
     });
 
     describe('Case23 — AI Feedback', () => {
@@ -33,14 +54,6 @@ describe('Case23', () => {
             expect.hasAssertions();
 
             mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-            mockGetSummary.mockReturnValue({
-                totalRecords: 0,
-                totalGenerated: 0,
-                totalModified: 0,
-                totalDeleted: 0,
-                acceptanceRate: 0,
-                topPromptVersion: '',
-            });
 
             await case23Handler.handler(makeMockCommandContext());
 
@@ -52,19 +65,38 @@ describe('Case23', () => {
             expect.hasAssertions();
 
             mockShowSelect.mockResolvedValueOnce('a').mockResolvedValueOnce('0');
-            mockGetSummary.mockReturnValue({
-                totalRecords: 5,
-                totalGenerated: 20,
-                totalModified: 2,
-                totalDeleted: 1,
-                acceptanceRate: 85,
-                topPromptVersion: 'v2',
-            });
+            recordAiGeneration(
+                buildRecord({
+                    generatedTests: [
+                        { title: 'T1', preConditions: [], stepCount: 1 },
+                        { title: 'T2', preConditions: [], stepCount: 2 },
+                    ],
+                }),
+            );
+            recordAiGeneration(
+                buildRecord({
+                    generatedTests: [
+                        { title: 'T3', preConditions: [], stepCount: 1 },
+                        { title: 'T4', preConditions: [], stepCount: 2 },
+                    ],
+                }),
+            );
+            recordAiGeneration(
+                buildRecord({
+                    generatedTests: [
+                        { title: 'T5', preConditions: [], stepCount: 1 },
+                        { title: 'T6', preConditions: [], stepCount: 2 },
+                    ],
+                }),
+            );
 
             await case23Handler.handler(makeMockCommandContext());
 
             expect(tableView).toHaveBeenCalledWith(
-                expect.arrayContaining([expect.objectContaining({ Métrica: 'Total de registros', Valor: 5 })]),
+                expect.arrayContaining([
+                    expect.objectContaining({ Métrica: 'Total de registros', Valor: 3 }),
+                    expect.objectContaining({ Métrica: 'Testes gerados', Valor: 6 }),
+                ]),
                 expect.any(Array),
             );
         });
@@ -73,28 +105,24 @@ describe('Case23', () => {
             expect.hasAssertions();
 
             mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-            mockGetRecent.mockReturnValue([
-                {
-                    id: 'rec-1',
-                    generatedAt: '2026-05-29T00:00:00.000Z',
-                    promptVersion: 'v2',
-                    generatedTests: [{ title: 'T1', preConditions: [], stepCount: 1 }],
-                    userStory: 'As a user',
-                    acceptanceCriteria: 'some criteria',
-                    preconditionMatches: [],
-                },
-            ]);
+            recordAiGeneration(buildRecord({ userStory: 'As a user I want to login' }));
+            recordAiGeneration(buildRecord({ userStory: 'As a user I want to logout' }));
 
             await case23Handler.handler(makeMockCommandContext());
 
-            expect(tableView).toHaveBeenCalledWith(expect.any(Array), expect.arrayContaining(['ID']));
+            expect(tableView).toHaveBeenCalledWith(
+                expect.arrayContaining([
+                    expect.objectContaining({ 'User Story': 'As a user I want to login' }),
+                    expect.objectContaining({ 'User Story': 'As a user I want to logout' }),
+                ]),
+                expect.arrayContaining(['ID']),
+            );
         });
 
         it('warns when no recent records', async () => {
             expect.hasAssertions();
 
             mockShowSelect.mockResolvedValueOnce('b').mockResolvedValueOnce('0');
-            mockGetRecent.mockReturnValue([]);
 
             await case23Handler.handler(makeMockCommandContext());
 
