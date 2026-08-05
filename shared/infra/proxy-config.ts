@@ -43,14 +43,25 @@ function resolveProxyPort(portRaw: string, protocol: string): number {
     return protocol === 'https' ? 443 : 80;
 }
 
-/** Resolve the effective proxy URL: explicit param wins; otherwise env vars.
- *  Returns undefined when no proxy is configured (direct egress). */
+/** Resolve the effective proxy URL with a fixed precedence chain.
+ *
+ *  Precedence (highest first):
+ *  1. explicit param
+ *  2. QA_PROXY_URL  (app-owned proxy, documented in config-schema)
+ *  3. HTTPS_PROXY   (standard convention)
+ *  4. HTTP_PROXY
+ *  5. https_proxy / http_proxy (lowercase convention)
+ *
+ *  Returns undefined when no proxy is configured (direct egress).
+ *  This matches the contract documented in config-schema.ts, http-client.ts
+ *  and .env: QA_PROXY_URL primary, then standard proxy env vars. */
+const PROXY_ENV_VARS: readonly string[] = ['QA_PROXY_URL', 'HTTPS_PROXY', 'HTTP_PROXY', 'https_proxy', 'http_proxy'];
+
 export function resolveProxyUrl(explicit?: string): string | undefined {
     if (explicit && explicit.trim().length > 0) return explicit.trim();
-    const env =
-        process.env['HTTPS_PROXY'] ||
-        process.env['HTTP_PROXY'] ||
-        process.env['https_proxy'] ||
-        process.env['http_proxy'];
-    return env && env.trim().length > 0 ? env.trim() : undefined;
+    for (const key of PROXY_ENV_VARS) {
+        const value = process.env[key];
+        if (value && value.trim().length > 0) return value.trim();
+    }
+    return undefined;
 }

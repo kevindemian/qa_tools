@@ -109,28 +109,33 @@ describe('Smoke Jira Cloud', () => {
             },
         );
 
-        it.runIf(process.env['JIRA_MODE'] === 'cloud')('resolves egress proxy from HTTPS_PROXY config', () => {
-            const saved: Record<string, string | undefined> = {
-                QA_PROXY_URL: process.env['QA_PROXY_URL'],
-                HTTPS_PROXY: process.env['HTTPS_PROXY'],
-                HTTP_PROXY: process.env['HTTP_PROXY'],
-                https_proxy: process.env['https_proxy'],
-                http_proxy: process.env['http_proxy'],
-            };
-            process.env['HTTPS_PROXY'] = 'https://corp-proxy.internal:8080';
-            delete process.env['HTTP_PROXY'];
-            delete process.env['https_proxy'];
-            delete process.env['http_proxy'];
-            delete process.env['QA_PROXY_URL'];
-            try {
-                expect(resolveProxyUrl()).toBe('https://corp-proxy.internal:8080');
-            } finally {
-                for (const key of Object.keys(saved)) {
-                    const value = saved[key];
-                    if (value === undefined) delete process.env[key];
-                    else process.env[key] = value;
+        it.runIf(process.env['JIRA_MODE'] === 'cloud')(
+            'resolves egress proxy from QA_PROXY_URL with precedence over HTTPS_PROXY',
+            () => {
+                const saved: Record<string, string | undefined> = {
+                    QA_PROXY_URL: process.env['QA_PROXY_URL'],
+                    HTTPS_PROXY: process.env['HTTPS_PROXY'],
+                    HTTP_PROXY: process.env['HTTP_PROXY'],
+                    https_proxy: process.env['https_proxy'],
+                    http_proxy: process.env['http_proxy'],
+                };
+                delete process.env['HTTP_PROXY'];
+                delete process.env['https_proxy'];
+                delete process.env['http_proxy'];
+                delete process.env['QA_PROXY_URL'];
+                process.env['HTTPS_PROXY'] = 'https://corp-proxy.internal:8080';
+                try {
+                    expect(resolveProxyUrl()).toBe('https://corp-proxy.internal:8080');
+                    process.env['QA_PROXY_URL'] = 'https://qa-proxy.internal:8443';
+                    expect(resolveProxyUrl()).toBe('https://qa-proxy.internal:8443');
+                } finally {
+                    for (const key of Object.keys(saved)) {
+                        const value = saved[key];
+                        if (value === undefined) delete process.env[key];
+                        else process.env[key] = value;
+                    }
                 }
-            }
-        });
+            },
+        );
     });
 });

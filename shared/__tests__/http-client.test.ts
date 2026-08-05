@@ -168,7 +168,7 @@ describe('HTTP Client', () => {
             }
         });
 
-        it('falls back to HTTPS_PROXY env var when proxyUrl is omitted', () => {
+        it('resolves proxy from HTTPS_PROXY when proxyUrl omitted and QA_PROXY_URL unset', () => {
             const saved: Record<string, string | undefined> = {
                 HTTPS_PROXY: process.env['HTTPS_PROXY'],
                 HTTP_PROXY: process.env['HTTP_PROXY'],
@@ -180,7 +180,7 @@ describe('HTTP Client', () => {
             delete process.env['https_proxy'];
             delete process.env['http_proxy'];
             delete process.env['QA_PROXY_URL'];
-            process.env['HTTPS_PROXY'] = 'ftps://envproxy.corp:3128';
+            process.env['HTTPS_PROXY'] = 'https://envproxy.corp:3128';
             try {
                 const createSpy = vi.spyOn(axios, 'create');
 
@@ -188,7 +188,35 @@ describe('HTTP Client', () => {
 
                 expect(createSpy).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        proxy: { protocol: 'http', host: 'envproxy.corp', port: 3128 },
+                        proxy: { protocol: 'https', host: 'envproxy.corp', port: 3128 },
+                    }),
+                );
+            } finally {
+                restoreProxyEnv(saved);
+            }
+        });
+
+        it('gives QA_PROXY_URL precedence over standard proxy env vars', () => {
+            const saved: Record<string, string | undefined> = {
+                HTTPS_PROXY: process.env['HTTPS_PROXY'],
+                HTTP_PROXY: process.env['HTTP_PROXY'],
+                https_proxy: process.env['https_proxy'],
+                http_proxy: process.env['http_proxy'],
+                QA_PROXY_URL: process.env['QA_PROXY_URL'],
+            };
+            delete process.env['HTTP_PROXY'];
+            delete process.env['https_proxy'];
+            delete process.env['http_proxy'];
+            process.env['QA_PROXY_URL'] = 'https://qa-proxy.corp:8443';
+            process.env['HTTPS_PROXY'] = 'https://envproxy.corp:3128';
+            try {
+                const createSpy = vi.spyOn(axios, 'create');
+
+                httpClient.createHttpClient({ baseUrl: 'https://api.test.com' });
+
+                expect(createSpy).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        proxy: { protocol: 'https', host: 'qa-proxy.corp', port: 8443 },
                     }),
                 );
             } finally {
@@ -243,14 +271,17 @@ describe('HTTP Client', () => {
             }
         });
 
-        it('resolveProxyUrl falls back to env proxy vars when explicit omitted', () => {
+        it('resolveProxyUrl falls back to HTTP_PROXY then QA_PROXY_URL when explicit omitted', () => {
             const saved = saveProxyEnv();
             delete process.env['HTTPS_PROXY'];
+            delete process.env['https_proxy'];
             delete process.env['http_proxy'];
             delete process.env['QA_PROXY_URL'];
             process.env['HTTP_PROXY'] = 'https://envfallback:9';
             try {
                 expect(resolveProxyUrl()).toBe('https://envfallback:9');
+                process.env['QA_PROXY_URL'] = 'https://qa-proxy:8';
+                expect(resolveProxyUrl()).toBe('https://qa-proxy:8');
             } finally {
                 restoreProxyEnv(saved);
             }

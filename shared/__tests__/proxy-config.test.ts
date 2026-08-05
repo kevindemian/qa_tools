@@ -36,22 +36,45 @@ describe('ProxyConfig', () => {
     });
 
     describe('ResolveProxyUrl', () => {
-        it('prefers the explicit param over env', () => {
-            vi.stubEnv('HTTPS_PROXY', 'https://localhost:3128');
+        it('prefers the explicit param over every env var', () => {
+            vi.stubEnv('QA_PROXY_URL', 'https://localhost:3128');
+            vi.stubEnv('HTTPS_PROXY', 'https://localhost:4000');
+            vi.stubEnv('HTTP_PROXY', 'http://localhost:4001');
 
             expect(resolveProxyUrl('http://localhost:9000')).toBe('http://localhost:9000');
         });
 
-        it('falls back to HTTPS_PROXY env', () => {
-            vi.stubEnv('HTTPS_PROXY', 'https://localhost:3128');
+        it('falls back to QA_PROXY_URL env', () => {
+            vi.stubEnv('QA_PROXY_URL', 'https://localhost:3128');
+            vi.stubEnv('HTTPS_PROXY', 'https://localhost:4000');
 
             expect(resolveProxyUrl()).toBe('https://localhost:3128');
         });
 
-        it('falls back to HTTP_PROXY env (lowercase)', () => {
-            vi.stubEnv('http_proxy', 'https://localhost:3128');
+        it('falls back to HTTPS_PROXY when QA_PROXY_URL is unset', () => {
+            vi.stubEnv('HTTPS_PROXY', 'https://localhost:4000');
 
-            expect(resolveProxyUrl()).toBe('https://localhost:3128');
+            expect(resolveProxyUrl()).toBe('https://localhost:4000');
+        });
+
+        it('falls back to HTTP_PROXY when HTTPS_PROXY is unset', () => {
+            vi.stubEnv('HTTP_PROXY', 'http://localhost:4001');
+
+            expect(resolveProxyUrl()).toBe('http://localhost:4001');
+        });
+
+        it('falls back to lowercase proxy env vars (POSIX convention)', () => {
+            vi.stubEnv('https_proxy', 'http://localhost:4002');
+
+            expect(resolveProxyUrl()).toBe('http://localhost:4002');
+        });
+
+        it('ignores empty/whitespace env values and continues the chain', () => {
+            vi.stubEnv('QA_PROXY_URL', '   ');
+            vi.stubEnv('HTTPS_PROXY', '');
+            vi.stubEnv('HTTP_PROXY', 'http://localhost:4001');
+
+            expect(resolveProxyUrl()).toBe('http://localhost:4001');
         });
 
         it('returns undefined when nothing configured', () => {

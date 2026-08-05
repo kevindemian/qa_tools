@@ -36,6 +36,7 @@ shared_docker/.selected_project
 *.csv
 *.html
 .audit/
+/dist/
 
 # === Runtime state ===
 shared/.local/
