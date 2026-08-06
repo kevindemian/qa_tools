@@ -60,8 +60,9 @@ export class GitStoreBackend implements StoreBackend {
     read(relPath: string): Buffer | null {
         const full = sanitizePath(this.fullPath, relPath);
         try {
-            return fs.existsSync(path.resolve(full)) ? fs.readFileSync(full) : null;
+            return fs.readFileSync(full);
         } catch (err) {
+            if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
             rootLogger.warn('GitStoreBackend: read failed: ' + String(err));
             return null;
         }
@@ -83,9 +84,9 @@ export class GitStoreBackend implements StoreBackend {
     atomicWrite(relPath: string, data: Buffer): void {
         const full = path.resolve(sanitizePath(this.fullPath, relPath));
         const tmp = path.join(path.dirname(full), `.${path.basename(full)}.qa-tools-tmp-${process.pid}`);
+        const tmpRel = path.relative(this.fullPath, tmp);
         try {
-            fs.mkdirSync(path.dirname(full), { recursive: true });
-            fs.writeFileSync(tmp, data);
+            this.write(tmpRel, data);
             fs.renameSync(tmp, full);
         } catch (err) {
             try {
@@ -143,8 +144,9 @@ export class FsStoreBackend implements StoreBackend {
     read(relPath: string): Buffer | null {
         const full = path.join(this.baseDir, relPath);
         try {
-            return fs.existsSync(path.resolve(full)) ? fs.readFileSync(full) : null;
+            return fs.readFileSync(full);
         } catch (err) {
+            if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
             rootLogger.warn('FsStoreBackend: read failed: ' + String(err));
             return null;
         }
@@ -164,9 +166,9 @@ export class FsStoreBackend implements StoreBackend {
     atomicWrite(relPath: string, data: Buffer): void {
         const full = path.resolve(path.join(this.baseDir, relPath));
         const tmp = path.join(path.dirname(full), `.${path.basename(full)}.qa-tools-tmp-${process.pid}`);
+        const tmpRel = path.relative(this.baseDir, tmp);
         try {
-            fs.mkdirSync(path.dirname(full), { recursive: true });
-            fs.writeFileSync(tmp, data);
+            this.write(tmpRel, data);
             fs.renameSync(tmp, full);
         } catch (err) {
             try {

@@ -106,12 +106,12 @@ const RETENTION_ENV_VARS: Array<{ envVar: string; label: string }> = [
  * Default (unset / empty) is valid and means "policy off" (§10 retrocompatível).
  */
 export function validateRetentionPolicy(): void {
-    for (const { envVar, label } of RETENTION_ENV_VARS) {
-        const raw = process.env[envVar];
+    for (const spec of RETENTION_ENV_VARS) {
+        const raw = process.env[spec.envVar];
         if (raw === undefined || raw === '') continue;
         const value = Number(raw);
         if (!Number.isInteger(value) || value < 0) {
-            throw new Error(`${label}: "${raw}" inválido — deve ser um inteiro >= 0 (0 = desativado).`);
+            throw new Error(`${spec.label}: "${raw}" inválido — deve ser um inteiro >= 0 (0 = desativado).`);
         }
     }
 }

@@ -198,9 +198,8 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         const keep = new Set<string>();
         if (count > 0) {
             const newestCount = Math.min(count, sorted.length);
-            for (let i = 0; i < newestCount; i++) {
-                const entry = sorted[i];
-                if (entry) keep.add(entry[0]);
+            for (const [sha] of sorted.slice(0, newestCount)) {
+                keep.add(sha);
             }
         }
         if (maxAgeMs > 0) {
@@ -218,25 +217,23 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         projIndex: Record<string, ReportMeta>,
         branchIndex: Record<string, BranchEntry[]>,
     ): void {
-        const newBranchIndex: Record<string, BranchEntry[]> = {};
-        for (const [branch, entries] of Object.entries(branchIndex)) {
-            if (!Array.isArray(entries)) continue;
-            const filtered = entries.filter((e) => !removedSet.has(e.sha));
-            if (filtered.length > 0) newBranchIndex[branch] = filtered;
-        }
+        const newBranchIndex = Object.fromEntries(
+            Object.entries(branchIndex)
+                .map(([branch, entries]) => {
+                    if (!Array.isArray(entries)) return null;
+                    const filtered = entries.filter((e) => !removedSet.has(e.sha));
+                    return filtered.length > 0 ? [branch, filtered] : null;
+                })
+                .filter((x): x is [string, BranchEntry[]] => x !== null),
+        );
         writeJsonAtomic(`reports/${_project}/branch-index.json`, newBranchIndex);
 
-        const newProjIndex: Record<string, ReportMeta> = {};
-        for (const [sha, meta] of Object.entries(projIndex)) {
-            if (!removedSet.has(sha)) newProjIndex[sha] = meta;
-        }
+        const newProjIndex = Object.fromEntries(Object.entries(projIndex).filter(([sha]) => !removedSet.has(sha)));
         writeJsonAtomic(`reports/${_project}/index.json`, newProjIndex);
 
-        const newGlobalIndex: Record<string, ReportMeta> = {};
-        for (const [sha, meta] of Object.entries(globalIndex)) {
-            if (meta.project === _project && removedSet.has(sha)) continue;
-            newGlobalIndex[sha] = meta;
-        }
+        const newGlobalIndex = Object.fromEntries(
+            Object.entries(globalIndex).filter(([sha, meta]) => !(meta.project === _project && removedSet.has(sha))),
+        );
         writeJsonAtomic('reports/index.json', newGlobalIndex);
     }
 

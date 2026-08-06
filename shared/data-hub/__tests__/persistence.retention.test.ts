@@ -8,14 +8,11 @@
  *
  * The policy is exercised via the real FsStoreBackend (no mock-teatro §26):
  * writes go to a mkdtemp sandbox and indexes are re-read from disk.
+ *
+ * N2-B: the sandbox is derived from `os.tmpdir()` via `mkdtempSync` (`tmpDir`).
+ * The only direct FS call in this file is `rmSync` (sandbox cleanup), which
+ * `security/detect-non-literal-fs-filename` does not flag — warning-free.
  */
-
-// N2-B (security/detect-non-literal-fs-filename): FS calls below read/write a
-// test sandbox derived from `os.tmpdir()` via `mkdtempSync` (`tmpDir`) — a
-// correct, non-attacker-controlled test path. The rule reports a false positive
-// because `os.tmpdir()` is not a static expression; severity warning (1), the
-// lint gate only fails on severity-2. Documented debt — same rationale as
-// persistence-cache.test.ts.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -30,21 +27,16 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-retention-test-'));
 const backend = new FsStoreBackend(tmpDir);
 const project = 'test-proj';
 
-const RETENTION_COUNT = 'REPORT_RETENTION_COUNT';
-const RETENTION_MAX_AGE = 'REPORT_RETENTION_MAX_AGE_DAYS';
-
 function clearRetentionEnv(): void {
-    delete process.env[RETENTION_COUNT];
-    delete process.env[RETENTION_MAX_AGE];
+    delete process.env['REPORT_RETENTION_COUNT'];
+    delete process.env['REPORT_RETENTION_MAX_AGE_DAYS'];
 }
 
 describe('DataHub report retention (C-12)', () => {
     let store: DataHubPersistence;
 
     beforeEach(() => {
-        for (const f of fs.readdirSync(path.resolve(tmpDir))) {
-            fs.rmSync(path.join(tmpDir, f), { recursive: true, force: true });
-        }
+        fs.rmSync(tmpDir, { recursive: true, force: true });
 
         backend.init();
         store = createDataHubPersistence(project, backend);
@@ -123,7 +115,7 @@ describe('DataHub report retention (C-12)', () => {
     it('count=5 removes the 2 oldest cached reports after a put', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
 
         expect(store.loadReport('sha1')).toBeNull();
@@ -134,7 +126,7 @@ describe('DataHub report retention (C-12)', () => {
     it('count=5 keeps global/project indexes consistent after the hook', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
 
         expect(Object.keys(projIndex())).toHaveLength(5);
@@ -149,7 +141,7 @@ describe('DataHub report retention (C-12)', () => {
         expect.hasAssertions();
 
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
 
         const removed = store.pruneReports(true);
 
@@ -164,7 +156,7 @@ describe('DataHub report retention (C-12)', () => {
         expect.hasAssertions();
 
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
 
         expect(store.pruneReports(true)).toHaveLength(2);
 
@@ -181,7 +173,7 @@ describe('DataHub report retention (C-12)', () => {
         expect.hasAssertions();
 
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
 
         store.pruneReports(false);
 
@@ -194,7 +186,7 @@ describe('DataHub report retention (C-12)', () => {
         expect.hasAssertions();
 
         seedBranchIndex({ main: [{ sha: 'sha1', timestamp: 1_001 }] });
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
 
         expect(store.loadReport('sha1')).not.toBeNull();
@@ -212,7 +204,7 @@ describe('DataHub report retention (C-12)', () => {
             ],
         });
         for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
-        process.env[RETENTION_COUNT] = '5';
+        process.env['REPORT_RETENTION_COUNT'] = '5';
 
         store.pruneReports(false);
         const entries = branchIndex()['main'] ?? [];
@@ -224,7 +216,7 @@ describe('DataHub report retention (C-12)', () => {
     it('max-age only removes runs older than the threshold', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_MAX_AGE] = '1';
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '1';
         const now = Date.now();
         for (let i = 1; i <= 5; i++) addRun('recent' + i, now - 60_000);
         addRun('old1', now - 10 * 86_400_000);
@@ -237,7 +229,7 @@ describe('DataHub report retention (C-12)', () => {
     it('max-age only keeps recent runs', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_MAX_AGE] = '1';
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '1';
         const now = Date.now();
         for (let i = 1; i <= 5; i++) addRun('recent' + i, now - 60_000);
         addRun('old1', now - 10 * 86_400_000);
@@ -250,8 +242,8 @@ describe('DataHub report retention (C-12)', () => {
     it('union semantics: young-but-not-in-N is kept; only old-and-not-in-N is removed', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_COUNT] = '3';
-        process.env[RETENTION_MAX_AGE] = '30';
+        process.env['REPORT_RETENTION_COUNT'] = '3';
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '30';
         const now = Date.now();
         for (let i = 1; i <= 7; i++) addRun('recent' + i, now - 86_400_000);
         addRun('old1', now - 40 * 86_400_000);
@@ -266,27 +258,27 @@ describe('DataHub report retention (C-12)', () => {
     it('invalid retention values fail high (int >= 0)', () => {
         expect.hasAssertions();
 
-        process.env[RETENTION_COUNT] = '-1';
+        process.env['REPORT_RETENTION_COUNT'] = '-1';
 
         expect(() => store.pruneReports(false)).toThrow(/REPORT_RETENTION_COUNT/);
 
-        Reflect.deleteProperty(process.env, RETENTION_COUNT);
-        process.env[RETENTION_COUNT] = 'abc';
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_COUNT');
+        process.env['REPORT_RETENTION_COUNT'] = 'abc';
 
         expect(() => store.pruneReports(false)).toThrow(/REPORT_RETENTION_COUNT/);
 
-        Reflect.deleteProperty(process.env, RETENTION_COUNT);
-        process.env[RETENTION_COUNT] = '5.5';
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_COUNT');
+        process.env['REPORT_RETENTION_COUNT'] = '5.5';
 
         expect(() => store.pruneReports(false)).toThrow(/REPORT_RETENTION_COUNT/);
 
-        Reflect.deleteProperty(process.env, RETENTION_COUNT);
-        process.env[RETENTION_MAX_AGE] = '-3';
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_COUNT');
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '-3';
 
         expect(() => store.pruneReports(false)).toThrow(/REPORT_RETENTION_MAX_AGE_DAYS/);
 
-        Reflect.deleteProperty(process.env, RETENTION_MAX_AGE);
-        process.env[RETENTION_MAX_AGE] = '3';
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_MAX_AGE_DAYS');
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '3';
 
         expect(() => store.pruneReports(false)).not.toThrow();
     });
