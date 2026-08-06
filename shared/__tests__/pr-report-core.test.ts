@@ -601,9 +601,9 @@ describe('Pr Report Core', () => {
                 error: 'AssertionError: boom',
             };
 
-            // SSOT deliberately disagrees with the latest run's totals: the summary
-            // MUST reflect computed.testCounts/runPassRate, and the failure table the
-            // latest run's tests (computed.metricsRuns[0].tests).
+            // Summary reflects computed.testCounts (SSOT, cumulative across runs).
+            // Failure table reflects latest run's tests (B4/B22).
+            // Fixture: 2 runs — oldest {7 passed, 1 failed}, latest {1 passed, 1 failed}.
             const hub = createTestHub({
                 testCounts: { passed: 8, failed: 2, skipped: 0, total: 10 },
                 runPassRate: calcRunPassRate({ passed: 8, failed: 2 }),
@@ -617,6 +617,25 @@ describe('Pr Report Core', () => {
                         total: 2,
                         duration: 5000,
                         tests: [passedTest, failedTest],
+                    },
+                    {
+                        timestamp: '2026-01-01T00:00:00.000Z',
+                        project: 'p',
+                        passed: 7,
+                        failed: 1,
+                        skipped: 0,
+                        total: 8,
+                        duration: 12000,
+                        tests: [
+                            { title: 'passing-test', state: 'passed', duration: 100 },
+                            { title: 'failing-test', state: 'failed', duration: 200, error: 'boom' },
+                            { title: 'old-passing-test', state: 'passed', duration: 100 },
+                            { title: 'old-passing-test-2', state: 'passed', duration: 100 },
+                            { title: 'old-passing-test-3', state: 'passed', duration: 100 },
+                            { title: 'old-passing-test-4', state: 'passed', duration: 100 },
+                            { title: 'old-passing-test-5', state: 'passed', duration: 100 },
+                            { title: 'old-passing-test-6', state: 'passed', duration: 100 },
+                        ],
                     },
                 ],
             });

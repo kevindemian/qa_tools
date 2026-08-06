@@ -182,7 +182,7 @@ describe('GenerateFlakinessHtml', () => {
         expect(html).toContain('Source Quality Banner');
     });
 
-    it('shows explicit N/A (never silent 0%) for Flaky Rate when dataHub testCounts is missing (B19)', () => {
+    it('shows explicit N/A (never silent 0%) for Flaky Rate when dataHub flakyTestRate is missing (B19)', () => {
         expect.hasAssertions();
 
         const entries: FlakinessEntry[] = [
@@ -203,7 +203,7 @@ describe('GenerateFlakinessHtml', () => {
 
         expect(rateValue).toBe('N/A');
         expect(html).toContain('Insufficient Data');
-        expect(html).toContain('testCounts.total');
+        expect(html).toContain('flakyTestRate');
     });
 
     it('renders real Flaky Rate when dataHub flakyTestRate is provided (B19 — SSOT source)', () => {

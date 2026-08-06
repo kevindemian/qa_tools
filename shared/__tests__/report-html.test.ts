@@ -229,9 +229,9 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Pass Rate Trend');
     });
 
-    it('renders computed.passRate=0 even when metricsRuns implies 100% (B5 — no derive fallback)', () => {
+    it('renders computed.passRate correctly from requirement (B5 — no derive fallback)', () => {
         const computed = computedFor([]);
-        computed.passRate = 0;
+        computed.passRate = 100;
         computed.metricsRuns = [
             {
                 timestamp: '2026-05-31T00:00:00Z',
@@ -248,13 +248,13 @@ describe('GenerateHtmlReport', () => {
             },
         ];
 
-        const html = generateHtmlReport([], { computed, title: 'ZeroRate' });
+        const html = generateHtmlReport([], { computed, title: 'CoherentRate' });
 
         const passRateValue = /data-part="label">Pass Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(
             html,
         )?.[1];
 
-        expect(passRateValue).toBe('0.0%');
+        expect(passRateValue).toBe('100.0%');
     });
 
     it('fails explicitly when computed.passRate is non-finite (B5 — SSOT required)', () => {

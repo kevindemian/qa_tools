@@ -74,7 +74,7 @@ function buildNoDataBanner(): string {
         dataSection: 'no-data',
         title: 'Insufficient Data',
         children:
-            'Flaky Rate indispon\u00edvel — dataHub.computed.testCounts.total ausente ou inv\u00e1lido (SSOT). Passe o DataHub (computed) ao renderer.',
+            'Flaky Rate indispon\u00edvel — dataHub.computed.flakyTestRate ausente ou inv\u00e1lido (SSOT). Passe o DataHub (computed) ao renderer.',
     });
 }
 
