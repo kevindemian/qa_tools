@@ -46,4 +46,42 @@ describe('Compute/coverage', () => {
 
         expect(result.files?.['src/a.ts']).toBeDefined();
     });
+
+    describe('Zero-silencing (§25) — non-finite inputs must fail explicitly, never default to 0', () => {
+        it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+            'throws when percentage is %s',
+            (percentage) => {
+                expect.hasAssertions();
+                expect(() => calcCoverageFromRaw({ total: 100, covered: 0, percentage })).toThrow(TypeError);
+            },
+        );
+
+        it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+            'throws when total (statements count) is %s',
+            (total) => {
+                expect.hasAssertions();
+                expect(() => calcCoverageFromRaw({ total, covered: 0, percentage: 50 })).toThrow(TypeError);
+            },
+        );
+
+        it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+            'throws when covered is %s',
+            (covered) => {
+                expect.hasAssertions();
+                expect(() => calcCoverageFromRaw({ total: 100, covered, percentage: 50 })).toThrow(TypeError);
+            },
+        );
+
+        it('throws when a per-file percentage is non-finite', () => {
+            expect.hasAssertions();
+            expect(() =>
+                calcCoverageFromRaw({
+                    total: 100,
+                    covered: 50,
+                    percentage: 50,
+                    files: { 'src/a.ts': { total: 10, covered: 5, percentage: Number.NaN } },
+                }),
+            ).toThrow(TypeError);
+        });
+    });
 });
