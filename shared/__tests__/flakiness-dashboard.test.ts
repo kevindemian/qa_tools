@@ -206,10 +206,15 @@ describe('GenerateFlakinessHtml', () => {
         expect(html).toContain('testCounts.total');
     });
 
-    it('renders real Flaky Rate when dataHub testCounts.total is provided (B19 — SSOT source)', () => {
+    it('renders real Flaky Rate when dataHub flakyTestRate is provided (B19 — SSOT source)', () => {
         expect.hasAssertions();
 
-        const hub = makeDataHubMock({ computed: { testCounts: { passed: 98, failed: 2, skipped: 0, total: 100 } } });
+        const hub = makeDataHubMock({
+            computed: {
+                testCounts: { passed: 98, failed: 2, skipped: 0, total: 100 },
+                flakyTestRate: 1,
+            },
+        });
         const entries: FlakinessEntry[] = [
             {
                 title: 'Very Flaky',
@@ -228,5 +233,63 @@ describe('GenerateFlakinessHtml', () => {
 
         expect(rateValue).toBe('1%');
         expect(html).not.toContain('Insufficient Data');
+    });
+
+    it('uses flakyTestRate SSOT (not testCounts.total) for Flaky Rate (C-5 — cumulative denominator bug)', () => {
+        expect.hasAssertions();
+
+        // testCounts.total=100 (cumulative across all runs) but flakyTestRate=25 (actual rate)
+        const hub = makeDataHubMock({
+            computed: {
+                testCounts: { passed: 98, failed: 2, skipped: 0, total: 100 },
+                flakyTestRate: 25,
+            },
+        });
+        const entries: FlakinessEntry[] = [
+            {
+                title: 'Flaky Test A',
+                project: 'test',
+                passCount: 75,
+                failCount: 25,
+                skipCount: 0,
+                totalRuns: 100,
+                rate: 0.25,
+            },
+        ];
+
+        const html = generateFlakinessHtml(entries, 'Flakiness', { dataHub: hub });
+
+        const rateValue = /data-part="label">Flaky Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(html)?.[1];
+
+        // BUG: renderer shows 1/100=1% (wrong). Should show 25% (SSOT).
+        expect(rateValue).toBe('25%');
+    });
+
+    it('shows N/A when flakyTestRate is undefined (C-5 — explicit no-data per §25)', () => {
+        expect.hasAssertions();
+
+        const hub = makeDataHubMock({
+            computed: { testCounts: { passed: 98, failed: 2, skipped: 0, total: 100 } },
+        });
+        delete hub.computed.flakyTestRate;
+
+        const entries: FlakinessEntry[] = [
+            {
+                title: 'Flaky Test A',
+                project: 'test',
+                passCount: 75,
+                failCount: 25,
+                skipCount: 0,
+                totalRuns: 100,
+                rate: 0.25,
+            },
+        ];
+
+        const html = generateFlakinessHtml(entries, 'Flakiness', { dataHub: hub });
+
+        const rateValue = /data-part="label">Flaky Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(html)?.[1];
+
+        // Without flakyTestRate → N/A (not 0%, not 1%, not silent default)
+        expect(rateValue).toBe('N/A');
     });
 });

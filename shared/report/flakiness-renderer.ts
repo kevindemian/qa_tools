@@ -34,20 +34,22 @@ export function generateFlakinessHtml(flaky: FlakinessEntry[], title?: string, o
         const pageTitle = title || 'Flakiness Dashboard';
         const sourceBanner = buildSourceQualityBanner(options?.dataHub);
 
-        // Total test count from DataHub computed metrics (SSOT). Missing data is
-        // NEVER masked as 0 (Rule 25) — it surfaces as explicit no-data.
+        // C-5 fix: use computed.flakyTestRate (domain SSOT) instead of
+        // testCounts.total (cumulative — sum of all runs, wrong denominator).
         const dataHub = options?.dataHub;
-        const totalTests = dataHub?.computed.testCounts.total;
-        const hasTotalTests = typeof totalTests === 'number' && Number.isFinite(totalTests) && totalTests >= 0;
+        const flakyTestRateRaw = dataHub?.computed.flakyTestRate;
+        const hasFlakyTestRate =
+            typeof flakyTestRateRaw === 'number' && Number.isFinite(flakyTestRateRaw) && flakyTestRateRaw >= 0;
+        const flakyTestRate = hasFlakyTestRate ? flakyTestRateRaw : undefined;
 
         const bodyContent = `<div data-component="container" data-dashboard="flakiness">
             <h1>${sanitizeHtml(pageTitle)}</h1>
             <div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(options?.generatedAt))}</div>
             ${sourceBanner}
-            ${hasTotalTests ? '' : buildNoDataBanner()}
-            ${buildFlakinessSummary(high, flaky, thresholds, totalTests)}
+            ${flakyTestRate === undefined ? buildNoDataBanner() : ''}
+            ${buildFlakinessSummary(high, flaky, thresholds, flakyTestRate)}
             ${buildFlakinessTable(high, thresholds)}
-            ${buildActions(high, thresholds, totalTests)}
+            ${buildActions(high, thresholds, flakyTestRate)}
         </div>`;
 
         return buildHtmlPage({
@@ -80,10 +82,10 @@ function buildFlakinessSummary(
     high: FlakinessEntry[],
     flaky: FlakinessEntry[],
     thresholds: FlakinessThresholds,
-    totalTests: number | undefined,
+    flakyTestRate: number | undefined,
 ): string {
-    const hasTotalTests = totalTests !== undefined;
-    const flakyRate = hasTotalTests && totalTests > 0 ? Math.round((high.length / totalTests) * 100) : 0;
+    const hasRate = flakyTestRate !== undefined;
+    const rateDisplay = hasRate ? `${Math.round(flakyTestRate)}%` : 'N/A';
 
     return Section({
         dataSection: 'summary',
@@ -95,17 +97,14 @@ function buildFlakinessSummary(
                     label: 'Flaky Tests',
                     value: String(high.length),
                     severity: high.length > thresholds.errorSeverityThreshold ? 'error' : 'warn',
-                    trend:
-                        hasTotalTests && totalTests > 0
-                            ? `${Math.round((high.length / totalTests) * 100)}% of ${totalTests} total`
-                            : '',
+                    trend: hasRate ? `flaky rate: ${rateDisplay}` : '',
                     target: `target: <${thresholds.errorSeverityThreshold}`,
                 }) +
-                // 2. Flaky Rate
+                // 2. Flaky Rate (SSOT from computed.flakyTestRate)
                 MetricCard({
                     label: 'Flaky Rate',
-                    value: hasTotalTests ? `${flakyRate}%` : 'N/A',
-                    severity: hasTotalTests && flakyRate > 5 ? 'warn' : 'default',
+                    value: rateDisplay,
+                    severity: hasRate && flakyTestRate > 5 ? 'warn' : 'default',
                     target: 'target: <5%',
                 }) +
                 // 3. High Flakiness
@@ -217,7 +216,11 @@ function buildSourceQualityBanner(dataHub?: DataHub): string {
     });
 }
 
-function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, totalTests: number | undefined): string {
+function buildActions(
+    high: FlakinessEntry[],
+    thresholds: FlakinessThresholds,
+    flakyTestRate: number | undefined,
+): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     if (high.length > 0) {
@@ -242,15 +245,12 @@ function buildActions(high: FlakinessEntry[], thresholds: FlakinessThresholds, t
             });
         }
 
-        // Add flaky rate context if total tests known
-        if (totalTests !== undefined && totalTests > 0) {
-            const flakyRate = Math.round((high.length / totalTests) * 100);
-            if (flakyRate > 5) {
-                actions.push({
-                    severity: 'warn',
-                    text: `Flaky rate is ${flakyRate}% of total test suite (${high.length}/${totalTests}). This indicates systemic stability issues.`,
-                });
-            }
+        // C-5: flaky rate context from SSOT (not cumulative denominator)
+        if (flakyTestRate !== undefined && flakyTestRate > 5) {
+            actions.push({
+                severity: 'warn',
+                text: `Flaky rate is ${Math.round(flakyTestRate)}% of qualifying tests. This indicates systemic stability issues.`,
+            });
         }
     }
 
