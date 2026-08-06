@@ -52,7 +52,7 @@ import {
 } from '../../shared/quality/case18-coverage-table.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
 import { createTestsFromTestCases } from '../import-orchestrator.js';
-import { pickIssueAndLinkType, type IssuePickerDeps } from '../services/issue-picker.js';
+import { pickIssueKeys, type IssuePickerDeps } from '../services/issue-picker.js';
 
 /** Maximum number of LLM generation attempts in a single case18 run. Guards
  *  against unbounded cost when the user re-generates with feedback. */
@@ -551,25 +551,23 @@ async function offerCreateAndLink(
     info('Testes criados no Jira: ' + createdTestKeys.join(', '));
 
     const deps: IssuePickerDeps = {
-        listLinkTypes: () => c.linkManager.getIssueLinkTypes(),
         getIssue: (key: string) =>
             c.jiraResource.getJiraResource<{
                 key: string;
                 fields?: { summary?: string; issuetype?: { name?: string } };
             }>('issue/' + key + '?fields=summary,issuetype'),
         ask,
-        showSelect,
         askConfirm,
         warn,
         info,
     };
-    const picked = await pickIssueAndLinkType(deps);
-    if (!picked || picked.keys.length === 0) {
+    const usKeys = await pickIssueKeys(deps, { confirmLabel: 'Test Coverage' });
+    if (!usKeys || usKeys.length === 0) {
         warn('Nenhuma user story de origem selecionada. Testes criados sem vínculo à US.');
         return;
     }
 
-    const usKey = picked.keys[0];
+    const usKey = usKeys[0];
     if (!usKey) {
         warn('Nenhuma user story de origem selecionada. Testes criados sem vínculo à US.');
         return;

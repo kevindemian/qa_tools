@@ -84,7 +84,10 @@ function storePath(): string {
 }
 
 function pipelinePath(): string {
-    return path.join(process.cwd(), PIPELINE_FILE);
+    // Injeção de path para isolamento em testes herméticos (§26 fs real, sem mock).
+    // Default inalterado: cwd do processo (consumido por CI/opencode-guard.sh).
+    const override = process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'];
+    return override ? path.resolve(override) : path.join(process.cwd(), PIPELINE_FILE);
 }
 
 function ensureDir(dir: string): void {

@@ -10,7 +10,7 @@ import * as fc from 'fast-check';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll, afterEach } from 'vitest';
 import { rootLogger } from '../logger.js';
 import { generatePipelineQuarantine, loadQuarantine, filterExpiredEntries } from '../validation/quarantine.js';
 import type { QuarantineEntry, QuarantineStore } from '../validation/quarantine.js';
@@ -25,7 +25,19 @@ vi.mock('../config-accessor.js', () => ({
     },
 }));
 
+function pipelineFilePath(): string {
+    return process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] ?? path.join(process.cwd(), 'qa-quarantine.json');
+}
+
 describe('Quarantine.Property', () => {
+    beforeAll(() => {
+        process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] = path.join(
+            os.tmpdir(),
+            'qa-tools-quarantine-pbt',
+            'qa-quarantine.json',
+        );
+    });
+
     afterEach(() => {
         try {
             fs.rmSync(path.join(os.tmpdir(), 'qa-tools-quarantine-pbt'), { recursive: true, force: true });
@@ -35,12 +47,16 @@ describe('Quarantine.Property', () => {
             );
         }
         try {
-            fs.unlinkSync(path.join(process.cwd(), 'qa-quarantine.json'));
+            fs.unlinkSync(path.resolve(pipelineFilePath()));
         } catch (err) {
             rootLogger.warn(
                 `cleanup: failed to remove qa-quarantine.json: ${err instanceof Error ? err.message : String(err)}`,
             );
         }
+    });
+
+    afterAll(() => {
+        delete process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'];
     });
 
     const entryArb: fc.Arbitrary<QuarantineEntry> = fc

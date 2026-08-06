@@ -10,7 +10,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { rootLogger } from '../../logger.js';
 
 const MOCK_STATE_HOME = path.join(os.tmpdir(), 'qa-tools-quarantine-integration');
@@ -41,10 +41,18 @@ function storePath(): string {
 }
 
 function pipelineFilePath(): string {
-    return path.join(process.cwd(), 'qa-quarantine.json');
+    return process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] ?? path.join(process.cwd(), 'qa-quarantine.json');
 }
 
 describe('Quarantine.Integration', () => {
+    beforeAll(() => {
+        process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] = path.join(
+            os.tmpdir(),
+            'qa-tools-quarantine-integration',
+            'qa-quarantine.json',
+        );
+    });
+
     beforeEach(() => {
         try {
             fs.rmSync(MOCK_STATE_HOME, { recursive: true, force: true });
@@ -77,6 +85,10 @@ describe('Quarantine.Integration', () => {
                 `cleanup: failed to remove ${pipelineFilePath()}: ${err instanceof Error ? err.message : String(err)}`,
             );
         }
+    });
+
+    afterAll(() => {
+        delete process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'];
     });
 
     describe('FT-36a — Create quarantine', () => {

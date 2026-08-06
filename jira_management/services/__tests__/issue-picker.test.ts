@@ -1,18 +1,13 @@
 import { expect, vi } from 'vitest';
-import { pickIssueAndLinkType, type IssuePickerDeps, type PickedIssue } from '../issue-picker.js';
+import { pickIssueKeys, type IssuePickerDeps, type PickedIssue } from '../issue-picker.js';
 
 function makeDeps(overrides?: Partial<IssuePickerDeps>): IssuePickerDeps {
     return {
-        listLinkTypes: vi.fn().mockResolvedValue([
-            { id: '10600', name: 'Tests' },
-            { id: '11701', name: 'Relates' },
-        ]),
         getIssue: vi.fn().mockResolvedValue({
             key: 'ECSPOL-731',
             fields: { summary: 'Validar login', issuetype: { name: 'Story' } },
         }),
         ask: vi.fn().mockResolvedValue('ECSPOL-731'),
-        showSelect: vi.fn().mockResolvedValue('Tests'),
         askConfirm: vi.fn().mockResolvedValue(true),
         warn: vi.fn(),
         info: vi.fn(),
@@ -21,39 +16,45 @@ function makeDeps(overrides?: Partial<IssuePickerDeps>): IssuePickerDeps {
 }
 
 describe('IssuePicker', () => {
-    it('flui digitação + validação + confirmação e retorna keys + linkType', async () => {
+    it('flui digitação + validação + confirmação e retorna as keys', async () => {
         expect.hasAssertions();
         const deps = makeDeps();
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
-        expect(result).toEqual({ keys: ['ECSPOL-731'], linkType: 'Tests' });
-        expect(deps.showSelect).toHaveBeenCalledWith(
-            expect.stringContaining('Tipo de link') as string,
-            expect.arrayContaining([expect.objectContaining({ name: 'Tests' })]) as unknown[],
-        );
+        expect(result).toEqual(['ECSPOL-731']);
         expect(deps.getIssue).toHaveBeenCalledWith('ECSPOL-731');
         expect(deps.askConfirm).toHaveBeenCalledWith(expect.stringContaining('ECSPOL-731') as string);
     });
 
-    it('key inexistente → warn explícito e não cria link (retorna null)', async () => {
+    it('usa confirmLabel na mensagem de confirmação quando fornecido', async () => {
+        expect.hasAssertions();
+        const deps = makeDeps();
+
+        const result = await pickIssueKeys(deps, { confirmLabel: 'Test Coverage' });
+
+        expect(result).toEqual(['ECSPOL-731']);
+        expect(deps.askConfirm).toHaveBeenCalledWith(expect.stringContaining('Test Coverage') as string);
+    });
+
+    it('key inexistente → warn explícito e retorna null (não executa ação)', async () => {
         expect.hasAssertions();
         const deps = makeDeps({
             getIssue: vi.fn().mockRejectedValue(new Error('404 - issue NOPE-1 not found')),
         });
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
         expect(result).toBeNull();
         expect(deps.warn).toHaveBeenCalledWith(expect.stringContaining('NOPE-1') as string);
         expect(deps.askConfirm).not.toHaveBeenCalled();
     });
 
-    it('confirmação negada → retorna null (não cria)', async () => {
+    it('confirmação negada → retorna null (não executa)', async () => {
         expect.hasAssertions();
         const deps = makeDeps({ askConfirm: vi.fn().mockResolvedValue(false) });
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
         expect(result).toBeNull();
         expect(deps.askConfirm).toHaveBeenCalled();
@@ -71,9 +72,9 @@ describe('IssuePicker', () => {
             ),
         });
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
-        expect(result).toEqual({ keys: ['ECSPOL-731', 'ECSPOL-732'], linkType: 'Tests' });
+        expect(result).toEqual(['ECSPOL-731', 'ECSPOL-732']);
         expect(deps.getIssue).toHaveBeenCalledWith('ECSPOL-731');
         expect(deps.getIssue).toHaveBeenCalledWith('ECSPOL-732');
     });
@@ -82,28 +83,18 @@ describe('IssuePicker', () => {
         expect.hasAssertions();
         const deps = makeDeps({ ask: vi.fn().mockResolvedValue('') });
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
         expect(result).toBeNull();
         expect(deps.warn).toHaveBeenCalled();
         expect(deps.getIssue).not.toHaveBeenCalled();
     });
 
-    it('sem link types disponíveis → warn explícito e retorna null', async () => {
-        expect.hasAssertions();
-        const deps = makeDeps({ listLinkTypes: vi.fn().mockResolvedValue([]) });
-
-        const result = await pickIssueAndLinkType(deps);
-
-        expect(result).toBeNull();
-        expect(deps.warn).toHaveBeenCalledWith(expect.stringContaining('tipo de link') as string);
-    });
-
     it('valida formato da key (PROJ-123) e rejeita formato inválido com warn', async () => {
         expect.hasAssertions();
         const deps = makeDeps({ ask: vi.fn().mockResolvedValue('not-a-key') });
 
-        const result = await pickIssueAndLinkType(deps);
+        const result = await pickIssueKeys(deps);
 
         expect(result).toBeNull();
         expect(deps.warn).toHaveBeenCalledWith(expect.stringContaining('formato') as string);

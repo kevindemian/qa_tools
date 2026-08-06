@@ -36,6 +36,50 @@ export interface CreateLinkInput {
 /** Outcome of a single `createLink` attempt — never ambiguous (§25). */
 export type CreateLinkOutcome = 'created' | 'duplicate' | 'missing-key';
 
+/** Expected orientation contract of a directional link type. */
+export interface OrientationHint {
+    /** Phrase the instance's INWARD side should carry (requirement side). */
+    inward: string;
+    /** Phrase the instance's OUTWARD side should carry (test side). */
+    outward: string;
+}
+
+/** Known Xray link-type orientation contracts (Test Coverage). Link types not
+ *  listed here (e.g. `Relates` — symmetric — and `Pre-Condition`, whose exact
+ *  instance phrases are not part of the Test Coverage contract) skip the
+ *  orientation validation. Only types with a documented directional contract
+ *  are validated — never a speculative guess (§9). */
+export const ORIENTATION_HINTS: Readonly<Record<string, OrientationHint>> = {
+    Tests: { inward: 'is tested by', outward: 'tests' },
+};
+
+/** Normalize a phrase for comparison: lowercase, collapsed whitespace, trimmed. */
+function normPhrase(s: string | undefined): string {
+    return (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Whether an instance phrase matches the expected phrase. Tolerates minor
+ *  instance-local wording (one contains the other). An absent phrase NEVER
+ *  matches — absence cannot confirm the contract (§25: explicit, not silent). */
+export function orientationPhraseMatches(actual: string | undefined, expected: string): boolean {
+    const a = normPhrase(actual);
+    const e = normPhrase(expected);
+    if (a === '' || e === '') return false;
+    return a === e || a.includes(e) || e.includes(a);
+}
+
+/** Whether an instance link-type definition is consistent with the expected
+ *  orientation contract. Absent/incomplete phrases are NOT consistent — the
+ *  caller surfaces the discrepancy explicitly (§25). */
+export function isOrientationConsistent(
+    def: { inward?: string; outward?: string },
+    expected: OrientationHint,
+): boolean {
+    return (
+        orientationPhraseMatches(def.inward, expected.inward) && orientationPhraseMatches(def.outward, expected.outward)
+    );
+}
+
 /** Result of a batch semantic operation. */
 export interface LinkBatchResult {
     created: number;
@@ -209,6 +253,50 @@ export class IssueLinkService {
     // PRIMITIVE
     // ─────────────────────────────────────────────────────────────
 
+    /** Resolve a link type to its instance id and validate its orientation
+     *  against the known Xray contract. Direction is ALWAYS provided by the
+     *  caller (the semantic operation) — this method never picks it. It only
+     *  surfaces a reversed/absent instance definition as an explicit warning
+     *  (§25), so the operator can verify Test Coverage before relying on it.
+     *  The link is still created (validation never blocks, §3/§9); the
+     *  warning carries the cause and the corrective action. */
+    private async resolveDirection(
+        linkTypeName: string,
+        inwardKey: string,
+        outwardKey: string,
+    ): Promise<{ linkTypeId: string; inwardKey: string; outwardKey: string }> {
+        const def = await this.linkTypeManager.getLinkTypeByName(linkTypeName);
+        if (!def) {
+            const types = await this.linkTypeManager.getIssueLinkTypes();
+            throw new Error(
+                `Tipo de link '${linkTypeName}' não encontrado. Disponíveis: ${types.map((t) => t.name).join(', ')}`,
+            );
+        }
+        const hint = ORIENTATION_HINTS[linkTypeName];
+        if (hint && !isOrientationConsistent(def, hint)) {
+            rootLogger.warn(
+                'IssueLinkService: o link type "' +
+                    linkTypeName +
+                    '" desta instância está configurado com orientação divergente do contrato Xray Test Coverage ' +
+                    '(inward="' +
+                    (def.inward ?? '') +
+                    '", outward="' +
+                    (def.outward ?? '') +
+                    '" vs esperado inward="' +
+                    hint.inward +
+                    '", outward="' +
+                    hint.outward +
+                    '"). ' +
+                    'O link será criado com a direção da operação semântica (inward=' +
+                    inwardKey +
+                    ', outward=' +
+                    outwardKey +
+                    '), mas confira a configuração do tipo de link na instância se o Test Coverage não popular na issue esperada.',
+            );
+        }
+        return { linkTypeId: def.id, inwardKey, outwardKey };
+    }
+
     /** Create a single issue link with explicit direction.
      *  Idempotent: an identical existing link returns `duplicate`.
      *  A missing issue key (404 / not found) returns `missing-key`.
@@ -234,11 +322,11 @@ export class IssueLinkService {
             return 'missing-key';
         }
 
-        const linkTypeId = await this.linkTypeManager.resolveLinkTypeId(input.linkType);
+        const resolved = await this.resolveDirection(input.linkType, inward, outward);
         const payload = {
-            type: { id: linkTypeId },
-            inwardIssue: { key: inward },
-            outwardIssue: { key: outward },
+            type: { id: resolved.linkTypeId },
+            inwardIssue: { key: resolved.inwardKey },
+            outwardIssue: { key: resolved.outwardKey },
         };
 
         // Idempotency: skip when an identical link already exists on the outward issue.

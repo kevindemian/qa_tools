@@ -61,7 +61,8 @@ outward??inward` (`link-operations.ts:57,74`), e rebuild/restore reconstrói via
 | Pasta `jira_management/services/` | Aceita | usuário (serviços centralizados futuros) |
 | Apagar `linkIssues`, absorver `createIssueLink` | Aceito | usuário + §3 (não-paralelo) |
 | UX do alvo da issue | **Digitação livre + GET issue/KEY + confirmação com summary** (sem auto-complete) | usuário (tens de paginação ~2000 issues) |
-| Link type | Menu `showSelect` de `issueLinkTypes` (conjunto finito); direção sempre derivada pelo serviço | usuário |
+| Link type | ~~Menu `showSelect` de `issueLinkTypes`~~ **REMOVIDO do picker (autorizado 2026-08-06)** — link type e direção são propriedade exclusiva da operação semântica do serviço; o picker retorna apenas keys (`string[]`). Menu era enganoso (§7): case18 descartava a escolha (`linkTestsToRequirement` fixa `Tests`). | usuário |
+| Validação de orientação por instância | **NOVO (autorizado 2026-08-06)** — `IssueLinkService.resolveDirection` resolve a definição completa via `getLinkTypeByName` e valida inward/outward contra o contrato Xray; divergência/ausência → warn explícito (§25), nunca bloqueia. | usuário |
 | Correção do snapshot | **Mesmo plano** | usuário |
 | case18 criar + linkar | **Mesmo plano** | usuário |
 | Erro em key inexistente | warn explícito + continue (sem hard-fail), preserva retomada | §18/§24/§25 |
@@ -100,11 +101,29 @@ shared/types/
 
 ### 4.2 UX — `issue-picker.ts`
 
-1. Menu de link type via `showSelect` (reutiliza `JiraLinkManager.getIssueLinkTypes`).
-2. Input livre da issue key (ou keys separadas por vírgula).
-3. `GET issue/KEY?fields=summary,issuetype` → valida existência.
-4. Exibe `KEY — "summary" (issuetype)` + confirmação `s/N`.
-5. `issue-picker` NUNCA escolhe direção — delega a operação semântica ao serviço.
+**Escopo pós-autorização (2026-08-06):** o picker NÃO escolhe mais tipo de link.
+
+1. Input livre da issue key (ou keys separadas por vírgula).
+2. `GET issue/KEY?fields=summary,issuetype` → valida existência.
+3. Exibe `KEY — "summary" (issuetype)` + confirmação `s/N` (com `confirmLabel` opcional, ex. "Test Coverage").
+4. Retorna `string[] | null` — **só as keys**. Nenhum tipo de link, nenhuma direção.
+
+O tipo de link e a direção são decididos pela operação semântica do serviço que o
+caller invoca (ex. case18 → `linkTestsToRequirement`). Menus de "tipo de link"
+foram removidos por serem enganosos (§7) e sem consumidor real (§3).
+
+### 4.3 Fortalecimento da direção (autorizado 2026-08-06)
+
+`IssueLinkService.resolveDirection(linkTypeName, inwardKey, outwardKey)`:
+
+- Resolve a **definição completa** do link type via `LinkTypeManager.getLinkTypeByName`
+  (novo método aditivo; `resolveLinkTypeId` vira wrapper fino, contrato §6 intacto).
+- Valida `inward`/`outward` da instância contra `ORIENTATION_HINTS[linkType]`
+  (hoje: `Tests` → inward="is tested by", outward="tests"). Link types sem contrato
+  documentado (Relates simétrico, Pre-Condition) pulam a validação — nunca especular (§9).
+- Divergência/ausência → **warn explícito com causa + correção** (§25); **nunca bloqueia**
+  (o link é criado com a direção da operação semântica — autoridade é a regra de domínio).
+- Link type inexistente na instância → throw com lista de disponíveis (mesma mensagem de hoje).
 
 ---
 
@@ -132,8 +151,8 @@ Substituir `linkIssues(...)` por `linkRelated(sourceKey, targetKeys)`. Manter G3
 Após `convertTestCases`/`writeTestOutput` (JSON), adicionar passo opcional:
 1. Perguntar se deseja **criar os testes no Jira**.
 2. Reusar `createTestsFromTestCases` (`import-orchestrator.ts:427`) para criação.
-3. Selecionar a US de origem via `issue-picker` (digitação + confirmação).
-4. `linkTestsToRequirement(usKey, createdTestKeys)` — Test Coverage correta.
+3. Selecionar a US de origem via `pickIssueKeys` (digitação + confirmação, sem menu de tipo).
+4. `linkTestsToRequirement(usKey, createdTestKeys)` — Test Coverage correta (tipo `Tests` fixo pela operação).
 
 ---
 
@@ -143,13 +162,16 @@ Após `convertTestCases`/`writeTestOutput` (JSON), adicionar passo opcional:
    `inward=US, outward=TEST` (falha no código atual).
 2. **Unit serviço**: direção de cada operação semântica, idempotência, 404 warn,
    args inválidos (empty/null).
-3. **Unit picker**: key inexistente (warn), confirmação negada (não cria), multi-keys.
+3. **Unit picker**: key inexistente (warn), confirmação negada (não executa), multi-keys,
+   `confirmLabel` na mensagem. (Sem testes de menu — menu removido.)
 4. **Unit snapshot**: `LinkSnapshot` com direção; rebuild preserva inward/outward.
-5. **e2e nock**: import CSV com `linkedIssues` → payload correto; TE creation;
+5. **Unit orientação**: `getLinkTypeByName` (match nome/inward/outward, null, warn em input
+   inválido); `resolveDirection` — orientação invertida → warn explícito, link type ausente → throw.
+6. **e2e nock**: import CSV com `linkedIssues` → payload correto; TE creation;
    bug-report `linkRelated`.
-6. **Mocks strict §26**: atualizar `__mocks__/jira_link_manager.ts` e afins para
+7. **Mocks strict §26**: atualizar `__mocks__/jira_link_manager.ts` e afins para
    novo shape (sem mock-teatro).
-7. Migrar testes existentes que assertam `linkIssues`/`createIssueLink` direto.
+8. Migrar testes existentes que assertam `linkIssues`/`createIssueLink` direto.
 
 ---
 
@@ -175,6 +197,28 @@ Após `convertTestCases`/`writeTestOutput` (JSON), adicionar passo opcional:
 | `npm run no-swallow` | ✅ nenhuma supressão no diff |
 | `npm run audit-suppressions` | ⚠️ não executável localmente (`audit/suppressions.yaml` ausente — artefato de CI) |
 | Verificação empírica ECSPOL-731 | ⛔ bloqueada (VPN OFF) — passo condicional, §9 |
+
+### 8.2 Emenda 2026-08-06 — menu de link type removido + orientação validada
+
+**Motivação:** auditoria pós-entrega detectou que o menu de tipo de link no picker
+era enganoso — o case18 chamava `pickIssueAndLinkType` (que exibia o menu) mas
+descartava a escolha e fixava `linkTestsToRequirement` (violação §7). Além disso,
+`resolveLinkTypeId` devolvia só o id, sem validar a orientação da instância.
+
+**Mudanças (autorizadas pelo usuário em 2026-08-06):**
+
+| Arquivo | Mudança |
+|---|---|
+| `jira_management/services/issue-picker.ts` | `pickIssueAndLinkType` → `pickIssueKeys(deps, {confirmLabel?})` retornando `string[] \| null`. Removidos `pickLinkType`, `listLinkTypes`, `showSelect`, `PickedIssueAndLinkType`. |
+| `jira_management/commands/case18.ts` | deps do picker sem `listLinkTypes`/`showSelect`; `pickIssueKeys(deps, {confirmLabel:'Test Coverage'})`. |
+| `jira_management/link-types.ts` | NOVO `getLinkTypeByName` (aditivo); `resolveLinkTypeId` vira wrapper fino (contrato §6 intacto). |
+| `jira_management/services/issue-link.service.ts` | NOVO `resolveDirection` + `ORIENTATION_HINTS` + `isOrientationConsistent`/`orientationPhraseMatches`; `createLink` valida orientação da instância com warn (§25), nunca bloqueia. |
+| Testes | `issue-picker.test.ts` (7, novo contrato), `issue-link.service.test.ts` (+4 orientação), `link-types.test.ts` (+4 getLinkTypeByName), `case18.test.ts` (mock `pickIssueKeys`). |
+
+**Decisão de design (técnica superior):** link type e direção são propriedade da
+operação semântica, não do usuário. Picker com responsabilidade única = digitar +
+validar + confirmar keys. Sem menu de tipo → sem promessa descartada (§7), sem
+capacidade sem consumidor (§3).
 
 ## 9. Fora de Escopo
 

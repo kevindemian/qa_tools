@@ -2,11 +2,17 @@ import { expect, vi } from 'vitest';
 import { IssueLinkService } from '../issue-link.service.js';
 import type { LinkTypeManager } from '../../link-types.js';
 import type { JiraResourceLike } from '../../../shared/types/jira.js';
+import { rootLogger } from '../../../shared/logger.js';
 
 function makeLinkTypeManager(): LinkTypeManager {
     return {
         resolveLinkTypeId: vi.fn().mockResolvedValue('10600'),
-        getIssueLinkTypes: vi.fn().mockResolvedValue([{ id: '10600', name: 'Tests' }]),
+        getIssueLinkTypes: vi
+            .fn()
+            .mockResolvedValue([{ id: '10600', name: 'Tests', inward: 'is tested by', outward: 'tests' }]),
+        getLinkTypeByName: vi
+            .fn()
+            .mockResolvedValue({ id: '10600', name: 'Tests', inward: 'is tested by', outward: 'tests' }),
     } as unknown as LinkTypeManager;
 }
 
@@ -40,7 +46,7 @@ describe('IssueLinkService', () => {
             const result = await service.linkTestsToRequirement('US-1', ['TEST-1']);
 
             expect(result).toEqual({ created: 1, skipped: 0, failed: [], missing: [] });
-            expect(ltm.resolveLinkTypeId).toHaveBeenCalledWith('Tests');
+            expect(ltm.getLinkTypeByName).toHaveBeenCalledWith('Tests');
             expect(jira.postJiraResource).toHaveBeenCalledWith('issueLink', {
                 type: { id: '10600' },
                 inwardIssue: { key: 'US-1' },
@@ -214,6 +220,69 @@ describe('IssueLinkService', () => {
             const links = await service.getIssueLinks('TEST-1');
 
             expect(links).toEqual([]);
+        });
+    });
+
+    describe('resolveDirection — validação de orientação por instância (§4.3)', () => {
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('orientação consistente (inward=is tested by) → link criado SEM warn', async () => {
+            expect.hasAssertions();
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
+            const { service, ltm } = setupLinks();
+            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({
+                id: '10600',
+                name: 'Tests',
+                inward: 'is tested by',
+                outward: 'tests',
+            });
+
+            const outcome = await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+
+            expect(outcome).toBe('created');
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
+        });
+
+        it('orientação INVERTIDA (inward=tests, outward=is tested by) → warn explícito mas link criado', async () => {
+            expect.hasAssertions();
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
+            const { service, ltm, jira } = setupLinks();
+            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({
+                id: '10600',
+                name: 'Tests',
+                inward: 'tests',
+                outward: 'is tested by',
+            });
+
+            const outcome = await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+
+            expect(outcome).toBe('created');
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
+            expect(jira.postJiraResource).toHaveBeenCalled();
+        });
+
+        it('frases AUSENTES (instância não expõe inward/outward) → warn explícito (não confirma contrato)', async () => {
+            expect.hasAssertions();
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
+            const { service, ltm } = setupLinks();
+            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({ id: '10600', name: 'Tests' });
+
+            await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
+        });
+
+        it('link type não encontrado na instância → throw explícito (nunca cria cego)', async () => {
+            expect.hasAssertions();
+            const { service, ltm, jira } = setupLinks();
+            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue(null);
+
+            await expect(
+                service.createLink({ linkType: 'NOPE', inwardKey: 'US-1', outwardKey: 'TEST-1' }),
+            ).rejects.toThrow(/não encontrado/);
+            expect(jira.postJiraResource).not.toHaveBeenCalled();
         });
     });
 });

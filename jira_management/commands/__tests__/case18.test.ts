@@ -53,7 +53,7 @@ vi.mock('../../import-orchestrator.js', () => ({
 }));
 
 vi.mock('../../services/issue-picker.js', () => ({
-    pickIssueAndLinkType: vi.fn(),
+    pickIssueKeys: vi.fn(),
 }));
 
 import * as promptModule from '../../../shared/ui/prompt.js';
@@ -920,7 +920,7 @@ describe('Case18', () => {
                 status: 'ok',
                 sourcePath: 'path.json',
             });
-            picker.pickIssueAndLinkType.mockResolvedValueOnce({ keys: ['ECSPOL-731'], linkType: 'Tests' });
+            picker.pickIssueKeys.mockResolvedValueOnce(['ECSPOL-731']);
             vi.mocked(baseContext.linkManager.linkTestsToRequirement).mockResolvedValueOnce({
                 created: 2,
                 skipped: 0,
@@ -933,7 +933,9 @@ describe('Case18', () => {
             expect(orchestrator.createTestsFromTestCases).toHaveBeenCalledWith(
                 expect.objectContaining({ tests: expect.any(Array) as unknown, sourceType: 'json' }),
             );
-            expect(picker.pickIssueAndLinkType).toHaveBeenCalled();
+            expect(picker.pickIssueKeys).toHaveBeenCalledWith(expect.anything() as object, {
+                confirmLabel: 'Test Coverage',
+            });
             expect(baseContext.linkManager.linkTestsToRequirement).toHaveBeenCalledWith('ECSPOL-731', [
                 'ECSPOL-900',
                 'ECSPOL-901',

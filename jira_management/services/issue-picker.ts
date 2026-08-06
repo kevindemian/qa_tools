@@ -1,21 +1,19 @@
 /** Issue Picker — UX: free-typing + GET validation + confirmation.
  *
- *  The user types the issue key(s) (comma separated), each key is validated via
+ *  Single responsibility: pick existing issue key(s). The user types the
+ *  key(s) (comma separated), each key is validated via
  *  `GET issue/KEY?fields=summary,issuetype`, the result is shown as
- *  `KEY — "summary" (issuetype)` and confirmed with s/N. The link type is chosen
- *  from the finite set of issue link types via `showSelect`.
+ *  `KEY — "summary" (issuetype)` and confirmed with s/N.
  *
- *  This module NEVER picks inward/outward direction: it returns the target keys
- *  and the link type; the semantic operation (with the correct direction) is
- *  delegated to `IssueLinkService` by the caller. */
-import type { SelectChoice } from '../../shared/ui/prompt-input-inquirer.js';
+ *  This module NEVER picks a link type nor the inward/outward direction: the
+ *  link type and direction are properties of the semantic operation, decided
+ *  by the caller on `IssueLinkService` (single source of truth). The picker
+ *  only returns the validated target keys. */
 import { formatErr } from '../../shared/errors.js';
 
 export interface IssuePickerDeps {
-    listLinkTypes: () => Promise<Array<{ id: string; name?: string; inward?: string; outward?: string }>>;
     getIssue: (key: string) => Promise<{ key: string; fields?: { summary?: string; issuetype?: { name?: string } } }>;
     ask: (label: string, options?: { default?: string }) => Promise<string>;
-    showSelect: (label: string, choices: SelectChoice[], options?: { pageSize?: number }) => Promise<string>;
     askConfirm: (label: string, defaultYes?: boolean) => Promise<boolean>;
     warn: (msg: string) => void;
     info: (msg: string) => void;
@@ -27,20 +25,18 @@ export interface PickedIssue {
     issuetype: string;
 }
 
-export interface PickedIssueAndLinkType {
-    keys: string[];
-    linkType: string;
+/** Options for the key-picking UX. */
+export interface PickIssueKeysOptions {
+    /** Label shown in the confirmation prompt (e.g. 'Test Coverage'). */
+    confirmLabel?: string;
 }
 
 const KEY_PATTERN = /^[A-Za-z]+-\d+$/;
 
-/** Result of picking: target keys + link type, or null when aborted.
+/** Result of picking target keys, or null when aborted.
  *  Null is the only "no-op" outcome and is always accompanied by an explicit
  *  warn/log (§25) — never a silent default. */
-export async function pickIssueAndLinkType(deps: IssuePickerDeps): Promise<PickedIssueAndLinkType | null> {
-    const linkType = await pickLinkType(deps);
-    if (!linkType) return null;
-
+export async function pickIssueKeys(deps: IssuePickerDeps, opts?: PickIssueKeysOptions): Promise<string[] | null> {
     const raw = await deps.ask('Issue(s) alvo (separar por vírgula, ex: ECSPOL-731,ECSPOL-732)');
     const keys = splitKeys(raw);
     if (keys.length === 0) {
@@ -59,7 +55,7 @@ export async function pickIssueAndLinkType(deps: IssuePickerDeps): Promise<Picke
     }
 
     if (picked.length === 0) {
-        deps.warn('Nenhuma issue válida confirmada. Nenhum link será criado.');
+        deps.warn('Nenhuma issue válida confirmada. Nenhuma ação será executada.');
         return null;
     }
 
@@ -68,37 +64,14 @@ export async function pickIssueAndLinkType(deps: IssuePickerDeps): Promise<Picke
     }
 
     const list = picked.map((p) => p.key).join(', ');
-    const ok = await deps.askConfirm(`Confirmar link ${linkType} para ${list}?`);
+    const label = opts?.confirmLabel && opts.confirmLabel.trim() ? opts.confirmLabel.trim() : 'link';
+    const ok = await deps.askConfirm(`Confirmar ${label} para ${list}?`);
     if (!ok) {
-        deps.warn('Confirmação negada. Nenhum link será criado.');
+        deps.warn('Confirmação negada. Nenhuma ação será executada.');
         return null;
     }
 
-    return { keys: picked.map((p) => p.key), linkType };
-}
-
-/** Menu of link types via `showSelect`. Returns the chosen type name or null. */
-async function pickLinkType(deps: IssuePickerDeps): Promise<string | null> {
-    let types: Array<{ id: string; name?: string; inward?: string; outward?: string }>;
-    try {
-        types = await deps.listLinkTypes();
-    } catch (err) {
-        deps.warn('Falha ao listar tipos de link: ' + formatErr(err));
-        return null;
-    }
-    if (!Array.isArray(types) || types.length === 0) {
-        deps.warn('Nenhum tipo de link disponível. Operação cancelada.');
-        return null;
-    }
-    const choices: SelectChoice[] = types
-        .map((t) => ({ name: t.name, value: t.name ?? t.id }))
-        .filter((c): c is { name: string; value: string } => Boolean(c.name));
-    const chosen = await deps.showSelect('Tipo de link:', choices);
-    if (!chosen || chosen === '0' || chosen === '__error__') {
-        deps.warn('Nenhum tipo de link selecionado. Operação cancelada.');
-        return null;
-    }
-    return chosen;
+    return picked.map((p) => p.key);
 }
 
 /** Validate a single issue key exists and returns its summary/issuetype.

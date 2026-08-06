@@ -155,4 +155,51 @@ describe('LinkTypeManager', () => {
             await expect(manager.resolveLinkTypeId('nonexistent')).rejects.toThrow(/não encontrado/);
         });
     });
+
+    describe('GetLinkTypeByName', () => {
+        beforeEach(() => {
+            const fakeTypes = [
+                { id: '100', name: 'Relates', inward: 'relates to', outward: 'relates to' },
+                { id: '200', name: 'Tests', inward: 'is tested by', outward: 'tests' },
+            ];
+            mockJiraResource.getJiraResource.mockResolvedValue({ issueLinkTypes: fakeTypes });
+        });
+
+        it('matches by name, inward, outward (case insensitive + trim)', async () => {
+            expect.hasAssertions();
+
+            for (const input of ['Tests', 'is tested by', 'tests', 'TESTS', '  Tests  ']) {
+                const def = await manager.getLinkTypeByName(input);
+                expect(def).not.toBeNull();
+                expect(def?.id).toBe('200');
+            }
+        });
+
+        it('returns the full definition (id + name + inward + outward)', async () => {
+            expect.hasAssertions();
+
+            const def = await manager.getLinkTypeByName('Tests');
+
+            expect(def).toStrictEqual({ id: '200', name: 'Tests', inward: 'is tested by', outward: 'tests' });
+        });
+
+        it('returns null (never throws) when no match', async () => {
+            expect.hasAssertions();
+
+            const def = await manager.getLinkTypeByName('nonexistent');
+
+            expect(def).toBeNull();
+        });
+
+        it('warns explicitly and returns null on invalid (empty/non-string) input', async () => {
+            expect.hasAssertions();
+
+            const empty = await manager.getLinkTypeByName('  ');
+            const notString = await manager.getLinkTypeByName(undefined as unknown as string);
+
+            expect(empty).toBeNull();
+            expect(notString).toBeNull();
+            expect(rootLoggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('linkTypeName') as string);
+        });
+    });
 });

@@ -34,11 +34,16 @@ function quarantineStorePath(): string {
 }
 
 function pipelineFilePath(): string {
-    return path.join(process.cwd(), 'qa-quarantine.json');
+    return process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] ?? path.join(process.cwd(), 'qa-quarantine.json');
 }
 
 describe('Quarantine', () => {
     beforeAll(() => {
+        process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'] = path.join(
+            os.tmpdir(),
+            'qa-tools-quarantine-unit',
+            'qa-quarantine.json',
+        );
         fs.rmSync(MOCK_STATE_HOME, { recursive: true, force: true });
         fs.rmSync(path.resolve(pipelineFilePath()), { force: true });
     });
@@ -46,6 +51,10 @@ describe('Quarantine', () => {
     afterEach(() => {
         fs.rmSync(MOCK_STATE_HOME, { recursive: true, force: true });
         fs.rmSync(path.resolve(pipelineFilePath()), { force: true });
+    });
+
+    afterAll(() => {
+        delete process.env['QA_TOOLS_QUARANTINE_PIPELINE_FILE'];
     });
 
     describe('QuarantineTest / isQuarantined', () => {
