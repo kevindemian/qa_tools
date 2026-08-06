@@ -341,7 +341,7 @@ function buildSnapshotContext(jiraResource: JiraResourceLike, linkManager: JiraL
         },
         clientId,
         clientSecret,
-        linkOps: linkManager.linkOperations,
+        linkOps: linkManager.issueLinkService,
     };
 }
 

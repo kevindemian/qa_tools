@@ -2,7 +2,7 @@ import { formatErr } from '../shared/errors.js';
 import type { TestExecutionSummary, JiraResourceLike } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import { LinkTypeManager } from './link-types.js';
-import { LinkOperations } from './link-operations.js';
+import { IssueLinkService } from './services/issue-link.service.js';
 import {
     PreconditionHandler,
     matchPreconditionByTokenOverlap,
@@ -14,13 +14,13 @@ export { matchPreconditionByTokenOverlap, matchPreconditionByDualThreshold };
 class JiraLinkManager {
     jiraResource: JiraResourceLike;
     linkTypeManager: LinkTypeManager;
-    linkOperations: LinkOperations;
+    issueLinkService: IssueLinkService;
     preconditionHandler: PreconditionHandler;
 
     constructor(jiraResource: JiraResourceLike) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = new LinkTypeManager(jiraResource);
-        this.linkOperations = new LinkOperations(jiraResource, this.linkTypeManager);
+        this.issueLinkService = new IssueLinkService(jiraResource, this.linkTypeManager);
         this.preconditionHandler = new PreconditionHandler(jiraResource);
     }
 
@@ -37,11 +37,35 @@ class JiraLinkManager {
     async resolveLinkTypeId(linkTypeName: string) {
         return this.linkTypeManager.resolveLinkTypeId(linkTypeName);
     }
-    async linkIssues(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>) {
-        return this.linkOperations.linkIssues(sourceKey, linkedIssues);
+    async linkTestsToRequirement(requirementKey: string, testKeys: string[]) {
+        return this.issueLinkService.linkTestsToRequirement(requirementKey, testKeys);
     }
-    async createIssueLink(sourceKey: string, targetKey: string, linkTypeName: string) {
-        return this.linkOperations.createIssueLink(sourceKey, targetKey, linkTypeName);
+    async linkTestToTestExecution(teKey: string, testKeys: string[]) {
+        return this.issueLinkService.linkTestToTestExecution(teKey, testKeys);
+    }
+    async linkRelated(sourceKey: string, targetKeys: string[]) {
+        return this.issueLinkService.linkRelated(sourceKey, targetKeys);
+    }
+    async linkPreCondition(testKey: string, preconditionKeys: string[]) {
+        return this.issueLinkService.linkPreCondition(testKey, preconditionKeys);
+    }
+    async linkSourceToTargets(sourceKey: string, targets: Array<{ key: string; linkType: string }>) {
+        return this.issueLinkService.linkSourceToTargets(sourceKey, targets);
+    }
+    async createLink(input: { linkType: string; inwardKey: string; outwardKey: string }) {
+        return this.issueLinkService.createLink(input);
+    }
+    async getIssueLinks(issueKey: string) {
+        return this.issueLinkService.getIssueLinks(issueKey);
+    }
+    async getIssueLinksByType(issueKey: string, linkTypeName: string) {
+        return this.issueLinkService.getIssueLinksByType(issueKey, linkTypeName);
+    }
+    async removeIssueLink(linkId: string) {
+        return this.issueLinkService.removeIssueLink(linkId);
+    }
+    async clearIssueLinksByType(issueKey: string, linkTypeName: string) {
+        return this.issueLinkService.clearIssueLinksByType(issueKey, linkTypeName);
     }
     async _getPreconditionFieldId() {
         return this.preconditionHandler._getPreconditionFieldId();
@@ -54,14 +78,18 @@ class JiraLinkManager {
                     testKey +
                     ' antes de associar...',
             );
-            const removed = await this.linkOperations.clearIssueLinksByType(testKey, 'Pre-Condition');
+            const removed = await this.issueLinkService.clearIssueLinksByType(testKey, 'Pre-Condition');
             if (removed > 0) {
                 rootLogger.info(
                     'JiraLinkManager: ' + removed + ' issue link(s) Pre-Condition removido(s) de ' + testKey,
                 );
             }
-            for (const key of keys) {
-                await this.createIssueLink(testKey, key, 'Pre-Condition');
+            const result = await this.issueLinkService.linkPreCondition(testKey, keys);
+            if (result.missing.length > 0) {
+                rootLogger.warn('JiraLinkManager: pre-condition key(s) inexistente(s): ' + result.missing.join(', '));
+            }
+            if (result.failed.length > 0) {
+                rootLogger.warn('JiraLinkManager: falha ao associar pre-condition(s): ' + result.failed.join(', '));
             }
             return null;
         }

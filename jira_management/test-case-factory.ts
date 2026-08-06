@@ -90,11 +90,18 @@ class TestCaseFactory {
             const linkedIssues: LinkSnapshot[] =
                 test?.linkedIssues?.map((li) => ({
                     id: '',
-                    targetKey: li.key,
                     linkType: li.linkType,
+                    inwardKey: li.key,
+                    outwardKey: key,
                 })) ??
-                ((testData as Record<string, unknown>)['linkedIssues'] as LinkSnapshot[]) ??
-                [];
+                (Array.isArray((testData as Record<string, unknown>)['linkedIssues'])
+                    ? (
+                          (testData as Record<string, unknown>)['linkedIssues'] as Array<{
+                              key: string;
+                              linkType: string;
+                          }>
+                      ).map((li) => ({ id: '', linkType: li.linkType, inwardKey: li.key, outwardKey: key }))
+                    : []);
 
             const result = await cleanSlateUpdate(
                 this._snapshotCtx,

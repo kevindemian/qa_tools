@@ -196,8 +196,15 @@ export class TestExecutionCreator {
         await withSpinner('Linkando ' + unlinked.length + ' teste(s)...', async () => {
             for (const key of unlinked) {
                 try {
-                    await this.linkManager.createIssueLink(key, teKey, 'Tests');
-                    linked++;
+                    const result = await this.linkManager.linkTestToTestExecution(teKey, [key]);
+                    if (result.created > 0 || result.skipped > 0) {
+                        linked++;
+                    } else if (result.failed.length > 0 || result.missing.length > 0) {
+                        rootLogger.warn(
+                            'Falha ao linkar ' + key + ': ' + result.failed.join(', ') + result.missing.join(', '),
+                        );
+                        failed++;
+                    }
                 } catch (err: unknown) {
                     const msg = formatErr(err);
                     if (msg.includes('already exists') || msg.includes('already linked')) {
@@ -369,9 +376,15 @@ export class TestExecutionCreator {
         if (parentIssues && parentIssues.length > 0) {
             const unique = deduplicateLinkedIssues(parentIssues);
             try {
-                await this.linkManager.linkIssues(result.key, unique);
-                result.linkedParentCount = unique.length;
+                const linkResult = await this.linkManager.linkSourceToTargets(result.key, unique);
+                result.linkedParentCount = linkResult.created + linkResult.skipped;
                 success('TE linkada a ' + unique.length + ' issue(s) pai.');
+                if (linkResult.missing.length > 0) {
+                    rootLogger.warn('Issues pai não encontradas: ' + linkResult.missing.join(', '));
+                }
+                if (linkResult.failed.length > 0) {
+                    rootLogger.warn('Falha ao linkar issues pai: ' + linkResult.failed.join(', '));
+                }
             } catch (err) {
                 error('Falha ao linkar TE a issues pai: ' + formatErr(err));
             }

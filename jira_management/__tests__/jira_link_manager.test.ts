@@ -162,8 +162,8 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('LinkIssues', () => {
-        it('creates links for each linked issue', async () => {
+    describe('LinkSourceToTargets', () => {
+        it('creates links for each target with target as INWARD', async () => {
             expect.hasAssertions();
 
             mockJiraResource.getJiraResource.mockResolvedValue({
@@ -174,18 +174,20 @@ describe('JiraLinkManager', () => {
                 { key: 'TEST-2', linkType: 'Tests' },
                 { key: 'TEST-3', linkType: 'Tests' },
             ];
-            await manager.linkIssues('TEST-1', linked);
+            const result = await manager.linkSourceToTargets('TEST-1', linked);
 
+            expect(result.created).toBe(2);
+            expect(result.missing).toHaveLength(0);
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledTimes(2);
             expect(mockJiraResource.postJiraResource).toHaveBeenNthCalledWith(1, 'issueLink', {
                 type: { id: '10200' },
-                inwardIssue: { key: 'TEST-1' },
-                outwardIssue: { key: 'TEST-2' },
+                inwardIssue: { key: 'TEST-2' },
+                outwardIssue: { key: 'TEST-1' },
             });
             expect(mockJiraResource.postJiraResource).toHaveBeenNthCalledWith(2, 'issueLink', {
                 type: { id: '10200' },
-                inwardIssue: { key: 'TEST-1' },
-                outwardIssue: { key: 'TEST-3' },
+                inwardIssue: { key: 'TEST-3' },
+                outwardIssue: { key: 'TEST-1' },
             });
         });
     });
@@ -225,7 +227,7 @@ describe('JiraLinkManager', () => {
         });
     });
 
-    describe('CreateIssueLink', () => {
+    describe('CreateLink', () => {
         it('creates a single issue link with resolved type', async () => {
             expect.hasAssertions();
 
@@ -233,14 +235,18 @@ describe('JiraLinkManager', () => {
                 issueLinkTypes: [{ id: '10200', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
             mockJiraResource.postJiraResource.mockResolvedValue({ id: 'new-link' });
-            const result = await manager.createIssueLink('TEST-1', 'TEST-2', 'Tests');
+            const result = await manager.createLink({
+                linkType: 'Tests',
+                inwardKey: 'TEST-2',
+                outwardKey: 'TEST-1',
+            });
 
             expect(mockJiraResource.postJiraResource).toHaveBeenCalledWith('issueLink', {
                 type: { id: '10200' },
                 inwardIssue: { key: 'TEST-2' },
                 outwardIssue: { key: 'TEST-1' },
             });
-            expect(result).toStrictEqual({ id: 'new-link' });
+            expect(result).toBe('created');
         });
     });
 
@@ -278,12 +284,15 @@ describe('JiraLinkManager', () => {
 
     describe('AssociatePrecondition (Cloud mode)', () => {
         let cloudManager: InstanceType<typeof JiraLinkManager>;
-        let createIssueLinkSpy: ReturnType<typeof vi.spyOn>;
+        let linkPreConditionSpy: ReturnType<typeof vi.spyOn>;
 
         beforeEach(() => {
             mockConfigGet.mockImplementation((key: string) => (key === 'jiraMode' ? 'cloud' : undefined));
             cloudManager = new JiraLinkManager(mockJiraResource);
-            createIssueLinkSpy = vi.spyOn(cloudManager, 'createIssueLink').mockResolvedValue({ id: 'link-1' });
+            linkPreConditionSpy = vi
+                .spyOn(cloudManager.issueLinkService, 'linkPreCondition')
+                .mockResolvedValue({ created: 1, skipped: 0, failed: [], missing: [] });
+            vi.spyOn(cloudManager.issueLinkService, 'clearIssueLinksByType').mockResolvedValue(0);
         });
 
         it('associates precondition via native issue link when in cloud mode', async () => {
@@ -292,8 +301,8 @@ describe('JiraLinkManager', () => {
             const result = await cloudManager.associatePrecondition('TEST-1', 'PRE-1');
 
             expect(result).toBeNull();
-            expect(createIssueLinkSpy).toHaveBeenCalledTimes(1);
-            expect(createIssueLinkSpy).toHaveBeenCalledWith('TEST-1', 'PRE-1', 'Pre-Condition');
+            expect(linkPreConditionSpy).toHaveBeenCalledTimes(1);
+            expect(linkPreConditionSpy).toHaveBeenCalledWith('TEST-1', ['PRE-1']);
             expect(mockJiraResource.putJiraResource).not.toHaveBeenCalled();
         });
 

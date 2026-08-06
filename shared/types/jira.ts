@@ -88,7 +88,9 @@ export interface SearchIssuesResponse {
     total: number;
 }
 
-/** Minimal JiraLinkManager interface for cross-layer type references. */
+/** Minimal JiraLinkManager interface for cross-layer type references.
+ *  Links are created with explicit semantic direction by the manager/service;
+ *  consumers never pick inward/outward. */
 export interface JiraLinkManagerLike {
-    linkIssues(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>): Promise<unknown>;
+    linkRelated(sourceKey: string, targetKeys: string[]): Promise<unknown>;
 }

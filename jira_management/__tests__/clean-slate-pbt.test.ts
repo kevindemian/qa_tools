@@ -26,7 +26,7 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         linkOps: {
             getIssueLinksByType: vi.fn().mockResolvedValue([]),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         stepSnapshots: new Map(),
         ...overrides,
@@ -74,7 +74,8 @@ describe('PBT: StepResult invariants', () => {
             const preconditions = randomStringArray(3);
             const links = Array.from({ length: randomInt(0, 3) }, (_, j) => ({
                 id: '',
-                targetKey: `STORY-${j}`,
+                inwardKey: `STORY-${j}`,
+                outwardKey: 'PROJ-1',
                 linkType: 'Blocks',
             }));
 

@@ -220,7 +220,12 @@ describe('TestExecutionCreator', () => {
 
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
 
             const result = await creator.createWithLinks(projectName, testKeys, csvName);
 
@@ -229,9 +234,9 @@ describe('TestExecutionCreator', () => {
                 summary: 'my_tests.csv - 23/05/2026 10:30',
                 linkedParentCount: 0,
             });
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-1', 'TE-1', 'Tests');
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-1']);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-2']);
         });
 
         it('skips already-linked tests', async () => {
@@ -243,12 +248,17 @@ describe('TestExecutionCreator', () => {
                     issuelinks: [{ outwardIssue: { key: 'TEST-1' } }],
                 },
             });
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(1);
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(1);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-2']);
         });
 
         it('links all unlinked tests when multiple provided', async () => {
@@ -261,14 +271,19 @@ describe('TestExecutionCreator', () => {
                     issuelinks: [{ outwardIssue: { key: 'TEST-1' } }, { outwardIssue: { key: 'TEST-3' } }],
                 },
             });
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
 
             await creator.createWithLinks(projectName, manyTests, csvName);
 
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(3);
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-2', 'TE-1', 'Tests');
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-4', 'TE-1', 'Tests');
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledWith('TEST-5', 'TE-1', 'Tests');
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(3);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-2']);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-4']);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledWith('TE-1', ['TEST-5']);
         });
 
         it('logs warnings for failed links and continues', async () => {
@@ -276,11 +291,13 @@ describe('TestExecutionCreator', () => {
 
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
-            mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('API error'));
+            mockLinkManager.linkTestToTestExecution
+                .mockResolvedValueOnce({ created: 1, skipped: 0, failed: [], missing: [] })
+                .mockRejectedValueOnce(new Error('API error'));
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(2);
         });
 
         it('proceeds to try linking all when fetching existing links fails', async () => {
@@ -288,11 +305,16 @@ describe('TestExecutionCreator', () => {
 
             setupCreate('TE-1');
             mockJiraResource.getJiraResource.mockRejectedValueOnce(new Error('Network error'));
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(2);
         });
 
         it('creates TE without linking when testKeys is empty', async () => {
@@ -301,7 +323,7 @@ describe('TestExecutionCreator', () => {
             setupCreate('TE-1');
             await creator.createWithLinks(projectName, [], csvName);
 
-            expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
+            expect(mockLinkManager['linkTestToTestExecution']).not.toHaveBeenCalled();
         });
 
         it('logs info when all tests are already linked (line 105)', async () => {
@@ -316,7 +338,7 @@ describe('TestExecutionCreator', () => {
 
             await creator.createWithLinks(projectName, testKeys, csvName);
 
-            expect(mockLinkManager['createIssueLink']).not.toHaveBeenCalled();
+            expect(mockLinkManager['linkTestToTestExecution']).not.toHaveBeenCalled();
         });
 
         it('logs error when outer linking block throws (line 121)', async () => {
@@ -377,7 +399,12 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, ...extraFields } }) // pagination
                 .mockResolvedValueOnce(defaultFields)
                 .mockResolvedValueOnce({ fields: { issuelinks: [] } });
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
         }
 
         it('returns { key, summary } on success', async () => {
@@ -469,11 +496,13 @@ describe('TestExecutionCreator', () => {
                 .mockResolvedValueOnce({ ...teIssue, fields: { ...teIssue.fields, customfield_10200: [] } }) // pagination
                 .mockResolvedValueOnce(defaultFields)
                 .mockResolvedValueOnce({ fields: { issuelinks: [] } });
-            mockLinkManager.createIssueLink.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Link error'));
+            mockLinkManager.linkTestToTestExecution
+                .mockResolvedValueOnce({ created: 1, skipped: 0, failed: [], missing: [] })
+                .mockRejectedValueOnce(new Error('Link error'));
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
             expect(result).toStrictEqual({ key: 'TE-1', summary: 'My TE', linkedParentCount: 0 });
-            expect(mockLinkManager['createIssueLink']).toHaveBeenCalledTimes(2);
+            expect(mockLinkManager['linkTestToTestExecution']).toHaveBeenCalledTimes(2);
         });
 
         it('uses teKey as summary when TE issue has no summary field', async () => {
@@ -485,7 +514,12 @@ describe('TestExecutionCreator', () => {
             });
             mockJiraResource.getJiraResource.mockResolvedValueOnce(defaultFields);
             mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
-            mockLinkManager.createIssueLink.mockResolvedValue({});
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
             const result = await creator.addTestsToExistingExecution(teKey, testKeys);
 
             expect(result).toStrictEqual({ key: 'TE-1', summary: 'TE-1', linkedParentCount: 0 });

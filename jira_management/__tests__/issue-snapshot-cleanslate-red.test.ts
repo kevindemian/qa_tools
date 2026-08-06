@@ -56,9 +56,11 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         clientId: 'cid',
         clientSecret: 'csec',
         linkOps: {
-            getIssueLinksByType: vi.fn().mockResolvedValue([{ id: 'link1', targetKey: 'STORY-1' }]),
+            getIssueLinksByType: vi
+                .fn()
+                .mockResolvedValue([{ id: 'link1', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }]),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         ...overrides,
     };
@@ -132,7 +134,7 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
                 description: null,
                 steps: [],
                 preconditions: [],
-                linkedIssues: [{ id: '', targetKey: 'STORY-1', linkType: 'Relates' }],
+                linkedIssues: [{ id: '', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }],
             },
             { linkTypeNames: ['Relates'] },
         );
@@ -142,8 +144,12 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
         // Step 1: clearIssueLinksByType was called via linkOps (clear)
         expect(ctx.linkOps.getIssueLinksByType).toHaveBeenCalled();
 
-        // Step 2: linkIssues was called with the new links (rebuild)
-        expect(ctx.linkOps.linkIssues).toHaveBeenCalledWith('PROJ-1', [{ key: 'STORY-1', linkType: 'Relates' }]);
+        // Step 2: createLink was called with the new links (rebuild)
+        expect(ctx.linkOps.createLink).toHaveBeenCalledWith({
+            linkType: 'Relates',
+            inwardKey: 'STORY-1',
+            outwardKey: 'PROJ-1',
+        });
     });
 
     it('red: full cycle — clears old data then rebuilds with new data', async () => {
@@ -155,7 +161,7 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
                 description: 'New description',
                 steps: [{ fields: { Action: 'New action', Data: '', 'Expected Result': 'New result' } }],
                 preconditions: ['PREC-NEW'],
-                linkedIssues: [{ id: '', targetKey: 'STORY-NEW', linkType: 'Blocks' }],
+                linkedIssues: [{ id: '', linkType: 'Blocks', inwardKey: 'STORY-NEW', outwardKey: 'PROJ-1' }],
             },
             { linkTypeNames: ['Relates', 'Blocks'] },
         );
@@ -176,6 +182,6 @@ describe('cleanSlateUpdate: rebuild with non-empty data', () => {
             'csec',
         );
         expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
-        expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
+        expect(ctx.linkOps.createLink).toHaveBeenCalled();
     });
 });

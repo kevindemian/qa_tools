@@ -141,7 +141,7 @@ describe('LinkTestsToTe (Xray Cloud association)', () => {
 
         const resource = makeCloudResource();
         const linkManager = {
-            createIssueLink: vi.fn(() => Promise.resolve(undefined)),
+            linkTestToTestExecution: vi.fn(() => Promise.resolve({ created: 0, skipped: 0, failed: [], missing: [] })),
         } as unknown as import('../jira_link_manager.js').default;
 
         mockXrayCloudGraphql();
@@ -152,7 +152,11 @@ describe('LinkTestsToTe (Xray Cloud association)', () => {
         expect(lastGraphqlBody?.variables?.issueId).toBe('100');
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200', '201']);
         expect(
-            (linkManager as unknown as { createIssueLink: (...a: unknown[]) => Promise<unknown> }).createIssueLink,
+            (
+                linkManager as unknown as {
+                    linkTestToTestExecution: (...a: unknown[]) => Promise<unknown>;
+                }
+            ).linkTestToTestExecution,
         ).not.toHaveBeenCalled();
     });
 });

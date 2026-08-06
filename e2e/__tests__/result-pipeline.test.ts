@@ -43,9 +43,17 @@ function setupJiraMocks(base: string): void {
         },
     ]);
 
-    api.get('/issueLinkType').reply(200, {
-        issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
-    });
+    api.persist()
+        .get('/issueLinkType')
+        .reply(200, {
+            issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
+        });
+
+    // IssueLinkService.createLink idempotency pre-check → GET /issue/{key}?fields=issuelinks
+    api.persist()
+        .get(/\/issue\/[^/]+/)
+        .query({ fields: 'issuelinks' })
+        .reply(200, { fields: { issuelinks: [] } });
 
     let teCount = 0;
     api.post('/issue').reply(201, (_uri: string, _body) => {

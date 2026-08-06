@@ -426,7 +426,10 @@ export async function interactiveBugReportFlow(
         info(`Bug criado: ${key}`);
 
         if (report.linkedIssues && report.linkedIssues.length > 0 && linkManager) {
-            await linkManager.linkIssues(key, report.linkedIssues);
+            await linkManager.linkRelated(
+                key,
+                report.linkedIssues.map((li) => li.key),
+            );
             info(`${report.linkedIssues.length} linked issue(s) vinculados`);
         }
 

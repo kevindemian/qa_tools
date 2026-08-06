@@ -7,8 +7,16 @@ describe('CreateMockLinkManager', () => {
         const methods = [
             'getIssueLinkTypes',
             'resolveLinkTypeId',
-            'linkIssues',
-            'createIssueLink',
+            'linkTestsToRequirement',
+            'linkTestToTestExecution',
+            'linkRelated',
+            'linkPreCondition',
+            'linkSourceToTargets',
+            'createLink',
+            'getIssueLinks',
+            'getIssueLinksByType',
+            'removeIssueLink',
+            'clearIssueLinksByType',
             '_getPreconditionFieldId',
             'associatePrecondition',
             '_resolvePreconditionIssueTypeId',
@@ -22,7 +30,7 @@ describe('CreateMockLinkManager', () => {
         expect(methods.every((m) => m in mock)).toBeTruthy();
         expect('jiraResource' in mock).toBeTruthy();
         expect('linkTypeManager' in mock).toBeTruthy();
-        expect('linkOperations' in mock).toBeTruthy();
+        expect('issueLinkService' in mock).toBeTruthy();
         expect('preconditionHandler' in mock).toBeTruthy();
     });
 
@@ -35,15 +43,15 @@ describe('CreateMockLinkManager', () => {
 
     it('merges overrides correctly', () => {
         const customLink = vi.fn();
-        const mock = createMockLinkManager({ linkIssues: customLink });
+        const mock = createMockLinkManager({ linkSourceToTargets: customLink });
 
-        expect(mock['linkIssues']).toBe(customLink);
+        expect(mock['linkSourceToTargets']).toBe(customLink);
     });
 
     it('each call produces independent vi.fn() instances', () => {
         const a = createMockLinkManager();
         const b = createMockLinkManager();
 
-        expect(a['linkIssues']).not.toBe(b['linkIssues']);
+        expect(a['linkSourceToTargets']).not.toBe(b['linkSourceToTargets']);
     });
 });

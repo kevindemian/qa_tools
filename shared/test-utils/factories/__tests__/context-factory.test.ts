@@ -19,7 +19,7 @@ describe('CreateMockContext', () => {
         const ctx = createMockContext();
 
         expect(typeof ctx.jiraResource.getJiraResource).toBe('function');
-        expect(typeof ctx.linkManager.linkIssues).toBe('function');
+        expect(typeof ctx.linkManager.linkSourceToTargets).toBe('function');
         expect(typeof ctx.csvResource.readCsvFromString).toBe('function');
     });
 

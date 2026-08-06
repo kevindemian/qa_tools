@@ -40,7 +40,6 @@ const makeLinker = (): Mocked<IssueLinker> => {
     const realLinkMgr = new JiraLinkManager(mockJiraResource);
     const mockLinkMgr = vi.mocked(realLinkMgr);
     mockLinkMgr.associatePrecondition = vi.fn();
-    mockLinkMgr.linkIssues = vi.fn();
     const linker = vi.mocked(new IssueLinker(mockJiraResource, mockLinkMgr));
     linker.associatePrecondition = vi.fn();
     linker.linkIssues = vi.fn();

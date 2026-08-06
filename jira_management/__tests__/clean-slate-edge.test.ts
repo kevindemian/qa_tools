@@ -24,7 +24,7 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         linkOps: {
             getIssueLinksByType: vi.fn().mockResolvedValue([]),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         stepSnapshots: new Map(),
         ...overrides,
@@ -111,13 +111,17 @@ describe('clean-slate edge cases', () => {
                 description: null,
                 steps: [],
                 preconditions: [],
-                linkedIssues: [{ id: '', targetKey: 'STORY-1', linkType: 'Blocks' }],
+                linkedIssues: [{ id: '', linkType: 'Blocks', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }],
             },
             { linkTypeNames: [] },
         );
 
         expect(result.success).toBe(true);
-        expect(ctx.linkOps.linkIssues).toHaveBeenCalledWith('PROJ-1', [{ key: 'STORY-1', linkType: 'Blocks' }]);
+        expect(ctx.linkOps.createLink).toHaveBeenCalledWith({
+            linkType: 'Blocks',
+            inwardKey: 'STORY-1',
+            outwardKey: 'PROJ-1',
+        });
     });
 
     it('multiple links with same type: grouped correctly', async () => {
@@ -130,20 +134,26 @@ describe('clean-slate edge cases', () => {
                 steps: [],
                 preconditions: [],
                 linkedIssues: [
-                    { id: '', targetKey: 'STORY-1', linkType: 'Blocks' },
-                    { id: '', targetKey: 'STORY-2', linkType: 'Blocks' },
-                    { id: '', targetKey: 'STORY-3', linkType: 'Relates' },
+                    { id: '', linkType: 'Blocks', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' },
+                    { id: '', linkType: 'Blocks', inwardKey: 'STORY-2', outwardKey: 'PROJ-1' },
+                    { id: '', linkType: 'Relates', inwardKey: 'STORY-3', outwardKey: 'PROJ-1' },
                 ],
             },
             { linkTypeNames: [] },
         );
 
         expect(result.success).toBe(true);
-        expect(ctx.linkOps.linkIssues).toHaveBeenCalledWith('PROJ-1', [
-            { key: 'STORY-1', linkType: 'Blocks' },
-            { key: 'STORY-2', linkType: 'Blocks' },
-            { key: 'STORY-3', linkType: 'Relates' },
-        ]);
+        expect(ctx.linkOps.createLink).toHaveBeenCalledTimes(3);
+        expect(ctx.linkOps.createLink).toHaveBeenCalledWith({
+            linkType: 'Blocks',
+            inwardKey: 'STORY-1',
+            outwardKey: 'PROJ-1',
+        });
+        expect(ctx.linkOps.createLink).toHaveBeenCalledWith({
+            linkType: 'Relates',
+            inwardKey: 'STORY-3',
+            outwardKey: 'PROJ-1',
+        });
     });
 
     it('includeLinks=false: links not cleared or rebuilt', async () => {
@@ -155,14 +165,14 @@ describe('clean-slate edge cases', () => {
                 description: 'desc',
                 steps: [],
                 preconditions: [],
-                linkedIssues: [{ id: '', targetKey: 'STORY-1', linkType: 'Blocks' }],
+                linkedIssues: [{ id: '', linkType: 'Blocks', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }],
             },
             { linkTypeNames: [], includeLinks: false },
         );
 
         expect(result.success).toBe(true);
-        // linkIssues should NOT be called (links excluded)
-        expect(ctx.linkOps.linkIssues).not.toHaveBeenCalled();
+        // createLink should NOT be called (links excluded)
+        expect(ctx.linkOps.createLink).not.toHaveBeenCalled();
     });
 
     it('StepResult always has duration >= 0', async () => {

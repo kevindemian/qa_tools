@@ -7,6 +7,7 @@ vi.mock('../../../shared/ui/prompt.js', () => ({
     showSelect: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
+    success: vi.fn(),
     printError: vi.fn(),
     title: vi.fn(),
     divider: vi.fn(),
@@ -47,11 +48,21 @@ vi.mock('crypto', async (importOriginal) => {
 
 vi.mock('fs');
 
+vi.mock('../../import-orchestrator.js', () => ({
+    createTestsFromTestCases: vi.fn(),
+}));
+
+vi.mock('../../services/issue-picker.js', () => ({
+    pickIssueAndLinkType: vi.fn(),
+}));
+
 import * as promptModule from '../../../shared/ui/prompt.js';
 import * as llmClientModule from '../../../shared/llm/llm-client.js';
 import * as fsModule from 'fs';
 import os from 'os';
 import path from 'path';
+import * as orchestratorModule from '../../import-orchestrator.js';
+import * as pickerModule from '../../services/issue-picker.js';
 import case18Module, { toGeneratedTestCases } from '../case18.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';
 
@@ -877,6 +888,81 @@ describe('Case18', () => {
             expect(converted?.['environment']).toBe('staging');
             expect(converted?.['components']).toStrictEqual(['API', 'Frontend']);
             expect(converted?.['priority']).toBe('High');
+        });
+    });
+
+    describe('Case18 — create + link to origin user story', () => {
+        it('cria testes no Jira e vincula à US de origem (linkTestsToRequirement)', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const fs = vi.mocked(fsModule);
+            const orchestrator = vi.mocked(orchestratorModule);
+            const picker = vi.mocked(pickerModule);
+
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('Must validate');
+            fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
+            llm.llmPrompt.mockResolvedValueOnce([
+                {
+                    title: 'Login test with valid credentials',
+                    steps: ['Enter valid user', 'Enter valid password', 'Click login'],
+                    expectedResult: 'User is redirected to dashboard and sees welcome message',
+                },
+            ]);
+            prompt.askConfirm.mockResolvedValueOnce(true);
+            orchestrator.createTestsFromTestCases.mockResolvedValueOnce({
+                inMemoryTasksId: ['ECSPOL-900', 'ECSPOL-901'],
+                inMemoryTasksText: ['Login test', 'Another'],
+                parentIssues: [],
+                summary: '2 testes criados',
+                status: 'ok',
+                sourcePath: 'path.json',
+            });
+            picker.pickIssueAndLinkType.mockResolvedValueOnce({ keys: ['ECSPOL-731'], linkType: 'Tests' });
+            vi.mocked(baseContext.linkManager.linkTestsToRequirement).mockResolvedValueOnce({
+                created: 2,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
+
+            await case18Module.handler(baseContext);
+
+            expect(orchestrator.createTestsFromTestCases).toHaveBeenCalledWith(
+                expect.objectContaining({ tests: expect.any(Array) as unknown, sourceType: 'json' }),
+            );
+            expect(picker.pickIssueAndLinkType).toHaveBeenCalled();
+            expect(baseContext.linkManager.linkTestsToRequirement).toHaveBeenCalledWith('ECSPOL-731', [
+                'ECSPOL-900',
+                'ECSPOL-901',
+            ]);
+        });
+
+        it('não cria testes quando a confirmação é negada', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            const llm = vi.mocked(llmClientModule);
+            const fs = vi.mocked(fsModule);
+            const orchestrator = vi.mocked(orchestratorModule);
+
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
+            prompt.askMultiline.mockResolvedValueOnce('User story').mockResolvedValueOnce('Criteria');
+            fs.readFileSync.mockReturnValueOnce('You are a QA engineer.');
+            llm.llmPrompt.mockResolvedValueOnce([
+                {
+                    title: 'Basic test',
+                    steps: ['Step 1'],
+                    expectedResult: 'Expected result',
+                },
+            ]);
+            prompt.askConfirm.mockResolvedValueOnce(false);
+
+            await case18Module.handler(baseContext);
+
+            expect(orchestrator.createTestsFromTestCases).not.toHaveBeenCalled();
         });
     });
 

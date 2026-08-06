@@ -6,15 +6,13 @@ export const matchPreconditionByDualThreshold = vi.fn<(...args: unknown[]) => st
 export class JiraLinkManager {
     jiraResource: Record<string, unknown>;
     linkTypeManager: Record<string, unknown>;
-    linkOperations: Record<string, unknown>;
+    issueLinkService: Record<string, unknown>;
     preconditionHandler: Record<string, unknown>;
 
     constructor(jiraResource: Record<string, unknown>) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = {};
-        this.linkOperations = {
-            clearIssueLinksByType: vi.fn(),
-        };
+        this.issueLinkService = {};
         this.preconditionHandler = {};
     }
 
@@ -27,8 +25,17 @@ export class JiraLinkManager {
 
     getIssueLinkTypes = vi.fn<() => Promise<unknown>>();
     resolveLinkTypeId = vi.fn<(linkTypeName: string) => Promise<string | null>>();
-    linkIssues = vi.fn<(sourceKey: string, linkedIssues: Array<{ key: string; linkType: string }>) => Promise<void>>();
-    createIssueLink = vi.fn<(sourceKey: string, targetKey: string, linkTypeName: string) => Promise<void>>();
+    linkTestsToRequirement = vi.fn<(requirementKey: string, testKeys: string[]) => Promise<unknown>>();
+    linkTestToTestExecution = vi.fn<(teKey: string, testKeys: string[]) => Promise<unknown>>();
+    linkRelated = vi.fn<(sourceKey: string, targetKeys: string[]) => Promise<unknown>>();
+    linkPreCondition = vi.fn<(testKey: string, preconditionKeys: string[]) => Promise<unknown>>();
+    linkSourceToTargets =
+        vi.fn<(sourceKey: string, targets: Array<{ key: string; linkType: string }>) => Promise<unknown>>();
+    createLink = vi.fn<(input: { linkType: string; inwardKey: string; outwardKey: string }) => Promise<unknown>>();
+    getIssueLinks = vi.fn<(issueKey: string) => Promise<unknown[]>>();
+    getIssueLinksByType = vi.fn<(issueKey: string, linkTypeName: string) => Promise<unknown[]>>();
+    removeIssueLink = vi.fn<(linkId: string) => Promise<void>>();
+    clearIssueLinksByType = vi.fn<(issueKey: string, linkTypeName: string) => Promise<number>>();
     _getPreconditionFieldId = vi.fn<() => Promise<string | null>>();
     associatePrecondition = vi.fn<(testKey: string, preconditionKey: string) => Promise<void>>();
     _resolvePreconditionIssueTypeId = vi.fn<() => Promise<string | null>>();

@@ -501,7 +501,7 @@ describe('BugReport Service', () => {
             transitionIssue: Mock;
         };
         let mockLinkManager: {
-            linkIssues: Mock;
+            linkRelated: Mock;
         };
 
         beforeEach(() => {
@@ -514,7 +514,9 @@ describe('BugReport Service', () => {
                 getTransitionsForIssue: vi.fn(),
                 transitionIssue: vi.fn(),
             };
-            mockLinkManager = { linkIssues: vi.fn() };
+            mockLinkManager = {
+                linkRelated: vi.fn().mockResolvedValue({ created: 0, skipped: 0, failed: [], missing: [] }),
+            };
         });
 
         it('calls collectManual, creates and links issues if confirmed', async () => {
@@ -538,7 +540,7 @@ describe('BugReport Service', () => {
                 label: 'PROJ-202',
                 message: 'Manual login failure',
             });
-            expect(mockLinkManager.linkIssues).toHaveBeenCalledWith('PROJ-202', report.linkedIssues);
+            expect(mockLinkManager.linkRelated).toHaveBeenCalledWith('PROJ-202', ['US-1']);
         });
 
         it('does not link issues when no linkedIssues', async () => {
@@ -556,7 +558,7 @@ describe('BugReport Service', () => {
 
             await interactiveBugReportFlow(mockJiraResource, 'PROJ', report, mockLinkManager);
 
-            expect(mockLinkManager.linkIssues).not.toHaveBeenCalled();
+            expect(mockLinkManager.linkRelated).not.toHaveBeenCalled();
         });
 
         it('returns null if cancelled by user', async () => {

@@ -23,6 +23,7 @@ import {
     showSelect,
     warn,
     info,
+    success,
     printError,
     title,
     divider,
@@ -50,6 +51,8 @@ import {
     coverageTableToJson,
 } from '../../shared/quality/case18-coverage-table.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
+import { createTestsFromTestCases } from '../import-orchestrator.js';
+import { pickIssueAndLinkType, type IssuePickerDeps } from '../services/issue-picker.js';
 
 /** Maximum number of LLM generation attempts in a single case18 run. Guards
  *  against unbounded cost when the user re-generates with feedback. */
@@ -201,13 +204,15 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         const converted = convertTestCases(testCases, resolvedPreConditions, createdKeys);
 
         recordAttempt(input, testCases, preconditionMatches, evaluation, 'created', attempt);
-        writeTestOutput(converted, summariesToCreate.length);
+        const outPath = writeTestOutput(converted, summariesToCreate.length);
         writeQualityArtifacts(evaluation, testCases, input.acceptanceCriteria);
         c.pushHistory(
             'ai-generate-tests',
             `user story: ${input.userStory.slice(0, 60)} — ${converted.length} testes (${evaluation.grade})`,
             'ok',
         );
+
+        await offerCreateAndLink(c, converted, outPath, input.project);
         return;
     }
 }
@@ -472,8 +477,9 @@ export function computePromptVersion(): string {
 
 /** Write test cases JSON to disk and log summary to console.
  *  The file is serialized in the import-compatible format (ImportJsonItemSchema) so
- *  that `parseJsonFile` (menu 15) can re-import it without data loss. */
-function writeTestOutput(converted: TestCase[], createdCount: number): void {
+ *  that `parseJsonFile` (menu 15) can re-import it without data loss.
+ *  Returns the absolute path written so callers can reuse it (case18 create+link). */
+function writeTestOutput(converted: TestCase[], createdCount: number): string {
     const outDir = path.join(process.cwd(), 'reports', formatDateISO());
     fs.mkdirSync(path.resolve(outDir), { recursive: true });
     const outPath = path.join(outDir, 'llm-generated-tests.json');
@@ -501,6 +507,86 @@ function writeTestOutput(converted: TestCase[], createdCount: number): void {
         );
     } else {
         info('Nenhuma pre-condition nova foi criada. Você pode importar os testes via menu 15 (Importar JSON).');
+    }
+    return outPath;
+}
+
+/** Optional post-generation step (§6): create the generated tests in Jira and
+ *  link them to the origin user story with the correct Test Coverage direction.
+ *  Requires explicit user confirmation (askConfirm) — never automatic. */
+async function offerCreateAndLink(
+    c: CommandContext,
+    converted: TestCase[],
+    outPath: string,
+    project: string,
+): Promise<void> {
+    const proceed = await askConfirm('Deseja criar estes testes no Jira e vinculá-los à user story de origem?', false);
+    if (!proceed) {
+        info('Testes NÃO criados no Jira. JSON salvo para importação via menu 15.');
+        return;
+    }
+
+    const result = await createTestsFromTestCases({
+        tests: converted,
+        jiraResource: c.jiraResource,
+        jiraResourceXray: c.jiraResourceXray,
+        linkManager: c.linkManager,
+        linkManagerXray: c.linkManagerXray,
+        project_name: project,
+        base_url: c.base_url,
+        sessionLog: c.sessionLog,
+        onBusy: (busy: boolean) => {
+            c.ctx.isBusy = busy;
+        },
+        sourcePath: outPath,
+        sourceType: 'json',
+        jiraLabels: [],
+    });
+    if (!result || result.inMemoryTasksId.length === 0) {
+        warn('Nenhum teste foi criado no Jira. Verifique os logs anteriores.');
+        return;
+    }
+
+    const createdTestKeys = result.inMemoryTasksId;
+    info('Testes criados no Jira: ' + createdTestKeys.join(', '));
+
+    const deps: IssuePickerDeps = {
+        listLinkTypes: () => c.linkManager.getIssueLinkTypes(),
+        getIssue: (key: string) =>
+            c.jiraResource.getJiraResource<{
+                key: string;
+                fields?: { summary?: string; issuetype?: { name?: string } };
+            }>('issue/' + key + '?fields=summary,issuetype'),
+        ask,
+        showSelect,
+        askConfirm,
+        warn,
+        info,
+    };
+    const picked = await pickIssueAndLinkType(deps);
+    if (!picked || picked.keys.length === 0) {
+        warn('Nenhuma user story de origem selecionada. Testes criados sem vínculo à US.');
+        return;
+    }
+
+    const usKey = picked.keys[0];
+    if (!usKey) {
+        warn('Nenhuma user story de origem selecionada. Testes criados sem vínculo à US.');
+        return;
+    }
+
+    const linkResult = await c.linkManager.linkTestsToRequirement(usKey, createdTestKeys);
+    if (linkResult.created > 0) {
+        success(
+            `Test Coverage criado: ${createdTestKeys.length} teste(s) vinculado(s) a ${usKey} ` +
+                `(${linkResult.created} criado(s), ${linkResult.skipped} já existente(s)).`,
+        );
+    }
+    if (linkResult.failed.length > 0) {
+        warn('Falha ao vincular teste(s): ' + linkResult.failed.join(', '));
+    }
+    if (linkResult.missing.length > 0) {
+        warn('Teste(s) não encontrado(s) no Jira (chave inexistente): ' + linkResult.missing.join(', '));
     }
 }
 

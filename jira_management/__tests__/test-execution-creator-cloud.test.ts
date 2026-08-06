@@ -71,8 +71,8 @@ describe('TestExecutionCreator (cloud mode)', () => {
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200', '201']);
 
         // Plain Jira "Tests" issue link must NOT be used in Cloud mode
-        expect(rawLinkManager.createIssueLink).not.toHaveBeenCalledWith('TEST-1', 'EXEC-1', 'Tests');
-        expect(rawLinkManager.createIssueLink).not.toHaveBeenCalledWith('TEST-2', 'EXEC-1', 'Tests');
+        expect(rawLinkManager.linkTestToTestExecution).not.toHaveBeenCalledWith('EXEC-1', ['TEST-1']);
+        expect(rawLinkManager.linkTestToTestExecution).not.toHaveBeenCalledWith('EXEC-1', ['TEST-2']);
     });
 
     it('addTestsToExistingExecution associates via native Cloud GraphQL when no Server custom field', async () => {
@@ -99,7 +99,7 @@ describe('TestExecutionCreator (cloud mode)', () => {
         expect(lastGraphqlBody).toBeDefined();
         expect(lastGraphqlBody?.variables?.issueId).toBe('100');
         expect(lastGraphqlBody?.variables?.testIssueIds).toStrictEqual(['200']);
-        expect(rawLinkManager.createIssueLink).not.toHaveBeenCalledWith('TEST-1', 'EXEC-1', 'Tests');
+        expect(rawLinkManager.linkTestToTestExecution).not.toHaveBeenCalledWith('EXEC-1', ['TEST-1']);
     });
 });
 
@@ -114,7 +114,7 @@ type MockResource = {
     postToApiRoot: Mock;
 };
 
-type MockLinkManager = { createIssueLink: Mock };
+type MockLinkManager = { linkTestToTestExecution: Mock };
 
 function makeResource(): { raw: MockResource; resource: JiraResourceLike } {
     const raw: MockResource = {
@@ -131,7 +131,7 @@ function makeResource(): { raw: MockResource; resource: JiraResourceLike } {
 }
 
 function makeLinkManager(): { raw: MockLinkManager; linkManager: JiraLinkManager } {
-    const raw: MockLinkManager = { createIssueLink: vi.fn().mockResolvedValue(undefined) };
+    const raw: MockLinkManager = { linkTestToTestExecution: vi.fn().mockResolvedValue(undefined) };
     return { raw, linkManager: raw as unknown as JiraLinkManager };
 }
 

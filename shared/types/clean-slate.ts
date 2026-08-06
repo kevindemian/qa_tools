@@ -19,11 +19,13 @@ export interface StepSnapshot {
     result: string;
 }
 
-/** Single linked issue snapshot. */
+/** Single linked issue snapshot. Direction is preserved so rebuild/restore
+ *  recreates the exact link (inward/outward) instead of losing it. */
 export interface LinkSnapshot {
     id: string;
-    targetKey: string;
     linkType: string;
+    inwardKey: string;
+    outwardKey: string;
 }
 
 /** Complete snapshot of all modifiable fields on a Jira issue. */

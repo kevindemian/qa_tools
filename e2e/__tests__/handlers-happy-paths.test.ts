@@ -587,12 +587,19 @@ describe('Handlers Happy Paths', () => {
                 issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
             api.post('/issueLink').times(2).reply(201);
+            // IssueLinkService.createLink idempotency pre-check → GET /issue/{testKey}?fields=issuelinks
+            api.get('/issue/IMT-1')
+                .query({ fields: 'issuelinks' })
+                .reply(200, { fields: { issuelinks: [] } });
+            api.get('/issue/IMT-2')
+                .query({ fields: 'issuelinks' })
+                .reply(200, { fields: { issuelinks: [] } });
             // showResults → getTestCaseSummaries
             api.get('/issue/IMT-1')
-                .query(true)
+                .query({ fields: 'summary' })
                 .reply(200, { key: 'IMT-1', fields: { summary: 'Memory Test 1' } });
             api.get('/issue/IMT-2')
-                .query(true)
+                .query({ fields: 'summary' })
                 .reply(200, { key: 'IMT-2', fields: { summary: 'Memory Test 2' } });
 
             getPrompt().askConfirm.mockResolvedValueOnce(true); // use in-memory // pagination
@@ -668,9 +675,13 @@ describe('Handlers Happy Paths', () => {
                 issueLinkTypes: [{ id: '10201', name: 'Tests', inward: 'is tested by', outward: 'tests' }],
             });
             api.post('/issueLink').reply(201);
+            // IssueLinkService.createLink idempotency pre-check → GET /issue/{testKey}?fields=issuelinks
+            api.get('/issue/TEST-1')
+                .query({ fields: 'issuelinks' })
+                .reply(200, { fields: { issuelinks: [] } });
             // showResults → getTestCaseSummaries
             api.get('/issue/TEST-1')
-                .query(true)
+                .query({ fields: 'summary' })
                 .reply(200, { key: 'TEST-1', fields: { summary: 'TC E2E' } });
 
             getPrompt().ask.mockResolvedValueOnce(jsonFixture); // json path // pagination

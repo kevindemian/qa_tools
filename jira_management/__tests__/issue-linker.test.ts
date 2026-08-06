@@ -108,7 +108,7 @@ describe('IssueLinker', () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [] });
 
             expect(result).toBeNull();
-            expect(mockLinkManager['linkIssues']).not.toHaveBeenCalled();
+            expect(mockLinkManager['linkSourceToTargets']).not.toHaveBeenCalled();
         });
 
         it('returns null when linkedIssues is empty array', async () => {
@@ -117,12 +117,18 @@ describe('IssueLinker', () => {
             const result = await linker.linkIssues('TEST-1', { title: 'Test', steps: [], linkedIssues: [] });
 
             expect(result).toBeNull();
+            expect(mockLinkManager['linkSourceToTargets']).not.toHaveBeenCalled();
         });
 
         it('returns null on success', async () => {
             expect.hasAssertions();
 
-            mockLinkManager.linkIssues.mockResolvedValue(undefined);
+            mockLinkManager.linkSourceToTargets.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
             const test: TestCase = {
                 title: 'Test',
                 steps: [],
@@ -131,13 +137,18 @@ describe('IssueLinker', () => {
             const result = await linker.linkIssues('TEST-1', test);
 
             expect(result).toBeNull();
-            expect(mockLinkManager['linkIssues']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
+            expect(mockLinkManager['linkSourceToTargets']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
 
         it('calls success when not quiet', async () => {
             expect.hasAssertions();
 
-            mockLinkManager.linkIssues.mockResolvedValue(undefined);
+            mockLinkManager.linkSourceToTargets.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
             mockPrompt.isQuiet.mockReturnValue(false);
             const test: TestCase = {
                 title: 'Test',
@@ -152,7 +163,12 @@ describe('IssueLinker', () => {
         it('returns abort action when no handler and link fails', async () => {
             expect.hasAssertions();
 
-            mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
+            mockLinkManager.linkSourceToTargets.mockResolvedValue({
+                created: 0,
+                skipped: 0,
+                failed: ['BUG-1'],
+                missing: [],
+            });
             const test: TestCase = {
                 title: 'Test',
                 steps: [],
@@ -167,7 +183,7 @@ describe('IssueLinker', () => {
             expect.hasAssertions();
 
             linker.setStepFailureHandler(async () => 'abort');
-            mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
+            mockLinkManager.linkSourceToTargets.mockRejectedValue(new Error('API error'));
             const test: TestCase = {
                 title: 'Test',
                 steps: [],
@@ -182,7 +198,7 @@ describe('IssueLinker', () => {
             expect.hasAssertions();
 
             linker.setStepFailureHandler(async () => 'skip');
-            mockLinkManager.linkIssues.mockRejectedValue(new Error('API error'));
+            mockLinkManager.linkSourceToTargets.mockRejectedValue(new Error('API error'));
             const test: TestCase = {
                 title: 'Test',
                 steps: [],
@@ -191,6 +207,26 @@ describe('IssueLinker', () => {
             const result = await linker.linkIssues('TEST-1', test);
 
             expect(result).toStrictEqual({ action: 'skip', missingKey: 'BUG-1' });
+        });
+
+        it('returns skip with missing keys when missing list is non-empty', async () => {
+            expect.hasAssertions();
+
+            mockLinkManager.linkSourceToTargets.mockResolvedValue({
+                created: 0,
+                skipped: 0,
+                failed: [],
+                missing: ['NOPE-1'],
+            });
+            const test: TestCase = {
+                title: 'Test',
+                steps: [],
+                linkedIssues: [{ key: 'BUG-1', linkType: 'is tested by' }],
+            };
+            const result = await linker.linkIssues('TEST-1', test);
+
+            expect(result).toBeNull();
+            expect(mockLinkManager['linkSourceToTargets']).toHaveBeenCalledWith('TEST-1', test.linkedIssues);
         });
     });
 

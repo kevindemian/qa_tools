@@ -29,12 +29,18 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         clientSecret: 'csec',
         linkOps: {
             getIssueLinksByType: vi.fn().mockImplementation((_key: string, typeName: string) => {
-                if (typeName === 'Relates') return Promise.resolve([{ id: 'link1', targetKey: 'STORY-1' }]);
-                if (typeName === 'Test') return Promise.resolve([{ id: 'link2', targetKey: 'ECSPOL-960' }]);
+                if (typeName === 'Relates')
+                    return Promise.resolve([
+                        { id: 'link1', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' },
+                    ]);
+                if (typeName === 'Test')
+                    return Promise.resolve([
+                        { id: 'link2', linkType: 'Test', inwardKey: 'ECSPOL-960', outwardKey: 'PROJ-1' },
+                    ]);
                 return Promise.resolve([]);
             }),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         stepSnapshots: new Map(),
         ...overrides,
@@ -61,7 +67,7 @@ describe('clean-slate integration: full pipeline', () => {
                 description: 'new desc',
                 steps: [{ fields: { Action: 'do X', Data: 'd', 'Expected Result': 'ok' } }],
                 preconditions: ['PREC-1'],
-                linkedIssues: [{ id: '', targetKey: 'STORY-2', linkType: 'Blocks' }],
+                linkedIssues: [{ id: '', linkType: 'Blocks', inwardKey: 'STORY-2', outwardKey: 'PROJ-1' }],
             },
             { linkTypeNames: ['Relates'] },
         );

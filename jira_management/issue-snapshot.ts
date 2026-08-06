@@ -19,6 +19,7 @@ import type {
     LinkSnapshot,
     StepSnapshot,
 } from '../shared/types/clean-slate.js';
+import type { IssueLink, CreateLinkInput } from './services/issue-link.service.js';
 
 // Re-export snapshot types for backward compatibility
 export type { StepSnapshot, LinkSnapshot, IssueFieldSnapshot } from '../shared/types/clean-slate.js';
@@ -48,11 +49,11 @@ export interface SnapshotContext {
     } | null;
     clientId: string;
     clientSecret: string;
-    /** LinkOperations instance — provides getIssueLinksByType, removeIssueLink, linkIssues. */
+    /** Issue link service — provides getIssueLinksByType, removeIssueLink, createLink. */
     linkOps: {
-        getIssueLinksByType(key: string, typeName: string): Promise<Array<{ id: string; targetKey: string }>>;
+        getIssueLinksByType(key: string, typeName: string): Promise<IssueLink[]>;
         removeIssueLink(linkId: string): Promise<void>;
-        linkIssues(key: string, linkedIssues: Array<{ key: string; linkType: string }>): Promise<void>;
+        createLink(input: CreateLinkInput): Promise<'created' | 'duplicate' | 'missing-key'>;
     };
     /** Per-step snapshots for granular rollback. Populated during clearIssueFields/rebuildIssueFields. */
     stepSnapshots?: Map<string, IssueFieldSnapshot>;
@@ -163,7 +164,7 @@ async function snapshotLinks(ctx: SnapshotContext, issueKey: string, linkTypeNam
     for (const typeName of linkTypeNames) {
         try {
             const links = await ctx.linkOps.getIssueLinksByType(issueKey, typeName);
-            allLinks.push(...links.map((l) => ({ ...l, linkType: typeName })));
+            allLinks.push(...links);
         } catch (err) {
             rootLogger.warn(
                 'snapshotLinks: falha ao ler links tipo "' + typeName + '" de ' + issueKey + ': ' + formatErr(err),
@@ -398,25 +399,19 @@ async function rebuildPreconditions(
     }
 }
 
-async function rebuildLinks(ctx: SnapshotContext, issueKey: string, links: LinkSnapshot[]): Promise<StepResult> {
+async function rebuildLinks(ctx: SnapshotContext, links: LinkSnapshot[]): Promise<StepResult> {
     const start = Date.now();
     if (links.length === 0) {
         return makeStepResult(true, 'rebuild-links', 'skipped (0 links)', start);
     }
     try {
-        const grouped = new Map<string, string[]>();
         for (const link of links) {
-            const existing = grouped.get(link.linkType) ?? [];
-            existing.push(link.targetKey);
-            grouped.set(link.linkType, existing);
+            await ctx.linkOps.createLink({
+                linkType: link.linkType,
+                inwardKey: link.inwardKey,
+                outwardKey: link.outwardKey,
+            });
         }
-        const linkedIssues: Array<{ key: string; linkType: string }> = [];
-        for (const [linkType, keys] of grouped) {
-            for (const key of keys) {
-                linkedIssues.push({ key, linkType });
-            }
-        }
-        await ctx.linkOps.linkIssues(issueKey, linkedIssues);
         return makeStepResult(true, 'rebuild-links', `${links.length} links created`, start);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -456,7 +451,7 @@ export async function rebuildIssueFields(
     results.push(await rebuildDescription(ctx.jiraResource, issueKey, data.description));
     results.push(await rebuildSteps(ctx, issueKey, data.steps));
     results.push(await rebuildPreconditions(ctx, issueKey, data.preconditions));
-    results.push(await rebuildLinks(ctx, issueKey, data.linkedIssues));
+    results.push(await rebuildLinks(ctx, data.linkedIssues));
 
     return results;
 }
@@ -500,22 +495,15 @@ export async function restoreIssueState(
         }
     }
 
-    // Restore links
+    // Restore links (direction preserved in the snapshot)
     if (snapshot.linkedIssues.length > 0) {
-        // Group by linkType for batch restore
-        const grouped = new Map<string, string[]>();
         for (const link of snapshot.linkedIssues) {
-            const existing = grouped.get(link.linkType) ?? [];
-            existing.push(link.targetKey);
-            grouped.set(link.linkType, existing);
+            await ctx.linkOps.createLink({
+                linkType: link.linkType,
+                inwardKey: link.inwardKey,
+                outwardKey: link.outwardKey,
+            });
         }
-        const linkedIssues: Array<{ key: string; linkType: string }> = [];
-        for (const [linkType, keys] of grouped) {
-            for (const key of keys) {
-                linkedIssues.push({ key, linkType });
-            }
-        }
-        await ctx.linkOps.linkIssues(issueKey, linkedIssues);
     }
 }
 
@@ -719,7 +707,7 @@ export async function cleanSlateUpdate(
                 () => rebuildPreconditions(ctx, issueKey, filteredRebuild.preconditions),
                 filteredRebuild,
             ],
-            ['rebuild-links', () => rebuildLinks(ctx, issueKey, filteredRebuild.linkedIssues), filteredRebuild],
+            ['rebuild-links', () => rebuildLinks(ctx, filteredRebuild.linkedIssues), filteredRebuild],
         ];
 
         for (const [stepName, stepFn, stepInput] of rebuildFns) {

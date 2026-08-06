@@ -181,7 +181,8 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
 
         // GREEN: linkedIssues should come from test.linkedIssues
         expect(rebuildData.linkedIssues).toHaveLength(1);
-        expect(rebuildData.linkedIssues[0].targetKey).toBe('STORY-1');
+        expect(rebuildData.linkedIssues[0].inwardKey).toBe('STORY-1');
+        expect(rebuildData.linkedIssues[0].outwardKey).toBe('PROJ-1');
         expect(rebuildData.linkedIssues[0].linkType).toBe('Relates');
     });
 });

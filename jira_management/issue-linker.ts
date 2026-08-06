@@ -209,7 +209,7 @@ class IssueLinker {
 
     async linkIssues(issueKey: string, test: TestCase): Promise<ActionResult | null> {
         if (!test.linkedIssues || test.linkedIssues.length === 0) return null;
-        const existingLinks = await this.linkManager.linkOperations.getAllIssueLinks(issueKey);
+        const existingLinks = await this.linkManager.getIssueLinks(issueKey);
         const typesToClear = new Set(existingLinks.map((l) => l.linkType));
         for (const li of test.linkedIssues) {
             typesToClear.add(li.linkType);
@@ -220,7 +220,7 @@ class IssueLinker {
                 rootLogger.info(
                     'Limpando issue links de tipo "' + type + '" existentes em ' + issueKey + ' antes de linkar...',
                 );
-                await this.linkManager.linkOperations.clearIssueLinksByType(issueKey, type);
+                await this.linkManager.clearIssueLinksByType(issueKey, type);
             } catch (err) {
                 rootLogger.warn(
                     'Falha ao limpar issue links de tipo "' + type + '" em ' + issueKey + ': ' + formatErr(err),
@@ -252,7 +252,19 @@ class IssueLinker {
             : undefined;
         const outcome = await executeOperation({
             run: async () => {
-                await this.linkManager.linkIssues(issueKey, linkedIssues);
+                const result = await this.linkManager.linkSourceToTargets(issueKey, linkedIssues);
+                if (result.missing.length > 0) {
+                    rootLogger.warn(
+                        'Linked issue(s) não encontrada(s) no Jira em "' +
+                            test.title +
+                            '": ' +
+                            result.missing.join(', '),
+                    );
+                    if (!isQuiet()) print(applyPalette('yellow')('w'));
+                }
+                if (result.failed.length > 0) {
+                    throw new Error('Falha ao criar linked issues: ' + result.failed.join(', '));
+                }
                 if (!isQuiet()) success('  ' + linkedIssues.length + ' linked issue(s) criados');
             },
             ctx: {

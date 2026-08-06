@@ -186,7 +186,12 @@ export async function linkTestsToTe(
 
     for (const m of tests) {
         try {
-            await linkManager.createIssueLink(m.key, te.key, 'Tests');
+            const result = await linkManager.linkTestToTestExecution(te.key, [m.key]);
+            if (result.failed.length > 0 || result.missing.length > 0) {
+                rootLogger.warn(
+                    'Falha ao linkar ' + m.key + ': ' + result.failed.join(', ') + result.missing.join(', '),
+                );
+            }
         } catch (err: unknown) {
             const msg = formatErr(err);
             if (!msg.includes('already exists') && !msg.includes('already linked')) {

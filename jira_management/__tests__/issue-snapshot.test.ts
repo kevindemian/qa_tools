@@ -54,9 +54,11 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         clientId: 'cid',
         clientSecret: 'csec',
         linkOps: {
-            getIssueLinksByType: vi.fn().mockResolvedValue([{ id: 'link1', targetKey: 'STORY-1' }]),
+            getIssueLinksByType: vi
+                .fn()
+                .mockResolvedValue([{ id: 'link1', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }]),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         ...overrides,
     };
@@ -141,7 +143,7 @@ describe('issue-snapshot', () => {
                 description: 'new desc',
                 steps: [{ fields: { Action: 'do Y', Data: 'd', 'Expected Result': 'r' } }],
                 preconditions: ['PREC-1'],
-                linkedIssues: [{ id: '', targetKey: 'STORY-2', linkType: 'Blocks' }],
+                linkedIssues: [{ id: '', linkType: 'Blocks', inwardKey: 'STORY-2', outwardKey: 'PROJ-1' }],
             });
 
             expect(ctx.jiraResource.putJiraResource).toHaveBeenCalledWith('issue/PROJ-1', {
@@ -154,7 +156,7 @@ describe('issue-snapshot', () => {
                 'csec',
             );
             expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
-            expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
+            expect(ctx.linkOps.createLink).toHaveBeenCalled();
         });
 
         it('skips when all collections are empty', async () => {
@@ -178,7 +180,7 @@ describe('issue-snapshot', () => {
                 description: 'restored desc',
                 steps: [{ id: 's1', action: 'do X', data: '', result: 'ok' }],
                 preconditions: ['p1'],
-                linkedIssues: [{ id: 'link1', targetKey: 'STORY-1', linkType: 'Relates' }],
+                linkedIssues: [{ id: 'link1', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }],
             };
             await restoreIssueState(ctx, 'PROJ-1', snapshot);
 
@@ -187,7 +189,7 @@ describe('issue-snapshot', () => {
             });
             expect((ctx.xrayCloud ?? {}).addTestStep).toHaveBeenCalled();
             expect((ctx.xrayCloud ?? {}).addPreconditionsToTest).toHaveBeenCalled();
-            expect(ctx.linkOps.linkIssues).toHaveBeenCalled();
+            expect(ctx.linkOps.createLink).toHaveBeenCalled();
         });
     });
 
@@ -202,7 +204,7 @@ describe('issue-snapshot', () => {
                     description: 'new',
                     steps: [{ fields: { Action: 'do', Data: '', 'Expected Result': 'ok' } }],
                     preconditions: ['PREC-1'],
-                    linkedIssues: [{ id: '', targetKey: 'STORY-1', linkType: 'Relates' }],
+                    linkedIssues: [{ id: '', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }],
                 },
                 { linkTypeNames: ['Relates'] },
             );

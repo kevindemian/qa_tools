@@ -57,9 +57,11 @@ function createMockContext(overrides?: Partial<SnapshotContext>): SnapshotContex
         clientId: 'cid',
         clientSecret: 'csec',
         linkOps: {
-            getIssueLinksByType: vi.fn().mockResolvedValue([{ id: 'link1', targetKey: 'STORY-1' }]),
+            getIssueLinksByType: vi
+                .fn()
+                .mockResolvedValue([{ id: 'link1', linkType: 'Relates', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' }]),
             removeIssueLink: vi.fn().mockResolvedValue(undefined),
-            linkIssues: vi.fn().mockResolvedValue(undefined),
+            createLink: vi.fn().mockResolvedValue('created'),
         },
         ...overrides,
     };
@@ -80,13 +82,19 @@ describe('clearLinks: must clear ALL link types, not just default list', () => {
             (_key: string, typeName: string) => {
                 callCount++;
                 if (typeName === 'Test') {
-                    return Promise.resolve([{ id: 'link-tests-1', targetKey: 'STORY-1' }]);
+                    return Promise.resolve([
+                        { id: 'link-tests-1', linkType: 'Test', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' },
+                    ]);
                 }
                 if (typeName === 'Relates') {
-                    return Promise.resolve([{ id: 'link-relates-1', targetKey: 'STORY-2' }]);
+                    return Promise.resolve([
+                        { id: 'link-relates-1', linkType: 'Relates', inwardKey: 'STORY-2', outwardKey: 'PROJ-1' },
+                    ]);
                 }
                 if (typeName === 'Pre-Condition') {
-                    return Promise.resolve([{ id: 'link-prec-1', targetKey: 'PREC-1' }]);
+                    return Promise.resolve([
+                        { id: 'link-prec-1', linkType: 'Pre-Condition', inwardKey: 'PREC-1', outwardKey: 'PROJ-1' },
+                    ]);
                 }
                 return Promise.resolve([]);
             },
@@ -108,10 +116,14 @@ describe('clearLinks: must clear ALL link types, not just default list', () => {
         (ctx.linkOps.getIssueLinksByType as ReturnType<typeof vi.fn>).mockImplementation(
             (_key: string, typeName: string) => {
                 if (typeName === 'Test') {
-                    return Promise.resolve([{ id: 'link-1', targetKey: 'STORY-1' }]);
+                    return Promise.resolve([
+                        { id: 'link-1', linkType: 'Test', inwardKey: 'STORY-1', outwardKey: 'PROJ-1' },
+                    ]);
                 }
                 if (typeName === 'is tested by') {
-                    return Promise.resolve([{ id: 'link-2', targetKey: 'STORY-2' }]);
+                    return Promise.resolve([
+                        { id: 'link-2', linkType: 'is tested by', inwardKey: 'STORY-2', outwardKey: 'PROJ-1' },
+                    ]);
                 }
                 return Promise.resolve([]);
             },
