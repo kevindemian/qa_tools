@@ -68,6 +68,8 @@ jobs:
               run: npm run snyk-test
             - name: Check mock chains
               run: npx tsx scripts/check-mock-chains.ts
+            - name: Audit mock boundaries (anti-mock-theater ratchet)
+              run: npx tsx scripts/audit-mock-boundaries.ts
             - name: Validation hook (committed copy exists)
               run: test -f .config/validation_hook.ts && echo "validation_hook.ts committed copy present"
             - name: Validation hook (if installed)
