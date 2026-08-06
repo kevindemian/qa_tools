@@ -196,7 +196,7 @@ npm run lint
 
 **Commit:** `feat(storage): política de retenção de runs com saneamento atômico (C-12)`
 
-**STATUS: IMPLEMENTADO (2026-08-06).** Verificação: `tsc --noEmit` ok; suite completa 7582/7582; `npm run lint` ok; `persistence.retention.test.ts` (9 testes) + `config-validator.test.ts` (4 testes novos de retenção) verdes.
+**STATUS: IMPLEMENTADO (2026-08-06).** Verificação: `tsc --noEmit` ok; suite completa 7585/7585; `npm run lint` ok; `persistence.retention.test.ts` (12 testes) + `config-validator.test.ts` (4 testes novos de retenção) verdes.
 
 **Desvio documentado (forma, §22.3):** o saneamento reescreve os índices (branch → project → global) ANTES de apagar os `{sha}.json` — ordem inversa à literal do plano — para que nenhum índice referencie arquivo removido em nenhum passo intermediário (invariante "sem dangling refs" estrita). Falha numa deleção deixa apenas arquivo órfão (inofensivo, não referenciado), nunca entry de índice pendente; cada reescrita é atômica (temp-file + rename) e falha = nada commitado + log alto.
 
