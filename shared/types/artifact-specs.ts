@@ -82,237 +82,12 @@ export interface ArtifactSpec {
 }
 
 // ============================================================================
-// ARTIFACT SPECIFICATIONS (16 RENDERERS)
+// ARTIFACT SPECIFICATIONS (8 SURVIVING RENDERERS)
 // ============================================================================
 
 export const ARTIFACT_SPECS: ArtifactSpec[] = [
     // =========================================================================
-    // 1. ai-effectiveness
-    // =========================================================================
-    {
-        id: 'ai-effectiveness',
-        purpose: 'Avaliar eficácia da geração automática de testes por IA',
-        auditor: 'QA Lead, Tech Lead',
-        reference: ['ISTQB CTFL (requirement acceptance)', 'ISO/IEC 25010 (functional suitability)'],
-        ssot: 'dataHub.computed.aiMetrics',
-        file: 'shared/report/ai-effectiveness-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: true,
-        metrics: [
-            {
-                name: 'Acceptance Rate',
-                source: 'result.acceptanceRate',
-                format: 'percentage',
-                severity: 'info',
-                threshold: 70,
-                thresholdOperator: '>=',
-                sampleSizeWarning: 30,
-                description: 'Taxa de aceitação de testes gerados por IA',
-            },
-            {
-                name: 'Total Records',
-                source: 'result.totalRecords',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de registros de geração AI',
-            },
-            {
-                name: 'Modified',
-                source: 'result.totalModified',
-                format: 'number',
-                severity: 'warn',
-                threshold: 30,
-                thresholdOperator: '<',
-                description: 'Testes modificados (formato: N (XX%))',
-            },
-            {
-                name: 'Deleted',
-                source: 'result.totalDeleted',
-                format: 'number',
-                severity: 'error',
-                threshold: 20,
-                thresholdOperator: '<',
-                description: 'Testes deletados (formato: N (XX%))',
-            },
-            {
-                name: 'Top Version',
-                source: 'result.topPromptVersion',
-                format: 'badge',
-                severity: 'info',
-                description: 'Versão com melhor performance',
-            },
-            {
-                name: 'Sample Size',
-                source: 'result.totalRecords',
-                format: 'number',
-                severity: 'warn',
-                sampleSizeWarning: 30,
-                description: 'Aviso quando sample < 30',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 6 métricas' },
-            {
-                name: 'Version Breakdown',
-                type: 'DataTable',
-                required: true,
-                description: 'DataTable: Version, Count, Acceptance Rate, Badge (pass >= 80%, warn >= 50%, fail < 50%)',
-            },
-            {
-                name: 'Daily Trend',
-                type: 'TrendChart',
-                required: true,
-                description: 'TrendChart com refLine em 80%, legenda trend direction',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais baseadas nos dados',
-            },
-        ],
-        actions: [
-            {
-                condition: 'acceptanceRate < 50',
-                message: 'Acceptance rate is {X}%. Review prompt engineering and test generation quality.',
-                severity: 'error',
-            },
-            {
-                condition: 'totalDeleted > totalGenerated * 0.2',
-                message: '{N} tests deleted ({X}% of generated). Investigate deletion patterns.',
-                severity: 'warn',
-            },
-            {
-                condition: 'totalRecords < 30',
-                message: 'Only {N} records. Results may not be statistically significant.',
-                severity: 'warn',
-            },
-            {
-                condition: 'acceptanceRate >= 80',
-                message: 'Acceptance rate is {X}%. Prompt version {top} is performing well.',
-                severity: 'info',
-            },
-            {
-                condition: 'versionWithLowAcceptance',
-                message: 'Version {X} has {Y}% acceptance. Consider deprecating or improving this prompt.',
-                severity: 'warn',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 2. ai-comparison
-    // =========================================================================
-    {
-        id: 'ai-comparison',
-        purpose: 'Comparar performance de testes AI vs manuais',
-        auditor: 'QA Lead, Test Manager',
-        reference: ['DORA (pass rate comparison)', 'ISO/IEC 25023 (quality measurement)'],
-        ssot: 'dataHub.computed.aiMetrics',
-        file: 'shared/report/ai-comparison-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: true,
-        metrics: [
-            {
-                name: 'AI Pass Rate',
-                source: 'result.aiPassRate',
-                format: 'percentage',
-                severity: 'info',
-                threshold: 70,
-                thresholdOperator: '>=',
-                description: 'Pass rate dos testes AI',
-            },
-            {
-                name: 'Manual Pass Rate',
-                source: 'result.manualPassRate',
-                format: 'percentage',
-                severity: 'info',
-                threshold: 70,
-                thresholdOperator: '>=',
-                description: 'Pass rate dos testes manuais',
-            },
-            {
-                name: 'AI Sample',
-                source: 'result.aiTotal',
-                format: 'number',
-                severity: 'warn',
-                sampleSizeWarning: 30,
-                description: 'Total de testes AI',
-            },
-            {
-                name: 'Manual Sample',
-                source: 'result.manualTotal',
-                format: 'number',
-                severity: 'warn',
-                sampleSizeWarning: 30,
-                description: 'Total de testes manuais',
-            },
-            {
-                name: 'AI Flakiness',
-                source: 'result.aiFlakinessAvg',
-                format: 'percentage',
-                severity: 'error',
-                threshold: 10,
-                thresholdOperator: '<',
-                description: 'Taxa de flakiness AI',
-            },
-            {
-                name: 'Manual Flakiness',
-                source: 'result.manualFlakinessAvg',
-                format: 'percentage',
-                severity: 'error',
-                threshold: 10,
-                thresholdOperator: '<',
-                description: 'Taxa de flakiness manual',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 6 métricas' },
-            {
-                name: 'Advantage Analysis',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Análise de vantagem AI vs manual',
-            },
-            {
-                name: 'Sample Size Warning',
-                type: 'EmptyState',
-                required: true,
-                description: 'Aviso quando sample < 30',
-            },
-            {
-                name: 'Version Breakdown',
-                type: 'DataTable',
-                required: true,
-                description: 'DataTable: Version, Count, Pass Rate (%)',
-            },
-        ],
-        actions: [
-            {
-                condition: 'aiAdvantage === "pass_rate"',
-                message: 'AI tests have higher pass rate (+{X}%). Consider increasing AI test coverage.',
-                severity: 'info',
-            },
-            {
-                condition: 'aiAdvantage === "flakiness"',
-                message: 'AI tests are less flaky (-{X}%). AI-generated tests are more reliable.',
-                severity: 'info',
-            },
-            {
-                condition: 'aiAdvantage === "none"',
-                message: 'No significant advantage detected between AI and manual tests.',
-                severity: 'info',
-            },
-            {
-                condition: 'sample < 30',
-                message: 'Sample size of {N} may not be statistically significant.',
-                severity: 'warn',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 3. incident-report
+    // 1. incident-report
     // =========================================================================
     {
         id: 'incident-report',
@@ -412,7 +187,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 4. impact-alert
+    // 2. impact-alert
     // =========================================================================
     {
         id: 'impact-alert',
@@ -490,189 +265,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 5. traceability
-    // =========================================================================
-    {
-        id: 'traceability',
-        purpose: 'Mapear rastreabilidade entre requisitos, testes e cobertura',
-        auditor: 'QA Lead, Product Owner',
-        reference: ['ISTQB (requirements traceability matrix)', 'ISO/IEC 25010 (functional suitability)'],
-        ssot: 'dataHub.computed.traceabilityTree',
-        file: 'shared/report/traceability-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Total Epics',
-                source: 'result.totalEpics',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de epics',
-            },
-            {
-                name: 'Total Tests',
-                source: 'result.totalTests',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de testes',
-            },
-            {
-                name: 'Coverage',
-                source: 'result.overallCoverage',
-                format: 'percentage',
-                severity: 'info',
-                threshold: 80,
-                thresholdOperator: '>=',
-                description: 'Cobertura geral',
-            },
-            {
-                name: 'Avg Flakiness',
-                source: 'result.avgFlakiness',
-                format: 'percentage',
-                severity: 'error',
-                threshold: 10,
-                thresholdOperator: '<',
-                description: 'Taxa média de flakiness',
-            },
-            {
-                name: 'Timestamp',
-                source: 'result.timestamp',
-                format: 'datetime',
-                severity: 'info',
-                description: 'Data/hora da análise',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 5 métricas' },
-            {
-                name: 'Traceability Tree',
-                type: 'HierarchyTree',
-                required: true,
-                description: 'Hierarquia epic → story → test com badges',
-            },
-            {
-                name: 'Uncovered Epics Highlight',
-                type: 'EmptyState',
-                required: true,
-                description: 'Epics com coverage < 50% destacados',
-            },
-            {
-                name: 'Awareness Section',
-                type: 'CoverageTable',
-                required: true,
-                description: 'Cross-references com confidence scores',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'epicsWithLowCoverage > 0',
-                message: 'Epic {name} has {X}% coverage. Add tests for uncovered stories.',
-                severity: 'warn',
-            },
-            { condition: 'flakyTests > 0', message: '{N} flaky tests detected in epic {name}.', severity: 'warn' },
-            {
-                condition: 'overallCoverage < 80',
-                message: 'Overall coverage is {X}%. Target is 80%.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 6. flakiness
-    // =========================================================================
-    {
-        id: 'flakiness',
-        purpose: 'Identificar e priorizar testes instáveis',
-        auditor: 'QA Lead, CI/CD Engineer',
-        reference: ['DORA (flaky rate impact on deployment frequency)', 'Allure Report (stability analysis)'],
-        ssot: 'dataHub.computed.flakinessEntries',
-        file: 'shared/report/flakiness-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: true,
-        metrics: [
-            {
-                name: 'Flaky Tests',
-                source: 'result.flakyTests',
-                format: 'number',
-                severity: 'warn',
-                description: 'Número de testes flaky',
-            },
-            {
-                name: 'Flaky Rate',
-                source: 'result.flakyRate',
-                format: 'percentage',
-                severity: 'error',
-                threshold: 5,
-                thresholdOperator: '<',
-                description: 'Taxa de flakiness',
-            },
-            {
-                name: 'High Flakiness',
-                source: 'result.highFlakinessCount',
-                format: 'number',
-                severity: 'error',
-                threshold: 0,
-                thresholdOperator: '>',
-                description: 'Testes com flakiness >= 50%',
-            },
-            {
-                name: 'Threshold',
-                source: 'result.threshold',
-                format: 'number',
-                severity: 'info',
-                description: 'Threshold configurado',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 4 métricas' },
-            {
-                name: 'Flaky Tests Table',
-                type: 'FlakyTable',
-                required: true,
-                description: 'Tabela: Test, Flakiness (%), Severity Badge, Sparkline, Runs',
-            },
-            {
-                name: 'Source Quality Banner',
-                type: 'EmptyState',
-                required: true,
-                description: 'Fonte e confiança dos dados',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'highFlakinessCount > 0',
-                message: '{N} tests with flakiness >= 50%. Prioritize stabilization.',
-                severity: 'error',
-            },
-            {
-                condition: 'moderateFlakiness > 0',
-                message: '{N} tests with moderate flakiness (30-50%). Consider quarantine.',
-                severity: 'warn',
-            },
-            { condition: 'flakyRate > 5', message: 'Flaky rate is {X}%. Target is < 5%.', severity: 'warn' },
-            {
-                condition: 'context',
-                message: 'Flaky tests reduce deployment confidence. Consider quarantine or removal.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 7. backlog-health
+    // 3. backlog-health
     // =========================================================================
     {
         id: 'backlog-health',
@@ -774,7 +367,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 8. pipeline-cost
+    // 4. pipeline-cost
     // =========================================================================
     {
         id: 'pipeline-cost',
@@ -861,201 +454,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 9. suite-optimization
-    // =========================================================================
-    {
-        id: 'suite-optimization',
-        purpose: 'Identificar oportunidades de otimização da suíte de testes',
-        auditor: 'QA Lead, CI/CD Engineer',
-        reference: ['DORA (test suite speed)', 'Allure Report (duration analysis)'],
-        ssot: 'dataHub.computed.testDurationMap',
-        file: 'shared/quality/suite-optimization-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Tests to Optimize',
-                source: 'result.testsToOptimize',
-                format: 'number',
-                severity: 'warn',
-                description: 'Testes que precisam de otimização',
-            },
-            {
-                name: 'Potential Savings',
-                source: 'result.potentialSavings',
-                format: 'duration',
-                severity: 'info',
-                threshold: 60,
-                thresholdOperator: '<',
-                description: 'Economia potencial em segundos',
-            },
-            {
-                name: 'Slow Threshold',
-                source: 'result.slowThreshold',
-                format: 'duration',
-                severity: 'info',
-                description: 'Threshold para teste lento',
-            },
-            {
-                name: 'Flaky Threshold',
-                source: 'result.flakyThreshold',
-                format: 'percentage',
-                severity: 'info',
-                description: 'Threshold para flakiness',
-            },
-            {
-                name: 'Total Duration',
-                source: 'result.totalDuration',
-                format: 'duration',
-                severity: 'info',
-                description: 'Duração total da suíte',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 5 métricas' },
-            {
-                name: 'Optimization Table',
-                type: 'DataTable',
-                required: true,
-                description: 'DataTable: Test, Duration, Flakiness, Impact Badge, Action, Savings',
-            },
-            {
-                name: 'Action Summary',
-                type: 'MetricGrid',
-                required: true,
-                description: 'Contagem por tipo de ação: quarantine, split, parallelize, remove_wait, speed_up',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'highImpact > 0',
-                message: '{N} tests have high optimization impact. Prioritize these first.',
-                severity: 'warn',
-            },
-            {
-                condition: 'quarantine > 0',
-                message: '{N} tests recommended for quarantine (flaky + slow).',
-                severity: 'warn',
-            },
-            {
-                condition: 'split > 0',
-                message: '{N} tests recommended for splitting (duration > threshold).',
-                severity: 'info',
-            },
-            {
-                condition: 'potentialSavings > 60',
-                message: 'Potential savings of {X}s identified. Consider parallelization.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 10. cross-squad-benchmark
-    // =========================================================================
-    {
-        id: 'cross-squad-benchmark',
-        purpose: 'Comparar performance entre squads',
-        auditor: 'QA Manager, Engineering Director',
-        reference: ['DORA (team performance)', 'ISO/IEC 25010 (quality comparison)'],
-        ssot: 'dataHub.computed.crossSquad',
-        file: 'shared/quality/cross-squad-benchmark-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Average Score',
-                source: 'result.averageScore',
-                format: 'number',
-                severity: 'info',
-                description: 'Score médio entre squads',
-            },
-            {
-                name: 'Score Range',
-                source: 'result.minScore - result.maxScore',
-                format: 'number',
-                severity: 'info',
-                description: 'Faixa de scores (min — max)',
-            },
-            {
-                name: 'Std Deviation',
-                source: 'result.stdDev',
-                format: 'number',
-                severity: 'warn',
-                threshold: 20,
-                thresholdOperator: '<',
-                description: 'Desvio padrão (qualidade gap)',
-            },
-            {
-                name: 'Top Squad',
-                source: 'result.topSquad',
-                format: 'badge',
-                severity: 'success',
-                description: 'Squad com melhor score',
-            },
-            {
-                name: 'Bottom Squad',
-                source: 'result.bottomSquad',
-                format: 'badge',
-                severity: 'error',
-                description: 'Squad com pior score',
-            },
-            {
-                name: 'Squad Count',
-                source: 'result.benchmarks.length',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de squads',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 6 métricas' },
-            {
-                name: 'Leaderboard',
-                type: 'DataTable',
-                required: true,
-                description: 'DataTable: Rank, Squad, Score, Grade Badge, Pass Rate, Flaky Rate, Coverage, Trend',
-            },
-            {
-                name: 'Score Distribution',
-                type: 'StatusChart',
-                required: true,
-                description: 'Gráfico de distribuição de scores',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'stdDev > 20',
-                message: 'High standard deviation ({X}) indicates significant quality gaps between squads.',
-                severity: 'warn',
-            },
-            {
-                condition: 'bottomScore < 60',
-                message: 'Squad {name} has score {X} (below 60). Immediate attention required.',
-                severity: 'error',
-            },
-            {
-                condition: 'topScore > 80',
-                message: 'Squad {name} leads with score {X}. Consider adopting their practices.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 11. release-score
+    // 5. release-score
     // =========================================================================
     {
         id: 'release-score',
@@ -1146,90 +545,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 12. silent-regression
-    // =========================================================================
-    {
-        id: 'silent-regression',
-        purpose: 'Detectar regressões silenciosas em duração de testes',
-        auditor: 'QA Lead, CI/CD Engineer',
-        reference: ['ISO 3534-2 (statistical process control)', 'Allure Report (duration dynamics)'],
-        ssot: 'dataHub.computed.testDurationMap',
-        file: 'shared/quality/silent-regression-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Regressions Found',
-                source: 'result.regressions.length',
-                format: 'number',
-                severity: 'error',
-                threshold: 0,
-                thresholdOperator: '>',
-                description: 'Regressões detectadas',
-            },
-            {
-                name: 'Avg Increase',
-                source: 'result.avgIncrease',
-                format: 'percentage',
-                severity: 'warn',
-                description: 'Aumento médio de duração',
-            },
-            {
-                name: 'Threshold (z)',
-                source: 'result.threshold',
-                format: 'number',
-                severity: 'info',
-                description: 'Threshold z-score',
-            },
-            {
-                name: 'Total Tests',
-                source: 'result.totalTests',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de testes analisados',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 4 métricas' },
-            {
-                name: 'Regression Table',
-                type: 'DataTable',
-                required: true,
-                description: 'DataTable: Test, Current Duration, Mean Duration, Increase (%), Z-Score, Severity Badge',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'critical > 0',
-                message: '{N} critical regressions detected. Immediate investigation required.',
-                severity: 'error',
-            },
-            {
-                condition: 'high > 0',
-                message: '{N} high-severity regressions. Review recent changes.',
-                severity: 'warn',
-            },
-            {
-                condition: 'avgStdDev > 1',
-                message: 'Average standard deviation is {X}. Consider stabilizing test environment.',
-                severity: 'info',
-            },
-            {
-                condition: 'avgStdDev <= 1',
-                message: 'Test duration stability is acceptable. Continue monitoring.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 13. defect-trend
+    // 6. defect-trend
     // =========================================================================
     {
         id: 'defect-trend',
@@ -1307,7 +623,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 14. defect-seasonality
+    // 7. defect-seasonality
     // =========================================================================
     {
         id: 'defect-seasonality',
@@ -1384,7 +700,7 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 15. developer-profile
+    // 8. developer-profile
     // =========================================================================
     {
         id: 'developer-profile',
@@ -1461,108 +777,15 @@ export const ARTIFACT_SPECS: ArtifactSpec[] = [
             },
         ],
     },
-
-    // =========================================================================
-    // 16. requirement-score
-    // =========================================================================
-    {
-        id: 'requirement-score',
-        purpose: 'Avaliar qualidade dos requisitos para geração de testes',
-        auditor: 'QA Lead, Product Owner',
-        reference: ['ISTQB (requirement acceptance)', 'ISO/IEC 25010 (functional suitability)'],
-        ssot: 'dataHub.raw.aiRecords',
-        file: 'shared/quality/requirement-score-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Requirements',
-                source: 'result.totalRequirements',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de requirements',
-            },
-            {
-                name: 'Overall Score',
-                source: 'result.overallGrade',
-                format: 'grade',
-                severity: 'info',
-                threshold: 75,
-                thresholdOperator: '>=',
-                description: 'Score geral (A/B/C/D/F)',
-            },
-            {
-                name: 'Acceptance Rate',
-                source: 'result.averageAcceptanceRate',
-                format: 'percentage',
-                severity: 'info',
-                threshold: 70,
-                thresholdOperator: '>=',
-                description: 'Taxa média de aceitação',
-            },
-            {
-                name: 'Kept/Modified/Deleted',
-                source: 'result.keptRate/result.modifiedRate/result.deletedRate',
-                format: 'percentage',
-                severity: 'info',
-                description: 'Taxas de retenção/modificação/deleção',
-            },
-            {
-                name: 'Generated Tests',
-                source: 'result.totalGenerated',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de testes gerados',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 5 métricas' },
-            {
-                name: 'Score Breakdown',
-                type: 'DataTable',
-                required: true,
-                description:
-                    'DataTable: Requirement, Score, Grade Badge, Acceptance, Generated, Kept, Modified, Deleted',
-            },
-            {
-                name: 'Recommended Actions',
-                type: 'RecommendedActions',
-                required: true,
-                description: 'Ações condicionais',
-            },
-        ],
-        actions: [
-            {
-                condition: 'overallScore < 40',
-                message: 'Overall requirement quality score is {X} (grade {Y}). Immediate action required.',
-                severity: 'error',
-            },
-            {
-                condition: 'averageAcceptance < 50',
-                message: 'Average acceptance rate is {X}%. Review test generation quality.',
-                severity: 'warn',
-            },
-            {
-                condition: 'lowScoreEntries > 0',
-                message: '{N} requirement(s) have scores below 40: {names}.',
-                severity: 'warn',
-            },
-            {
-                condition: 'highDeletionRate',
-                message: '{N} tests were deleted ({X}% of generated). Review deletion reasons.',
-                severity: 'warn',
-            },
-        ],
-    },
 ];
 
 // ============================================================================
-// ARTIFACT SPECIFICATIONS (11 NON-RENDERER ARTIFACTS)
+// ARTIFACT SPECIFICATIONS (7 RECONSTRUCTED / ORCHESTRATOR ARTIFACTS)
 // ============================================================================
 
 export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     // =========================================================================
-    // 17. coverage-gap
+    // 1. coverage-gap
     // =========================================================================
     {
         id: 'coverage-gap',
@@ -1656,7 +879,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 18. report-html (orchestrator)
+    // 2. report-html (orchestrator)
     // =========================================================================
     {
         id: 'report-html',
@@ -1746,92 +969,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 19. pipeline-health
-    // =========================================================================
-    {
-        id: 'pipeline-health',
-        purpose: 'Monitorar saúde do pipeline CI/CD',
-        auditor: 'DevOps Lead, QA Lead',
-        reference: ['DORA (software delivery performance)', 'Google SRE (SLI/SLO)'],
-        ssot: 'PipelineHealthData (external)',
-        file: 'git_triggers/pipeline-health-renderer.ts',
-        timestamp: true,
-        sampleSizeWarning: false,
-        metrics: [
-            {
-                name: 'Total Runs',
-                source: 'result.totalRuns',
-                format: 'number',
-                severity: 'info',
-                description: 'Total de runs',
-            },
-            {
-                name: 'Passed',
-                source: 'result.passed',
-                format: 'number',
-                severity: 'success',
-                description: 'Runs aprovados',
-            },
-            {
-                name: 'Failed',
-                source: 'result.failed',
-                format: 'number',
-                severity: 'error',
-                description: 'Runs falhos',
-            },
-            {
-                name: 'Pass Rate',
-                source: 'result.passRate',
-                format: 'percentage',
-                severity: 'info',
-                description: 'Taxa de aprovação',
-            },
-            {
-                name: 'Avg Duration',
-                source: 'result.avgDuration',
-                format: 'duration',
-                severity: 'info',
-                description: 'Duração média',
-            },
-        ],
-        sections: [
-            { name: 'Summary', type: 'MetricGrid', required: true, description: 'MetricGrid com as 5 métricas' },
-            {
-                name: 'Top Failing Jobs',
-                type: 'DataTable',
-                required: true,
-                description: 'Tabela: Job, Fail Count, Total, Rate, Bar Chart',
-            },
-            {
-                name: 'Failure Intelligence',
-                type: 'DataTable',
-                required: true,
-                description: 'Mensagens de erro extraídas dos logs',
-            },
-            {
-                name: 'Branch Breakdown',
-                type: 'DataTable',
-                required: true,
-                description: 'Tabela: Branch, Run Count, Pass Rate',
-            },
-        ],
-        actions: [
-            { condition: 'passRate < 90', message: 'Pass rate is {X}%. Investigate failing jobs.', severity: 'error' },
-            {
-                condition: 'topFailingJobs > 0',
-                message: 'Top failing jobs: {names}. Prioritize fixes.',
-                severity: 'warn',
-            },
-            {
-                condition: 'longDuration',
-                message: 'Average duration is {X} minutes. Consider optimization.',
-                severity: 'info',
-            },
-        ],
-    },
-
-    // =========================================================================
-    // 20. schedule-handler (weekly report)
+    // 3. schedule-handler (weekly report)
     // =========================================================================
     {
         id: 'schedule-handler',
@@ -1955,7 +1093,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 21. interactive-mode (quality gate dashboard)
+    // 4. interactive-mode (quality gate dashboard)
     // =========================================================================
     {
         id: 'interactive-mode',
@@ -2019,7 +1157,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 22. PR Report — Markdown Comment
+    // 5. PR Report — Markdown Comment
     // =========================================================================
     {
         id: 'pr-report-markdown',
@@ -2116,7 +1254,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 23. PR Report — Job Summary
+    // 6. PR Report — Job Summary
     // =========================================================================
     {
         id: 'pr-report-job-summary',
@@ -2158,7 +1296,7 @@ export const ADDITIONAL_ARTIFACT_SPECS: ArtifactSpec[] = [
     },
 
     // =========================================================================
-    // 24. PR Report — HTML Artifact
+    // 7. PR Report — HTML Artifact
     // =========================================================================
     {
         id: 'pr-report-html',

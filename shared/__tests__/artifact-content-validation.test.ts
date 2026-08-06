@@ -14,40 +14,24 @@ import { describe, it, expect } from 'vitest';
 import { ARTIFACT_SPECS, ADDITIONAL_ARTIFACT_SPECS } from '../types/artifact-specs.js';
 import type { ArtifactSpec } from '../types/artifact-specs.js';
 
-import { generateAiEffectivenessHtml } from '../report/ai-effectiveness-renderer.js';
-import { generateAiComparisonHtml } from '../report/ai-comparison-renderer.js';
 import { generateIncidentReportHtml } from '../report/incident-report-renderer.js';
 import { generateImpactAlertHtml } from '../report/impact-alert-renderer.js';
-import { generateTraceabilityHtml } from '../report/traceability-renderer.js';
-import { generateFlakinessHtml } from '../report/flakiness-renderer.js';
 import { generateBacklogHealthHtml } from '../report/backlog-health-renderer.js';
 import { generatePipelineCostHtml } from '../quality/pipeline-cost-renderer.js';
-import { generateOptimizationHtml } from '../quality/suite-optimization-renderer.js';
-import { generateBenchmarkHtml } from '../quality/cross-squad-benchmark-renderer.js';
 import { generateReleaseScoreHtml } from '../quality/release-score-renderer.js';
-import { generateSilentRegressionHtml } from '../quality/silent-regression-renderer.js';
 import { generateDefectTrendHtml } from '../quality/defect-trend-renderer.js';
 import { generateSeasonalityHtml } from '../quality/defect-seasonality-renderer.js';
 import { generateDeveloperProfileHtml } from '../quality/developer-profile-renderer.js';
-import { generateRequirementScoreHtml } from '../quality/requirement-score-renderer.js';
 import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 
-import type { AiMetricsResult } from '../types/data-hub-extensions.js';
-import type { AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 import type { IncidentReport } from '../report/incident-report.js';
 import type { ImpactAlertResult } from '../report/impact-alert.js';
-import type { TraceabilityResult } from '../report/traceability-matrix.js';
-import type { FlakinessEntry } from '../types/data-hub.js';
 import type { BacklogHealthResult } from '../report/backlog-health.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
-import type { OptimizationResult } from '../types/data-hub-extensions.js';
-import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
 import type { ReleaseScoreResult } from '../types/data-hub.js';
-import type { RegressionDetectionResult } from '../types/data-hub-extensions.js';
 import type { DefectAggregationResult } from '../types/data-hub-extensions.js';
 import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../quality/developer-profile.js';
-import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import type { CoverageGapResult } from '../types/coverage.js';
 
 const ALL_SPECS: ArtifactSpec[] = [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS];
@@ -55,47 +39,6 @@ const ALL_SPECS: ArtifactSpec[] = [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPE
 // ============================================================================
 // Mock data factories for each renderer
 // ============================================================================
-
-function makeAiMetrics(): AiMetricsResult {
-    return {
-        acceptanceRate: 75,
-        totalRecords: 50,
-        totalGenerated: 50,
-        totalKept: 35,
-        totalModified: 10,
-        totalDeleted: 5,
-        topPromptVersion: 'v2.1',
-        byVersion: [
-            { version: 'v2.1', count: 30, acceptanceRate: 80 },
-            { version: 'v1.0', count: 20, acceptanceRate: 65 },
-        ],
-        trend: [
-            { date: '2026-07-01', acceptanceRate: 70, generated: 25 },
-            { date: '2026-07-02', acceptanceRate: 80, generated: 25 },
-        ],
-        requirementScores: { 'REQ-001': 90, 'REQ-002': 60 },
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeAiComparison(): AiComparisonResult {
-    return {
-        aiTotal: 30,
-        aiPassRate: 80,
-        aiFlakinessAvg: 0.1,
-        aiAcceptanceRate: 75,
-        manualTotal: 20,
-        manualPassRate: 65,
-        manualFlakinessAvg: 0.2,
-        manualAcceptanceRate: 60,
-        aiAdvantage: 'pass_rate',
-        byVersion: [
-            { version: 'v2.1', count: 20, passRate: 85 },
-            { version: 'v1.0', count: 10, passRate: 70 },
-        ],
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
 
 function makeIncidentReport(): IncidentReport {
     return {
@@ -136,65 +79,6 @@ function makeImpactAlert(): ImpactAlertResult {
     };
 }
 
-function makeTraceability(): TraceabilityResult {
-    return {
-        nodes: [
-            {
-                epic: 'AUTH',
-                coverage: 80,
-                health: 75,
-                flakiness: 0.1,
-                stories: [
-                    {
-                        key: 'LOGIN',
-                        coverage: 100,
-                        health: 100,
-                        flakiness: 0,
-                        tests: [
-                            { title: 'test-login-1', status: 'passed', duration: 100, flakiness: 0 },
-                            { title: 'test-login-2', status: 'passed', duration: 120, flakiness: 0 },
-                        ],
-                    },
-                ],
-            },
-            {
-                epic: 'PAYMENT',
-                coverage: 50,
-                health: 60,
-                flakiness: 0.2,
-                stories: [],
-            },
-        ],
-        totalEpics: 2,
-        totalTests: 5,
-        overallCoverage: 65,
-        timestamp: '2026-07-25T10:00:00Z',
-        awareness: {
-            categories: [
-                {
-                    category: 'coverageFiles',
-                    entities: [{ id: 'AUTH', confidence: 0.9, valid: true }],
-                },
-            ],
-            minConfidence: 0.7,
-        },
-    };
-}
-
-function makeFlakiness(): FlakinessEntry[] {
-    return [
-        {
-            title: 'test-login',
-            project: 'auth',
-            passCount: 7,
-            failCount: 3,
-            skipCount: 0,
-            totalRuns: 10,
-            rate: 0.3,
-        },
-    ];
-}
-
 function makeBacklogHealth(): BacklogHealthResult {
     return {
         unassignedIssues: [],
@@ -231,59 +115,6 @@ function makePipelineCost(): PipelineCostResult {
     };
 }
 
-function makeOptimization(): OptimizationResult {
-    return {
-        optimizations: [
-            {
-                testTitle: 'test-slow-integration',
-                duration: 300,
-                flakiness: 0.3,
-                impact: 'high',
-                action: 'parallelize',
-                reason: 'Long duration and high flakiness',
-            },
-        ],
-        totalTests: 50,
-        totalDuration: 3600,
-        potentialSavings: 600,
-        slowThreshold: 60,
-        flakyThreshold: 0.2,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeCrossSquad(): CrossSquadResult {
-    return {
-        benchmarks: [
-            {
-                project: 'Frontend',
-                healthScore: 85,
-                grade: 'A',
-                passRate: 90,
-                flakyRate: 5,
-                coveragePct: 80,
-                runCount: 50,
-                trend: 'up',
-            },
-            {
-                project: 'Backend',
-                healthScore: 72,
-                grade: 'B',
-                passRate: 80,
-                flakyRate: 10,
-                coveragePct: 65,
-                runCount: 40,
-                trend: 'stable',
-            },
-        ],
-        topSquad: 'Frontend',
-        bottomSquad: 'Backend',
-        averageScore: 78.5,
-        stdDev: 9.2,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
 function makeReleaseScore(): ReleaseScoreResult {
     return {
         score: 82,
@@ -303,25 +134,6 @@ function makeReleaseScore(): ReleaseScoreResult {
             { label: 'Execution Rate', score: 80, status: 'pass' },
         ],
         recommendation: 'Release is ready with good quality metrics',
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
-function makeSilentRegression(): RegressionDetectionResult {
-    return {
-        regressions: [
-            {
-                title: 'test-login',
-                meanDuration: 100,
-                currentDuration: 200,
-                stdDev: 10,
-                zScore: 10,
-                severity: 'high',
-                previousDurations: [100, 105, 95, 110, 100],
-            },
-        ],
-        totalTests: 50,
-        threshold: 2,
         timestamp: '2026-07-25T10:00:00Z',
     };
 }
@@ -384,34 +196,6 @@ function makeDeveloperProfile(): DeveloperProfileResult {
     };
 }
 
-function makeRequirementScore(): RequirementScoreResult {
-    return {
-        entries: [
-            {
-                requirementId: 'REQ-001',
-                userStory: 'As a user I want to login',
-                totalTests: 10,
-                keptTests: 8,
-                modifiedTests: 1,
-                deletedTests: 1,
-                acceptanceRate: 85,
-                score: 90,
-                scoreGrade: 'A',
-                promptVersion: 'v2.1',
-            },
-        ],
-        totalRequirements: 1,
-        overallScore: 90,
-        overallGrade: 'A',
-        averageAcceptanceRate: 85,
-        totalGenerated: 10,
-        totalKept: 8,
-        totalModified: 1,
-        totalDeleted: 1,
-        timestamp: '2026-07-25T10:00:00Z',
-    };
-}
-
 function makeCoverageGap(): CoverageGapResult {
     return {
         items: [],
@@ -459,22 +243,14 @@ interface RendererEntry {
 
 function buildRendererEntries(): RendererEntry[] {
     return [
-        { specId: 'ai-effectiveness', generate: () => generateAiEffectivenessHtml(makeAiMetrics()) },
-        { specId: 'ai-comparison', generate: () => generateAiComparisonHtml(makeAiComparison()) },
         { specId: 'incident-report', generate: () => generateIncidentReportHtml(makeIncidentReport()) },
         { specId: 'impact-alert', generate: () => generateImpactAlertHtml(makeImpactAlert()) },
-        { specId: 'traceability', generate: () => generateTraceabilityHtml(makeTraceability()) },
-        { specId: 'flakiness', generate: () => generateFlakinessHtml(makeFlakiness()) },
         { specId: 'backlog-health', generate: () => generateBacklogHealthHtml(makeBacklogHealth()) },
         { specId: 'pipeline-cost', generate: () => generatePipelineCostHtml(makePipelineCost()) },
-        { specId: 'suite-optimization', generate: () => generateOptimizationHtml(makeOptimization()) },
-        { specId: 'cross-squad-benchmark', generate: () => generateBenchmarkHtml(makeCrossSquad()) },
         { specId: 'release-score', generate: () => generateReleaseScoreHtml(makeReleaseScore()) },
-        { specId: 'silent-regression', generate: () => generateSilentRegressionHtml(makeSilentRegression()) },
         { specId: 'defect-trend', generate: () => generateDefectTrendHtml(makeDefectTrend()) },
         { specId: 'defect-seasonality', generate: () => generateSeasonalityHtml(makeSeasonality()) },
         { specId: 'developer-profile', generate: () => generateDeveloperProfileHtml(makeDeveloperProfile()) },
-        { specId: 'requirement-score', generate: () => generateRequirementScoreHtml(makeRequirementScore()) },
         { specId: 'coverage-gap', generate: () => generateCoverageGapHtml(makeCoverageGap()) },
     ];
 }
@@ -485,22 +261,14 @@ function buildRendererEntries(): RendererEntry[] {
 
 /** Specs that are HTML renderers in shared/report/ and can be validated with real output. */
 const HTML_RENDERER_SPECS = [
-    'ai-effectiveness',
-    'ai-comparison',
     'incident-report',
     'impact-alert',
-    'traceability',
-    'flakiness',
     'backlog-health',
     'pipeline-cost',
-    'suite-optimization',
-    'cross-squad-benchmark',
     'release-score',
-    'silent-regression',
     'defect-trend',
     'defect-seasonality',
     'developer-profile',
-    'requirement-score',
     'coverage-gap',
 ];
 
@@ -531,9 +299,12 @@ describe('R8.7 Cross-validation: specs vs renderers (C17)', () => {
         const excludedSpecs = ALL_SPECS.map((s) => s.id).filter((id) => !HTML_RENDERER_SPECS.includes(id));
 
         // These specs are git triggers, markdown outputs, or orchestrators — not standalone HTML renderers
-        expect(excludedSpecs).toContain('pipeline-health');
+        expect(excludedSpecs).toContain('report-html');
+        expect(excludedSpecs).toContain('schedule-handler');
+        expect(excludedSpecs).toContain('interactive-mode');
         expect(excludedSpecs).toContain('pr-report-markdown');
         expect(excludedSpecs).toContain('pr-report-job-summary');
+        expect(excludedSpecs).toContain('pr-report-html');
     });
 });
 
@@ -709,9 +480,9 @@ describe('R8 Cross-cutting Validation', () => {
         }
     });
 
-    it('total artifact count is at least 21', () => {
+    it('total artifact count is exactly 15 (8 survivors + 7 reconstructed/orchestrators)', () => {
         expect.hasAssertions();
-        expect(ALL_SPECS.length).toBeGreaterThanOrEqual(21);
+        expect(ALL_SPECS).toHaveLength(15);
     });
 
     it('all metrics have description', () => {

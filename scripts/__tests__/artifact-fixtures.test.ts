@@ -6,23 +6,16 @@ import { loadFixture } from '../artifact-fixtures.js';
 
 const FIXTURES_DIR = join(import.meta.dirname, '..', '__fixtures__', 'artefactos');
 
+// F0.7: only fixtures of surviving + reconstructed artifacts remain.
 const KNOWN_ARTIFACTS = [
-    'ai-effectiveness',
-    'ai-comparison',
     'incident-report',
     'impact-alert',
-    'traceability',
-    'flakiness',
     'backlog-health',
     'pipeline-cost',
-    'suite-optimization',
-    'cross-squad-benchmark',
     'release-score',
-    'silent-regression',
     'defect-trend',
     'defect-seasonality',
     'developer-profile',
-    'requirement-score',
     'coverage-gap',
 ];
 
@@ -44,12 +37,6 @@ describe('LoadFixture', () => {
             expect(data).toBeDefined();
             expect(data).not.toBeNull();
         }
-    });
-
-    it('returns the flakiness fixture as an array', () => {
-        const data = loadFixture<Array<Record<string, unknown>>>('flakiness', FIXTURES_DIR);
-
-        expect(Array.isArray(data)).toBeTruthy();
     });
 
     it('throws an explicit error when the fixture file is missing', () => {
