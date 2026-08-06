@@ -4,6 +4,9 @@ import os from 'os';
 import { execFileSync } from 'child_process';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FsStoreBackend, GitStoreBackend, detectStoreBackend, detectProjectGitDir } from '../infra/store-backend.js';
+import { rootLogger } from '../logger.js';
+
+vi.mock('../logger.js');
 
 const GIT_BIN = '/usr/bin/git';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-store-backend-test-'));
@@ -104,6 +107,73 @@ describe('Store Backend', () => {
 
             expect(result?.toString()).toBe('not valid buffer');
         });
+
+        it('read returns null WITHOUT warning on ENOENT (missing file)', () => {
+            const dir = path.join(tmpDir, 'fs-read-enoent-silent');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+            vi.clearAllMocks();
+
+            expect(backend.read('nonexistent.json')).toBeNull();
+
+            expect(rootLogger['warn']).not.toHaveBeenCalled();
+        });
+
+        it('read returns null AND warns on a non-ENOENT fs error (directory read → EISDIR)', () => {
+            const dir = path.join(tmpDir, 'fs-read-eisdir');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+            backend.write('subdir/x', Buffer.from(''));
+            vi.clearAllMocks();
+
+            expect(backend.read('subdir')).toBeNull();
+
+            expect(rootLogger['warn']).toHaveBeenCalledTimes(1);
+            expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('FsStoreBackend: read failed'));
+        });
+
+        it('atomicWrite writes content and leaves no temp file behind', () => {
+            const dir = path.join(tmpDir, 'fs-atomic-ok');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+
+            backend.atomicWrite('data.json', Buffer.from('atomic content'));
+
+            expect(backend.read('data.json')?.toString()).toBe('atomic content');
+        });
+
+        it('atomicWrite throws when the rename target is an existing non-empty directory', () => {
+            const dir = path.join(tmpDir, 'fs-atomic-fail');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+            backend.write('data.json/x', Buffer.from('x'));
+
+            expect(() => backend.atomicWrite('data.json', Buffer.from('data'))).toThrow(
+                'FsStoreBackend: falha ao escrever atomicamente',
+            );
+        });
+
+        it('remove deletes an existing file and is idempotent for missing files', () => {
+            const dir = path.join(tmpDir, 'fs-remove-ok');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+            backend.write('data.json', Buffer.from('x'));
+
+            expect(() => backend.remove('data.json')).not.toThrow();
+            expect(backend.exists('data.json')).toBeFalsy();
+
+            expect(() => backend.remove('data.json')).not.toThrow();
+            expect(() => backend.remove('never-existed.json')).not.toThrow();
+        });
+
+        it('remove throws on a filesystem error (path under a regular file → ENOTDIR)', () => {
+            const dir = path.join(tmpDir, 'fs-remove-fail');
+            const backend = new FsStoreBackend(dir);
+            backend.init();
+            backend.write('blocker', Buffer.from('file'));
+
+            expect(() => backend.remove('blocker/x.json')).toThrow('FsStoreBackend: falha ao remover');
+        });
     });
 
     describe('GitStoreBackend', () => {
@@ -158,6 +228,30 @@ describe('Store Backend', () => {
             const full = path.join(dir, '.qa-tools', 'data.json');
 
             expect(fs.existsSync(path.resolve(full))).toBeTruthy();
+        });
+
+        it('read returns null WITHOUT warning on ENOENT (missing file)', () => {
+            const dir = path.join(tmpDir, 'git-read-enoent-silent');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+            vi.clearAllMocks();
+
+            expect(backend.read('nonexistent.json')).toBeNull();
+
+            expect(rootLogger['warn']).not.toHaveBeenCalled();
+        });
+
+        it('read returns null AND warns on a non-ENOENT fs error (directory read → EISDIR)', () => {
+            const dir = path.join(tmpDir, 'git-read-eisdir');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+            backend.write('subdir/x', Buffer.from(''));
+            vi.clearAllMocks();
+
+            expect(backend.read('subdir')).toBeNull();
+
+            expect(rootLogger['warn']).toHaveBeenCalledTimes(1);
+            expect(rootLogger['warn']).toHaveBeenCalledWith(expect.stringContaining('GitStoreBackend: read failed'));
         });
 
         it('pre-existing git repo is not re-initialized', () => {
@@ -246,6 +340,52 @@ describe('Store Backend', () => {
 
             spy.mockRestore();
             readSpy.mockRestore();
+        });
+
+        it('atomicWrite writes content and leaves no temp file behind', () => {
+            const dir = path.join(tmpDir, 'git-atomic-ok');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+
+            backend.atomicWrite('data.json', Buffer.from('atomic content'));
+
+            expect(backend.read('data.json')?.toString()).toBe('atomic content');
+        });
+
+        it('atomicWrite throws and leaves no temp file behind when the write fails', () => {
+            const dir = path.join(tmpDir, 'git-atomic-fail');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+            backend.write('blocker', Buffer.from('file'));
+            vi.clearAllMocks();
+
+            expect(() => backend.atomicWrite('blocker/x.json', Buffer.from('data'))).toThrow(
+                'GitStoreBackend: falha ao escrever atomicamente',
+            );
+
+            expect(backend.exists('blocker/x.json')).toBeFalsy();
+        });
+
+        it('remove deletes an existing file and is idempotent for missing files', () => {
+            const dir = path.join(tmpDir, 'git-remove-ok');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+            backend.write('data.json', Buffer.from('x'));
+
+            expect(() => backend.remove('data.json')).not.toThrow();
+            expect(backend.exists('data.json')).toBeFalsy();
+
+            expect(() => backend.remove('data.json')).not.toThrow();
+            expect(() => backend.remove('never-existed.json')).not.toThrow();
+        });
+
+        it('remove throws on a filesystem error (path under a regular file → ENOTDIR)', () => {
+            const dir = path.join(tmpDir, 'git-remove-fail');
+            const backend = new GitStoreBackend(dir, '.');
+            backend.init();
+            backend.write('blocker', Buffer.from('file'));
+
+            expect(() => backend.remove('blocker/x.json')).toThrow('GitStoreBackend: falha ao remover');
         });
 
         it('exists checks file existence', () => {
@@ -445,6 +585,43 @@ describe('Store Backend', () => {
                 else delete process.env['XDG_STATE_HOME'];
                 if (origHome) process.env['HOME'] = origHome;
                 else delete process.env['HOME'];
+            }
+        });
+
+        it('uses FsStoreBackend at <dir>/.qa-tools when QA_PROJECT_DIR is not a git repo', () => {
+            const proj = path.join(tmpDir, 'proj-qaproj-fs');
+            const prev = process.env['QA_PROJECT_DIR'];
+            process.env['QA_PROJECT_DIR'] = proj;
+            try {
+                const backend = detectStoreBackend();
+
+                expect(backend.constructor.name).toBe('FsStoreBackend');
+
+                backend.init();
+
+                expect(backend.exists('.')).toBeTruthy();
+            } finally {
+                if (prev) process.env['QA_PROJECT_DIR'] = prev;
+                else delete process.env['QA_PROJECT_DIR'];
+            }
+        });
+
+        it('uses GitStoreBackend at <dir>/.qa-tools when QA_PROJECT_DIR is a git repo', () => {
+            const proj = path.join(tmpDir, 'proj-qaproj-git');
+            new GitStoreBackend(proj, '.qa-tools').init();
+            const prev = process.env['QA_PROJECT_DIR'];
+            process.env['QA_PROJECT_DIR'] = proj;
+            try {
+                const backend = detectStoreBackend();
+
+                expect(backend.constructor.name).toBe('GitStoreBackend');
+
+                backend.init();
+
+                expect(backend.exists('.')).toBeTruthy();
+            } finally {
+                if (prev) process.env['QA_PROJECT_DIR'] = prev;
+                else delete process.env['QA_PROJECT_DIR'];
             }
         });
     });

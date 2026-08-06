@@ -92,7 +92,7 @@ describe('DataHub report retention (C-12)', () => {
         );
     }
 
-    function seedBranchIndex(branches: Record<string, Array<{ sha: string; timestamp: number }>>): void {
+    function seedBranchIndex(branches: Record<string, unknown>): void {
         backend.write(`reports/${project}/branch-index.json`, Buffer.from(JSON.stringify(branches, null, 2), 'utf8'));
     }
 
@@ -211,6 +211,45 @@ describe('DataHub report retention (C-12)', () => {
 
         expect(entries.map((e) => e.sha)).not.toContain('sha1');
         expect(entries.map((e) => e.sha)).not.toContain('sha2');
+    });
+
+    it('rewrites branch indexes handling empty and non-array entries while preserving kept branches', () => {
+        expect.hasAssertions();
+
+        seedBranchIndex({
+            kept: [{ sha: 'sha7', timestamp: 1_007 }],
+            empty: [],
+            garbage: 'not-an-array',
+        });
+        process.env['REPORT_RETENTION_COUNT'] = '5';
+        for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
+
+        expect(() => store.pruneReports(false)).not.toThrow();
+
+        const entries = branchIndex()['kept'] ?? [];
+
+        expect(entries.map((e) => e.sha)).toStrictEqual(['sha7']);
+        expect(branchIndex()['empty']).toBeUndefined();
+        expect(branchIndex()['garbage']).toBeUndefined();
+    });
+
+    it('keeps foreign-project entries in the global index when pruning this project', () => {
+        expect.hasAssertions();
+
+        for (let i = 1; i <= 7; i++) addRun('sha' + i, 1_000 + i);
+
+        const glob = globalIndex();
+        glob['sha2'] = { ...makeMeta('sha2', 1_002), project: 'other-proj' };
+        backend.write('reports/index.json', Buffer.from(JSON.stringify(glob, null, 2)));
+
+        process.env['REPORT_RETENTION_COUNT'] = '5';
+        store.pruneReports(false);
+
+        const after = globalIndex();
+
+        expect(after['sha2']).toBeDefined();
+        expect(after['sha2']?.project).toBe('other-proj');
+        expect(after['sha1']).toBeUndefined();
     });
 
     it('max-age only removes runs older than the threshold', () => {
