@@ -72,7 +72,7 @@ export function extractLatestRunSnapshots(runs: MetricsRun[]): {
 } {
     const statusByTitle = new Map<string, TestStatus>();
     const durationByTitle = new Map<string, number>();
-    const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
+    const latestRun = selectLatestRun(runs);
     if (latestRun) {
         for (const t of latestRun.tests) {
             statusByTitle.set(t.title, t.state);
@@ -80,6 +80,25 @@ export function extractLatestRunSnapshots(runs: MetricsRun[]): {
         }
     }
     return { statusByTitle, durationByTitle };
+}
+
+/**
+ * Select the run with the latest valid timestamp (order-independent).
+ * Prevents recurrence regardless of producer sort order (C-4 fix).
+ */
+function selectLatestRun(runs: MetricsRun[]): MetricsRun | null {
+    let latest: MetricsRun | null = null;
+    let latestTime = Number.NEGATIVE_INFINITY;
+    if (!Array.isArray(runs)) return null;
+    for (const run of runs) {
+        const time = new Date(run.timestamp).getTime();
+        if (!Number.isFinite(time)) continue;
+        if (time > latestTime) {
+            latest = run;
+            latestTime = time;
+        }
+    }
+    return latest;
 }
 
 export function groupItemsByEpic(items?: CoverageGapItem[]): Map<string, CoverageGapItem[]> {

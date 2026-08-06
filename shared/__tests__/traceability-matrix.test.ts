@@ -374,6 +374,55 @@ describe('BuildTraceabilityMatrix', () => {
         expect(firstTest?.flakiness).toBe(0.5);
         expect(firstTest?.status).toBe('passed');
     });
+
+    it('bases snapshots on the LATEST run by timestamp, not the last array element (C-4 — producer contract: newest-first)', () => {
+        const metrics: MetricsRun[] = [
+            {
+                timestamp: '2026-01-03T00:00:00.000Z',
+                project: 'test',
+                total: 1,
+                passed: 1,
+                failed: 0,
+                skipped: 0,
+                duration: 30,
+                tests: [{ title: 'TC-001', state: 'passed', duration: 30 }],
+            },
+            {
+                timestamp: '2026-01-02T00:00:00.000Z',
+                project: 'test',
+                total: 1,
+                passed: 0,
+                failed: 1,
+                skipped: 0,
+                duration: 50,
+                tests: [{ title: 'TC-001', state: 'failed', duration: 50 }],
+            },
+            {
+                timestamp: '2026-01-01T00:00:00.000Z',
+                project: 'test',
+                total: 1,
+                passed: 1,
+                failed: 0,
+                skipped: 0,
+                duration: 100,
+                tests: [{ title: 'TC-001', state: 'skipped', duration: 100 }],
+            },
+        ];
+        const result = matrix(
+            metrics,
+            {
+                items: [{ epic: 'EPIC-1', hasTest: true, linkedTestKeys: ['TC-001'], issueKey: 'STORY-1' }],
+                totals: { total: 1, covered: 1 },
+                byEpic: { 'EPIC-1': { total: 1, covered: 1, rawPct: 100 } },
+            },
+            [{ title: 'TC-001', rate: 50, runs: 3 }],
+        );
+
+        const firstTest = nonNull(nonNull(result.nodes[0]).stories[0]).tests[0];
+
+        // Latest run (2026-01-03) says 'passed'. Current code picks [length-1] = 2026-01-01 (oldest) → 'skipped' (WRONG).
+        expect(firstTest?.status).toBe('passed');
+    });
 });
 
 describe('GenerateTraceabilityHtml', () => {
