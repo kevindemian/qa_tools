@@ -7,6 +7,7 @@ import {
     validateConfigValues,
     warnUnknownEnv,
     validateAll,
+    validateRetentionPolicy,
 } from '../validation/config-validator.js';
 
 describe('ValidateRequiredEnv', () => {
@@ -210,6 +211,51 @@ describe('WarnUnknownEnv', () => {
         const warnings = warnUnknownEnv();
 
         expect(warnings).toStrictEqual([]);
+    });
+});
+
+describe('ValidateRetentionPolicy', () => {
+    const KNOBS = ['REPORT_RETENTION_COUNT', 'REPORT_RETENTION_MAX_AGE_DAYS'];
+
+    afterEach(() => {
+        for (const k of KNOBS) Reflect.deleteProperty(process.env, k);
+    });
+
+    it('accepts unset / empty (policy off)', () => {
+        expect(() => validateRetentionPolicy()).not.toThrow();
+
+        process.env['REPORT_RETENTION_COUNT'] = '';
+
+        expect(() => validateRetentionPolicy()).not.toThrow();
+    });
+
+    it('accepts valid integers >= 0', () => {
+        process.env['REPORT_RETENTION_COUNT'] = '0';
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '30';
+
+        expect(() => validateRetentionPolicy()).not.toThrow();
+    });
+
+    it('fails high on negative values', () => {
+        process.env['REPORT_RETENTION_COUNT'] = '-1';
+
+        expect(() => validateRetentionPolicy()).toThrow(/REPORT_RETENTION_COUNT/);
+
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_COUNT');
+        process.env['REPORT_RETENTION_MAX_AGE_DAYS'] = '-3';
+
+        expect(() => validateRetentionPolicy()).toThrow(/REPORT_RETENTION_MAX_AGE_DAYS/);
+    });
+
+    it('fails high on non-integer values', () => {
+        process.env['REPORT_RETENTION_COUNT'] = 'abc';
+
+        expect(() => validateRetentionPolicy()).toThrow(/REPORT_RETENTION_COUNT/);
+
+        Reflect.deleteProperty(process.env, 'REPORT_RETENTION_COUNT');
+        process.env['REPORT_RETENTION_COUNT'] = '5.5';
+
+        expect(() => validateRetentionPolicy()).toThrow(/REPORT_RETENTION_COUNT/);
     });
 });
 

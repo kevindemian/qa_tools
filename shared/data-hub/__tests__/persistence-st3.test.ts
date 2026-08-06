@@ -28,6 +28,14 @@ class MemoryBackend implements StoreBackend {
         this.store.set(relPath, data);
     }
 
+    atomicWrite(relPath: string, data: Buffer): void {
+        this.store.set(relPath, data);
+    }
+
+    remove(relPath: string): void {
+        this.store.delete(relPath);
+    }
+
     flush(_message: string): void {
         /* no-op for memory */
     }

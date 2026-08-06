@@ -149,6 +149,8 @@ describe('DataHub test-result cache', () => {
                 init: () => {},
                 read: () => null,
                 write: () => {},
+                atomicWrite: () => {},
+                remove: () => {},
                 exists: () => false,
             };
             const spy = vi.spyOn(mockBackend, 'flush');
@@ -167,6 +169,10 @@ describe('DataHub test-result cache', () => {
                 write: () => {
                     throw new Error('ENOSPC');
                 },
+                atomicWrite: () => {
+                    throw new Error('ENOSPC');
+                },
+                remove: () => {},
                 exists: () => false,
                 flush: () => {},
             };
@@ -184,6 +190,8 @@ describe('DataHub test-result cache', () => {
                     throw new Error('EACCES');
                 },
                 write: () => {},
+                atomicWrite: () => {},
+                remove: () => {},
                 exists: () => false,
                 flush: () => {},
             };
@@ -202,6 +210,8 @@ describe('DataHub test-result cache', () => {
                     throw new Error('EACCES');
                 },
                 write: () => {},
+                atomicWrite: () => {},
+                remove: () => {},
                 exists: () => false,
                 flush: () => {},
             };
@@ -217,6 +227,8 @@ describe('DataHub test-result cache', () => {
                 init: () => {},
                 read: () => Buffer.from('{"main": {"sha": "abc", "timestamp": 123}}', 'utf8'),
                 write: () => {},
+                atomicWrite: () => {},
+                remove: () => {},
                 exists: () => false,
                 flush: () => {},
             };

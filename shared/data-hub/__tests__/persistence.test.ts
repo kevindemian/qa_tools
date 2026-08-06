@@ -21,6 +21,12 @@ function createMockBackend(): StoreBackend & { data: Map<string, Buffer>; flushF
         write: vi.fn((path: string, content: Buffer) => {
             data.set(path, content);
         }),
+        atomicWrite: vi.fn((path: string, content: Buffer) => {
+            data.set(path, content);
+        }),
+        remove: vi.fn((path: string) => {
+            data.delete(path);
+        }),
         flush: flushFn,
         exists: vi.fn((path: string) => data.has(path)),
         flushFn,

@@ -148,6 +148,23 @@ export function createDataHubFromParseResult(
     return DataHubImpl.createFromParseResult(parseResult, repo, p);
 }
 
+/**
+ * Create a maintenance-only DataHub for a project: an empty hub backed by the
+ * project's real persistence, with NO data fetch and NO Layer 7 fallback.
+ *
+ * Used by the manual `--prune-reports` command (C-12): the retention policy
+ * operates exclusively on persisted report indexes, so no providers are needed.
+ * G1: `git_triggers` MUST consume DataHub through these public factories, never
+ * by importing `createDataHubPersistence` directly.
+ *
+ * @param project - Project name (scopes the persisted reports).
+ * @param persistence - Optional pre-built persistence (tests inject mocks).
+ */
+export function createDataHubForMaintenance(project: string, persistence?: DataHubPersistence): DataHub {
+    const p = persistence ?? createDataHubPersistence(project);
+    return DataHubImpl.createEmpty('github', project, p);
+}
+
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);

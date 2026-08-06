@@ -31,6 +31,8 @@ const BATCH_ARGS: BatchCliArgs = {
     conservative: false,
     teKey: undefined,
     dryRun: false,
+    pruneReports: false,
+    force: false,
 };
 
 const BASE_ARGS = { mode: 'interactive' as const, help: false, version: false, noClear: false };

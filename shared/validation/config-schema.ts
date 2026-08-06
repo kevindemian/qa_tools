@@ -717,6 +717,22 @@ export const CONFIG_SCHEMA: ConfigField[] = [
         description: 'Max cached CTRF reports retained (prune oldest on save)',
     },
     {
+        key: 'reportRetentionCount',
+        envVar: 'REPORT_RETENTION_COUNT',
+        type: 'number',
+        category: 'qa-tools',
+        defaultVal: 0,
+        description: 'Report retention: keep the last N cached reports per project (0 = off)',
+    },
+    {
+        key: 'reportRetentionMaxAgeDays',
+        envVar: 'REPORT_RETENTION_MAX_AGE_DAYS',
+        type: 'number',
+        category: 'qa-tools',
+        defaultVal: 0,
+        description: 'Report retention safety net: max age in days (0 = off)',
+    },
+    {
         key: 'opencodeDbTimeoutMs',
         envVar: 'OPENCODE_DB_TIMEOUT_MS',
         type: 'number',

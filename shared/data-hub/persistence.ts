@@ -9,6 +9,8 @@
  */
 import { rootLogger } from '../logger.js';
 import { getErrorMessage } from '../errors.js';
+import Config from '../config-accessor.js';
+import { validateRetentionPolicy } from '../validation/config-validator.js';
 import { detectProjectGitDir, detectStoreBackend } from '../infra/store-backend.js';
 import type { StoreBackend } from '../infra/store-backend.js';
 import type {
@@ -145,6 +147,158 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
         const data = readJson<T>(b, relPath);
         return data ?? null;
     };
+
+    // ─── Report retention policy (C-12) ─────────────────────────────────────
+    // Opt-in, default OFF (both knobs 0 = no-op, §10 retrocompatível). The
+    // policy is a SAFETY MECHANISM (it deletes persisted reports), so it fails
+    // HIGH on invalid values via validateRetentionPolicy (Regra 24).
+    interface RetentionPolicy {
+        count: number;
+        maxAgeDays: number;
+    }
+
+    function readRetentionPolicy(): RetentionPolicy {
+        validateRetentionPolicy();
+        return {
+            count: Config.get<number>('reportRetentionCount'),
+            maxAgeDays: Config.get<number>('reportRetentionMaxAgeDays'),
+        };
+    }
+
+    function writeJsonAtomic<T>(relPath: string, data: T): void {
+        try {
+            b.atomicWrite(relPath, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
+        } catch (err: unknown) {
+            const raw = extractErrorMessage(err);
+            const known = humanizeError(raw);
+            rootLogger.error(
+                `data-hub-persistence: falha ao reescrever atomicamente ${relPath} — ${known ? known.msg : raw}`,
+            );
+            throw err;
+        }
+    }
+
+    function collectProtectedShas(branchIndex: Record<string, BranchEntry[]>): Set<string> {
+        const protectedShas = new Set<string>();
+        for (const entries of Object.values(branchIndex)) {
+            if (!Array.isArray(entries) || entries.length === 0) continue;
+            const newest = entries.reduce((a, e) => (e.timestamp > a.timestamp ? e : a), entries[0] as BranchEntry);
+            protectedShas.add(newest.sha);
+        }
+        return protectedShas;
+    }
+
+    function computeKeepSet(
+        sorted: Array<[string, ReportMeta]>,
+        protectedShas: Set<string>,
+        now: number,
+        maxAgeMs: number,
+        count: number,
+    ): Set<string> {
+        const keep = new Set<string>();
+        if (count > 0) {
+            const newestCount = Math.min(count, sorted.length);
+            for (let i = 0; i < newestCount; i++) {
+                const entry = sorted[i];
+                if (entry) keep.add(entry[0]);
+            }
+        }
+        if (maxAgeMs > 0) {
+            for (const [sha, meta] of sorted) {
+                if (meta.timestamp >= now - maxAgeMs) keep.add(sha);
+            }
+        }
+        for (const sha of protectedShas) keep.add(sha);
+        return keep;
+    }
+
+    function rewriteIndexes(
+        removedSet: Set<string>,
+        globalIndex: Record<string, ReportMeta>,
+        projIndex: Record<string, ReportMeta>,
+        branchIndex: Record<string, BranchEntry[]>,
+    ): void {
+        const newBranchIndex: Record<string, BranchEntry[]> = {};
+        for (const [branch, entries] of Object.entries(branchIndex)) {
+            if (!Array.isArray(entries)) continue;
+            const filtered = entries.filter((e) => !removedSet.has(e.sha));
+            if (filtered.length > 0) newBranchIndex[branch] = filtered;
+        }
+        writeJsonAtomic(`reports/${_project}/branch-index.json`, newBranchIndex);
+
+        const newProjIndex: Record<string, ReportMeta> = {};
+        for (const [sha, meta] of Object.entries(projIndex)) {
+            if (!removedSet.has(sha)) newProjIndex[sha] = meta;
+        }
+        writeJsonAtomic(`reports/${_project}/index.json`, newProjIndex);
+
+        const newGlobalIndex: Record<string, ReportMeta> = {};
+        for (const [sha, meta] of Object.entries(globalIndex)) {
+            if (meta.project === _project && removedSet.has(sha)) continue;
+            newGlobalIndex[sha] = meta;
+        }
+        writeJsonAtomic('reports/index.json', newGlobalIndex);
+    }
+
+    function deleteRemovedReports(removed: string[]): void {
+        for (const sha of removed) {
+            try {
+                b.remove(`reports/${_project}/${sha}.json`);
+            } catch (err: unknown) {
+                const raw = extractErrorMessage(err);
+                const known = humanizeError(raw);
+                rootLogger.error(
+                    `data-hub-persistence: falha ao remover reports/${_project}/${sha}.json — ${known ? known.msg : raw}`,
+                );
+                throw err;
+            }
+            rootLogger.info(`data-hub-persistence: prune removeu reports/${_project}/${sha}.json (retenção)`);
+        }
+    }
+
+    /**
+     * Enforce the report retention policy. Removes cached `{sha}.json` reports
+     * that are NOT in the last N runs AND NOT younger than the max age, then
+     * rewrites global/project/branch indexes consistently. Protected: newest
+     * entry per branch (consumers rely on `getBranch(...)[0]`).
+     *
+     * Ordering note (deviation from plan literal order, documented): indexes are
+     * rewritten BEFORE the report files are deleted, so no index ever references
+     * a removed file (no dangling refs at any intermediate step). A failed file
+     * deletion leaves only an orphaned file (harmless, unreferenced), never a
+     * dangling index entry. Each index rewrite is atomic (temp-file + rename);
+     * on failure nothing is committed (git backend) and an error is logged +
+     * rethrown (Regra 25 — never silent).
+     */
+    function pruneReports(dryRun: boolean): string[] {
+        const policy = readRetentionPolicy();
+        if (policy.count <= 0 && policy.maxAgeDays <= 0) return [];
+
+        const now = Date.now();
+        const maxAgeMs = policy.maxAgeDays > 0 ? policy.maxAgeDays * 86_400_000 : 0;
+
+        const globalIndex = readJson<Record<string, ReportMeta>>(b, 'reports/index.json') ?? {};
+        const projIndex = readJson<Record<string, ReportMeta>>(b, `reports/${_project}/index.json`) ?? {};
+        const branchIndex = readJson<Record<string, BranchEntry[]>>(b, `reports/${_project}/branch-index.json`) ?? {};
+
+        const sorted = Object.entries(projIndex).sort((a, z) => z[1].timestamp - a[1].timestamp);
+        const keep = computeKeepSet(sorted, collectProtectedShas(branchIndex), now, maxAgeMs, policy.count);
+
+        const removed = sorted.filter(([sha]) => !keep.has(sha)).map(([sha]) => sha);
+        if (removed.length === 0) return [];
+
+        if (dryRun) {
+            for (const sha of removed) {
+                rootLogger.info(`data-hub-persistence: prune (dry-run) removeria reports/${_project}/${sha}.json`);
+            }
+            return removed;
+        }
+
+        rewriteIndexes(new Set(removed), globalIndex, projIndex, branchIndex);
+        deleteRemovedReports(removed);
+
+        return removed;
+    }
 
     return {
         saveRun(_sha: string, run: MetricsRun): void {
@@ -297,6 +451,15 @@ export function createDataHubPersistence(_project: string, backend?: StoreBacken
             const projEntries = Object.entries(projIndex).filter(([k]) => k !== sha);
             projEntries.push([sha, meta]);
             writeJson(b, `reports/${_project}/index.json`, Object.fromEntries(projEntries));
+
+            const policy = readRetentionPolicy();
+            if (policy.count > 0 || policy.maxAgeDays > 0) {
+                pruneReports(false);
+            }
+        },
+
+        pruneReports(dryRun?: boolean): string[] {
+            return pruneReports(dryRun ?? false);
         },
 
         getBranch(branch: string): BranchEntry[] {

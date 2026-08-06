@@ -12,6 +12,15 @@ export interface StoreBackend {
     init(): void;
     read(relPath: string): Buffer | null;
     write(relPath: string, data: Buffer): void;
+    /**
+     * Atomic write: write via temp-file + rename (same directory), so a reader
+     * never observes a partially-written file. Required by the retention
+     * sanitation (C-12) to guarantee indexes never sit in a partial state (Regra 7).
+     * Failure throws; on failure the target file is left untouched.
+     */
+    atomicWrite(relPath: string, data: Buffer): void;
+    /** Remove a file. Idempotent — missing file is not an error. */
+    remove(relPath: string): void;
     exists(relPath: string): boolean;
     flush(message: string): void;
 }
@@ -71,6 +80,38 @@ export class GitStoreBackend implements StoreBackend {
         }
     }
 
+    atomicWrite(relPath: string, data: Buffer): void {
+        const full = path.resolve(sanitizePath(this.fullPath, relPath));
+        const tmp = path.join(path.dirname(full), `.${path.basename(full)}.qa-tools-tmp-${process.pid}`);
+        try {
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(tmp, data);
+            fs.renameSync(tmp, full);
+        } catch (err) {
+            try {
+                fs.rmSync(tmp, { force: true });
+            } catch (cleanupErr) {
+                rootLogger.warn(`GitStoreBackend: falha ao limpar arquivo temporário ${tmp} — ${String(cleanupErr)}`);
+            }
+            const msg = String(err);
+            throw new Error(`GitStoreBackend: falha ao escrever atomicamente ${relPath} — ${msg}`, {
+                cause: err,
+            });
+        }
+    }
+
+    remove(relPath: string): void {
+        const full = sanitizePath(this.fullPath, relPath);
+        try {
+            fs.rmSync(path.resolve(full), { force: true });
+        } catch (err) {
+            const msg = String(err);
+            throw new Error(`GitStoreBackend: falha ao remover ${relPath} — ${msg}`, {
+                cause: err,
+            });
+        }
+    }
+
     exists(relPath: string): boolean {
         return fs.existsSync(sanitizePath(this.fullPath, relPath));
     }
@@ -117,6 +158,36 @@ export class FsStoreBackend implements StoreBackend {
         } catch (err) {
             const msg = String(err);
             throw new Error(`FsStoreBackend: falha ao escrever ${relPath} — ${msg}`, { cause: err });
+        }
+    }
+
+    atomicWrite(relPath: string, data: Buffer): void {
+        const full = path.resolve(path.join(this.baseDir, relPath));
+        const tmp = path.join(path.dirname(full), `.${path.basename(full)}.qa-tools-tmp-${process.pid}`);
+        try {
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(tmp, data);
+            fs.renameSync(tmp, full);
+        } catch (err) {
+            try {
+                fs.rmSync(tmp, { force: true });
+            } catch (cleanupErr) {
+                rootLogger.warn(`FsStoreBackend: falha ao limpar arquivo temporário ${tmp} — ${String(cleanupErr)}`);
+            }
+            const msg = String(err);
+            throw new Error(`FsStoreBackend: falha ao escrever atomicamente ${relPath} — ${msg}`, {
+                cause: err,
+            });
+        }
+    }
+
+    remove(relPath: string): void {
+        const full = path.join(this.baseDir, relPath);
+        try {
+            fs.rmSync(path.resolve(full), { force: true });
+        } catch (err) {
+            const msg = String(err);
+            throw new Error(`FsStoreBackend: falha ao remover ${relPath} — ${msg}`, { cause: err });
         }
     }
 

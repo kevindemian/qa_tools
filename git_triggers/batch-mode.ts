@@ -254,6 +254,32 @@ async function triggerAndCollectBatchPipeline(
     );
 }
 
+/**
+ * Manual report-retention prune command (C-12): `--prune-reports` is a dry-run;
+ * `--prune-reports --force` executes. G1: accesses DataHub via the public
+ * `createDataHubForMaintenance` factory (maintenance-only, no data fetch).
+ */
+async function _runPruneCommand(projectName: string, force: boolean): Promise<boolean> {
+    const { createDataHubForMaintenance } = await import('../shared/data-hub/factory.js');
+    const hub = createDataHubForMaintenance(projectName);
+    const removed = hub.pruneReports(!force);
+    if (removed.length === 0) {
+        info('Nenhum relatório excede a política de retenção para ' + projectName + '.');
+    } else if (!force) {
+        info(
+            '--prune-reports (dry-run): ' +
+                removed.length +
+                ' relatório(s) seriam removidos de ' +
+                projectName +
+                '. Use --force para executar.',
+        );
+    } else {
+        hub.flush('prune: retenção de relatórios');
+        success('Prune concluído: ' + removed.length + ' relatório(s) removido(s) de ' + projectName + '.');
+    }
+    return true;
+}
+
 function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
     if (!projectName) return;
     const hub = getDataHub();
@@ -290,6 +316,10 @@ export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
     if (!setup) return true;
 
     info('Modo batch: ' + setup.projectName + ' @ ' + setup.branch);
+
+    if (batch.pruneReports) {
+        return _runPruneCommand(setup.projectName, batch.force);
+    }
 
     let jiraResource: JiraClient | undefined;
     let linkManager: JiraLinkManager | undefined;

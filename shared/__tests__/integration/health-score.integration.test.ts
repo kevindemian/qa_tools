@@ -303,6 +303,7 @@ describe('Integration: Health Score', () => {
                 saveReport: vi.fn(),
                 put: vi.fn(),
                 getBranch: vi.fn(),
+                pruneReports: vi.fn(),
                 loadMetrics: vi.fn(),
                 saveMetrics: vi.fn(),
                 ...makeDataHubGetters(),

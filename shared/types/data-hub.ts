@@ -1044,6 +1044,8 @@ export interface DataHub {
     put(sha: string, meta: ReportMeta): void;
     /** Load branch→SHA index entries for a branch (may be empty). */
     getBranch(branch: string): BranchEntry[];
+    /** Enforce the report retention policy. Returns the removed report SHAs. */
+    pruneReports(dryRun?: boolean): string[];
 
     // ─── Legacy metrics blob (quality-gated) — owned by DataHub (SSOT) ───────
     /** Load project metrics blob (legacy metrics.json). */
@@ -1186,6 +1188,17 @@ export interface DataHubPersistence {
     loadMetrics<T = Record<string, unknown>>(): T | null;
     /** Save project metrics blob (legacy metrics.json). */
     saveMetrics<T = Record<string, unknown>>(data: T): void;
+
+    /**
+     * Enforce the report retention policy (REPORT_RETENTION_COUNT /
+     * REPORT_RETENTION_MAX_AGE_DAYS). Removes cached reports outside the keep-set
+     * and rewrites global/project/branch indexes consistently (atomic, no
+     * dangling refs). Default (both knobs 0) is a no-op.
+     * @param dryRun - When true, computes and logs the would-be removals without
+     * touching the store.
+     * @returns The removed report SHAs.
+     */
+    pruneReports(dryRun?: boolean): string[];
 
     /** Flush changes to disk. */
     flush(message: string): void;

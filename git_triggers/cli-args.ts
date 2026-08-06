@@ -25,6 +25,10 @@ export interface BatchCliArgs extends BaseCliArgs {
     conservative: boolean;
     teKey: string | undefined;
     dryRun: boolean;
+    /** Run the report retention prune command (dry-run unless `force`). */
+    pruneReports: boolean;
+    /** Execute the prune (with `--prune-reports`). Without it, prune is dry-run. */
+    force: boolean;
 }
 
 export interface InteractiveCliArgs extends BaseCliArgs {
@@ -97,6 +101,12 @@ function parseBatchFlag(args: string[], i: number, result: BatchCliArgs): number
         case '--dry-run':
             result.dryRun = true;
             return i;
+        case '--prune-reports':
+            result.pruneReports = true;
+            return i;
+        case '--force':
+            result.force = true;
+            return i;
         case '--te-key':
         case '-k':
             if (val !== undefined) {
@@ -124,6 +134,8 @@ export function parseCliArgs(): CliArgs {
             '--run-impacted-tests',
             '--conservative',
             '--dry-run',
+            '--prune-reports',
+            '--force',
             '--te-key',
             '-k',
         ].includes(arg),
@@ -160,6 +172,8 @@ export function parseCliArgs(): CliArgs {
             conservative: false,
             teKey: undefined,
             dryRun: false,
+            pruneReports: false,
+            force: false,
         };
 
         let idx = 0;
@@ -221,6 +235,8 @@ export function printUsage(packageVersion: string): void {
         '  --run-impacted-tests Run test impact selection',
         '  --conservative       Conservative test selection mode',
         '  --dry-run            Show execution plan without running',
+        '  --prune-reports       Prune cached reports per retention policy (dry-run)',
+        '  --force               Execute the prune (with --prune-reports)',
         '  --te-key, -k <key>   Test execution key for Jira',
         '',
         'Global options:',

@@ -285,6 +285,7 @@ describe('Session-state', () => {
                 saveReport: vi.fn(),
                 put: vi.fn(),
                 getBranch: vi.fn(),
+                pruneReports: vi.fn().mockReturnValue([]),
                 loadMetrics: vi.fn(),
                 saveMetrics: vi.fn(),
             });

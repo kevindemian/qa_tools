@@ -75,6 +75,7 @@ describe('ST-1 hub delegates to persistence', () => {
         const saveReport = vi.fn<(sha: string, tests: FlatTest[]) => void>();
         const put = vi.fn<(sha: string, meta: ReportMeta) => void>();
         const getBranch = vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]);
+        const pruneReports = vi.fn<(dryRun?: boolean) => string[]>().mockReturnValue([]);
         const loadMetrics = vi.fn<() => null>().mockReturnValue(null);
         const saveMetrics = vi.fn<(data: unknown) => void>();
         const flush = vi.fn<(message: string) => void>();
@@ -111,6 +112,7 @@ describe('ST-1 hub delegates to persistence', () => {
             saveReport,
             put,
             getBranch,
+            pruneReports,
             loadMetrics,
             saveMetrics,
             flush,

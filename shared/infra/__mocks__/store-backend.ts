@@ -3,6 +3,8 @@ function createMockBackend() {
         init: vi.fn(),
         read: vi.fn<(relPath: string) => Buffer | null>().mockReturnValue(null),
         write: vi.fn<(relPath: string, data: Buffer) => void>(),
+        atomicWrite: vi.fn<(relPath: string, data: Buffer) => void>(),
+        remove: vi.fn<(relPath: string) => void>(),
         exists: vi.fn<(relPath: string) => boolean>().mockReturnValue(false),
         flush: vi.fn<(message: string) => void>(),
     };

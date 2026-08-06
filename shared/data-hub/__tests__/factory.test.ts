@@ -84,6 +84,7 @@ function makeMockPersistence(): DataHubPersistence {
         saveReport: vi.fn(),
         put: vi.fn(),
         getBranch: vi.fn().mockReturnValue([]),
+        pruneReports: vi.fn().mockReturnValue([]),
         loadMetrics: vi.fn().mockReturnValue(null),
         saveMetrics: vi.fn(),
         flush: vi.fn(),

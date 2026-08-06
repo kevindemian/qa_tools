@@ -89,6 +89,33 @@ function checkAllowedValues(
     }
 }
 
+const RETENTION_ENV_VARS: Array<{ envVar: string; label: string }> = [
+    { envVar: 'REPORT_RETENTION_COUNT', label: 'REPORT_RETENTION_COUNT (manter últimos N runs por projeto)' },
+    { envVar: 'REPORT_RETENTION_MAX_AGE_DAYS', label: 'REPORT_RETENTION_MAX_AGE_DAYS (idade máxima em dias)' },
+];
+
+/**
+ * Validate the report retention policy before it is used (Regra 24).
+ *
+ * The retention policy is a SAFETY MECHANISM (it deletes persisted reports), so
+ * it must fail HIGH on invalid values instead of silently coercing to a default:
+ * `Config.get` → `toInt` would coerce `REPORT_RETENTION_COUNT="abc"` to 0 (off)
+ * and accept `-1` — both silent, both wrong. This guard reads the raw env value
+ * and throws for anything that is not an integer >= 0.
+ *
+ * Default (unset / empty) is valid and means "policy off" (§10 retrocompatível).
+ */
+export function validateRetentionPolicy(): void {
+    for (const { envVar, label } of RETENTION_ENV_VARS) {
+        const raw = process.env[envVar];
+        if (raw === undefined || raw === '') continue;
+        const value = Number(raw);
+        if (!Number.isInteger(value) || value < 0) {
+            throw new Error(`${label}: "${raw}" inválido — deve ser um inteiro >= 0 (0 = desativado).`);
+        }
+    }
+}
+
 export function validateConfigValues(): string[] {
     const warnings: string[] = [];
 

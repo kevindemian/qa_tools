@@ -120,6 +120,7 @@ export function makeDataHubPersistenceMock(): DataHubPersistence {
         saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
         put: vi.fn<(sha: string, meta: ReportMeta) => void>(),
         getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
+        pruneReports: vi.fn<(dryRun?: boolean) => string[]>().mockReturnValue([]),
         loadMetrics: vi.fn().mockReturnValue(null),
         saveMetrics: vi.fn(),
         flush: vi.fn(),
@@ -280,6 +281,7 @@ export function makeDataHubMock(
         saveReport: vi.fn<(sha: string, tests: FlatTest[]) => void>(),
         put: vi.fn<(sha: string, meta: ReportMeta) => void>(),
         getBranch: vi.fn<(branch: string) => BranchEntry[]>().mockReturnValue([]),
+        pruneReports: vi.fn<(dryRun?: boolean) => string[]>().mockReturnValue([]),
         // ─── Legacy metrics blob ───────────────────────────────────────────────
         loadMetrics: vi.fn(),
         saveMetrics: vi.fn(),

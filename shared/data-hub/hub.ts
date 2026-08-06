@@ -371,6 +371,10 @@ export class DataHubImpl implements DataHub {
         return this.persistence.getBranch(branch);
     }
 
+    pruneReports(dryRun?: boolean): string[] {
+        return this.persistence.pruneReports(dryRun);
+    }
+
     loadMetrics<T = Record<string, unknown>>(): T | null {
         return this.persistence.loadMetrics<T>();
     }
