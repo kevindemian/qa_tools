@@ -227,20 +227,23 @@ function processAnswer(
     answer: string,
     canRetry: boolean,
     canDetails: boolean,
-): 'abort' | 'skip' | 'retry' | 'details' | null {
+    canCreate: boolean,
+): 'abort' | 'skip' | 'retry' | 'create' | 'details' | null {
     if (answer === 'r' && canRetry) return 'retry';
     if (answer === 's') return 'skip';
     if (answer === 'a') return 'abort';
     if (answer === 'd' && canDetails) return 'details';
+    if (answer === 'c' && canCreate) return 'create';
     return null;
 }
 
-function readUserChoice(canRetry: boolean, canDetails: boolean): string {
+function readUserChoice(canRetry: boolean, canDetails: boolean, canCreate: boolean): string {
     const opts: string[] = [];
     if (canRetry) opts.push('[R]etry');
     opts.push('[S]kip');
     opts.push('[A]bort');
     if (canDetails) opts.push('[D]etails');
+    if (canCreate) opts.push('[C]reate');
 
     output.print('  ' + boxDivider());
     output.print('    ' + opts.join('   '));
@@ -259,9 +262,9 @@ function readUserChoice(canRetry: boolean, canDetails: boolean): string {
 export function onError(
     context: string,
     err: unknown,
-    options: { retry?: boolean; details?: boolean } = {},
-): 'abort' | 'skip' | 'retry' {
-    const { retry: canRetry = false, details: canDetails = false } = options;
+    options: { retry?: boolean; details?: boolean; create?: boolean } = {},
+): 'abort' | 'skip' | 'retry' | 'create' {
+    const { retry: canRetry = false, details: canDetails = false, create: canCreate = false } = options;
     const { msg, raw } = _formatErrorMessage(err);
 
     error(`${context}: ${msg}`);
@@ -274,11 +277,12 @@ export function onError(
 
     const MAX_ATTEMPTS = 10;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const answer = readUserChoice(canRetry, canDetails);
+        const answer = readUserChoice(canRetry, canDetails, canCreate);
         if (answer === 'abort') return 'abort';
-        const result = processAnswer(answer, canRetry, canDetails);
+        const result = processAnswer(answer, canRetry, canDetails, canCreate);
         if (result === 'retry') return 'retry';
         if (result === 'skip') return 'skip';
+        if (result === 'create') return 'create';
         if (result === 'details') {
             _showErrorDetails(err);
             continue;
@@ -288,6 +292,7 @@ export function onError(
         opts.push('[S]kip');
         opts.push('[A]bort');
         if (canDetails) opts.push('[D]etails');
+        if (canCreate) opts.push('[C]reate');
         warn('Opção inválida. Escolha ' + opts.join(', '));
     }
     return 'abort';

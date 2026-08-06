@@ -78,7 +78,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
             test,
         });
 
@@ -127,7 +127,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
             test,
         });
 
@@ -172,7 +172,7 @@ describe('clean-slate: _doUpdate passes TestCase data to cleanSlateUpdate', () =
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
             test,
         });
 

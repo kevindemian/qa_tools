@@ -2,7 +2,7 @@
 import { success, warn, info, isQuiet, confirm, prompt } from '../shared/ui/prompt.js';
 import type { JiraResourceLike } from '../shared/types.js';
 import type { XrayStepImporter } from './xray-client.js';
-import type { JsonObject, LogContext, TestCase } from '../shared/types.js';
+import type { ImportMode, JsonObject, LogContext, TestCase } from '../shared/types.js';
 import type { TestStep } from '../shared/types.js';
 import { rootLogger } from '../shared/logger.js';
 import Config from '../shared/config-accessor.js';
@@ -33,7 +33,8 @@ interface CreateIssueParams {
     testIdx: number;
     totalTests: number;
     opLog: { info: (msg: string, meta?: LogContext) => void };
-    skipExisting?: boolean;
+    /** Import strategy: create (always new), update (existing only, never creates), hybrid (update-or-create). */
+    importMode: ImportMode;
     checkOnly?: boolean;
     /** TestCase with steps, preconditions, linkedIssues — used for clean-slate rebuild. */
     test?: TestCase;
@@ -161,7 +162,7 @@ class TestCaseFactory {
         }
 
         try {
-            const jql = `project = "${((testData as Record<string, unknown>)['project'] as string) || ''}" AND summary = "${testTitle.replace(/"/g, '\\"')}"`;
+            const jql = `project = "${((testData as Record<string, unknown>)['project'] as string) || ''}" AND summary ~ "${testTitle.replace(/"/g, '\\"')}"`;
             const existing = await this.jiraResource.searchJiraIssues(jql, 5);
             const normalizedTitle = testTitle.trim().toLowerCase();
             const matches = existing.issues.filter(
@@ -245,12 +246,12 @@ class TestCaseFactory {
     }
 
     async createIssue(params: CreateIssueParams): Promise<CreateIssueResult> {
-        const { testData, testTitle, testIdx, totalTests, opLog, skipExisting } = params;
+        const { testData, testTitle, testIdx, totalTests, opLog, importMode } = params;
 
         const targetKeys = this._getTargetKeys();
         const hasTargetKey = targetKeys && testIdx < targetKeys.length && targetKeys[testIdx];
 
-        if (skipExisting && testTitle) {
+        if (importMode !== 'create' && testTitle) {
             const result = await this._attemptUpdate(params);
             if (result !== null) {
                 if (result.updated) return result;
@@ -273,6 +274,11 @@ class TestCaseFactory {
                     title: testTitle,
                 });
                 return { key: targetKeys?.[testIdx] ?? null, skipped: true };
+            }
+            if (importMode === 'update') {
+                warn('Modo update: nenhuma issue existente para "' + testTitle + '" — issue NAO criada');
+                opLog.info('Modo update: nenhuma issue existente, criacao bloqueada', { title: testTitle });
+                return { skipped: true };
             }
         }
 

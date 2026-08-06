@@ -96,6 +96,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             sessionLog,
             onBusy,
             csvPath,
+            importMode: (Config.get<string>('importMode') || 'create') as 'create' | 'update' | 'hybrid',
         });
 
         if (!outcome.ok) {
@@ -483,6 +484,10 @@ function showHelp(): void {
     rootLogger.info('                 prompt: pergunta o que fazer');
     rootLogger.info('  --target-keys <KEY1,KEY2,...>');
     rootLogger.info('                 atualiza issues por chave, na ordem do CSV');
+    rootLogger.info('  --mode <create|update|hybrid>');
+    rootLogger.info('                 create: sempre cria novos (default interativo)');
+    rootLogger.info('                 update: atualiza existentes por targetKeys, não cria');
+    rootLogger.info('                 hybrid: atualiza existentes, cria novos');
     rootLogger.info('  --dry-run      Simula a importacao sem criar ou atualizar issues');
     rootLogger.info('  --create-te    Cria Test Execution e associa todos os testes ao final');
     rootLogger.info('  --te-parent <KEY1,KEY2,...>');
@@ -557,11 +562,23 @@ function parseTestKeys(): void {
     Config.set('associateTestKeys', keys.join(','));
 }
 
+function parseImportMode(): void {
+    const val = getFlagValue('--mode');
+    if (!val) return;
+    const mode = val.trim().toLowerCase();
+    if (!['create', 'update', 'hybrid'].includes(mode)) {
+        rootLogger.error('--mode deve ser create, update ou hybrid');
+        process.exit(ExitCode.ERROR);
+    }
+    Config.set('importMode', mode);
+}
+
 function parseArgs(): void {
     if (process.argv.includes('--auto')) Config.setAutoConfirm(true);
     if (process.argv.includes('--dry-run')) Config.set('dryRun', true);
     parseUpdatePolicy();
     parseTargetKeys();
+    parseImportMode();
     parseAssociateTe();
     parseTestKeys();
 }

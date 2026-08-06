@@ -1,7 +1,7 @@
 /** Create tests — orchestrate CSV/JSON import, issue creation, linking, and test execution reporting.
  * @module Functions ordered by dependency: readers → creators → validators → linkers. 219 lines under the 300-line R2 limit. */
 
-import type { JiraResourceLike } from '../shared/types.js';
+import type { ImportMode, JiraResourceLike } from '../shared/types.js';
 import type JiraLinkManager from './jira_link_manager.js';
 import type CsvResource from './csv_resource.js';
 import type { TestCase } from '../shared/types.js';
@@ -35,6 +35,7 @@ interface CreateFromFileParams {
     filePath?: string;
     jiraLabels?: string[];
     targetKeys?: string[];
+    importMode?: ImportMode;
 }
 
 /** Why a CSV/JSON read did not yield tests. Empty and missing must stay distinguishable (AGENTS.md §25). */
@@ -122,6 +123,7 @@ async function createTestsFromCsv({
     csvPath: csvPathInput,
     jiraLabels: jiraLabelsInput,
     targetKeys: targetKeysInput,
+    importMode,
 }: CreateFromFileParams & {
     csvResource: CsvResource;
     csvPath?: string;
@@ -150,6 +152,7 @@ async function createTestsFromCsv({
             jiraLabels,
             ...(batchFields ? { batchFields } : {}),
             ...(targetKeysInput && targetKeysInput.length > 0 ? { targetKeys: targetKeysInput } : {}),
+            ...(importMode ? { importMode } : {}),
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -176,6 +179,7 @@ async function createTestsFromJson({
     jsonPath: jsonPathInput,
     jiraLabels: jiraLabelsInput,
     targetKeys: targetKeysInput,
+    importMode,
 }: CreateFromFileParams & {
     jsonPath?: string;
 }): Promise<CsvImportOutcome> {
@@ -203,6 +207,7 @@ async function createTestsFromJson({
         jiraLabels,
         ...(batchFields ? { batchFields } : {}),
         ...(targetKeysInput && targetKeysInput.length > 0 ? { targetKeys: targetKeysInput } : {}),
+        ...(importMode ? { importMode } : {}),
     });
     if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do JSON.' };
     return {

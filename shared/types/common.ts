@@ -1,6 +1,9 @@
 /** Generic JSON-compatible object shape. */
 export type JsonObject = Record<string, unknown>;
 
+/** Import strategy for test-case creation: always create, update-only, or hybrid. */
+export type ImportMode = 'create' | 'update' | 'hybrid';
+
 /** Arbitrary key-value metadata carried across log calls. */
 export type LogContext = Record<string, unknown>;
 

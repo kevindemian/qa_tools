@@ -151,7 +151,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-42', updated: true });
@@ -177,7 +177,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-43' });
@@ -196,7 +196,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-44' });
@@ -214,7 +214,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: false,
+                importMode: 'create',
             });
 
             expect(mockJiraResource['searchJiraIssues']).not.toHaveBeenCalledWith();
@@ -241,7 +241,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-10', updated: true });
@@ -263,7 +263,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(mockPrompt.success).toHaveBeenCalledWith('Issue atualizada (auto): TEST-42');
@@ -287,7 +287,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ skipped: true });
@@ -315,7 +315,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ skipped: true });
@@ -343,7 +343,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-42', updated: true });
@@ -373,7 +373,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ skipped: true });
@@ -406,7 +406,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 3,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
@@ -425,7 +425,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 1,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
@@ -443,7 +443,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 3,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
@@ -464,7 +464,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 3,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'ECSPOL-1605', skipped: true });
@@ -485,7 +485,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 2,
                 totalTests: 3,
                 opLog,
-                skipExisting: true,
+                importMode: 'hybrid',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-99', updated: true });

@@ -1,4 +1,4 @@
-vi.mock('readline-sync', () => ({ question: vi.fn() }));
+vi.mock('readline-sync', () => ({ default: { question: vi.fn() } }));
 vi.mock('../ui/output.js', () => ({
     defaultOutput: { print: vi.fn() },
 }));
@@ -23,6 +23,7 @@ import { humanizeError, extractErrorMessage, printError, CancelError, onError } 
 import { getConfig, isQuiet } from '../ui/prompt-format.js';
 import { defaultOutput as output } from '../ui/output.js';
 import { createMockConfigInstance } from '../test-utils/factories/index.js';
+import readlineSync from 'readline-sync';
 
 describe('HumanizeError', () => {
     it('returns unknown error for null input', () => {
@@ -146,5 +147,30 @@ describe('OnError', () => {
         const r = onError('ctx', new Error('fail'));
 
         expect(r).toBe('skip');
+    });
+
+    it('returns create when user chooses C with canCreate', () => {
+        vi.mocked(readlineSync.question).mockReturnValue('c');
+        const r = onError('ctx', new Error('fail'), { create: true });
+
+        expect(r).toBe('create');
+    });
+
+    it('rejects C when canCreate is false', () => {
+        vi.mocked(readlineSync.question).mockReturnValueOnce('c').mockReturnValueOnce('a');
+        const r = onError('ctx', new Error('fail'));
+
+        expect(r).toBe('abort');
+    });
+
+    it('never returns create under autoConfirm', () => {
+        const mockConfig = createMockConfigInstance();
+        mockConfig.get = function <T = string>(k: string): T {
+            return (k === 'autoConfirm' ? 'true' : 'abort') as T;
+        };
+        vi.mocked(getConfig).mockReturnValue(mockConfig);
+        const r = onError('ctx', new Error('fail'), { create: true });
+
+        expect(r).toBe('abort');
     });
 });

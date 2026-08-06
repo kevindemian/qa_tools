@@ -1,5 +1,5 @@
 /** Import orchestrator: coordinates CSV parsing, test-case creation, issue linking, and result reporting. */
-import type { JiraResourceLike } from '../shared/types.js';
+import type { ImportMode, JiraResourceLike } from '../shared/types.js';
 import JiraLinkManager from './jira_link_manager.js';
 import type { TestCase, TestResult, BatchFields } from '../shared/types.js';
 import TestCaseFactory from './test-case-factory.js';
@@ -33,6 +33,7 @@ interface CreateTestsFromTestCasesParams {
     jiraLabels: string[];
     batchFields?: BatchFields;
     targetKeys?: string[];
+    importMode?: ImportMode;
 }
 
 export type CreateTestsFromTestCasesResult = {
@@ -54,6 +55,7 @@ type PrepareTestRunResult =
           inMemoryTasksText: string[];
           opLog: ReturnType<typeof rootLogger.child>;
           targetKeys: string[];
+          importMode: ImportMode;
       }
     | undefined;
 
@@ -68,6 +70,7 @@ interface PrepareTestRunOptions {
     warn: (msg: string) => void;
     jiraResource?: JiraResourceLike;
     targetKeys?: string[];
+    importMode?: ImportMode;
 }
 
 async function findExistingMatches(
@@ -79,7 +82,7 @@ async function findExistingMatches(
     for (const test of tests) {
         if (!test.title) continue;
         try {
-            const jql = `project = "${project.replace(/"/g, '\\"')}" AND summary = "${test.title.replace(/"/g, '\\"')}"`;
+            const jql = `project = "${project.replace(/"/g, '\\"')}" AND summary ~ "${test.title.replace(/"/g, '\\"')}"`;
             const result = await jiraResource.searchJiraIssues(jql, 5);
             const found = result.issues.find(
                 (i) => (i.fields['summary'] as string).trim().toLowerCase() === test.title.trim().toLowerCase(),
@@ -157,6 +160,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
         warn,
         jiraResource,
         targetKeys,
+        importMode = 'create',
     } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
     if (validationResult === undefined) return;
@@ -189,7 +193,15 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
         };
     }
 
-    return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog, targetKeys: resolvedTargetKeys };
+    return {
+        tests: filtered,
+        resumeFrom,
+        inMemoryTasksId,
+        inMemoryTasksText,
+        opLog,
+        targetKeys: resolvedTargetKeys,
+        importMode,
+    };
 }
 
 interface FinalizeTestCreationParams {
@@ -414,10 +426,22 @@ interface RunCreationLoopOptions {
     opLog: ReturnType<typeof rootLogger.child>;
     inMemoryTasksId: string[];
     inMemoryTasksText: string[];
+    importMode: ImportMode;
 }
 
 async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTestCreationResult | undefined> {
-    const { filtered, factory, linker, results, params, resumeFrom, opLog, inMemoryTasksId, inMemoryTasksText } = opts;
+    const {
+        filtered,
+        factory,
+        linker,
+        results,
+        params,
+        resumeFrom,
+        opLog,
+        inMemoryTasksId,
+        inMemoryTasksText,
+        importMode,
+    } = opts;
     const failedLinks: string[] = [];
     const loopOpts: TestCreationLoopOptions = {
         tests: filtered,
@@ -438,6 +462,7 @@ async function runCreationLoop(opts: RunCreationLoopOptions): Promise<FinalizeTe
         reportInfo: info,
         reportPrint: print,
         failedLinks,
+        importMode,
     };
     await executeTestCreationLoop(loopOpts);
     return finalizeTestCreation({
@@ -474,6 +499,7 @@ async function createTestsFromTestCases(
         warn,
         jiraResource: params.jiraResource,
         ...(params.targetKeys && params.targetKeys.length > 0 ? { targetKeys: params.targetKeys } : {}),
+        ...(params.importMode ? { importMode: params.importMode } : {}),
     });
     if (prepared === undefined || 'summary' in prepared) {
         if (prepared === undefined) {
@@ -484,7 +510,7 @@ async function createTestsFromTestCases(
         }
         return prepared;
     }
-    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog, targetKeys } = prepared;
+    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog, targetKeys, importMode } = prepared;
 
     info('Passo 2 de 5: Preparando criação de testes...');
     const { factory, linker, results } = testCreationSetup(
@@ -507,6 +533,7 @@ async function createTestsFromTestCases(
         opLog,
         inMemoryTasksId,
         inMemoryTasksText,
+        importMode,
     });
 }
 

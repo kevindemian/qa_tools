@@ -1,5 +1,5 @@
 /** Import loop — iterates over test cases, creates/fetches issues, and updates state. */
-import type { JsonObject, TestCase, TestResult, BatchFields } from '../shared/types.js';
+import type { ImportMode, JsonObject, TestCase, TestResult, BatchFields } from '../shared/types.js';
 import type TestCaseFactory from './test-case-factory.js';
 import type IssueLinker from './issue-linker.js';
 import { rootLogger } from '../shared/logger.js';
@@ -51,6 +51,7 @@ interface CreateIssueOptions {
     opLog: ReturnType<typeof rootLogger.child>;
     results: TestResult[];
     checkOnly?: boolean;
+    importMode: ImportMode;
 }
 
 async function createIssueForTest(
@@ -58,8 +59,20 @@ async function createIssueForTest(
 ): Promise<
     { key: string | null; skipped: boolean; updated?: boolean; cleanSlateUsed?: boolean } | 'abort' | 'continue'
 > {
-    const { factory, test, testTitle, projectName, jiraLabels, batchFields, t, total, opLog, results, checkOnly } =
-        opts;
+    const {
+        factory,
+        test,
+        testTitle,
+        projectName,
+        jiraLabels,
+        batchFields,
+        t,
+        total,
+        opLog,
+        results,
+        checkOnly,
+        importMode,
+    } = opts;
     const testData = buildTestData(test, projectName, jiraLabels, batchFields);
     const MAX_ISSUE_CREATE_RETRIES = 3;
     for (let attempt = 1; attempt <= MAX_ISSUE_CREATE_RETRIES; attempt++) {
@@ -69,7 +82,7 @@ async function createIssueForTest(
             testIdx: t,
             totalTests: total,
             opLog,
-            skipExisting: true,
+            importMode,
             test,
             ...(checkOnly !== undefined ? { checkOnly } : {}),
         });
@@ -329,6 +342,7 @@ export interface TestCreationLoopOptions {
     reportInfo: (msg: string) => void;
     reportPrint: (msg: string) => void;
     failedLinks: string[];
+    importMode: ImportMode;
 }
 
 async function notifyBatch(
@@ -367,6 +381,7 @@ interface ProcessOneTestOptions {
     reportPrint: (msg: string) => void;
     failedLinks: string[];
     isCheckpoint?: boolean;
+    importMode: ImportMode;
 }
 
 function recordSkippedTest(results: TestResult[], testTitle: string): void {
@@ -451,8 +466,20 @@ async function _finalizeAfterIssueCreation(
 }
 
 async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'abort' | 'continue'> {
-    const { test, testTitle, factory, projectName, jiraLabels, batchFields, t, total, opLog, results, isCheckpoint } =
-        opts;
+    const {
+        test,
+        testTitle,
+        factory,
+        projectName,
+        jiraLabels,
+        batchFields,
+        t,
+        total,
+        opLog,
+        results,
+        isCheckpoint,
+        importMode,
+    } = opts;
     const issueResult = await createIssueForTest({
         factory,
         test,
@@ -464,6 +491,7 @@ async function processCreationAndLinking(opts: ProcessOneTestOptions): Promise<'
         total,
         opLog,
         results,
+        importMode,
         ...(isCheckpoint !== undefined ? { checkOnly: isCheckpoint } : {}),
     });
     if (!issueResult || issueResult === 'continue') {
@@ -504,6 +532,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
         reportInfo,
         reportPrint,
         failedLinks,
+        importMode,
     } = opts;
 
     for (let t = 0; t < tests.length; t++) {
@@ -536,6 +565,7 @@ async function executeTestCreationLoop(opts: TestCreationLoopOptions): Promise<v
             reportPrint,
             failedLinks,
             isCheckpoint,
+            importMode,
         });
         if (signal === 'abort') break;
     }

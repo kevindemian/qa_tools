@@ -8,7 +8,7 @@ vi.mock('../../../shared/state', () => ({
 vi.mock('../../../shared/config-accessor.js', () => {
     const mockGet = vi.fn();
     return {
-        default: { get: mockGet, getInstance: vi.fn().mockReturnValue({ get: mockGet }) },
+        default: { get: mockGet, set: vi.fn(), getInstance: vi.fn().mockReturnValue({ get: mockGet }) },
     };
 });
 

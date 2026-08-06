@@ -18,10 +18,14 @@ vi.mock('../../../shared/state', () => ({
 }));
 
 vi.mock('../../../shared/config-accessor.js', () => {
-    const mockGet = vi.fn(() => '');
+    const mockGet = vi.fn((key?: string) => {
+        if (key === 'importMode') return 'create';
+        return '';
+    });
     return {
         default: {
             get: mockGet,
+            set: vi.fn(),
             getInstance: vi.fn().mockReturnValue({ get: mockGet }),
         },
     };

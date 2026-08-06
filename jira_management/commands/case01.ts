@@ -25,6 +25,17 @@ function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath:
 async function handler(c: CommandContext): Promise<boolean | void> {
     try {
         const state = loadTypedState();
+
+        let importMode = Config.get<string>('importMode') || '';
+        if (!['create', 'update', 'hybrid'].includes(importMode)) {
+            const modeInput = await ask('Modo de importação?', {
+                hint: '1 = criar novo | 2 = atualizar existente | 3 = híbrido',
+                default: '1',
+            });
+            importMode = modeInput === '2' ? 'update' : modeInput === '3' ? 'hybrid' : 'create';
+        }
+        Config.set('importMode', importMode);
+
         const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, '../test_steps.csv');
         const csvPath =
             Config.get('csvPath') ||
@@ -65,6 +76,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             },
             csvPath: csvPath,
             jiraLabels: jiraLabels,
+            importMode: importMode,
         });
         if (!result.ok) {
             const detail = describeCsvFailure(result.reason, csvPath);

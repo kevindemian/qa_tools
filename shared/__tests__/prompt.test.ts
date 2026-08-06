@@ -1006,6 +1006,34 @@ describe('Prompt', () => {
             expect(result).toBe('retry');
         });
 
+        it('returns "create" when user chooses C with canCreate', () => {
+            vi.spyOn(readlineSync, 'question').mockReturnValue('c');
+            const result = prompt.onError('ctx', new Error('fail'), { create: true });
+
+            expect(result).toBe('create');
+        });
+
+        it('does not accept C when canCreate is false', () => {
+            vi.spyOn(readlineSync, 'question').mockReturnValueOnce('c').mockReturnValueOnce('a');
+            const result = prompt.onError('ctx', new Error('fail'));
+
+            expect(result).toBe('abort');
+        });
+
+        it('returns "skip" when autoConfirm and create flag is set (create never automatic)', () => {
+            prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'skip' }));
+            const result = prompt.onError('ctx', new Error('fail'), { create: true });
+
+            expect(result).toBe('skip');
+        });
+
+        it('returns "abort" when autoConfirm and create flag is set (create never automatic)', () => {
+            prompt.__setConfig(Config.create({ autoConfirm: true, onError: 'abort' }));
+            const result = prompt.onError('ctx', new Error('fail'), { create: true });
+
+            expect(result).toBe('abort');
+        });
+
         it('shows details and loops when user chooses D with canDetails', () => {
             vi.spyOn(readlineSync, 'question').mockReturnValueOnce('d').mockReturnValueOnce('a');
             const err = {

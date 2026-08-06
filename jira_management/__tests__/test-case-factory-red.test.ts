@@ -39,7 +39,7 @@ describe("BUG 9: CSV import doesn't update existing issues", () => {
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
         });
 
         // Should NOT be skipped
@@ -74,7 +74,7 @@ describe("BUG 9: CSV import doesn't update existing issues", () => {
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
         });
 
         expect(result.key).toBe('TEST-NEW');
@@ -108,7 +108,7 @@ describe("BUG 9: CSV import doesn't update existing issues", () => {
             testIdx: 0,
             totalTests: 1,
             opLog: { info: vi.fn() },
-            skipExisting: true,
+            importMode: 'hybrid',
         });
 
         // Should create new issue when search fails
