@@ -1,48 +1,5 @@
 /** Tests for report-utils — formatting and stats for HTML report generation. */
-import type { FlatTest } from '../result_parser.js';
-import { statsFromTests, fmtDuration, pctClass, pct, pctSub } from '../report/report-utils.js';
-
-describe('StatsFromTests', () => {
-    const tests: FlatTest[] = [
-        { title: 'T1', state: 'passed', duration: 100 },
-        { title: 'T2', state: 'failed', duration: 200 },
-        { title: 'T3', state: 'passed', duration: 150 },
-        { title: 'T4', state: 'skipped', duration: 0 },
-    ];
-
-    it('counts passed/failed/skipped correctly', () => {
-        const stats = statsFromTests(tests);
-
-        expect(stats.passed).toBe(2);
-        expect(stats.failed).toBe(1);
-        expect(stats.skipped).toBe(1);
-        expect(stats.total).toBe(4);
-    });
-
-    it('sums total duration', () => {
-        const stats = statsFromTests(tests);
-
-        expect(stats.duration).toBe(450);
-    });
-
-    it('returns zeroes for empty array', () => {
-        const stats = statsFromTests([]);
-
-        expect(stats).toStrictEqual({ passed: 0, failed: 0, skipped: 0, total: 0, duration: 0 });
-    });
-
-    it('handles all-passed tests', () => {
-        const allPassed: FlatTest[] = [
-            { title: 'X', state: 'passed', duration: 50 },
-            { title: 'Y', state: 'passed', duration: 75 },
-        ];
-        const stats = statsFromTests(allPassed);
-
-        expect(stats.passed).toBe(2);
-        expect(stats.failed).toBe(0);
-        expect(stats.skipped).toBe(0);
-    });
-});
+import { fmtDuration, pctClass, pct, pctSub } from '../report/report-utils.js';
 
 describe('FmtDuration', () => {
     it('formats seconds only', () => {

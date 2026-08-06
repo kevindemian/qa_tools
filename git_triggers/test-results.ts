@@ -12,6 +12,7 @@ import { parseTestResults as detectAndParseTestResults } from '../shared/result_
 import type { ParseResult } from '../shared/result_parser.js';
 import { matchResultsToTests, createTestExecutionFromResults } from '../jira_management/result_reporter.js';
 import { getDataHub } from '../shared/data-hub/global-hub.js';
+import { normalizeRunId } from '../shared/ci/run-id.js';
 import type { GitProvider } from '../shared/types.js';
 
 function _jiraEnv(): { base: string; token: string; xray: string; mode: JiraMode } | null {
@@ -41,7 +42,9 @@ async function _downloadArtifactBuffer(m: GitProvider, art: { id: number | strin
             return dl.buffer;
         });
     } catch (err) {
-        rootLogger.warn('test-results: Falha ao baixar artifact: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'test-results: Falha ao baixar artifact: ' + (err instanceof Error ? err.message : String(err)),
+        );
         printError('Falha ao baixar artifact', err);
         return null;
     }
@@ -65,7 +68,9 @@ function _extractTestResultsFromZip(buffer: Buffer): unknown {
         const raw = resultEntry.getData().toString('utf8');
         return JSON.parse(raw);
     } catch (err) {
-        rootLogger.warn('test-results: Falha ao ler arquivo de resultados: ' + (err instanceof Error ? err.message : String(err)));
+        rootLogger.warn(
+            'test-results: Falha ao ler arquivo de resultados: ' + (err instanceof Error ? err.message : String(err)),
+        );
         printError('Falha ao ler arquivo de resultados', err);
         return null;
     }
@@ -232,7 +237,7 @@ async function collectTestResults(opts: CollectTestResultsOptions): Promise<Pars
     const parsed = await downloadTestArtifacts(m, pipelineId);
     if (!parsed) return null;
 
-    getDataHub().saveParseResult(projectName, parsed);
+    getDataHub().saveParseResult(projectName, parsed, normalizeRunId(pipelineId));
 
     const mapping = await parseTestResults(parsed);
     if (!mapping) return parsed;

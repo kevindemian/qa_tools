@@ -1,0 +1,42 @@
+{
+    "nodes": [
+        {
+            "epic": "AUTH",
+            "coverage": 80,
+            "health": 75,
+            "flakiness": 0.1,
+            "stories": [
+                {
+                    "key": "LOGIN",
+                    "coverage": 100,
+                    "health": 100,
+                    "flakiness": 0,
+                    "tests": [
+                        { "title": "test-login-1", "status": "passed", "duration": 100, "flakiness": 0 },
+                        { "title": "test-login-2", "status": "passed", "duration": 120, "flakiness": 0 }
+                    ]
+                }
+            ]
+        },
+        {
+            "epic": "PAYMENT",
+            "coverage": 50,
+            "health": 60,
+            "flakiness": 0.2,
+            "stories": []
+        }
+    ],
+    "totalEpics": 2,
+    "totalTests": 5,
+    "overallCoverage": 65,
+    "timestamp": "2026-07-25T10:00:00Z",
+    "awareness": {
+        "categories": [
+            {
+                "category": "coverageFiles",
+                "entities": [{ "id": "AUTH", "confidence": 0.9, "valid": true }]
+            }
+        ],
+        "minConfidence": 0.7
+    }
+}

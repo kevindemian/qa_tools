@@ -20,8 +20,8 @@ describe('Report-styles', () => {
         it('contains light-mode color values', () => {
             const vars = buildCssVars();
 
-            expect(vars).toContain('#22c55e');
-            expect(vars).toContain('#ef4444');
+            expect(vars).toContain('#1a7f37');
+            expect(vars).toContain('#d1242f');
         });
     });
 
@@ -68,6 +68,25 @@ describe('Report-styles', () => {
             for (const token of expected) {
                 expect(css).toContain(token);
             }
+        });
+
+        it('contains pipeline-health summary card CSS classes', () => {
+            const css = buildCss();
+
+            expect(css).toContain('.summary{');
+            expect(css).toContain('.card .num{');
+            expect(css).toContain('.card .num[data-color="info"]');
+            expect(css).toContain('.card .num[data-color="success"]');
+            expect(css).toContain('.card .num[data-color="error"]');
+            expect(css).toContain('.card .num[data-status="pass"]');
+            expect(css).toContain('.card .num[data-status="fail"]');
+            expect(css).toContain('.failure-bar{');
+        });
+
+        it('contains pipeline-health error message CSS class', () => {
+            const css = buildCss();
+
+            expect(css).toContain('.error-msg{');
         });
     });
 });

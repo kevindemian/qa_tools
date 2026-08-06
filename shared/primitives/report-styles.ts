@@ -43,6 +43,9 @@ export function buildCssVars(): string {
     vars.push(`--color-border-default:${tokens.color.border.default.light}`);
     vars.push(`--color-border-subtle:${tokens.color.border.subtle.light}`);
 
+    // Brand accent colors
+    vars.push(`--color-brand-jira:${tokens.color.brand.jira.light}`);
+
     // Badge colors
     vars.push(`--color-badge-pass-bg:${tokens.color.badge.pass.bg.light}`);
     vars.push(`--color-badge-pass-text:${tokens.color.badge.pass.text.light}`);
@@ -86,6 +89,9 @@ export function buildDarkVars(): string {
 
     vars.push(`--color-border-default:${tokens.color.border.default.dark}`);
     vars.push(`--color-border-subtle:${tokens.color.border.subtle.dark}`);
+
+    // Brand accent colors (dark mode)
+    vars.push(`--color-brand-jira:${tokens.color.brand.jira.dark}`);
 
     vars.push(`--color-badge-pass-bg:${tokens.color.badge.pass.bg.dark}`);
     vars.push(`--color-badge-pass-text:${tokens.color.badge.pass.text.dark}`);
@@ -133,7 +139,7 @@ const TABS_SIDEBAR_CSS = `
 .sidebar .tree-node.active{background:var(--color-info);color:var(--color-text-inverse);font-weight:600}
 .timeline-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:0.85rem;cursor:pointer}
 .timeline-row:hover{background:var(--color-surface-elevated)}
-.timeline-bar{height:16px;border-radius:3px;min-width:4px;flex-shrink:0}
+.timeline-bar{height:16px;border-radius:3px;min-width:4px;flex-shrink:0;background:${tokens.color.chart.pass}}
 `;
 
 const TABLE_CSS = `
@@ -178,6 +184,53 @@ const DETAIL_CSS = `
 
 const OVERFLOW_CSS = `
 [data-overflow="true"]{display:none!important}
+`;
+
+const ACCESSIBILITY_CSS = `
+/* Skip link */
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.skip-link:focus{position:fixed;left:12px;top:12px;width:auto;height:auto;padding:8px 16px;background:var(--color-surface-card);color:var(--color-info);border:2px solid var(--color-info);border-radius:${tokens.borderRadius.md}px;font-weight:${tokens.fontWeight.semibold};z-index:9999;outline:none}
+/* Visible focus ring */
+a:focus-visible,button:focus-visible,[data-component="button"]:focus-visible,summary:focus-visible,[data-clickable="true"]:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
+/* Tabular numbers for data density */
+table,td,th,[data-part="value"],.score-value,.dim-value,.category-count,.hierarchy-pct,.timeline-duration{font-variant-numeric:tabular-nums}
+/* Badge backgrounds derived from token color via color-mix */
+.category-badge-dynamic,.flakiness-badge{background:color-mix(in srgb,var(--badge-color) 12%,var(--color-surface-card));color:var(--badge-color)}
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important}
+  [data-component="health-bar"] .health-fill,[data-component="progress-bar"] [data-part="fill"],.dim-bar-fill,.timeline-bar{transition:none!important}
+}
+`;
+
+const CASE17_CSS = `
+/* case17 injected context fragments */
+.case17-box{border-left:4px solid var(--color-info);margin-bottom:12px}
+.case17-box-jira{border-left:4px solid var(--color-brand-jira);margin-bottom:12px}
+.chart-box .label.case17-label{margin-bottom:6px}
+.case17-label{display:flex;align-items:center;gap:4px}
+.case17-label svg,.case17-summary svg{vertical-align:-2px}
+.runs-chart{margin-bottom:8px}
+.runs-chart-label{font-size:0.8rem;color:var(--color-text-muted);margin-bottom:4px}
+.runs-chart-bars{display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0}
+.runs-chart-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+.runs-chart-bar{width:100%;border-radius:3px 3px 0 0;min-height:4px;height:var(--bar-h);background:var(--bar-color)}
+.runs-chart-date{font-size:0.6rem;color:var(--color-text-muted)}
+.case17-table{margin:4px 0 0 8px;font-size:0.8rem;border-collapse:collapse;width:100%}
+.case17-th{padding:2px 8px;border-bottom:1px solid var(--color-border-subtle)}
+.case17-th-right{text-align:right}
+.case17-td{padding:2px 8px}
+.case17-td-right{text-align:right}
+.case17-details{margin-bottom:6px;font-size:0.85rem}
+.case17-details-commits{margin-bottom:4px;font-size:0.85rem}
+.case17-summary{cursor:pointer;font-weight:600}
+.case17-summary-flaky{color:var(--color-warn)}
+.case17-summary-commits{color:var(--color-info)}
+.case17-pre{margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap}
+.case17-pre-flat{margin:0;font-size:0.85rem;white-space:pre-wrap}
+.case17-diff-fail{margin:2px 0;color:var(--color-error)}
+.case17-diff-pass{margin:2px 0;color:var(--color-success)}
+.case17-diff-list{margin:2px 0 6px 16px;font-size:0.85rem}
 `;
 
 const EMPTY_STATE_CSS = `
@@ -345,6 +398,25 @@ const FORM_COMPONENT_CSS = `
 [data-component='label']{font-size:${tokens.fontSize.xs};text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:${tokens.spacing.xs}px;display:block}
 `;
 
+const PIPELINE_HEALTH_CSS = `
+/* Pipeline health dashboard */
+.summary{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.card{background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:.75rem 1rem;flex:1;min-width:120px}
+.card .num{font-size:1.5rem;font-weight:700}
+.card .lbl{font-size:.75rem;color:var(--color-text-muted)}
+.card .num[data-color="info"]{color:var(--color-info)}
+.card .num[data-color="success"]{color:var(--color-success)}
+.card .num[data-color="error"]{color:var(--color-error)}
+.card .num[data-status="pass"]{color:var(--color-success)}
+.card .num[data-status="fail"]{color:var(--color-error)}
+td[data-color="error"]{color:var(--color-error)}
+td[data-color="success"]{color:var(--color-success)}
+td[data-status="pass"]{color:var(--color-success)}
+td[data-status="fail"]{color:var(--color-error)}
+.failure-bar{font-family:monospace;font-size:0.8rem;color:var(--color-text-muted);white-space:nowrap}
+.error-msg{font-family:monospace;font-size:0.8rem}
+`;
+
 const RESPONSIVE_TABLE_CSS = `
 @media(max-width:600px){
   [data-component='data-table'] thead{display:none}
@@ -480,11 +552,11 @@ const INLINE_STYLES_CSS = `
 .step-icon{flex-shrink:0}
 .step-icon-row{display:flex;gap:6px;align-items:center}
 .category-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-left:4px}
-.category-badge-dynamic{background:var(--badge-bg);color:var(--badge-color)}
-.flakiness-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-left:4px;background:var(--badge-bg);color:var(--badge-color)}
+.category-badge-dynamic{color:var(--badge-color)}
+.flakiness-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-left:4px;color:var(--badge-color)}
 .flakiness-dash{color:var(--color-text-muted)}
 .thead-colored{background:var(--color-surface-elevated)}
-.th-cell{padding:var(--th-padding);font-size:var(--th-font-size);text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)}
+.th-cell{padding:${tokens.spacing.xs}px ${tokens.spacing.sm}px;font-size:${tokens.fontSize.sm};text-transform:uppercase;color:var(--color-text-secondary);white-space:nowrap;border-bottom:2px solid var(--color-border-subtle)}
 .control-bar-top{margin-top:8px}
 .detail-row-hidden{display:none}
 
@@ -522,9 +594,9 @@ const INLINE_STYLES_CSS = `
 .diff-section-spaced{margin-top:8px}
 
 /* Chart legend */
-.dot-pass{background:var(--color-chart-pass)}
-.dot-fail{background:var(--color-chart-fail)}
-.dot-skip{background:var(--color-chart-skip)}
+.dot-pass{background:${tokens.color.chart.pass}}
+.dot-fail{background:${tokens.color.chart.fail}}
+.dot-skip{background:${tokens.color.chart.skip}}
 
 /* Utils */
 .metric-subtitle{font-size:0.75rem;color:var(--color-text-muted);font-weight:400}
@@ -568,7 +640,10 @@ export function buildCss(): string {
         CHART_COMPONENT_CSS +
         FORM_COMPONENT_CSS +
         RESPONSIVE_TABLE_CSS +
+        PIPELINE_HEALTH_CSS +
         INLINE_STYLES_CSS +
+        ACCESSIBILITY_CSS +
+        CASE17_CSS +
         PRINT_CSS +
         RESPONSIVE_CSS +
         buildDarkVars()

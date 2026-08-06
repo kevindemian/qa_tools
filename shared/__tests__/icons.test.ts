@@ -1,14 +1,14 @@
 /**
  * shared/icons.ts — Testes robustos.
  *
- * Testa a geração de SVG inline para todos os 25 ícones.
+ * Testa a geração de SVG inline para todos os 26 ícones.
  * Fluxo real — zero mocks internos.
  */
 import { describe, it, expect } from 'vitest';
 import { icon, availableIcons } from '../icons.js';
 
 describe('Icon', () => {
-    describe('All 25 icons generate valid SVG', () => {
+    describe('All 26 icons generate valid SVG', () => {
         it.each(availableIcons())('icon("%s") returns valid SVG', (name) => {
             expect.hasAssertions();
 
@@ -81,12 +81,12 @@ describe('Icon', () => {
     });
 
     describe('AvailableIcons', () => {
-        it('returns array of 25 icon names', () => {
+        it('returns array of 26 icon names', () => {
             expect.hasAssertions();
 
             const names = availableIcons();
 
-            expect(names).toHaveLength(25);
+            expect(names).toHaveLength(26);
         });
 
         it('all returned names produce valid SVG', () => {

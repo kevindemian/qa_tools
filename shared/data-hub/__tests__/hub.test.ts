@@ -10,13 +10,16 @@ import type { ArtifactParseResult } from '../artifact-parser.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
 import type {
     DataProvider,
+    DataHub,
     RawData,
     MetricsStore,
     DataHubPersistence,
     CoverageSnapshot,
     FailureClassification,
+    ReleaseScoreBreakdownEntry,
 } from '../../types/data-hub.js';
-import type { PipelineRun } from '../../types/ci-cd.js';
+import type { PipelineJob, PipelineRun } from '../../types/ci-cd.js';
+import type { ParseResult } from '../../result_parser.js';
 
 function makeRun(overrides?: Partial<PipelineRun>): PipelineRun {
     return {
@@ -161,6 +164,35 @@ describe('DataHubImpl', () => {
         expect(hub.computed.runPassRate).toBeCloseTo(80, 5);
     });
 
+    it('b1: computed.passRate reflects test-level pass rate when only parsed artifacts exist (no pipeline runs)', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [
+                { title: 'test A', state: 'passed' as const, duration: 100 },
+                { title: 'test B', state: 'passed' as const, duration: 150 },
+                { title: 'test C', state: 'passed' as const, duration: 200 },
+            ],
+            stats: { passed: 3, failed: 0, skipped: 0, total: 3, duration: 450 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        expect(hub.raw.runs).toHaveLength(0);
+        expect(hub.computed.passRate).toBe(100);
+        expect(hub.computed.runPassRate).toBe(100);
+    });
+
+    it('b1: computed.passRate stays 0 only when there is genuinely no data at all', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.passRate).toBe(0);
+        expect(hub.computed.runPassRate).toBe(0);
+    });
+
     it('merges data from multiple providers', async () => {
         expect.hasAssertions();
 
@@ -225,6 +257,432 @@ describe('DataHubImpl', () => {
 
         expect(hub.timestamp.getTime()).toBeGreaterThanOrEqual(before);
         expect(hub.timestamp.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('b3: computed.releaseScore is the single enriched implementation — noData for absent data sources', () => {
+        expect.hasAssertions();
+
+        const parseResult = {
+            framework: 'jest',
+            tests: [{ title: 'test A', state: 'passed' as const, duration: 100 }],
+            stats: { passed: 1, failed: 0, skipped: 0, total: 1, duration: 100 },
+        };
+
+        const hub = DataHubImpl.createFromParseResult(parseResult, 'test/repo', createMockPersistence());
+
+        const rs = hub.computed.releaseScore;
+
+        expect(rs.breakdown).toBeDefined();
+        expect(rs.breakdown).toHaveLength(5);
+
+        const passRateDim = (rs.breakdown ?? []).find((d) => d.label === 'Pass Rate');
+
+        expect(passRateDim?.noData).toBeFalsy();
+
+        for (const label of ['Coverage', 'Suite Speed', 'Execution Rate']) {
+            const dim = (rs.breakdown ?? []).find((d) => d.label === label);
+
+            expect(dim?.noData).toBeTruthy();
+        }
+    });
+
+    it('computes backlogHealth with explicit no-data when there are no jira issues (Rule 25)', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        const bh = hub.computed.backlogHealth;
+
+        expect(bh).toBeDefined();
+        expect(bh?.noData).toBeTruthy();
+        expect(bh?.totalIssues).toBe(0);
+        expect(bh?.score).toBe(0);
+    });
+
+    it('computes backlogHealth from raw.jiraIssues (unassigned bugs, bugs without tests)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeEmptyRawData(),
+            jiraIssues: [
+                {
+                    key: 'PROJ-1',
+                    summary: 'Bug sem assignee',
+                    status: 'To Do',
+                    type: 'Bug',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    key: 'PROJ-2',
+                    summary: 'Bug coberto por teste',
+                    status: 'To Do',
+                    type: 'Bug',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                    linkedTestKeys: ['TEST-1'],
+                    linkedTestCount: 1,
+                },
+            ],
+        };
+        const provider = makeProvider(raw);
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const bh = hub.computed.backlogHealth;
+
+        expect(bh?.noData).toBeFalsy();
+        expect(bh?.totalIssues).toBe(2);
+        expect(bh?.unassignedIssues.map((i) => i.key)).toStrictEqual(['PROJ-1', 'PROJ-2']);
+        expect(bh?.bugsWithoutTests.map((i) => i.key)).toStrictEqual(['PROJ-1']);
+        expect(bh?.densityByEpic[0]?.testCount).toBe(1);
+    });
+
+    it('computes developerProfile from failureClassifications and empty result on no data', () => {
+        expect.hasAssertions();
+
+        const empty = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(empty.computed.developerProfile?.totalFailures).toBe(0);
+        expect(empty.computed.developerProfile?.authors).toStrictEqual([]);
+
+        const classifications: FailureClassification[] = [
+            { timestamp: '2026-01-01T00:00:00Z', testTitle: 't1', category: 'FLAKY', project: 'main' },
+            { timestamp: '2026-01-01T00:00:00Z', testTitle: 't1', category: 'FLAKY', project: 'main' },
+        ];
+        const store = makeMetricsStore({ failureClassifications: classifications });
+        const hub = DataHubImpl.loadFromStore(store, 'test-repo', createMockPersistence());
+
+        expect(hub.raw.failureClassifications).toHaveLength(2);
+        expect(hub.computed.developerProfile?.totalFailures).toBe(2);
+        expect(hub.computed.developerProfile?.authors[0]?.author).toBe('Unknown');
+    });
+
+    it('leaves aiComparison as explicit no-data — undefined (P-3; raw não carrega AiComparisonRecord)', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.aiComparison).toBeUndefined();
+    });
+
+    it('computes pipelineCostResult from runs and perRunCosts (SSOT projection)', async () => {
+        expect.hasAssertions();
+
+        const runs = [makeRun({ id: 1, conclusion: 'success' }), makeRun({ id: 2, conclusion: 'failure' })];
+        const provider = makeProvider(makeRawDataWithRuns(runs));
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const pcr = hub.computed.pipelineCostResult;
+
+        expect(pcr).toBeDefined();
+        expect(pcr?.runCount).toBe(2);
+        expect(pcr?.totalDurationSec).toBeGreaterThan(0);
+        expect(pcr?.costByRun.some((e) => e.status === 'passed')).toBeTruthy();
+        expect(pcr?.costByRun.some((e) => e.status === 'failed')).toBeTruthy();
+    });
+
+    it('computes coverageGap equivalent from raw.jiraIssues linkedTestKeys (N6)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeEmptyRawData(),
+            jiraIssues: [
+                {
+                    key: 'PROJ-1',
+                    summary: 'Story com teste',
+                    status: 'Done',
+                    type: 'Story',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                    linkedTestKeys: ['TEST-1'],
+                },
+                {
+                    key: 'PROJ-2',
+                    summary: 'Story sem teste',
+                    status: 'To Do',
+                    type: 'Story',
+                    labels: [],
+                    fixVersions: [],
+                    components: [],
+                    created: '2026-01-01T00:00:00.000Z',
+                    updated: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        };
+        const provider = makeProvider(raw);
+        const { hub } = await DataHubImpl.create([provider], { repo: 'test/repo' }, createMockPersistence());
+
+        const cg = hub.computed.coverageGap;
+
+        expect(cg).toBeDefined();
+        expect(cg?.totals.totalIssues).toBe(2);
+        expect(cg?.totals.covered).toBe(1);
+        expect(cg?.totals.gap).toBe(1);
+        expect(cg?.items[0]?.hasTest).toBeTruthy();
+        expect(cg?.items[1]?.hasTest).toBeFalsy();
+    });
+
+    it('keeps coverageGap undefined when there are no jira issues', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(hub.computed.coverageGap).toBeUndefined();
+    });
+
+    it('keeps coverageGap undefined when jiraIssues is present but empty (Rule 25)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = { ...makeRawDataWithRuns([makeRun()]), jiraIssues: [] };
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(hub.computed.coverageGap).toBeUndefined();
+    });
+});
+
+describe('DataHubImpl — data availability (B2/§25)', () => {
+    function dim(hub: DataHub, label: string): ReleaseScoreBreakdownEntry | undefined {
+        return (hub.computed.releaseScore.breakdown ?? []).find((d) => d.label === label);
+    }
+
+    function makeArtifact(
+        stats: { passed: number; failed: number },
+        coverage?: { total: number; covered: number; percentage: number },
+    ): ArtifactParseResult {
+        return {
+            fileName: 'ctrf.json',
+            format: 'ctrf',
+            data: {
+                tests: [],
+                stats: { ...stats, skipped: 0, total: stats.passed + stats.failed, duration: 0 },
+            },
+            ...(coverage != null ? { coverage } : {}),
+        };
+    }
+
+    it('b2: passRate falls back to test-level rate when no pipeline run has a conclusion', async () => {
+        expect.hasAssertions();
+
+        // Domínio (B1): passRate usa a taxa de pipeline APENAS quando existem runs com
+        // conclusion definida; run sem conclusion não é fonte de pipeline pass rate
+        // (calcPipelinePassRate a ignora). Sem source de pipeline, cai para runPassRate.
+        const runs: PipelineRun[] = [
+            { id: 1, run_started_at: '2026-01-01T10:00:00Z', updated_at: '2026-01-01T10:10:00Z', head_branch: 'main' },
+        ];
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[1, [makeArtifact({ passed: 8, failed: 2 })]]]);
+        const raw: RawData = { ...makeRawDataWithRuns(runs), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(hub.computed.passRate).toBeCloseTo(80, 5);
+        expect(dim(hub, 'Pass Rate')?.noData).toBeFalsy();
+        expect(dim(hub, 'Execution Rate')?.noData).toBeTruthy();
+    });
+
+    it('b2: Pass Rate is marked noData on an empty hub (no runs, no artifacts)', () => {
+        expect.hasAssertions();
+
+        const hub = DataHubImpl.createEmpty('github', 'test/repo', createMockPersistence());
+
+        expect(dim(hub, 'Pass Rate')?.noData).toBeTruthy();
+    });
+
+    it('b2: Pass Rate is available whenever any test result exists, regardless of pass/fail balance', async () => {
+        expect.hasAssertions();
+
+        // Domínio: passRate (test-level) requer QUALQUER resultado de teste
+        // (passed+failed>0); 5 falhas sem nenhum passed ainda é uma fonte real.
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([[1, [makeArtifact({ passed: 0, failed: 5 })]]]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Pass Rate')?.noData).toBeFalsy();
+    });
+
+    it('b2: Flaky Rate and Execution Rate are available when a run with a conclusion exists', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1, conclusion: 'success' })]);
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Flaky Rate')?.noData).toBeFalsy();
+        expect(dim(hub, 'Execution Rate')?.noData).toBeFalsy();
+    });
+
+    it('b2: Coverage is available from raw.coverage with positive percentage', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 50, covered: 25, percentage: 50 },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+    });
+
+    it('b2: Coverage is available from raw.coverage reporting a measured 0% (Rule 25)', async () => {
+        expect.hasAssertions();
+
+        // Domínio (§25): um report de coverage presente com 0% é um valor MEDIDO —
+        // escondê-lo como noData mascararia condição crítica (projeto sem cobertura).
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 0, covered: 0, percentage: 0 },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is available from parsed-artifact coverage reporting a measured 0% (Rule 25)', async () => {
+        expect.hasAssertions();
+
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 0, covered: 0, percentage: 0 })]],
+        ]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is available when raw.coverage is a real 0% (statements instrumented, none covered)', async () => {
+        expect.hasAssertions();
+
+        // Domínio (§25): 100 statements instrumentados e 0 cobertos = 0% REAL,
+        // não ausência de dados. Deve aparecer como 0%, nunca como "N/A".
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 100, covered: 0, percentage: 0 },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is noData when raw.coverage percentage is not finite (missing measurement)', async () => {
+        expect.hasAssertions();
+
+        // Domínio (§25): percentage não-finito = medição ausente (não um 0% medido).
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 0, covered: 0, percentage: NaN },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeTruthy();
+    });
+
+    it('b2: Coverage is noData when parsed-artifact coverage percentage is not finite', async () => {
+        expect.hasAssertions();
+
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 0, covered: 0, percentage: NaN })]],
+        ]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeTruthy();
+    });
+
+    it('b2: Coverage is available from parsed-artifact coverage when raw.coverage is absent', async () => {
+        expect.hasAssertions();
+
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 75, covered: 60, percentage: 80 })]],
+        ]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+    });
+
+    it('b2: Pass Rate is available from a run with conclusion even when test counts are zero', async () => {
+        expect.hasAssertions();
+
+        // Domínio: uma pipeline run com conclusion é fonte REAL de passRate mesmo sem
+        // contagens de teste — o primeiro operando do || sozinho já indica presença.
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1, conclusion: 'success' })]);
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Pass Rate')?.noData).toBeFalsy();
+    });
+
+    it('b2: Suite Speed is available from run timing data (zero-duration run is still a source)', async () => {
+        expect.hasAssertions();
+
+        // Domínio: o guard de timing aceita run_duration_ms >= 0 — 0ms é um valor
+        // medido válido (não ausência), portanto Suite Speed NÃO é noData.
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            timing: new Map([[1, { run_duration_ms: 0 }]]),
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Suite Speed')?.noData).toBeFalsy();
+    });
+
+    it('b2: Suite Speed is noData when timing is invalid (negative duration)', async () => {
+        expect.hasAssertions();
+
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            timing: new Map([[1, { run_duration_ms: -100 }]]),
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Suite Speed')?.noData).toBeTruthy();
+    });
+
+    it('b2: Suite Speed is available from positive job duration', async () => {
+        expect.hasAssertions();
+
+        const jobs = new Map<number, PipelineJob[]>([
+            [1, [{ id: 1, name: 'build', stage: 'build', status: 'success', duration: 500 }]],
+        ]);
+        const raw: RawData = { ...makeRawDataWithRuns([makeRun()]), jobs };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Suite Speed')?.noData).toBeFalsy();
+    });
+
+    it('b2: Suite Speed is noData when job duration is zero (no positive duration source)', async () => {
+        expect.hasAssertions();
+
+        const jobs = new Map<number, PipelineJob[]>([
+            [1, [{ id: 1, name: 'build', stage: 'build', status: 'success', duration: 0 }]],
+        ]);
+        const raw: RawData = { ...makeRawDataWithRuns([makeRun()]), jobs };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Suite Speed')?.noData).toBeTruthy();
     });
 });
 
@@ -702,6 +1160,116 @@ describe('DataHubImpl — SSOT Persistence', () => {
 
             expect(mockedSafe(persistence).flush).toHaveBeenCalledTimes(1);
             expect(mockedSafe(persistence).flush.mock.calls[0]).toStrictEqual(['test commit']);
+        });
+    });
+
+    describe('SaveParseResult() (F0-T8 reconciliation)', () => {
+        function makeParseResult(overrides?: { failed?: number; title?: string }): ParseResult {
+            const failed = overrides?.failed ?? 0;
+            const passed = 3 - failed;
+            return {
+                tests: [
+                    { title: overrides?.title ?? 'test1', state: 'passed', duration: 100 },
+                    { title: 'test2', state: 'passed', duration: 100 },
+                    { title: 'test3', state: failed > 0 ? 'failed' : 'passed', duration: 100 },
+                ],
+                stats: {
+                    passed,
+                    failed,
+                    skipped: 0,
+                    total: 3,
+                    duration: 300,
+                },
+            };
+        }
+
+        it('delegates to persistence and reconciles parsedArtifacts under sourceRunId', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(mockedSafe(persistence).saveParseResult).toHaveBeenCalledTimes(1);
+            expect(mockedSafe(persistence).saveParseResult.mock.calls[0]).toStrictEqual(['my-project', result]);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts).toBeDefined();
+
+            const run42 = artifacts?.get(42)?.[0];
+
+            expect(run42).toBeDefined();
+            expect(run42?.fileName).toBe('42');
+            expect(run42?.data).toBe(result);
+        });
+
+        it('recomputes computed.metricsRuns[0] from the reconciled artifact (never stale)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+            const result = makeParseResult();
+
+            hub.saveParseResult('my-project', result, 42);
+
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+
+            const firstRun = hub.computed.metricsRuns?.[0];
+
+            expect(firstRun).toBeDefined();
+            expect(firstRun?.tests).toStrictEqual(result.tests);
+            expect(firstRun?.total).toBe(3);
+            expect(firstRun?.passed).toBe(3);
+            expect(firstRun?.failed).toBe(0);
+        });
+
+        it('dedups by sourceRunId: same key replaces the previous artifact', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult(), 42);
+            const second = makeParseResult({ failed: 1, title: 'second' });
+            hub.saveParseResult('my-project', second, 42);
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(42)).toHaveLength(1);
+
+            const latest = artifacts?.get(42)?.[0];
+
+            expect(latest).toBeDefined();
+            expect(latest?.data).toBe(second);
+            expect(hub.computed.metricsRuns).toHaveLength(3);
+            expect(hub.computed.metricsRuns?.[0]?.failed).toBe(1);
+        });
+
+        it('uses the user-fallback slot (key 0) when sourceRunId is omitted', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            hub.saveParseResult('my-project', makeParseResult());
+
+            const artifacts = hub.raw.parsedArtifacts;
+
+            expect(artifacts?.get(0)).toHaveLength(1);
+
+            const slot = artifacts?.get(0)?.[0];
+
+            expect(slot).toBeDefined();
+            expect(slot?.fileName).toBe('user-fallback');
+        });
+
+        it('throws on non-integer sourceRunId (§24 boundary guard)', () => {
+            const store = makeMetricsStore();
+            const persistence = createMockPersistence();
+            const hub = DataHubImpl.loadFromStore(store, 'test-repo', persistence);
+
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), 1.5)).toThrow(/inteiro/);
+            expect(() => hub.saveParseResult('my-project', makeParseResult(), NaN)).toThrow(/inteiro/);
+            expect(mockedSafe(persistence).saveParseResult).not.toHaveBeenCalled();
         });
     });
 });

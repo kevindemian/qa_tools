@@ -124,6 +124,23 @@ describe('Incident Report', () => {
 
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('No incidents to display');
+            expect(html).toContain('No incident type data available');
+            expect(html).toContain(
+                'Per-type count summary requires incidents classified by type. No type data was found.',
+            );
+            expect(html).toContain('Classify incidents by type so the per-type summary can be rendered.');
+            expect(html).toContain('data-icon="bar-chart"');
+        });
+
+        it('renders per-type summary with the mapped type labels and correct counts', () => {
+            // Domínio: 1 failure + 1 regression + 2 coverage gaps (2 epics) + 1 seasonality.
+            const report = buildIncidentReport(45, 5, 'December Peak', ['EPIC-1', 'EPIC-2'], 50);
+            const html = generateIncidentReportHtml(report);
+
+            expect(html).toMatch(/<div data-part="label">Failures<\/div>\s*<div data-part="value">1<\/div>/);
+            expect(html).toMatch(/<div data-part="label">Regressions<\/div>\s*<div data-part="value">1<\/div>/);
+            expect(html).toMatch(/<div data-part="label">Coverage Gaps<\/div>\s*<div data-part="value">2<\/div>/);
+            expect(html).toMatch(/<div data-part="label">Seasonality Events<\/div>\s*<div data-part="value">1<\/div>/);
         });
 
         it('supports custom title', () => {

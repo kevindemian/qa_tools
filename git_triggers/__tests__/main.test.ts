@@ -1317,7 +1317,7 @@ describe('Main', () => {
         it('has handler keys for all new menu entries', () => {
             const keys = Object.keys(mainModule.ACTION_HANDLERS);
 
-            const expected = ['c', 'd', 'e', 'g', 'i', 'p', 'q', 't', 'b', 'r'];
+            const expected = ['c', 'd', 'g', 'i', 'p', 'q', 't', 'b', 'r'];
 
             expect(expected.every((k) => keys.includes(k))).toBeTruthy();
         });

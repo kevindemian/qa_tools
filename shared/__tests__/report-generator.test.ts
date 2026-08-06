@@ -1,7 +1,7 @@
 import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml } from '../report/report-generator.js';
+import { generateHtmlReport } from '../report/report-generator.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { TestRunTab } from '../report/report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
 function computedFor(tests: FlatTest[]): ComputedMetrics {
@@ -9,7 +9,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const failed = tests.filter((t) => t.state === 'failed').length;
     const skipped = tests.filter((t) => t.state === 'skipped').length;
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -21,7 +21,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped, total: tests.length },
         framework: '',
         metricsRuns: [
@@ -133,7 +133,7 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('My Custom Report');
     });
 
-    it('generates quality gate warning when pass rate below threshold', () => {
+    it('renders the quality gate section with a fail status when pass rate below threshold', () => {
         const tests: FlatTest[] = [
             { title: 'Fail A', state: 'failed', duration: 100 },
             { title: 'Fail B', state: 'failed', duration: 100 },
@@ -141,11 +141,12 @@ describe('GenerateHtmlReport', () => {
 
         const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
-        expect(html).toContain('Quality Gate Failed');
-        expect(html).toContain('below the configured threshold');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('data-variant="fail"');
+        expect(html).toContain('data-status="fail"');
     });
 
-    it('omits quality gate when pass rate meets threshold', () => {
+    it('renders the quality gate section with a pass status when pass rate meets threshold', () => {
         const tests: FlatTest[] = [
             { title: 'Pass A', state: 'passed', duration: 100 },
             { title: 'Pass B', state: 'passed', duration: 100 },
@@ -153,7 +154,8 @@ describe('GenerateHtmlReport', () => {
 
         const html = generateHtmlReport(tests, { computed: computedFor(tests), qualityGate: 90 });
 
-        expect(html).not.toContain('Quality Gate Failed');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('data-status="pass"');
     });
 
     it('includes source and ci URL in footer when provided', () => {
@@ -423,46 +425,45 @@ describe('GenerateHtmlReport', () => {
 
     it('renders trend chart when trends are provided', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, {
-            computed: computedFor(tests),
-            trends: [
-                { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
-                { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
-                { label: '2026-05-03', passRate: 95, total: 10, failed: 0 },
-            ],
-        });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [
+            { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
+            { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
+            { label: '2026-05-03', passRate: 95, total: 10, failed: 0 },
+        ];
+        const html = generateHtmlReport(tests, { computed });
 
         expect(html).toContain('Pass Rate Trend');
         expect(html).toContain('<svg');
-        expect(html).toContain('6366f1');
+        expect(html).toContain('0969da');
     });
 
     it('omits trend chart when trends have fewer than 2 points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const htmlSingle = generateHtmlReport(tests, {
-            computed: computedFor(tests),
-            trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
-        });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }];
+        const htmlSingle = generateHtmlReport(tests, { computed });
 
         expect(htmlSingle).not.toContain('Pass Rate Trend');
     });
 
     it('omits trend chart when trends is empty', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const htmlEmpty = generateHtmlReport(tests, { computed: computedFor(tests), trends: [] });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [];
+        const htmlEmpty = generateHtmlReport(tests, { computed });
 
         expect(htmlEmpty).not.toContain('Pass Rate Trend');
     });
 
     it('renders trend chart with 90% reference line', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, {
-            computed: computedFor(tests),
-            trends: [
-                { label: '2026-05-01', passRate: 70, total: 10, failed: 3 },
-                { label: '2026-05-02', passRate: 85, total: 10, failed: 1 },
-            ],
-        });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [
+            { label: '2026-05-01', passRate: 70, total: 10, failed: 3 },
+            { label: '2026-05-02', passRate: 85, total: 10, failed: 1 },
+        ];
+        const html = generateHtmlReport(tests, { computed });
 
         expect(html).toContain('90%');
         expect(html).toContain('stroke-dasharray');
@@ -532,8 +533,8 @@ describe('GenerateHtmlReport', () => {
         ];
         const html = generateHtmlReport(tests, { computed: computedFor(tests) });
 
-        expect(html).toContain('#22c55e');
-        expect(html).toContain('#ef4444');
+        expect(html).toContain('#1a7f37');
+        expect(html).toContain('#d1242f');
     });
 
     it('omits timeline when test list is empty', () => {
@@ -658,87 +659,16 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Logs');
     });
 
-    // ── R7: Coverage HTML Report ────────────────────────────────────
-
-    it('generates coverage HTML with epics and issues', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Authentication',
-                issues: [
-                    { key: 'AUTH-1', summary: 'Login page', status: 'Done', type: 'Story' },
-                    { key: 'AUTH-2', summary: 'Logout', status: 'In Progress', type: 'Story' },
-                ],
-            },
-            {
-                key: 'EPIC-2',
-                summary: 'Dashboard',
-                issues: [{ key: 'DASH-1', summary: 'Widget', status: 'Open', type: 'Bug' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('Coverage Report');
-        expect(html).toContain('EPIC-1');
-        expect(html).toContain('AUTH-1');
-        expect(html).toContain('AUTH-2');
-        expect(html).toContain('EPIC-2');
-
-        expect(html).toContain('DASH-1');
-        expect(html).toContain('Authentication');
-        expect(html).toContain('Dashboard');
-    });
-
-    it('coverage report shows correct issue counts', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Test',
-                issues: [{ key: 'T-1', summary: 'Thing', status: 'Done', type: 'Task' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('>1<');
-        expect(html).toContain('1 issues, 100.0% closed');
-    });
-
-    it('coverage report uses custom title', () => {
-        const html = generateCoverageHtml([], 'My Coverage');
-
-        expect(html).toContain('My Coverage');
-    });
-
-    it('coverage report renders status badges', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-1',
-                summary: 'Test',
-                issues: [
-                    { key: 'T-1', summary: 'Done', status: 'Done', type: 'Story' },
-                    { key: 'T-2', summary: 'Progress', status: 'In Progress', type: 'Story' },
-                    { key: 'T-3', summary: 'Open', status: 'Open', type: 'Bug' },
-                ],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('data-variant="pass"');
-        expect(html).toContain('data-variant="skip"');
-        expect(html).toContain('data-variant="fail"');
-    });
-
     // ── R9: Mini Trend Chart ────────────────────────────────────────
 
     it('renders mini trend chart when trends have 2+ points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const html = generateHtmlReport(tests, {
-            computed: computedFor(tests),
-            trends: [
-                { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
-                { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
-            ],
-        });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [
+            { label: '2026-05-01', passRate: 80, total: 10, failed: 2 },
+            { label: '2026-05-02', passRate: 90, total: 10, failed: 1 },
+        ];
+        const html = generateHtmlReport(tests, { computed });
 
         expect(html).toContain('mini-trend');
         expect(html).toContain('viewBox="0 0 300 100"');
@@ -746,10 +676,9 @@ describe('GenerateHtmlReport', () => {
 
     it('omits mini trend chart when trends have <2 points', () => {
         const tests: FlatTest[] = [{ title: 'A', state: 'passed', duration: 100 }];
-        const htmlSingle = generateHtmlReport(tests, {
-            computed: computedFor(tests),
-            trends: [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }],
-        });
+        const computed = computedFor(tests);
+        computed.metricsTrends = [{ label: '2026-05-01', passRate: 80, total: 10, failed: 2 }];
+        const htmlSingle = generateHtmlReport(tests, { computed });
 
         expect(htmlSingle).not.toContain('viewBox="0 0 300 100"');
     });

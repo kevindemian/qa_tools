@@ -1,312 +1,363 @@
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../quality/release-score.js';
-import type { ReleaseScoreResult } from '../quality/release-score.js';
+/**
+ * Unit tests — Release Score (B3 SSOT).
+ *
+ * Exercises the single implementation `calcReleaseScore` (5-dimension model)
+ * and the renderer `generateReleaseScoreHtml`.
+ *
+ * Grade boundaries and weights are the DORA/Google SRE constants defined in
+ * shared/data-hub/compute/types.ts (excellent>=90, good>=80, needs_attention>=70,
+ * poor>=60, critical<60).
+ */
+import { describe, expect, it } from 'vitest';
 
-describe('CalculateReleaseScore', () => {
+import { calcReleaseScore, makeDimensionScore } from '../data-hub/compute/release-score.js';
+import { DEFAULT_WEIGHTS } from '../data-hub/compute/types.js';
+import { generateReleaseScoreHtml } from '../quality/release-score-renderer.js';
+import type { HealthDimensions, ReleaseScoreResult } from '../types/data-hub.js';
+
+function allDims(score: number, status: 'pass' | 'fail'): HealthDimensions {
+    return {
+        passRate: { score, status },
+        flakyRate: { score, status },
+        coverage: { score, status },
+        suiteSpeed: { score, status },
+        executionRate: { score, status },
+    };
+}
+
+describe('CalcReleaseScore (B3 SSOT — 5-dimension model)', () => {
     describe('Grade boundaries', () => {
         it('grades excellent at score >= 90', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
+            const result = calcReleaseScore(allDims(100, 'pass'));
 
             expect(result.score).toBe(100);
             expect(result.grade).toBe('excellent');
         });
 
-        it('grades good at score 70–89', () => {
-            const result = calculateReleaseScore(85, 85, 'pass', 85, 15);
+        it('grades good at score 80–89', () => {
+            const result = calcReleaseScore(allDims(85, 'pass'));
 
             expect(result.score).toBe(85);
             expect(result.grade).toBe('good');
         });
 
-        it('grades needs_attention at score 50–69', () => {
-            const result = calculateReleaseScore(65, 65, 'pass', 65, 35);
+        it('grades needs_attention at score 70–79', () => {
+            const result = calcReleaseScore(allDims(75, 'pass'));
 
-            expect(result.score).toBe(65);
+            expect(result.score).toBe(75);
             expect(result.grade).toBe('needs_attention');
         });
 
-        it('grades critical at score < 50', () => {
-            const result = calculateReleaseScore(30, 30, 'fail', 30, 70);
+        it('grades poor at score 60–69', () => {
+            const result = calcReleaseScore(allDims(65, 'pass'));
 
-            expect(result.score).toBe(30);
+            expect(result.score).toBe(65);
+            expect(result.grade).toBe('poor');
+        });
+
+        it('grades critical at score < 60', () => {
+            const result = calcReleaseScore(allDims(50, 'fail'));
+
+            expect(result.score).toBe(50);
             expect(result.grade).toBe('critical');
         });
 
         it('boundary: 89 is good, 90 is excellent', () => {
-            const r89 = calculateReleaseScore(89, 89, 'pass', 89, 11);
-
-            expect(r89.score).toBe(89);
-            expect(r89.grade).toBe('good');
-
-            const r90 = calculateReleaseScore(90, 90, 'pass', 90, 10);
-
-            expect(r90.score).toBe(90);
-            expect(r90.grade).toBe('excellent');
+            expect(calcReleaseScore(allDims(89, 'pass')).grade).toBe('good');
+            expect(calcReleaseScore(allDims(90, 'pass')).grade).toBe('excellent');
         });
 
-        it('boundary: 49 is critical, 50 is needs_attention', () => {
-            const r49 = calculateReleaseScore(49, 49, 'fail', 49, 51);
-
-            expect(r49.score).toBe(49);
-            expect(r49.grade).toBe('critical');
-
-            const r50 = calculateReleaseScore(50, 50, 'pass', 50, 50);
-
-            expect(r50.score).toBe(50);
-            expect(r50.grade).toBe('needs_attention');
+        it('boundary: 79 is needs_attention, 80 is good', () => {
+            expect(calcReleaseScore(allDims(79, 'pass')).grade).toBe('needs_attention');
+            expect(calcReleaseScore(allDims(80, 'pass')).grade).toBe('good');
         });
 
-        it('boundary: 69 is needs_attention, 70 is good', () => {
-            const r69 = calculateReleaseScore(69, 69, 'pass', 69, 31);
-
-            expect(r69.score).toBe(69);
-            expect(r69.grade).toBe('needs_attention');
-
-            const r70 = calculateReleaseScore(70, 70, 'pass', 70, 30);
-
-            expect(r70.score).toBe(70);
-            expect(r70.grade).toBe('good');
+        it('boundary: 59 is critical, 60 is poor', () => {
+            expect(calcReleaseScore(allDims(59, 'fail')).grade).toBe('critical');
+            expect(calcReleaseScore(allDims(60, 'pass')).grade).toBe('poor');
         });
     });
 
-    describe('Flakiness inversion', () => {
-        it('inverts flakyRate 0 to score contribution 100', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
+    describe('Weighted average (DEFAULT_WEIGHTS)', () => {
+        const single = (winner: keyof HealthDimensions): HealthDimensions => {
+            const dims = allDims(0, 'fail');
+            dims[winner] = { score: 100, status: 'pass' };
+            return dims;
+        };
 
-            expect(result.score).toBe(100);
+        it('passRate contributes 30%', () => {
+            expect(calcReleaseScore(single('passRate')).score).toBe(DEFAULT_WEIGHTS.passRate);
         });
 
-        it('inverts flakyRate 100 to score contribution 0', () => {
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
-
-            expect(result.score).toBe(0);
+        it('flakyRate contributes 20%', () => {
+            expect(calcReleaseScore(single('flakyRate')).score).toBe(DEFAULT_WEIGHTS.flakyRate);
         });
 
-        it('inverts flakyRate 50 to score contribution 50', () => {
-            const result = calculateReleaseScore(50, 50, 'pass', 50, 50);
+        it('coverage contributes 25%', () => {
+            expect(calcReleaseScore(single('coverage')).score).toBe(DEFAULT_WEIGHTS.coverage);
+        });
 
-            expect(result.score).toBe(50);
+        it('executionRate contributes 15%', () => {
+            expect(calcReleaseScore(single('executionRate')).score).toBe(DEFAULT_WEIGHTS.executionRate);
+        });
+
+        it('suiteSpeed contributes 10%', () => {
+            expect(calcReleaseScore(single('suiteSpeed')).score).toBe(DEFAULT_WEIGHTS.suiteSpeed);
+        });
+
+        it('weights sum to 100', () => {
+            const sum = [
+                DEFAULT_WEIGHTS.passRate,
+                DEFAULT_WEIGHTS.flakyRate,
+                DEFAULT_WEIGHTS.coverage,
+                DEFAULT_WEIGHTS.executionRate,
+                DEFAULT_WEIGHTS.suiteSpeed,
+            ].reduce((s, v) => s + v, 0);
+
+            expect(sum).toBe(100);
         });
     });
 
     describe('Breakdown', () => {
-        it('reports pass status when all dimensions meet threshold', () => {
+        it('includes all five dimensions in fixed order', () => {
+            const result = calcReleaseScore(allDims(80, 'pass'));
+            const labels = (result.breakdown ?? []).map((d) => d.label);
+
+            expect(labels).toStrictEqual(['Pass Rate', 'Flaky Rate', 'Coverage', 'Suite Speed', 'Execution Rate']);
+        });
+
+        it('reports pass status when all dimensions pass', () => {
+            const result = calcReleaseScore(allDims(100, 'pass'));
+
+            expect((result.breakdown ?? []).every((d) => d.status === 'pass')).toBeTruthy();
+        });
+
+        it('reports fail status when all dimensions fail', () => {
+            const result = calcReleaseScore(allDims(0, 'fail'));
+
+            expect((result.breakdown ?? []).every((d) => d.status === 'fail')).toBeTruthy();
+        });
+
+        it('carries the per-dimension score through the breakdown', () => {
             expect.hasAssertions();
 
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
-            for (const item of result.breakdown) {
-                expect(item.status).toBe('pass');
+            const result = calcReleaseScore(allDims(72, 'pass'));
+
+            for (const d of result.breakdown ?? []) {
+                expect(d.score).toBe(72);
             }
-        });
-
-        it('reports fail status when dimensions are below threshold', () => {
-            expect.hasAssertions();
-
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
-            for (const item of result.breakdown) {
-                expect(item.status).toBe('fail');
-            }
-        });
-
-        it('uses healthGate for health dimension status', () => {
-            const result = calculateReleaseScore(100, 90, 'fail', 100, 0);
-            const healthDim = result.breakdown.find((d) => d.label === 'Health');
-
-            expect(healthDim?.status).toBe('fail');
-            expect(healthDim?.score).toBe(90);
-        });
-
-        it('includes all four dimensions in breakdown', () => {
-            const result = calculateReleaseScore(80, 80, 'pass', 80, 20);
-            const labels = result.breakdown.map((d) => d.label);
-
-            expect(labels).toStrictEqual(['Tasks', 'Health', 'Coverage', 'Flakiness']);
         });
     });
 
     describe('Recommendation', () => {
         it('returns ready message when all dimensions pass', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
+            const result = calcReleaseScore(allDims(100, 'pass'));
 
             expect(result.recommendation).toBe('All dimensions meet the release threshold. Ready for release.');
         });
 
-        it('recommends improvement when single dimension fails', () => {
-            const result = calculateReleaseScore(30, 100, 'pass', 100, 0);
+        it('recommends improvement when a single dimension fails', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: 100, status: 'pass' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 30, status: 'fail' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
 
-            expect(result.recommendation).toBe('Improve tasks before release.');
-        });
-
-        it('recommends improvement when health gate fails', () => {
-            const result = calculateReleaseScore(100, 90, 'fail', 100, 0);
-
-            expect(result.recommendation).toBe('Improve health before release.');
-        });
-
-        it('recommends improvement when multiple dimensions fail', () => {
-            const result = calculateReleaseScore(30, 40, 'fail', 50, 60);
-
-            expect(result.recommendation).toContain('Improve');
-            expect(result.recommendation).toContain('tasks');
-            expect(result.recommendation).toContain('health');
+            expect(calcReleaseScore(dims).recommendation).toBe('Improve Coverage before release.');
         });
 
         it('lists all failing dimensions separated by commas', () => {
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
+            const dims: HealthDimensions = {
+                passRate: { score: 30, status: 'fail' },
+                flakyRate: { score: 40, status: 'fail' },
+                coverage: { score: 50, status: 'fail' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
 
-            expect(result.recommendation).toBe('Improve tasks, health, coverage, flakiness before release.');
+            expect(calcReleaseScore(dims).recommendation).toBe(
+                'Improve Pass Rate, Flaky Rate, Coverage before release.',
+            );
+        });
+
+        it('all dimensions unavailable -> cannot be assessed (no partial scoring)', () => {
+            const availability = {
+                passRate: false,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(allDims(100, 'pass'), DEFAULT_WEIGHTS, availability);
+
+            expect(result.score).toBe(0);
+            expect(result.grade).toBe('unknown');
+            expect(result.recommendation).toBe('Insufficient data — release score could not be assessed.');
+            expect((result.breakdown ?? []).every((d) => d.noData && d.status === 'fail')).toBeTruthy();
+        });
+
+        it('partial data -> names the missing dimensions in the recommendation', () => {
+            const availability = {
+                passRate: true,
+                flakyRate: false,
+                coverage: true,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(allDims(70, 'pass'), DEFAULT_WEIGHTS, availability);
+
+            expect(result.recommendation).toBe(
+                'Insufficient data for Flaky Rate, Suite Speed, Execution Rate — assessment is partial.',
+            );
+            expect((result.breakdown ?? []).filter((d) => d.noData).map((d) => d.label)).toStrictEqual([
+                'Flaky Rate',
+                'Suite Speed',
+                'Execution Rate',
+            ]);
+        });
+
+        it('failing AND missing dimensions -> both parts present, space-joined', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: 30, status: 'fail' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 100, status: 'pass' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
+            const availability = {
+                passRate: true,
+                flakyRate: false,
+                coverage: false,
+                suiteSpeed: false,
+                executionRate: false,
+            };
+
+            const result = calcReleaseScore(dims, DEFAULT_WEIGHTS, availability);
+
+            expect(result.recommendation).toBe(
+                'Improve Pass Rate before release. Insufficient data for Flaky Rate, Coverage, Suite Speed, Execution Rate — assessment is partial.',
+            );
         });
     });
 
     describe('Edge cases', () => {
         it('handles all zeros', () => {
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
+            const result = calcReleaseScore(allDims(0, 'fail'));
 
             expect(result.score).toBe(0);
             expect(result.grade).toBe('critical');
-            expect(result.breakdown.every((d) => d.status === 'fail')).toBeTruthy();
+            expect((result.breakdown ?? []).every((d) => d.status === 'fail')).toBeTruthy();
         });
 
-        it('handles perfect score with healthGate pass', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
+        it('handles all perfect with pass status', () => {
+            const result = calcReleaseScore(allDims(100, 'pass'));
 
             expect(result.score).toBe(100);
-            expect(result.breakdown.every((d) => d.status === 'pass')).toBeTruthy();
             expect(result.grade).toBe('excellent');
+            expect((result.breakdown ?? []).every((d) => d.status === 'pass')).toBeTruthy();
         });
 
-        it('handles healthGate fail with high healthScore', () => {
-            const result = calculateReleaseScore(100, 95, 'fail', 100, 0);
+        it('naN dimension score never propagates to the composite (guarded §24)', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: Number.NaN, status: 'fail' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 100, status: 'pass' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
 
-            expect(result.score).toBe(99);
-            expect(result.grade).toBe('excellent');
+            const result = calcReleaseScore(dims);
 
-            const healthDim = result.breakdown.find((d) => d.label === 'Health');
-
-            expect(healthDim?.status).toBe('fail');
+            expect(Number.isFinite(result.score)).toBeTruthy();
+            expect(result.score).toBeGreaterThanOrEqual(0);
         });
 
-        it('handles flakyRate overflow beyond 100', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, 150);
+        it('infinity dimension score never propagates to the composite', () => {
+            const dims: HealthDimensions = {
+                passRate: { score: Infinity, status: 'fail' },
+                flakyRate: { score: 100, status: 'pass' },
+                coverage: { score: 100, status: 'pass' },
+                suiteSpeed: { score: 100, status: 'pass' },
+                executionRate: { score: 100, status: 'pass' },
+            };
 
-            expect(result.score).toBe(80);
+            const result = calcReleaseScore(dims);
+
+            expect(Number.isFinite(result.score)).toBeTruthy();
+            expect(result.score).toBeGreaterThanOrEqual(0);
         });
 
-        it('handles flakyRate negative', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, -10);
+        it('zero total weight yields score 0 and grade unknown', () => {
+            const weights = { passRate: 0, flakyRate: 0, coverage: 0, suiteSpeed: 0, executionRate: 0 };
 
-            expect(result.score).toBe(100);
+            const result = calcReleaseScore(allDims(100, 'pass'), weights);
+
+            expect(result.score).toBe(0);
+            expect(result.grade).toBe('unknown');
         });
 
-        it('produces timestamp in ISO format', () => {
-            const result = calculateReleaseScore(80, 80, 'pass', 80, 20);
+        it('produces an ISO timestamp', () => {
+            const result = calcReleaseScore(allDims(80, 'pass'));
 
             expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
         });
 
-        it('naN flakyRate produces score 0, not NaN', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, NaN);
+        it('makeDimensionScore: pass at/above threshold, fail below', () => {
+            expect.hasAssertions();
 
-            expect(Number.isFinite(result.score)).toBeTruthy();
-            expect(result.score).toBeGreaterThanOrEqual(0);
-        });
-
-        it('infinity flakyRate produces score 0, not NaN', () => {
-            const result = calculateReleaseScore(100, 100, 'pass', 100, Infinity);
-
-            expect(Number.isFinite(result.score)).toBeTruthy();
-            expect(result.score).toBeGreaterThanOrEqual(0);
-        });
-
-        it('naN tasksPct does not propagate to final score', () => {
-            const result = calculateReleaseScore(NaN, 100, 'pass', 100, 0);
-
-            expect(Number.isFinite(result.score)).toBeTruthy();
-        });
-
-        it('naN in all inputs produces score 0', () => {
-            const result = calculateReleaseScore(NaN, NaN, 'pass', NaN, NaN);
-
-            expect(result.score).toBe(0);
-            expect(result.grade).toBe('critical');
-        });
-    });
-
-    describe('Weighted average', () => {
-        it('computes tasks at 25% weight', () => {
-            const result = calculateReleaseScore(100, 0, 'fail', 0, 100);
-
-            expect(result.score).toBe(25);
-        });
-
-        it('computes health at 30% weight', () => {
-            const result = calculateReleaseScore(0, 100, 'pass', 0, 100);
-
-            expect(result.score).toBe(30);
-        });
-
-        it('computes coverage at 25% weight', () => {
-            const result = calculateReleaseScore(0, 0, 'fail', 100, 100);
-
-            expect(result.score).toBe(25);
-        });
-
-        it('computes flakiness at 20% weight', () => {
-            const result = calculateReleaseScore(0, 0, 'fail', 0, 0);
-
-            expect(result.score).toBe(20);
+            expect(makeDimensionScore(95, 90).status).toBe('pass');
+            expect(makeDimensionScore(80, 90).status).toBe('fail');
         });
     });
 });
 
-describe('GenerateReleaseScoreHtml', () => {
+describe('GenerateReleaseScoreHtml (renderer)', () => {
     const result: ReleaseScoreResult = {
         score: 85,
+        dimensions: allDims(85, 'pass'),
         grade: 'good',
         breakdown: [
-            { label: 'Tasks', score: 80, status: 'pass' },
-            { label: 'Health', score: 90, status: 'pass' },
-            { label: 'Coverage', score: 70, status: 'pass' },
-            { label: 'Flakiness', score: 100, status: 'pass' },
+            { label: 'Pass Rate', score: 85, status: 'pass' },
+            { label: 'Flaky Rate', score: 85, status: 'pass' },
+            { label: 'Coverage', score: 85, status: 'pass' },
+            { label: 'Suite Speed', score: 85, status: 'pass' },
+            { label: 'Execution Rate', score: 85, status: 'pass' },
         ],
         recommendation: 'All dimensions meet the release threshold. Ready for release.',
         timestamp: '2026-06-03T12:00:00.000Z',
     };
 
     it('returns a string', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(typeof html).toBe('string');
+        expect(typeof generateReleaseScoreHtml(result)).toBe('string');
     });
 
     it('contains the page title', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(html).toContain('Release Readiness Score');
+        expect(generateReleaseScoreHtml(result)).toContain('Release Readiness Score');
     });
 
     it('contains the score value', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(html).toContain('85');
+        expect(generateReleaseScoreHtml(result)).toContain('85');
     });
 
     it('contains the grade', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(html).toContain('good');
+        expect(generateReleaseScoreHtml(result)).toContain('good');
     });
 
     it('contains the recommendation', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(html).toContain('All dimensions meet the release threshold. Ready for release.');
+        expect(generateReleaseScoreHtml(result)).toContain(
+            'All dimensions meet the release threshold. Ready for release.',
+        );
     });
 
     it('contains breakdown items', () => {
         expect.hasAssertions();
 
         const html = generateReleaseScoreHtml(result);
-        for (const item of result.breakdown) {
+        for (const item of result.breakdown ?? []) {
             expect(html).toContain(item.label);
             expect(html).toContain(String(item.score));
         }
@@ -322,14 +373,105 @@ describe('GenerateReleaseScoreHtml', () => {
     });
 
     it('includes generated footer', () => {
-        const html = generateReleaseScoreHtml(result);
-
-        expect(html).toContain('Generated by QA Tools');
+        expect(generateReleaseScoreHtml(result)).toContain('Generated by QA Tools');
     });
 
     it('includes theme script', () => {
-        const html = generateReleaseScoreHtml(result);
+        expect(generateReleaseScoreHtml(result)).toContain('qa-report-theme');
+    });
+});
 
-        expect(html).toContain('qa-report-theme');
+describe('GenerateReleaseScoreHtml — availability rendering (B3/§25)', () => {
+    function renderResult(overrides: Partial<ReleaseScoreResult>): string {
+        return generateReleaseScoreHtml({
+            score: 0,
+            dimensions: allDims(0, 'fail'),
+            grade: 'unknown',
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 40, status: 'fail' },
+            ],
+            recommendation: 'All dimensions meet the release threshold. Ready for release.',
+            ...overrides,
+        });
+    }
+
+    it('null result renders the explicit no-data empty state', () => {
+        expect.hasAssertions();
+
+        const html = generateReleaseScoreHtml(null);
+
+        expect(html).toContain('No release score data available');
+        expect(html).toContain('Run the release score analysis with valid pipeline and quality data.');
+    });
+
+    it('all-noData result renders the insufficient-data empty state, never a fabricated score', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({
+            score: 0,
+            breakdown: [
+                { label: 'Coverage', score: 0, status: 'fail', noData: true },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('Insufficient data for release score');
+        expect(html).toContain('<h1>Release Readiness Score</h1>');
+        expect(html).toContain('No dimension had a data source');
+        expect(html).toContain('Run the release score analysis with valid pipeline and quality data.');
+        expect(html).toContain('data-icon="info"');
+    });
+
+    it('counts checks over available dimensions only (noData excluded from numerator and denominator)', () => {
+        expect.hasAssertions();
+
+        // Domínio: 2 disponíveis passam, 1 disponível falha, 2 sem fonte de dados.
+        // Checks Passed = 2/3 (noData fora do denominador); a única falha disponível
+        // é nomeada na ação de correção. Score 85 (>= GATE) mantém Score/Grade/Gate
+        // em success — o único metric-card warn é o Checks Passed, isolando a
+        // severidade baseada em failedChecks.
+        const html = renderResult({
+            score: 85,
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 40, status: 'fail' },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+                { label: 'Execution Rate', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('2/3');
+        expect(html).toContain('<h1>Release Readiness Score</h1>');
+        expect(html).toContain('1 check(s) failed: Coverage');
+        expect(html).toContain('data-component="metric-card" data-severity="warn"');
+    });
+
+    it('keeps the checks card success when only noData dimensions are failing', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({
+            score: 0,
+            breakdown: [
+                { label: 'Pass Rate', score: 90, status: 'pass' },
+                { label: 'Flaky Rate', score: 85, status: 'pass' },
+                { label: 'Coverage', score: 0, status: 'fail', noData: true },
+                { label: 'Suite Speed', score: 0, status: 'fail', noData: true },
+            ],
+        });
+
+        expect(html).toContain('data-component="metric-card" data-severity="success"');
+        expect(html).not.toContain('data-component="metric-card" data-severity="warn"');
+        expect(html).not.toContain('check(s) failed');
+    });
+
+    it('falls back to a default recommendation when the recommendation is blank', () => {
+        expect.hasAssertions();
+
+        const html = renderResult({ score: 90, recommendation: '   ' });
+
+        expect(html).toContain('No recommendation available.');
     });
 });

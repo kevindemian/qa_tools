@@ -590,12 +590,16 @@ describe('EIXO C — traceability awareness (C-3c)', () => {
         expect(html).toContain('invalid');
     });
 
-    it('omits the awareness panel when no ST-1 category is present', () => {
+    it('renders an explicit no-data panel when no ST-1 category is present', () => {
         expect.hasAssertions();
 
         const result = buildTraceabilityMatrix([], undefined, []);
 
         expect(result.awareness.categories).toHaveLength(0);
-        expect(generateTraceabilityHtml(result)).not.toContain('Awareness Section');
+
+        const html = generateTraceabilityHtml(result);
+
+        expect(html).not.toContain('Awareness Section');
+        expect(html).toContain('No traceability awareness data available');
     });
 });

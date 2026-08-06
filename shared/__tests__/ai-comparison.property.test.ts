@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { compareAiVsManual, generateAiComparisonHtml } from '../report/ai-comparison.js';
+import { compareAiVsManual } from '../data-hub/compute/ai-comparison.js';
+import { generateAiComparisonHtml } from '../report/ai-comparison.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },

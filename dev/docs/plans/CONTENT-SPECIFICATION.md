@@ -556,24 +556,26 @@ OBRIGATÓRIO
 
 ## RESUMO DE GAPS POR ARTEFATO
 
+> **Atualizado (2026-08-05):** todos os 16 artefatos agora exibem `timestamp` (via `resolveGeneratedAt`/`result.timestamp`) e `thresholds` nos cards. Gap table original de 2026-07-11 está obsoleta — resolvido no plano `ARTIFACT-VALIDATION.md` (F5-T1..T6, I-8.2, D5).
+
 | # | Artefato | Gaps de Conteúdo |
 |---|----------|-----------------|
-| 1 | ai-effectiveness | Timestamp, thresholds nos cards |
-| 2 | ai-comparison | Timestamp, thresholds, formato consistente (tudo %) |
-| 3 | incident-report | Timestamp, thresholds explícitos, per-type count |
-| 4 | impact-alert | Timestamp, thresholds nos cards |
-| 5 | traceability | Thresholds nos cards (já tem timestamp) |
-| 6 | flakiness | **BUG: totalTests=0**, timestamp, thresholds |
-| 7 | backlog-health | Timestamp, thresholds nos cards |
-| 8 | pipeline-cost | Timestamp, thresholds nos cards |
-| 9 | suite-optimization | Timestamp, thresholds, savings column |
-| 10 | cross-squad-benchmark | Timestamp, thresholds nos cards |
-| 11 | release-score | Timestamp, threshold hints na breakdown |
-| 12 | silent-regression | Timestamp, thresholds nos cards |
-| 13 | defect-trend | Timestamp, trend direction badge, avg/defects day |
-| 14 | defect-seasonality | Timestamp, avg defects/day |
-| 15 | developer-profile | Timestamp, ranking badges |
-| 16 | requirement-score | Timestamp, thresholds nos cards |
+| 1 | ai-effectiveness | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 2 | ai-comparison | ~~Timestamp, thresholds, formato consistente (tudo %)~~ → ✅ |
+| 3 | incident-report | ~~Timestamp, thresholds explícitos, per-type count~~ → ✅ |
+| 4 | impact-alert | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 5 | traceability | ~~Thresholds nos cards (já tem timestamp)~~ → ✅ |
+| 6 | flakiness | ~~**BUG: totalTests=0**, timestamp, thresholds~~ → ✅ (I-4) |
+| 7 | backlog-health | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 8 | pipeline-cost | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 9 | suite-optimization | ~~Timestamp, thresholds, savings column~~ → ✅ |
+| 10 | cross-squad-benchmark | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 11 | release-score | ~~Timestamp, threshold hints na breakdown~~ → ✅ |
+| 12 | silent-regression | ~~Timestamp, thresholds nos cards~~ → ✅ |
+| 13 | defect-trend | ~~Timestamp, trend direction badge, avg/defects day~~ → ✅ |
+| 14 | defect-seasonality | ~~Timestamp, avg defects/day~~ → ✅ |
+| 15 | developer-profile | ~~Timestamp, ranking badges~~ → ✅ |
+| 16 | requirement-score | ~~Timestamp, thresholds nos cards~~ → ✅ |
 
 ---
 

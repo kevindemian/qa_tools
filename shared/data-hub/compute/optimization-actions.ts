@@ -42,6 +42,7 @@ export function computeOptimizationActions(
         Number.isFinite(flakyThreshold) && flakyThreshold >= 0 && flakyThreshold <= 1
             ? flakyThreshold
             : DEFAULT_FLAKY_THRESHOLD;
+    const flakinessByTitle = new Map(Object.entries(flakinessMap));
 
     const optimizations: OptimizationEntry[] = [];
     let totalDuration = 0;
@@ -50,9 +51,11 @@ export function computeOptimizationActions(
     for (const [title, durations] of Object.entries(testDurationMap)) {
         if (!Array.isArray(durations) || durations.length === 0) continue;
 
-        const avgDuration = durations.reduce((s, v) => s + v, 0) / durations.length;
+        const rawAvg = durations.reduce((s, v) => s + v, 0) / durations.length;
+        const avgDuration = Number.isFinite(rawAvg) && rawAvg > 0 ? rawAvg : 0;
         const durationSec = avgDuration / 1000;
-        const flakiness = flakinessMap[title] ?? 0;
+        const rawFlakiness = flakinessByTitle.get(title) ?? 0;
+        const flakiness = Number.isFinite(rawFlakiness) && rawFlakiness >= 0 ? rawFlakiness : 0;
 
         totalDuration += durationSec;
 
@@ -74,16 +77,19 @@ export function computeOptimizationActions(
 
     optimizations.sort((a, b) => {
         const impactOrder: Record<OptimizationImpact, number> = { high: 0, medium: 1, low: 2 };
-        return impactOrder[a.impact] - impactOrder[b.impact];
+        const impactDiff = impactOrder[a.impact] - impactOrder[b.impact];
+        if (impactDiff !== 0) return impactDiff;
+        return b.duration - a.duration;
     });
 
     return {
         optimizations,
         totalTests: optimizations.length,
-        totalDuration: Math.round(totalDuration * 100) / 100,
-        potentialSavings: Math.round(potentialSavings * 100) / 100,
+        totalDuration,
+        potentialSavings,
         slowThreshold: validSlow,
         flakyThreshold: validFlaky,
+        timestamp: new Date().toISOString(),
     };
 }
 

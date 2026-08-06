@@ -164,6 +164,8 @@ export interface RawJiraIssue {
     resolutionDate?: string | undefined;
     /** Number of linked test executions — enriched from Xray/Jira linkage. */
     linkedTestCount?: number | undefined;
+    /** Chaves de issues do tipo Test vinculados a este issue — enriquecido no provider via `linkedIssuesOf` (SSOT coverage-gap, N6). */
+    linkedTestKeys?: string[] | undefined;
 }
 
 /** A single Xray Cloud test run (within a test execution). */
@@ -521,7 +523,30 @@ export interface ReleaseScoreResult {
     dimensions: HealthDimensions;
     /** Grade (A-F). */
     grade: string;
+    /**
+     * B3 — human-readable per-dimension breakdown (labels + pass/fail). A
+     * dimension with no real data source is `noData: true` (renderers MUST show
+     * "N/A", never the 0 placeholder — AGENTS.md §24/§25). Always produced by
+     * `calcReleaseScore`; optional only for legacy/CSV-imported hubs.
+     */
+    breakdown?: ReleaseScoreBreakdownEntry[];
+    /** Human-readable recommendation derived from the failing/absent dimensions. */
+    recommendation?: string;
+    /** ISO timestamp of the computation. */
+    timestamp?: string;
 }
+
+/** Single release-score dimension entry with no-data awareness. */
+export interface ReleaseScoreBreakdownEntry {
+    label: string;
+    score: number;
+    status: 'pass' | 'fail';
+    /** True when the dimension had no real data source (not fabricated). */
+    noData?: boolean;
+}
+
+/** Per-dimension availability for release score (mirrors ComputedMetrics.dataAvailability). */
+export type ReleaseScoreAvailability = Record<keyof HealthDimensions, boolean>;
 
 /** Quarantine status for flaky tests. */
 export interface QuarantineStatus {
@@ -691,6 +716,26 @@ export interface TraceabilityAwareness {
     minConfidence: number | null;
 }
 
+/** Per-run pipeline cost entry (projection over PerRunCost + run status). */
+export interface PipelineCostEntry {
+    timestamp: string;
+    durationSec: number;
+    cost: number;
+    status: string;
+}
+
+/** Pipeline cost analytics result (SSOT — computed by DataHub, rendered by renderers). */
+export interface PipelineCostResult {
+    totalCost: number;
+    avgCostPerRun: number;
+    totalDurationSec: number;
+    costPerMinute: number;
+    costByRun: PipelineCostEntry[];
+    runCount: number;
+    period: { from: string; to: string };
+    timestamp: string;
+}
+
 export interface ComputedMetrics {
     passRate: number;
     avgDuration: number;
@@ -758,14 +803,43 @@ export interface ComputedMetrics {
     /** Traceability tree: epic > story > test mapping with coverage and health. */
     traceabilityTree?: TraceabilityResult | undefined;
     /** Cross-squad benchmark: inter-squad comparison of health, coverage, and velocity. */
-    crossSquad?: import('../quality/cross-squad-benchmark.js').CrossSquadResult | undefined;
+    crossSquad?: import('../data-hub/compute/cross-squad-benchmark.js').CrossSquadResult | undefined;
     // ─── SSOT expansion (Batch 2 — G10, G11) ─────────────────────────────
     /** Coverage gap analysis result. */
     coverageGap?: import('./coverage.js').CoverageGapResult | undefined;
+    /** Backlog health: stale, unassigned, bugs without tests (SSOT — N6 hub-first). */
+    backlogHealth?: import('../report/backlog-health.js').BacklogHealthResult | undefined;
+    /** Developer profile from failure classifications (SSOT — N6 hub-first). */
+    developerProfile?: import('../quality/developer-profile.js').DeveloperProfileResult | undefined;
+    /** AI vs manual test comparison from aiRecords (SSOT — N6 hub-first). */
+    aiComparison?: import('../data-hub/compute/ai-comparison.js').AiComparisonResult | undefined;
+    /** Pipeline cost analytics result — SSOT projection over perRunCosts (I-1). */
+    pipelineCostResult?: PipelineCostResult | undefined;
     /** Suite-level aggregation: passed/failed/skipped/duration per suite. */
     suiteBreakdown?: SuiteBreakdown[] | undefined;
     /** Failure classification per test title (e.g., 'ASSERTION', 'TIMEOUT'). */
     failureClassifications?: Record<string, string> | undefined;
+    /**
+     * Per-dimension data availability for the health score. `false` means the
+     * underlying data source is genuinely ABSENT (no runs / no coverage / no
+     * jobs), NOT a measured 0 — consumers MUST show "N/A", never the 0 value
+     * (AGENTS.md §24/§25). Always computed by `DataHubImpl.computeMetrics`.
+     */
+    dataAvailability?: DataAvailability;
+}
+
+/** Whether each health dimension has a real data source behind its computed value. */
+export interface DataAvailability {
+    /** Pipeline runs with conclusion exist OR executed tests (passed+failed) > 0. */
+    passRate: boolean;
+    /** Pipeline runs exist (flaky detection has qualifying data). */
+    flaky: boolean;
+    /** Coverage data present (raw.coverage or parsed artifact coverage > 0). */
+    coverage: boolean;
+    /** Pipeline runs with conclusion exist. */
+    executionRate: boolean;
+    /** Job durations / run timing present. */
+    suiteSpeed: boolean;
 }
 
 /**
@@ -837,10 +911,23 @@ export interface DataHub {
     /** Save the full MetricsStore. Throws if persistence not configured. */
     saveMetricsStore(store: MetricsStore): void;
     /**
-     * Convert a ParseResult to MetricsRun and save it to history.
+     * Convert a ParseResult to MetricsRun, persist it to history, AND reconcile
+     * it as the authoritative current run in `computed.metricsRuns` (F0-T8).
+     *
+     * `computed.metricsRuns[0]` is guaranteed to represent `result` after the
+     * call (its tests reflect `result.tests`), making the hub the single source
+     * of truth for report generation and failure analysis.
+     *
+     * @param project - Project name for scoping.
+     * @param result - Parsed test results (CTRF/JUnit/Mochawesome).
+     * @param sourceRunId - Optional CI run id (e.g. pipeline id / GITHUB_RUN_ID).
+     *   When provided, the parse is keyed by that id (idempotent: re-saving the
+     *   same id replaces the slot instead of duplicating). When omitted, a
+     *   synthetic user-fallback slot is used.
+     * @throws Error if sourceRunId is provided but not a valid integer.
      * Throws if persistence not configured.
      */
-    saveParseResult(project: string, result: ParseResult): MetricsRun;
+    saveParseResult(project: string, result: ParseResult, sourceRunId?: number): MetricsRun;
     /** Save a quality metrics snapshot. Throws if persistence not configured. */
     saveQualityMetrics(snapshot: QualityMetricsSnapshot): void;
     /** Load all quality metrics snapshots. Throws if persistence not configured. */

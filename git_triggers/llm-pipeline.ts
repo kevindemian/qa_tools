@@ -3,28 +3,28 @@ import { formatErr } from '../shared/errors.js';
 import { confirm, info, warn, success, printError, divider, print } from '../shared/ui/prompt.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
 import { analyzeFailuresWithReport } from '../shared/validation/failure-analysis.js';
-import type { ParseResult } from '../shared/result_parser.js';
 import type { AnalysisReport } from '../shared/validation/failure-analysis.js';
+import type { ParseResult } from '../shared/result_parser.js';
+import type { DataHub } from '../shared/types/data-hub.js';
+import { isDataHubInitialized, getDataHub } from '../shared/data-hub/global-hub.js';
+import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
+import { getCurrentProject } from '../shared/project-context.js';
 import { rootLogger } from '../shared/logger.js';
 
-export async function offerPipelineFailureAnalysis(
-    parsed: ParseResult,
-    onAnalysis?: (report: AnalysisReport) => Promise<void>,
-): Promise<void> {
-    const failed = parsed.tests.filter((t) => t.state === 'failed');
-    if (failed.length === 0) {
-        info('Nenhuma falha para analisar.');
-        return;
-    }
+export interface OfferPipelineFailureAnalysisOptions {
+    /** Hub que reflete o parse sendo analisado (SSOT F0-T8). Obrigatório quando o hub global não está inicializado. */
+    dataHub?: DataHub;
+    /** Callback do consumidor — executado FORA do catch de análise (§25: erros do consumidor propagam). */
+    onAnalysis?: (report: AnalysisReport) => Promise<void>;
+}
 
-    if (!confirm('Analisar ' + failed.length + ' falha(s) com IA?', false)) return;
-
+async function _runAnalysis(hub: DataHub, onAnalysis?: (report: AnalysisReport) => Promise<void>): Promise<void> {
     let analysis: AnalysisReport;
     try {
-        analysis = await analyzeFailuresWithReport(parsed.tests);
+        analysis = await analyzeFailuresWithReport(hub);
     } catch (err) {
-        // Falha da análise LLM (fronteira externa): degradação explícita e logada.
-        // O catch cobre APENAS a chamada de análise — não mascara erros de outras origens.
+        // Falha da análise LLM / contrato do hub (fronteira externa): degradação
+        // explícita e logada. Não mascara erros de outras origens.
         printError('Falha ao analisar com IA', err);
         rootLogger.error('LLM pipeline analysis error: ' + formatErr(err));
         return;
@@ -62,4 +62,38 @@ export async function offerPipelineFailureAnalysis(
     if (onAnalysis) {
         await onAnalysis(analysis);
     }
+}
+
+function _resolveAnalysisRepo(): string {
+    return getCurrentProject() ?? process.env['GITHUB_REPOSITORY'] ?? '';
+}
+
+export async function offerPipelineFailureAnalysis(
+    parsed: ParseResult,
+    options?: OfferPipelineFailureAnalysisOptions,
+): Promise<void> {
+    const failed = parsed.tests.filter((t) => t.state === 'failed');
+    if (failed.length === 0) {
+        info('Nenhuma falha para analisar.');
+        return;
+    }
+
+    if (!confirm('Analisar ' + failed.length + ' falha(s) com IA?', false)) return;
+
+    let hub = options?.dataHub ?? (isDataHubInitialized() ? getDataHub() : undefined);
+    if (!hub) {
+        // Nenhum hub disponível (nem explícito, nem global): constrói um hub
+        // dedicado que reflete o parse coletado (defensivo F0-T8). Sem isso, a
+        // análise rodaria contra um hub sem o run atual ou nem rodaria — ambos
+        // violariam o §25 (perda de capacidade silenciosa).
+        try {
+            hub = createDataHubFromParseResult(parsed, _resolveAnalysisRepo());
+        } catch (err) {
+            printError('Falha ao preparar o DataHub para análise', err);
+            rootLogger.error('offerPipelineFailureAnalysis: falha ao criar hub dedicado: ' + formatErr(err));
+            return;
+        }
+    }
+
+    await _runAnalysis(hub, options?.onAnalysis);
 }

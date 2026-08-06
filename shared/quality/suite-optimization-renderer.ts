@@ -8,6 +8,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { Container, Section } from '../primitives/layout.js';
 import { MetricCard, MetricGrid } from '../primitives/card.js';
@@ -18,7 +19,7 @@ import { buildCss } from '../report/report-styles.js';
 import { rootLogger } from '../logger.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { icon } from '../icons.js';
-import type { OptimizationResult } from './suite-optimization.js';
+import type { OptimizationResult } from '../types/data-hub-extensions.js';
 
 const POTENTIAL_SAVINGS_WARN_THRESHOLD = 60;
 
@@ -70,8 +71,16 @@ function buildRecommendedActions(result: OptimizationResult): string {
     });
 }
 
-export function generateOptimizationHtml(result: OptimizationResult, title?: string): string {
+export function generateOptimizationHtml(
+    result: OptimizationResult | null | undefined,
+    title?: string,
+    generatedAt?: string,
+): string {
     const pageTitle = title || 'Suite Optimization Report';
+    if (!result) {
+        rootLogger.error('generateOptimizationHtml: optimization result is missing.');
+        return buildErrorPage('Error generating dashboard', 'Suite optimization data is unavailable.');
+    }
     const actionable = result.optimizations.filter((e) => e.action !== 'none');
 
     const customCss = [
@@ -85,7 +94,7 @@ export function generateOptimizationHtml(result: OptimizationResult, title?: str
     let bodyContent =
         `<div data-dashboard="suite-optimization">` +
         `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-        `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+        `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
         Section({
             dataSection: 'summary',
             title: 'Summary',

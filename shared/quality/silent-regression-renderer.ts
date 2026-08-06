@@ -1,7 +1,7 @@
 /**
  * Silent Regression Detector — HTML rendering layer.
  *
- * Receives computed RegressionResult and produces a complete HTML page.
+ * Receives computed RegressionDetectionResult and produces a complete HTML page.
  * This module has NO business logic — only presentation.
  *
  * @module silent-regression-renderer
@@ -21,7 +21,7 @@ import {
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
-import type { RegressionResult, RegressionEntry } from './silent-regression.js';
+import type { RegressionDetectionResult, RegressionEntry } from '../types/data-hub-extensions.js';
 
 const REGRESSION_COUNT_TARGET = 0;
 const AVG_INCREASE_WARN_THRESHOLD = 20;
@@ -41,10 +41,15 @@ function severityBadgeVariant(severity: RegressionEntry['severity']): 'fail' | '
     }
 }
 
-export function generateSilentRegressionHtml(result: RegressionResult | null | undefined, title?: string): string {
+export function generateSilentRegressionHtml(
+    result: RegressionDetectionResult | null | undefined,
+    title?: string,
+): string {
     try {
         if (!result) {
-            rootLogger.error('Silent regression result is null or undefined. Provide a valid RegressionResult.');
+            rootLogger.error(
+                'Silent regression result is null or undefined. Provide a valid RegressionDetectionResult.',
+            );
             return buildErrorPage('Error generating report', 'Error generating silent regression report');
         }
         const pageTitle = title || 'Silent Regression Detector';
@@ -79,7 +84,7 @@ function wrapContainer(pageTitle: string, children: string, timestamp: string): 
     </div>`;
 }
 
-function buildMetricSummary(result: RegressionResult): string {
+function buildMetricSummary(result: RegressionDetectionResult): string {
     // Calculate average percentage increase across regressions
     const avgIncrease =
         result.regressions.length > 0
@@ -119,7 +124,7 @@ function buildMetricSummary(result: RegressionResult): string {
     });
 }
 
-function buildRegressions(result: RegressionResult): string {
+function buildRegressions(result: RegressionDetectionResult): string {
     if (result.regressions.length === 0) {
         return EmptyState({
             title: 'No silent regressions detected',
@@ -173,7 +178,8 @@ function buildRegressions(result: RegressionResult): string {
     });
 }
 
-function buildRecommendedActions(result: RegressionResult): string {
+function buildRecommendedActions(result: RegressionDetectionResult): string {
+    // legitimate: zero regressions = condition-false (nothing to recommend) — absence IS the message; EmptyState would be redundant noise (Rule 25.3 intent).
     if (result.regressions.length === 0) return '';
 
     const criticalCount = result.regressions.filter((r) => r.severity === 'critical' || r.severity === 'high').length;

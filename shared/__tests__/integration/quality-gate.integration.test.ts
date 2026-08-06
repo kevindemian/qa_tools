@@ -4,9 +4,8 @@
  * Validates the quality gate orchestrator:
  * - runQualityGate with/without metrics data
  * - Pass/fail overall based on threshold combination
- * - Individual checks: health-score, pass-rate, flaky-rate, coverage, suite-speed
+ * - Checks: health-score (single dimension rule) + data-quality categories
  * - Project filtering
- * - formatQualityGateJson / formatQualityGateText output
  * - DataHub parameter acceptance
  *
  * Uses vi.spyOn for getDataHub (reads from disk) but keeps
@@ -22,8 +21,6 @@ async function loadModules() {
     const qg = await import('../../quality/quality-gate.js');
     return {
         runQualityGate: qg.runQualityGate,
-        formatQualityGateJson: qg.formatQualityGateJson,
-        formatQualityGateText: qg.formatQualityGateText,
     };
 }
 
@@ -188,38 +185,9 @@ describe('Integration: Quality Gate', () => {
             const result = runQualityGate({ project: 'test-project', dataHub: mockHub });
 
             expect(result.overall).toBe('pass');
-            expect(result.checks).toHaveLength(5);
+            expect(result.checks).toHaveLength(1);
+            expect(result.checks[0]?.name).toBe('health-score');
             expect(result.score).toBeGreaterThan(0);
-        });
-    });
-
-    describe('FT-10c: formatQualityGateJson', () => {
-        it('produces valid JSON', async () => {
-            expect.hasAssertions();
-
-            const { formatQualityGateJson } = await loadModules();
-            const result = { overall: 'pass' as const, checks: [], score: 85 };
-            const json = formatQualityGateJson(result);
-
-            expect(JSON.parse(json)).toHaveProperty('overall', 'pass');
-        });
-    });
-
-    describe('FT-10d: formatQualityGateText', () => {
-        it('produces human-readable output', async () => {
-            expect.hasAssertions();
-
-            const { formatQualityGateText } = await loadModules();
-            const result = {
-                overall: 'pass' as const,
-                checks: [{ name: 'health-score', status: 'pass' as const, score: 85, threshold: 70, details: 'good' }],
-                score: 85,
-            };
-            const text = formatQualityGateText(result);
-
-            expect(text).toContain('Quality Gate');
-            expect(text).toContain('PASS');
-            expect(text).toContain('health-score');
         });
     });
 

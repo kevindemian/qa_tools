@@ -12,8 +12,13 @@ import { rootLogger } from '../../logger.js';
 /**
  * Convert parsedArtifacts map to MetricsRun[] array.
  *
+ * Each run is stamped with the owning project name — the identity every
+ * consumer filter (`r.project === getCurrentProject()`, schedule/batch/interactive)
+ * matches against. The pipeline `runs` are used only for timestamps, not identity.
+ *
  * @param parsedArtifacts - Map of run ID to parsed test artifacts.
  * @param runs - Optional PipelineRun[] for timestamp lookup (preserves original timestamps).
+ * @param project - Project name stamped on every produced MetricsRun.
  * @returns Array of MetricsRun sorted by timestamp (newest first).
  */
 function accumulateArtifactStats(
@@ -42,7 +47,8 @@ function accumulateArtifactStats(
 
 export function convertToMetricsRuns(
     parsedArtifacts: Map<number, ArtifactParseResult[]>,
-    runs?: PipelineRun[],
+    runs: PipelineRun[] | undefined,
+    project: string,
 ): MetricsRun[] {
     const result: MetricsRun[] = [];
     const runsById = new Map((runs ?? []).map((r) => [String(r.id), r]));
@@ -58,7 +64,7 @@ export function convertToMetricsRuns(
 
         result.push({
             timestamp,
-            project: run?.head_branch ?? '',
+            project,
             passed: acc.passed,
             failed: acc.failed,
             skipped: acc.skipped,

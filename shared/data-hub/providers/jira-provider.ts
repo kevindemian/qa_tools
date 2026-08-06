@@ -3,8 +3,12 @@
  *
  * Fetches Jira issues via JiraResourceLike and adapts to DataProvider.
  */
-import type { JiraResourceLike, JiraIssue } from '../../types/jira.js';
+import type { JiraResourceLike, JiraIssue, JiraIssueLink } from '../../types/jira.js';
 import type { DataProvider, FetchOptions, RawData, RawJiraIssue } from '../../types/data-hub.js';
+import { rootLogger } from '../../logger.js';
+
+/** Lote de issueKeys para a query `linkedIssuesOf` (limite do JQL). */
+const LINKED_TESTS_BATCH_SIZE = 50;
 
 /** Extrai nome de um objeto desconhecido (displayName ou name), se string. */
 function extractName(value: unknown): string | undefined {
@@ -52,6 +56,33 @@ function extractSprintName(value: unknown): string | undefined {
     return extractName(value);
 }
 
+/** Extrai a issue (inward/outward) vinculada a um teste. */
+function extractLinkedIssueKey(link: unknown, testKey: string): string | undefined {
+    const l = link as JiraIssueLink;
+    if (l.inwardIssue?.key === testKey) return l.outwardIssue?.key;
+    return l.inwardIssue?.key;
+}
+
+/** Acumula, no linkMap, as issues da base ligadas aos testes retornados pelo JQL. */
+function collectTestLinks(
+    linkMap: Map<string, string[]>,
+    testIssues: Array<{ key: string; fields: Record<string, unknown> }>,
+    issueKeys: string[],
+): void {
+    for (const test of testIssues) {
+        const testKey = test.key;
+        const links = test.fields['issuelinks'];
+        if (!Array.isArray(links)) continue;
+        for (const link of links) {
+            const linkedKey = extractLinkedIssueKey(link, testKey);
+            if (typeof linkedKey !== 'string' || !issueKeys.includes(linkedKey)) continue;
+            const existing = linkMap.get(linkedKey) ?? [];
+            existing.push(testKey);
+            linkMap.set(linkedKey, existing);
+        }
+    }
+}
+
 export class JiraDataProvider implements DataProvider {
     readonly name = 'jira';
     readonly source = 'jira' as const;
@@ -70,6 +101,17 @@ export class JiraDataProvider implements DataProvider {
 
         const jiraIssues: RawJiraIssue[] = response.issues.map((issue) => this.mapIssue(issue as JiraIssue));
 
+        // Enriquecimento SSOT (N6): resolve os testes vinculados a cada issue via
+        // `linkedIssuesOf` (mesma técnica do live analyzeCoverageGaps) e grava as
+        // chaves no raw — permite o hub computar um coverage-gap equivalente.
+        const issueKeys = jiraIssues.map((i) => i.key);
+        const testLinkMap = await this.fetchLinkedTestKeys(issueKeys);
+        for (const issue of jiraIssues) {
+            const keys = testLinkMap.get(issue.key) ?? [];
+            issue.linkedTestKeys = keys;
+            issue.linkedTestCount = keys.length;
+        }
+
         return {
             runs: [],
             jobs: new Map(),
@@ -77,6 +119,27 @@ export class JiraDataProvider implements DataProvider {
             failureReasons: new Map(),
             jiraIssues,
         };
+    }
+
+    /** Busca os testes vinculados aos issues (bate por lotes) e devolve claves: issue -> test keys. */
+    private async fetchLinkedTestKeys(issueKeys: string[]): Promise<Map<string, string[]>> {
+        const linkMap = new Map<string, string[]>();
+        if (issueKeys.length === 0) return linkMap;
+        try {
+            for (let i = 0; i < issueKeys.length; i += LINKED_TESTS_BATCH_SIZE) {
+                const chunk = issueKeys.slice(i, i + LINKED_TESTS_BATCH_SIZE);
+                const jql = `issueType = Test AND issue in linkedIssuesOf("${chunk.join('","')}")`;
+                const testResponse = await this.jira.searchJiraIssues(jql, 500);
+                collectTestLinks(linkMap, testResponse.issues, issueKeys);
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            rootLogger.error(
+                'Failed to fetch linked tests for Jira issues; coverage-gap test links will be incomplete. Details: ' +
+                    msg,
+            );
+        }
+        return linkMap;
     }
 
     private mapIssue(issue: JiraIssue): RawJiraIssue {

@@ -8,7 +8,7 @@
  * - Dark mode
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DefectTrendResult } from '../../quality/defect-trend.js';
+import type { DefectAggregationResult } from '../../types/data-hub-extensions.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -24,7 +24,7 @@ vi.mock('../../report/html-factory.js', async (importOriginal) => {
     return { ...actual, buildHtmlPage: vi.fn(actual.buildHtmlPage) };
 });
 
-function makeResult(overrides?: Partial<DefectTrendResult>): DefectTrendResult {
+function makeResult(overrides?: Partial<DefectAggregationResult>): DefectAggregationResult {
     return {
         trends: [
             { date: '2026-06-01', categories: { ASSERTION: 2, TIMEOUT: 1 }, total: 3 },
@@ -35,6 +35,7 @@ function makeResult(overrides?: Partial<DefectTrendResult>): DefectTrendResult {
             { category: 'TIMEOUT', count: 2 },
         ],
         period: { from: '2026-06-01', to: '2026-06-02' },
+        totalRecords: 4,
         ...overrides,
     };
 }
@@ -91,6 +92,7 @@ describe('Integration: Defect Trend (FT-20)', () => {
                     trends: [{ date: '2026-06-01', categories: { A: 1 }, total: 1 }],
                     topCategories: [{ category: 'A', count: 1 }],
                     period: { from: '2026-06-01', to: '2026-06-01' },
+                    totalRecords: 1,
                 },
                 'Error Test',
             );

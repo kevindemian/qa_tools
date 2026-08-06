@@ -99,6 +99,18 @@ export function generatePostProcessWorkflowYaml(options: PostProcessWorkflowOpti
         '                  name: pr-report-html',
         `                  path: ${DEFAULT_TEST_REPORT_PATH}pr-report.html`,
         '                  if-no-files-found: warn',
+        '            - name: Generate AQS Scorecard',
+        '              if: always()',
+        '              run: npx tsx scripts/artifact-scorecard-runner.ts',
+        '              env:',
+        '                  GITHUB_TOKEN: ${{ github.token }}',
+        '            - name: Upload AQS Scorecard',
+        '              if: always()',
+        `              uses: ${ACTION_VERSIONS.UPLOAD_ARTIFACT}`,
+        '              with:',
+        '                  name: artifact-scorecard',
+        '                  path: reports/validation/artifact-scorecard.json',
+        '                  if-no-files-found: warn',
     ].join('\n');
 }
 

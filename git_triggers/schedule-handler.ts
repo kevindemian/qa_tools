@@ -2,42 +2,32 @@
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/ui/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
 import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
-import { calcTestDurationMap } from '../shared/data-hub/compute/test-duration-map.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import { calculateHealthScore } from '../shared/quality/health-score.js';
-import { aggregateDefectTrends, generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
-import { calculateReleaseScore, generateReleaseScoreHtml } from '../shared/quality/release-score.js';
+import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
+import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
 import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
-import { buildTraceabilityMatrix, generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
-import JiraClient from '../shared/jira/jira-client.js';
-import Config from '../shared/config-accessor.js';
+import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 
 import { openWithFallback } from '../shared/open.js';
 import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import { buildHtmlPage } from '../shared/report/html-factory.js';
-import {
-    mapJiraIssuesToBacklogHealth,
-    analyzeBacklogHealth,
-    generateBacklogHealthHtml,
-} from '../shared/report/backlog-health.js';
-import type { RawJiraIssue } from '../shared/types/data-hub.js';
-import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
-import { detectSilentRegression, generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
-import { compareAiVsManual, generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
-import { buildDeveloperProfile, generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
-import { analyzeCoverageGaps } from '../shared/report/coverage-gap.js';
+import { buildCss } from '../shared/primitives/report-styles.js';
+import { resolveGeneratedAt } from '../shared/date-utils.js';
+import { generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
+import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
+import { generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
+import { generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
+import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
+import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
+import { generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
-import { calculatePipelineCost, generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
-import {
-    generateGitMetricsRuns,
-    generateGitFailureClassifications,
-    getLastGitLogError,
-} from '../shared/ci/git-metrics-adapter.js';
-import { runQualityGate, formatQualityGateText } from '../shared/quality/quality-gate.js';
+import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
+import { calculateRequirementScores } from '../shared/data-hub/compute/requirement-score.js';
+import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
+import { runQualityGate } from '../shared/quality/quality-gate.js';
+import { buildQualityGateSection } from '../shared/report/report-sections.js';
 
 import { writeReport } from '../shared/infra/temp-dir.js';
 import {
@@ -123,30 +113,6 @@ export async function handleChangeProject(names: string[]): Promise<void> {
     }
 }
 
-interface GitFallbackResult {
-    projectRuns: import('../shared/types/data-hub.js').MetricsRun[];
-    failureClassifications: import('../shared/types/data-hub.js').FailureClassification[];
-}
-
-function resolveGitFallback(): GitFallbackResult | null {
-    info('Sem dados de pipeline — tentando fallback para git history...');
-    const gitRuns = generateGitMetricsRuns({ projectName: getCurrentProject() ?? '' });
-    const gitError = getLastGitLogError();
-    if (gitRuns.length >= 2) {
-        const failureClassifications = generateGitFailureClassifications({
-            projectName: getCurrentProject() ?? '',
-        });
-        info('Usando ' + gitRuns.length + ' runs derivados do git history.');
-        return { projectRuns: gitRuns, failureClassifications };
-    }
-    if (gitError) {
-        warn('Não foi possível obter o git history. ' + gitError + ' Execute pipelines para gerar dados primeiro.');
-        return null;
-    }
-    warn('Menos de 2 execuções registradas. Execute pipelines primeiro.');
-    return null;
-}
-
 function extractTrendCategories(trends: { categories: Record<string, number> }[]): string[] {
     const categories = new Set<string>();
     for (const t of trends) {
@@ -157,95 +123,69 @@ function extractTrendCategories(trends: { categories: Record<string, number> }[]
     return [...categories];
 }
 
-export async function generateWeeklyQualityReport(): Promise<void> {
+export function generateWeeklyQualityReport(): void {
     try {
         if (!getCurrentProject()) {
             warn('Nenhum projeto selecionado.');
             return;
         }
-        const hub = getDataHub();
-        let projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
-        let failureClassifications = hub.raw.failureClassifications ?? [];
-
+        const dataHub = getDataHub();
+        const projectRuns = (dataHub.computed.metricsRuns ?? []).filter(
+            (r) => r.project === (getCurrentProject() ?? ''),
+        );
         if (projectRuns.length < 2) {
-            const fallback = resolveGitFallback();
-            if (!fallback) return;
-            projectRuns = fallback.projectRuns;
-            failureClassifications = fallback.failureClassifications;
+            warn(
+                'Menos de 2 execuções registradas para ' +
+                    (getCurrentProject() ?? '') +
+                    '. Execute pipelines primeiro.',
+            );
+            return;
         }
 
-        const effectiveRuns = projectRuns;
-
-        const dataHub = getDataHub();
         const health = calculateHealthScore({ dataHub });
-        const flaky = calcFlakinessEntries(projectRuns, 2);
-        const coveragePct = dataHub.computed.coverage;
-        const releaseScore = calculateReleaseScore(
-            undefined,
-            health.overall,
-            health.overall >= 70 ? 'pass' : 'fail',
-            coveragePct,
-            flaky.filter((f) => f.rate > 0.3).length > 0
-                ? Math.min(100, Math.round((flaky.filter((f) => f.rate > 0.3).length / flaky.length) * 100))
-                : 0,
-        );
-        const defects = aggregateDefectTrends(failureClassifications);
-        const matrix = buildTraceabilityMatrix(effectiveRuns, undefined, []);
+        const releaseScore = dataHub.computed.releaseScore;
+        const defects = dataHub.computed.defectAggregation;
+        const matrix = dataHub.computed.traceabilityTree;
+        const backlog = dataHub.computed.backlogHealth;
 
-        const rawJiraIssues: RawJiraIssue[] = hub.raw.jiraIssues ?? [];
-        const backlogIssues = mapJiraIssuesToBacklogHealth(rawJiraIssues);
-        const backlog = analyzeBacklogHealth(backlogIssues);
+        if (defects == null) {
+            throw new Error('Invariant violated: hub.computed.defectAggregation is undefined.');
+        }
+        if (matrix == null) {
+            throw new Error('Invariant violated: hub.computed.traceabilityTree is undefined.');
+        }
+        if (backlog == null) {
+            throw new Error('Invariant violated: hub.computed.backlogHealth is undefined.');
+        }
 
-        const aiRecords = hub.raw.aiRecords ?? null;
-        const aiResult = hub.computed.aiMetrics;
+        const aiRecords = dataHub.raw.aiRecords ?? null;
+        const aiResult = dataHub.computed.aiMetrics;
         const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
 
-        // Fase 9: Compute real coverage gap analysis for incident/impact reports
-        const jiraResource = new JiraClient(
-            Config.get('jiraPersonalToken'),
-            Config.get('jiraBaseUrl') + '/rest/api/2',
-            Config.get('jiraMode'),
-        );
-        const coverageGapResult = await analyzeCoverageGaps(jiraResource, getCurrentProject() ?? '');
+        const seasonality = dataHub.computed.seasonalityAggregation;
+        const regression = dataHub.computed.regressionDetection;
+        const devProfile = dataHub.computed.developerProfile;
+        const aiComparison = dataHub.computed.aiComparison;
+        const optimization = dataHub.computed.optimizationActions;
+        const benchmark = dataHub.computed.crossSquad;
+        const coverageGap = dataHub.computed.coverageGap;
 
-        const seasonality = aggregateDefectSeasonality(failureClassifications);
-        const regression = detectSilentRegression(calcTestDurationMap(effectiveRuns));
-        const devProfile = buildDeveloperProfile(
-            failureClassifications.map((fc) => ({
-                testTitle: fc.testTitle,
-                category: fc.category,
-                timestamp: fc.timestamp,
-            })),
-        );
-        const aiComparison = compareAiVsManual([]);
-        const flatTests = projectRuns.flatMap((r) =>
-            r.tests.map((t) => ({ title: t.title, duration: t.duration, flakiness: 0 })),
-        );
-        const optimization = analyzeSuiteOptimization(flatTests);
-
-        const projectNames = [...new Set(effectiveRuns.map((r) => r.project))];
-        const benchmark = computeCrossSquadBenchmark(
-            projectNames.map((name) => {
-                const pRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === name);
-                const pDataHub = getDataHub();
-                const pHealth = calculateHealthScore({ dataHub: pDataHub });
-                return {
-                    name,
-                    healthScore: pHealth.overall,
-                    grade: pHealth.grade,
-                    passRate: pHealth.dimensions.passRate.score,
-                    flakyRate: pHealth.dimensions.flakyRate.score,
-                    coveragePct: pHealth.dimensions.coverage.score,
-                    runCount: pRuns.length,
-                };
-            }),
-        );
+        if (seasonality == null) {
+            throw new Error('Invariant violated: hub.computed.seasonalityAggregation is undefined.');
+        }
+        if (regression == null) {
+            throw new Error('Invariant violated: hub.computed.regressionDetection is undefined.');
+        }
+        if (optimization == null) {
+            throw new Error('Invariant violated: hub.computed.optimizationActions is undefined.');
+        }
+        if (benchmark == null) {
+            throw new Error('Invariant violated: hub.computed.crossSquad is undefined.');
+        }
 
         const failRate = calcRunFailureRate(projectRuns);
 
-        // Use real coverage gap analysis for uncovered epics
-        const uncoveredEpics: string[] = coverageGapResult.gateConfig.failingEpics;
-        // Fallback to traceability matrix if no coverage gap data
+        const uncoveredEpics: string[] = [...(coverageGap?.gateConfig.failingEpics ?? [])];
         if (uncoveredEpics.length === 0) {
             matrix.nodes.forEach((n) => {
                 if (n.coverage < 100) uncoveredEpics.push(n.epic);
@@ -258,7 +198,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             seasonality.peakDay,
             uncoveredEpics,
             health.overall,
-            coverageGapResult,
+            coverageGap,
         );
 
         const trendCategories = extractTrendCategories(defects.trends);
@@ -269,10 +209,10 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             trendCategories.slice(0, 5),
             health.dimensions.coverage.score,
             uncoveredEpics,
-            coverageGapResult,
+            coverageGap,
         );
 
-        const pipelineCost = calculatePipelineCost(undefined, getDataHub());
+        const pipelineCost = dataHub.computed.pipelineCostResult;
 
         const sections: string[] = [];
         const qgDataHub = getDataHub();
@@ -280,12 +220,8 @@ export async function generateWeeklyQualityReport(): Promise<void> {
             project: getCurrentProject() ?? '',
             dataHub: qgDataHub,
         });
-        const timestamp = new Date().toISOString();
-        sections.push(
-            '<div data-section="quality-gate"><h2>Quality Gate</h2><pre>' +
-                formatQualityGateText(qualityGate) +
-                '</pre></div>',
-        );
+        const timestamp = resolveGeneratedAt();
+        sections.push('<h2>Quality Gate</h2>' + buildQualityGateSection(qualityGate));
         sections.push(
             '<div data-section="cross-squad-benchmark"><h2>Cross-Squad Benchmark</h2>' +
                 generateBenchmarkHtml(benchmark) +
@@ -371,7 +307,7 @@ export async function generateWeeklyQualityReport(): Promise<void> {
 
         const html = buildHtmlPage({
             title: 'Weekly Quality Report — ' + (getCurrentProject() ?? ''),
-            styles: '',
+            styles: buildCss(),
             theme: 'system',
             bodyContent,
             footer: 'Generated by QA Tools — Weekly Quality Report',
@@ -406,7 +342,7 @@ export async function handleFlakinessDashboard(): Promise<void> {
             info('Nenhum teste flaky detectado em ' + (getCurrentProject() ?? '') + '.');
             return;
         }
-        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''));
+        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''), { dataHub: hub });
         const outPath = writeReport('flakiness-' + (getCurrentProject() ?? '') + '.html', html);
         await openWithFallback(outPath, 'Dashboard de flaky', info);
         pushHistory(

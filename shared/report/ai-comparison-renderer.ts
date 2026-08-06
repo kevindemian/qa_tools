@@ -22,7 +22,7 @@ import {
     RecommendedActions,
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
-import type { AiComparisonResult } from './ai-comparison.js';
+import type { AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 
 const PASS_RATE_TARGET = 80;
 const FLAKINESS_TARGET = 0.1;
@@ -117,7 +117,16 @@ function buildAdvantageSection(result: AiComparisonResult): string {
 }
 
 function buildVersionTable(result: AiComparisonResult): string {
-    if (result.byVersion.length === 0) return '';
+    if (result.byVersion.length === 0) {
+        // Rule 25: explicit no-data (per-version comparison unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No version comparison data available',
+            description:
+                'Per-prompt-version comparison requires AI run results grouped by prompt version. No by-version data was found.',
+            action: 'Run AI generation with multiple prompt versions so their pass rates can be compared.',
+            icon: icon('bar-chart', 16),
+        });
+    }
 
     // Sort by pass rate (best first)
     const sorted = [...result.byVersion].sort((a, b) => b.passRate - a.passRate);
@@ -173,6 +182,7 @@ function buildSampleSizeWarning(result: AiComparisonResult): string {
         );
     }
 
+    // legitimate: zero warnings = condition-false (no sample-size warning) — absence IS the message, corroborated by summary counts; EmptyState would be redundant noise (Rule 25.3 intent).
     if (warnings.length === 0) return '';
 
     return Section({
@@ -234,6 +244,7 @@ function buildRecommendedActions(result: AiComparisonResult): string {
         }
     }
 
+    // legitimate: zero recommended actions = condition-false (nothing to recommend) — absence IS the message; EmptyState would be redundant noise (Rule 25.3 intent).
     if (actions.length === 0) return '';
 
     return Section({

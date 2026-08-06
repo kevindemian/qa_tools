@@ -12,7 +12,8 @@
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { calculateRequirementScores, generateRequirementScoreHtml } from '../quality/requirement-score.js';
+import { calculateRequirementScores } from '../data-hub/compute/requirement-score.js';
+import { generateRequirementScoreHtml } from '../quality/requirement-score.js';
 import type { AiGenerationRecord, AiModification } from '../types/llm.js';
 
 vi.mock('../logger', () => ({

@@ -491,32 +491,16 @@ describe('MatchPreconditionByTokenOverlap', () => {
         { key: 'PREC-3', summary: 'Admin role required' },
     ];
 
-    it('returns exact match when summary is identical', () => {
-        const result = matchPreconditionByTokenOverlap('User must be logged in', candidates);
+    it.each([
+        { query: 'User must be logged in', expectedKey: 'PREC-1', expectedMatchType: 'exact' },
+        { query: 'USER MUST BE LOGGED IN', expectedKey: 'PREC-1', expectedMatchType: 'exact' },
+        { query: 'Database seeded', expectedKey: 'PREC-2', expectedMatchType: 'overlap' },
+        { query: 'must be seeded', expectedKey: 'PREC-2', expectedMatchType: 'containment' },
+    ])('matches "$query" to $expectedKey with type $expectedMatchType', ({ query, expectedKey, expectedMatchType }) => {
+        const result = matchPreconditionByTokenOverlap(query, candidates);
 
-        expect(result.key).toBe('PREC-1');
-        expect(result.matchType).toBe('exact');
-    });
-
-    it('is case insensitive for exact match', () => {
-        const result = matchPreconditionByTokenOverlap('USER MUST BE LOGGED IN', candidates);
-
-        expect(result.key).toBe('PREC-1');
-        expect(result.matchType).toBe('exact');
-    });
-
-    it('returns overlap match when query tokens are subset of summary', () => {
-        const result = matchPreconditionByTokenOverlap('Database seeded', candidates);
-
-        expect(result.key).toBe('PREC-2');
-        expect(result.matchType).toBe('overlap');
-    });
-
-    it('returns containment match when query is contiguous substring of summary', () => {
-        const result = matchPreconditionByTokenOverlap('must be seeded', candidates);
-
-        expect(result.key).toBe('PREC-2');
-        expect(result.matchType).toBe('containment');
+        expect(result.key).toBe(expectedKey);
+        expect(result.matchType).toBe(expectedMatchType);
     });
 
     it('returns containment match when summary is substring of query', () => {

@@ -194,18 +194,26 @@ function buildPerTypeSummary(report: IncidentReport): string {
         typeCounts[event.type] = (typeCounts[event.type] ?? 0) + 1;
     }
 
-    const labels: Record<string, string> = {
-        failure: 'Failures',
-        regression: 'Regressions',
-        coverage_gap: 'Coverage Gaps',
-        seasonality: 'Seasonality Events',
-    };
+    const labels = new Map<string, string>([
+        ['failure', 'Failures'],
+        ['regression', 'Regressions'],
+        ['coverage_gap', 'Coverage Gaps'],
+        ['seasonality', 'Seasonality Events'],
+    ]);
 
     const children = Object.entries(typeCounts)
-        .map(([type, count]) => MetricCard({ label: labels[type] ?? type, value: String(count) }))
+        .map(([type, count]) => MetricCard({ label: labels.get(type) ?? type, value: String(count) }))
         .join('');
 
-    if (!children) return '';
+    // Rule 25: explicit no-data (no per-type counts) instead of silent omission.
+    if (!children) {
+        return EmptyState({
+            title: 'No incident type data available',
+            description: 'Per-type count summary requires incidents classified by type. No type data was found.',
+            action: 'Classify incidents by type so the per-type summary can be rendered.',
+            icon: icon('bar-chart', 16),
+        });
+    }
 
     return Section({
         dataSection: 'per-type',

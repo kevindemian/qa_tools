@@ -1,41 +1,61 @@
 /**
- * Property-Based Tests — Release Score (FT-14)
+ * Property-Based Tests — Release Score (B3 SSOT)
  *
- * Dimensão 5 — Métricas:
- * - calculateReleaseScore: score sempre [0, 100]
- * - Grade boundaries: excellent>=90, good>=70, needs_attention>=50, critical<50
- * - invertFlakiness: sempre [0, 100]
- * - Breakdown: 4 dimensões, labels fixos
- * - Recommendation: lista todas dimensões falhando
- * - Weights: tasks 0.25, health 0.30, coverage 0.25, flakiness 0.20
+ * Invariants that must hold for ALL inputs of `calcReleaseScore` (5-dim model):
+ * - score sempre em [0, 100]
+ * - Grade boundaries: excellent>=90, good>=80, needs_attention>=70, poor>=60, critical<60
+ * - Breakdown: 5 dimensões, labels fixos
+ * - Recommendation: 'Ready' quando todas passam; 'Improve' quando alguma falha
+ * - Breakdown status espelha o status da dimensão
+ * - Score monotônico em cada dimensão
+ * - NaN em qualquer dimensão não propaga ao compósito (§24)
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { calculateReleaseScore } from '../quality/release-score.js';
 
-/* ── Helpers ─────────────────────────────────────────────────── */
+import { calcReleaseScore } from '../data-hub/compute/release-score.js';
+import type { HealthDimensions } from '../types/data-hub.js';
+
+const KEYS: Array<keyof HealthDimensions> = ['passRate', 'flakyRate', 'coverage', 'suiteSpeed', 'executionRate'];
 
 function pctArb(): fc.Arbitrary<number> {
     return fc.float({ min: 0, max: 100, noDefaultInfinity: true, noNaN: true });
 }
 
-function intPctArb(): fc.Arbitrary<number> {
-    return fc.integer({ min: 0, max: 100 });
-}
-
-function gateArb(): fc.Arbitrary<'pass' | 'fail'> {
+function statusArb(): fc.Arbitrary<'pass' | 'fail'> {
     return fc.constantFrom('pass' as const, 'fail' as const);
 }
 
-/* ── Tests ───────────────────────────────────────────────────── */
+function dimsArb(): fc.Arbitrary<HealthDimensions> {
+    return fc
+        .tuple(
+            pctArb(),
+            statusArb(),
+            pctArb(),
+            statusArb(),
+            pctArb(),
+            statusArb(),
+            pctArb(),
+            statusArb(),
+            pctArb(),
+            statusArb(),
+        )
+        .map(([a, as, b, bs, c, cs, d, ds, e, es]) => ({
+            passRate: { score: a, status: as },
+            flakyRate: { score: b, status: bs },
+            coverage: { score: c, status: cs },
+            suiteSpeed: { score: d, status: ds },
+            executionRate: { score: e, status: es },
+        }));
+}
 
-describe('CalculateReleaseScore — property-based', () => {
+describe('CalcReleaseScore — property-based', () => {
     it('score sempre em [0, 100]', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+            fc.property(dimsArb(), (dimensions) => {
+                const result = calcReleaseScore(dimensions);
 
                 expect(result.score).toBeGreaterThanOrEqual(0);
                 expect(result.score).toBeLessThanOrEqual(100);
@@ -44,46 +64,42 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('grade: excellent >= 90, good >= 70, needs_attention >= 50, critical < 50', () => {
+    it('grade: excellent>=90, good>=80, needs_attention>=70, poor>=60, critical<60', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
-                const s = result.score;
+            fc.property(dimsArb(), (dimensions) => {
+                const s = calcReleaseScore(dimensions).score;
                 let expectedGrade: string;
                 if (s >= 90) {
                     expectedGrade = 'excellent';
-                } else if (s >= 70) {
+                } else if (s >= 80) {
                     expectedGrade = 'good';
-                } else if (s >= 50) {
+                } else if (s >= 70) {
                     expectedGrade = 'needs_attention';
+                } else if (s >= 60) {
+                    expectedGrade = 'poor';
                 } else {
                     expectedGrade = 'critical';
                 }
 
-                expect(result.grade).toBe(expectedGrade);
+                expect(calcReleaseScore(dimensions).grade).toBe(expectedGrade);
             }),
             { numRuns: 100 },
         );
     });
 
-    it('breakdown: sempre 4 dimensões com labels fixos', () => {
+    it('breakdown: sempre 5 dimensões com labels fixos e scores em [0, 100]', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
+            fc.property(dimsArb(), (dimensions) => {
+                const result = calcReleaseScore(dimensions);
+                const labels = (result.breakdown ?? []).map((d) => d.label);
 
-                expect(result.breakdown).toHaveLength(4);
-                expect(result.breakdown.map((d) => d.label)).toStrictEqual([
-                    'Tasks',
-                    'Health',
-                    'Coverage',
-                    'Flakiness',
-                ]);
+                expect(labels).toStrictEqual(['Pass Rate', 'Flaky Rate', 'Coverage', 'Suite Speed', 'Execution Rate']);
 
-                for (const d of result.breakdown) {
+                for (const d of result.breakdown ?? []) {
                     expect(d.score).toBeGreaterThanOrEqual(0);
                     expect(d.score).toBeLessThanOrEqual(100);
                 }
@@ -92,101 +108,67 @@ describe('CalculateReleaseScore — property-based', () => {
         );
     });
 
-    it('recommendation: "Ready" quando todas >= 70 e healthGate="pass"', () => {
+    it('breakdown status espelha o status de cada dimensão', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(
-                fc.integer({ min: 70, max: 100 }),
-                fc.integer({ min: 70, max: 100 }),
-                fc.integer({ min: 70, max: 100 }),
-                fc.integer({ min: 0, max: 30 }),
-                (tasks, health, coverage, flaky) => {
-                    const result = calculateReleaseScore(tasks, health, 'pass', coverage, flaky);
+            fc.property(dimsArb(), (dimensions) => {
+                const result = calcReleaseScore(dimensions);
+                const breakdown = result.breakdown ?? [];
 
-                    expect(result.recommendation).toContain('Ready');
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
+                expect(breakdown).toHaveLength(KEYS.length);
 
-    it('recommendation: lista dimensões falhando', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(
-                fc.integer({ min: 0, max: 69 }),
-                fc.integer({ min: 0, max: 69 }),
-                gateArb(),
-                fc.integer({ min: 0, max: 69 }),
-                fc.integer({ min: 71, max: 100 }),
-                (tasks, health, gate, coverage, flaky) => {
-                    const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
-
-                    expect(result.recommendation).toContain('Improve');
-                },
-            ),
-            { numRuns: 100 },
-        );
-    });
-
-    it('breakdown status matches score thresholds per dimension', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
-                for (const d of result.breakdown) {
-                    expect(d.score).toBeGreaterThanOrEqual(0);
-                    expect(d.score).toBeLessThanOrEqual(100);
-
-                    let expectedStatus: string;
-                    if (d.label === 'Health') {
-                        expectedStatus = gate;
-                    } else if (d.score >= 70) {
-                        expectedStatus = 'pass';
-                    } else {
-                        expectedStatus = 'fail';
-                    }
-
-                    expect(d.status).toBe(expectedStatus);
+                for (const [i, key] of KEYS.entries()) {
+                    expect(breakdown[i]?.status).toBe(dimensions[key].status);
+                    expect(breakdown[i]?.score).toBe(dimensions[key].score);
                 }
             }),
             { numRuns: 100 },
         );
     });
 
-    it('flakiness score is inversely monotonic with flakyRate', () => {
+    it('recommendation: "Ready" quando todas as dimensões passam', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(intPctArb(), intPctArb(), (a, b) => {
-                const resultA = calculateReleaseScore(100, 100, 'pass', 100, a);
-                const resultB = calculateReleaseScore(100, 100, 'pass', 100, b);
-                const flkAEntry = resultA.breakdown.find((d) => d.label === 'Flakiness');
-                const flkBEntry = resultB.breakdown.find((d) => d.label === 'Flakiness');
-                if (flkAEntry === undefined || flkBEntry === undefined) {
-                    throw new Error('Flakiness entry not found in breakdown');
-                }
-                const flkA = flkAEntry.score;
-                const flkB = flkBEntry.score;
-                let isMonotonic: boolean;
-                if (a > b) {
-                    isMonotonic = flkA <= flkB;
-                } else if (a < b) {
-                    isMonotonic = flkA >= flkB;
-                } else {
-                    isMonotonic = flkA === flkB;
-                }
+            fc.property(
+                fc.integer({ min: 70, max: 100 }),
+                fc.integer({ min: 70, max: 100 }),
+                fc.integer({ min: 70, max: 100 }),
+                fc.integer({ min: 70, max: 100 }),
+                fc.integer({ min: 70, max: 100 }),
+                (a, b, c, d, e) => {
+                    const dimensions: HealthDimensions = {
+                        passRate: { score: a, status: 'pass' },
+                        flakyRate: { score: b, status: 'pass' },
+                        coverage: { score: c, status: 'pass' },
+                        suiteSpeed: { score: d, status: 'pass' },
+                        executionRate: { score: e, status: 'pass' },
+                    };
 
-                expect(isMonotonic).toBeTruthy();
+                    expect(calcReleaseScore(dimensions).recommendation).toContain('Ready');
+                },
+            ),
+            { numRuns: 100 },
+        );
+    });
+
+    it('recommendation: lista dimensões falhando quando alguma falha', () => {
+        expect.hasAssertions();
+
+        fc.assert(
+            fc.property(dimsArb(), (dimensions) => {
+                const anyFail = KEYS.some((k) => dimensions[k].status === 'fail');
+
+                fc.pre(anyFail);
+
+                expect(calcReleaseScore(dimensions).recommendation).toContain('Improve');
             }),
             { numRuns: 100 },
         );
     });
 
-    it('score is monotonic in each positive dimension', () => {
+    it('score é monotônico quando uma dimensão aumenta', () => {
         expect.hasAssertions();
 
         fc.assert(
@@ -195,11 +177,24 @@ describe('CalculateReleaseScore — property-based', () => {
                 fc.integer({ min: 0, max: 99 }),
                 fc.integer({ min: 0, max: 99 }),
                 fc.integer({ min: 0, max: 99 }),
-                (tasks, health, coverage, flaky) => {
-                    const result = calculateReleaseScore(tasks, health, 'pass', coverage, flaky);
-                    const higher = calculateReleaseScore(tasks + 1, health + 1, 'pass', coverage + 1, flaky);
+                fc.integer({ min: 0, max: 99 }),
+                (a, b, c, d, e) => {
+                    const base: HealthDimensions = {
+                        passRate: { score: a, status: 'pass' },
+                        flakyRate: { score: b, status: 'pass' },
+                        coverage: { score: c, status: 'pass' },
+                        suiteSpeed: { score: d, status: 'pass' },
+                        executionRate: { score: e, status: 'pass' },
+                    };
+                    const higher: HealthDimensions = {
+                        passRate: { score: a + 1, status: 'pass' },
+                        flakyRate: { score: b + 1, status: 'pass' },
+                        coverage: { score: c + 1, status: 'pass' },
+                        suiteSpeed: { score: d + 1, status: 'pass' },
+                        executionRate: { score: e + 1, status: 'pass' },
+                    };
 
-                    expect(higher.score).toBeGreaterThanOrEqual(result.score);
+                    expect(calcReleaseScore(higher).score).toBeGreaterThanOrEqual(calcReleaseScore(base).score);
                 },
             ),
             { numRuns: 100 },
@@ -207,134 +202,100 @@ describe('CalculateReleaseScore — property-based', () => {
     });
 
     it('score boundary cases: all-zero gives 0, all-max gives 100', () => {
-        const zero = calculateReleaseScore(0, 0, 'pass', 0, 100);
+        const zero: HealthDimensions = {
+            passRate: { score: 0, status: 'fail' },
+            flakyRate: { score: 0, status: 'fail' },
+            coverage: { score: 0, status: 'fail' },
+            suiteSpeed: { score: 0, status: 'fail' },
+            executionRate: { score: 0, status: 'fail' },
+        };
 
-        expect(zero.score).toBe(0);
+        expect(calcReleaseScore(zero).score).toBe(0);
 
-        const full = calculateReleaseScore(100, 100, 'pass', 100, 0);
+        const full: HealthDimensions = {
+            passRate: { score: 100, status: 'pass' },
+            flakyRate: { score: 100, status: 'pass' },
+            coverage: { score: 100, status: 'pass' },
+            suiteSpeed: { score: 100, status: 'pass' },
+            executionRate: { score: 100, status: 'pass' },
+        };
 
-        expect(full.score).toBe(100);
+        expect(calcReleaseScore(full).score).toBe(100);
     });
 
     it('timestamp no formato ISO', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(pctArb(), pctArb(), gateArb(), pctArb(), pctArb(), (tasks, health, gate, coverage, flaky) => {
-                const result = calculateReleaseScore(tasks, health, gate, coverage, flaky);
-
-                expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+            fc.property(dimsArb(), (dimensions) => {
+                expect(calcReleaseScore(dimensions).timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
             }),
             { numRuns: 50 },
         );
     });
 });
 
-/* ──────────────────────────────────────────────────────────────
- * Edge-case stress tests — NaN, Infinity, weight normalization
- * These tests are designed to BREAK the code, not just validate it.
- * ────────────────────────────────────────────────────────────── */
+describe('CalcReleaseScore — edge cases (no mocks)', () => {
+    it('naN em qualquer dimensão não crasha e o compósito permanece finito (§24)', () => {
+        expect.hasAssertions();
 
-describe('CalculateReleaseScore — edge cases (no mocks)', () => {
-    it('naN in tasksPct does not crash and yields valid score', () => {
-        const result = calculateReleaseScore(Number.NaN, 80, 'pass', 80, 2);
+        fc.assert(
+            fc.property(dimsArb(), (dimensions) => {
+                const withNan: HealthDimensions = { ...dimensions };
+                withNan.coverage = { score: Number.NaN, status: 'fail' };
 
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-        expect(result.grade).toBeDefined();
+                const result = calcReleaseScore(withNan);
+
+                expect(Number.isFinite(result.score)).toBeTruthy();
+                expect(result.score).toBeGreaterThanOrEqual(0);
+                expect(result.score).toBeLessThanOrEqual(100);
+            }),
+            { numRuns: 100 },
+        );
     });
 
-    it('naN in healthScore does not crash and yields valid score', () => {
-        const result = calculateReleaseScore(80, Number.NaN, 'pass', 80, 2);
+    it('dimensão ausente (availability false) não é pontuada como 0 nem incluída no compósito', () => {
+        expect.hasAssertions();
 
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-    });
+        const dimensions: HealthDimensions = {
+            passRate: { score: 100, status: 'pass' },
+            flakyRate: { score: 0, status: 'fail' },
+            coverage: { score: 0, status: 'fail' },
+            suiteSpeed: { score: 0, status: 'fail' },
+            executionRate: { score: 0, status: 'fail' },
+        };
 
-    it('naN in coveragePct does not crash and yields valid score', () => {
-        const result = calculateReleaseScore(80, 80, 'pass', Number.NaN, 2);
-
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-    });
-
-    it('naN in flakyRate does not crash and yields valid score', () => {
-        const result = calculateReleaseScore(80, 80, 'pass', 80, Number.NaN);
-
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-    });
-
-    it('undefined tasksPct yields score based on remaining dimensions', () => {
-        const result = calculateReleaseScore(undefined, 80, 'pass', 80, 2);
-
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-        expect(result.breakdown.find((b) => b.label === 'Tasks')?.noData).toBeTruthy();
-    });
-
-    it('undefined coveragePct yields score based on remaining dimensions', () => {
-        const result = calculateReleaseScore(80, 80, 'pass', undefined, 2);
-
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-        expect(result.breakdown.find((b) => b.label === 'Coverage')?.noData).toBeTruthy();
-    });
-
-    it('all undefined inputs yields score 0', () => {
-        const result = calculateReleaseScore(undefined, 80, 'pass', undefined, 2);
-
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-    });
-
-    it('flakyRate of 100 inverts to 0', () => {
-        const result = calculateReleaseScore(80, 80, 'pass', 80, 100);
-        const flkEntry = result.breakdown.find((b) => b.label === 'Flakiness');
-
-        expect(flkEntry?.score).toBe(0);
-    });
-
-    it('flakyRate of 0 inverts to 100', () => {
-        const result = calculateReleaseScore(80, 80, 'pass', 80, 0);
-        const flkEntry = result.breakdown.find((b) => b.label === 'Flakiness');
-
-        expect(flkEntry?.score).toBe(100);
-    });
-
-    it('weight normalization: when tasksPct is undefined, remaining weights are renormalized', () => {
-        const result = calculateReleaseScore(undefined, 80, 'pass', 80, 2);
-        const flkScore = 98;
-        const expected = Math.round((80 * 0.3 + 80 * 0.25 + flkScore * 0.2) / (0.3 + 0.25 + 0.2));
-
-        expect(result.score).toBe(expected);
-    });
-
-    it('all dimensions at 100 yields score 100', () => {
-        const result = calculateReleaseScore(100, 100, 'pass', 100, 0);
+        const result = calcReleaseScore(dimensions, undefined, {
+            passRate: true,
+            flakyRate: false,
+            coverage: false,
+            suiteSpeed: false,
+            executionRate: false,
+        });
 
         expect(result.score).toBe(100);
-        expect(result.grade).toBe('excellent');
+        expect(result.breakdown?.filter((b) => b.noData)).toHaveLength(4);
     });
 
-    it('all dimensions at 0 yields score 0', () => {
-        const result = calculateReleaseScore(0, 0, 'fail', 0, 100);
+    it('todas as dimensões ausentes → grade unknown e recommendation explícita (nunca critical fabricado)', () => {
+        const dimensions: HealthDimensions = {
+            passRate: { score: 0, status: 'fail' },
+            flakyRate: { score: 0, status: 'fail' },
+            coverage: { score: 0, status: 'fail' },
+            suiteSpeed: { score: 0, status: 'fail' },
+            executionRate: { score: 0, status: 'fail' },
+        };
 
-        expect(result.score).toBe(0);
-        expect(result.grade).toBe('critical');
-    });
+        const result = calcReleaseScore(dimensions, undefined, {
+            passRate: false,
+            flakyRate: false,
+            coverage: false,
+            suiteSpeed: false,
+            executionRate: false,
+        });
 
-    it('recommendation lists all failing dimensions', () => {
-        const result = calculateReleaseScore(30, 30, 'fail', 30, 80);
-
-        expect(result.recommendation).toContain('tasks');
-        expect(result.recommendation).toContain('health');
-        expect(result.recommendation).toContain('coverage');
-    });
-
-    it('recommendation says ready when all pass', () => {
-        const result = calculateReleaseScore(90, 90, 'pass', 90, 2);
-
-        expect(result.recommendation).toContain('Ready');
+        expect(result.grade).toBe('unknown');
+        expect(result.recommendation).toContain('Insufficient data');
+        expect((result.breakdown ?? []).every((b) => b.noData)).toBeTruthy();
     });
 });

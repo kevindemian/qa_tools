@@ -46,9 +46,10 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     }),
 }));
 
-vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
-    calcFlakinessEntries: vi.fn().mockReturnValue([]),
-}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/data-hub/compute/flakiness-entries.js')>();
+    return { ...actual, calcFlakinessEntries: vi.fn().mockReturnValue([]) };
+});
 
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
@@ -61,21 +62,6 @@ vi.mock('../../shared/quality/health-score.js', () => ({
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
     generateDefectTrendHtml: vi.fn(() => ''),
-}));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({
-        score: 82,
-        grade: 'good',
-        breakdown: [
-            { label: 'tasks', score: 80, status: 'pass' as const },
-            { label: 'health', score: 85, status: 'pass' as const },
-            { label: 'coverage', score: 70, status: 'pass' as const },
-            { label: 'flakiness', score: 90, status: 'pass' as const },
-        ],
-        recommendation: 'Ship after hardening coverage gap.',
-        timestamp: new Date().toISOString(),
-    })),
-    generateReleaseScoreHtml: vi.fn(() => '<section>release</section>'),
 }));
 vi.mock('../../shared/report/ai-effectiveness.js', () => ({
     computeAiEffectiveness: vi.fn(() => ({
@@ -214,31 +200,16 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
     generateImpactAlertHtml: vi.fn(() => '<section>impact</section>'),
 }));
 vi.mock('../../shared/quality/pipeline-cost.js', () => ({
-    calculatePipelineCost: vi.fn(() => ({
-        totalCost: 0.5,
-        avgCostPerRun: 0.25,
-        totalDurationSec: 120,
-        costPerMinute: 0.01,
-        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' as const }],
-        runCount: 2,
-        period: { from: '2026-01-01', to: '2026-01-02' },
-        timestamp: new Date().toISOString(),
-    })),
     generatePipelineCostHtml: vi.fn(() => '<section>pipelinecost</section>'),
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
-    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
     generateRequirementScoreHtml: vi.fn(() => '<section>reqscore</section>'),
 }));
-vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
-    generateGitMetricsRuns: vi.fn(() => []),
-    generateGitFailureClassifications: vi.fn(() => []),
-    getLastGitLogError: vi.fn(() => undefined),
-    clearGitLogError: vi.fn(),
+vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
+    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
 }));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
-    formatQualityGateText: vi.fn(() => ''),
 }));
 vi.mock('../../shared/infra/temp-dir.js', () => ({
     writeReport: vi.fn((name: string, content: string) => {
@@ -296,12 +267,14 @@ import {
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
-import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
-import { calculatePipelineCost } from '../../shared/quality/pipeline-cost.js';
 import { runQualityGate } from '../../shared/quality/quality-gate.js';
 import { buildIncidentReport } from '../../shared/report/incident-report.js';
+import { aggregateDefectTrends } from '../../shared/data-hub/compute/defect-aggregation.js';
+import { DataHubImpl } from '../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
+import type { DataHub } from '../../shared/types/data-hub.js';
 const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
@@ -314,10 +287,8 @@ const mockInfo = vi.mocked(info);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockWriteReport = vi.mocked(writeReport);
-const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
-const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
+const mockGenerateBenchmarkHtml = vi.mocked(generateBenchmarkHtml);
 const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
-const mockCalculatePipelineCost = vi.mocked(calculatePipelineCost);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
 
@@ -566,7 +537,11 @@ describe('Schedule Handler', () => {
 
             await handleFlakinessDashboard();
 
-            expect(mockGenerateHtml).toHaveBeenCalledWith(expect.any(Array), expect.any(String));
+            expect(mockGenerateHtml).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.any(String),
+                expect.objectContaining({ dataHub: mockGetDataHub() }),
+            );
 
             const { openWithFallback } = (await import('../../shared/open.js')) as {
                 openWithFallback: (...args: unknown[]) => unknown;
@@ -581,17 +556,17 @@ describe('Schedule Handler', () => {
     });
 
     describe('GenerateWeeklyQualityReport', () => {
-        it('warns when no project selected', async () => {
+        it('warns when no project selected', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('');
 
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
         });
 
-        it('warns when less than 2 runs and git fallback fails', async () => {
+        it('warns when less than 2 runs', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
@@ -613,7 +588,7 @@ describe('Schedule Handler', () => {
                 },
                 raw: { failureClassifications: [] },
             } as never);
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
         });
@@ -645,6 +620,132 @@ describe('Schedule Handler', () => {
                         },
                     ],
                     coverage: 65,
+                    // The release score is genuinely computed by the real chain
+                    // (DataHub → calcReleaseScore) — never a hand-written fixture.
+                    releaseScore: DataHubImpl.createFromParseResult(
+                        {
+                            tests: [
+                                { title: 't1', state: 'passed' as const, duration: 50 },
+                                { title: 't2', state: 'passed' as const, duration: 55 },
+                            ],
+                            stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 105 },
+                        },
+                        'proj1',
+                        makeDataHubPersistenceMock(),
+                    ).computed.releaseScore,
+                    // I-1 SSOT: the report consumes hub.computed, so the seed must
+                    // carry the same computed fields the hub would populate.
+                    defectAggregation: aggregateDefectTrends([]),
+                    traceabilityTree: {
+                        nodes: [
+                            { epic: 'EPIC-1', coverage: 100, requirement: 'R1', tests: ['t1'] },
+                            { epic: 'EPIC-2', coverage: 40, requirement: 'R2', tests: ['t2'] },
+                        ],
+                        totalEpics: 2,
+                        totalTests: 2,
+                        overallCoverage: 70,
+                        timestamp: new Date().toISOString(),
+                        awareness: { haveTest: 1, missingTest: 1 },
+                    },
+                    backlogHealth: {
+                        unassignedIssues: [],
+                        staleIssues: [],
+                        bugsWithoutTests: [],
+                        densityByEpic: [{ epic: 'EPIC-1', bugCount: 1, testCount: 2 }],
+                        score: 65,
+                        totalIssues: 0,
+                        noData: false,
+                        timestamp: new Date().toISOString(),
+                    },
+                    developerProfile: {
+                        authors: [{ author: 'dev1', defectCount: 1, flakyCount: 0 }],
+                        totalAuthors: 1,
+                        totalFailures: 1,
+                        topContributor: 'dev1',
+                        topFailureAuthor: 'dev1',
+                        timestamp: new Date().toISOString(),
+                    },
+                    aiComparison: {
+                        aiTotal: 0,
+                        aiPassRate: 0,
+                        aiFlakinessAvg: 0,
+                        aiAcceptanceRate: 0,
+                        manualTotal: 0,
+                        manualPassRate: 0,
+                        manualFlakinessAvg: 0,
+                        manualAcceptanceRate: 0,
+                        aiAdvantage: 'none',
+                        byVersion: [],
+                        timestamp: new Date().toISOString(),
+                    },
+                    seasonalityAggregation: {
+                        byDayOfWeek: [],
+                        byHour: [],
+                        peakDay: 'N/A',
+                        peakHour: -1,
+                        totalRecords: 0,
+                        period: { from: '', to: '' },
+                        timestamp: new Date().toISOString(),
+                    },
+                    regressionDetection: {
+                        regressions: [],
+                        totalTests: 0,
+                        threshold: 2,
+                        timestamp: new Date().toISOString(),
+                    },
+                    optimizationActions: {
+                        optimizations: [],
+                        totalTests: 0,
+                        totalDuration: 0,
+                        potentialSavings: 0,
+                        slowThreshold: 5,
+                        flakyThreshold: 0.3,
+                        timestamp: new Date().toISOString(),
+                    },
+                    crossSquad: {
+                        benchmarks: [
+                            {
+                                project: 'proj1',
+                                healthScore: 70,
+                                grade: 'good',
+                                passRate: 80,
+                                flakyRate: 5,
+                                coveragePct: 70,
+                                runCount: 2,
+                                trend: 'up' as const,
+                            },
+                        ],
+                        topSquad: 'proj1',
+                        bottomSquad: 'proj1',
+                        averageScore: 70,
+                        stdDev: 0,
+                        timestamp: new Date().toISOString(),
+                    },
+                    coverageGap: {
+                        items: [],
+                        totals: {
+                            totalIssues: 0,
+                            covered: 0,
+                            gap: 0,
+                            weightedCoveragePct: 65,
+                            rawCoveragePct: 65,
+                        },
+                        byEpic: {},
+                        gateConfig: { minCoveragePct: 80, failingEpics: [] },
+                        hierarchy: [],
+                        trends: [],
+                        timestamp: new Date().toISOString(),
+                    },
+                    pipelineCostResult: {
+                        totalCost: 0.5,
+                        avgCostPerRun: 0.25,
+                        totalDurationSec: 120,
+                        costPerMinute: 0.01,
+                        costByRun: [{ timestamp: '2026-01-01', durationSec: 60, cost: 0.01, status: 'passed' }],
+                        runCount: 2,
+                        period: { from: '2026-01-01', to: '2026-01-02' },
+                        timestamp: new Date().toISOString(),
+                    },
                 },
                 raw: {
                     failureClassifications: [{ testTitle: 't2', category: 'flaky', timestamp: '2026-01-02' }],
@@ -654,32 +755,48 @@ describe('Schedule Handler', () => {
             } as never);
         }
 
-        it('invokes all score/dashboard functions with real run data when >= 2 runs exist', async () => {
+        it('writes the genuinely computed release score into the report HTML', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
-            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.any(String),
-                65,
-                expect.any(Number),
-            );
+            const hub = vi.mocked(getSessionDataHub).mock.results[0]?.value as DataHub | undefined;
+            const hubRuns = (hub?.computed.metricsRuns ?? []) as Array<{ project: string }>;
 
-            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls[0]?.[0] as Array<{
-                name: string;
-                runCount: number;
-                healthScore: number;
-                grade: string;
-                passRate: number;
-                flakyRate: number;
-                coveragePct: number;
-            }>;
+            expect(hubRuns, `hubRuns=${JSON.stringify(hubRuns)}`).toHaveLength(2);
 
-            expect(Array.isArray(benchmarkInput)).toBeTruthy();
-            expect(benchmarkInput.some((b) => b.name === 'proj1' && b.runCount === 2)).toBeTruthy();
+            // The real release-score chain ran: the written HTML must contain the
+            // genuinely computed score (SSOT via DataHub → calcReleaseScore → renderer).
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+            const hubReleaseScore = hub?.computed.releaseScore;
+
+            expect(writtenHtml).toContain('<div data-section="release-score">');
+            expect(writtenHtml).toContain('Release Score');
+            expect(writtenHtml).toContain(String(hubReleaseScore?.score));
+            expect(writtenHtml).toContain(String(hubReleaseScore?.grade));
+        });
+
+        it('renders the hub computed cross-squad benchmark into the report', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
+            const benchmarkInput = mockGenerateBenchmarkHtml.mock.calls[0]?.[0] as
+                { topSquad: string; benchmarks: Array<{ project: string; runCount: number }> } | undefined;
+
+            expect(benchmarkInput, `benchmarkInput=${JSON.stringify(benchmarkInput)}`).toBeTruthy();
+            expect(benchmarkInput?.topSquad).toBe('proj1');
+            expect(benchmarkInput?.benchmarks.some((b) => b.project === 'proj1' && b.runCount === 2)).toBeTruthy();
+        });
+
+        it('invokes the score/dashboard analyzers with real run data', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
             expect(mockAnalyzePipelineImpact).toHaveBeenCalledWith(
                 expect.any(Number),
                 expect.any(Number),
@@ -688,7 +805,6 @@ describe('Schedule Handler', () => {
                 expect.any(Array),
                 expect.anything(),
             );
-            expect(mockCalculatePipelineCost).toHaveBeenCalledWith(undefined, expect.anything());
             expect(mockRunQualityGate).toHaveBeenCalledWith(expect.objectContaining({ project: 'proj1' }));
             expect(mockBuildIncidentReport).toHaveBeenCalledWith(
                 expect.any(Number),
@@ -700,11 +816,11 @@ describe('Schedule Handler', () => {
             );
         });
 
-        it('writes exactly one report file with the project-specific path', async () => {
+        it('writes exactly one report file with the project-specific path', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             expect(mockPrintError).not.toHaveBeenCalled();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
@@ -714,11 +830,11 @@ describe('Schedule Handler', () => {
             expect(writtenPath).toContain('weekly-quality-proj1.html');
         });
 
-        it('renders every dashboard section in the generated HTML', async () => {
+        it('renders every dashboard section in the generated HTML', () => {
             expect.hasAssertions();
 
             seedTwoRunsHub();
-            await generateWeeklyQualityReport();
+            generateWeeklyQualityReport();
 
             const calls = mockWriteReport.mock.calls;
             const writtenHtml = calls[calls.length - 1]?.[1] as string;

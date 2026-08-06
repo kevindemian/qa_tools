@@ -1,6 +1,18 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { analyzeSuiteOptimization, generateOptimizationHtml } from '../quality/suite-optimization.js';
+import { computeOptimizationActions } from '../data-hub/compute/optimization-actions.js';
+import { generateOptimizationHtml } from '../quality/suite-optimization.js';
+import type { OptimizationResult } from '../types/data-hub-extensions.js';
+
+function analyze(tests: Array<{ title: string; duration: number; flakiness: number }>): OptimizationResult {
+    const durationMap = Object.create(null) as Record<string, number[]>;
+    const flakinessMap = Object.create(null) as Record<string, number>;
+    for (const t of tests) {
+        durationMap[t.title] = [t.duration * 1000];
+        flakinessMap[t.title] = t.flakiness;
+    }
+    return computeOptimizationActions(durationMap, flakinessMap);
+}
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -25,8 +37,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 15 }), (tests) => {
+                const result = analyze(tests);
 
                 expect(result.totalTests).toBe(tests.length);
             }),
@@ -38,8 +50,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 15 }), (tests) => {
+                const result = analyze(tests);
                 const expected = tests.reduce(
                     (s, t) =>
                         s +
@@ -59,8 +71,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 15 }), (tests) => {
+                const result = analyze(tests);
                 const entries = result.optimizations;
                 const impactOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
                 for (let i = 1; i < entries.length; i++) {
@@ -92,8 +104,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 1, maxLength: 10 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 1, maxLength: 10 }), (tests) => {
+                const result = analyze(tests);
                 for (const entry of result.optimizations) {
                     expect(entry.flakiness > DEFAULT_FLAKY ? entry.action : 'quarantine').toBe('quarantine');
                     expect(entry.flakiness > DEFAULT_FLAKY ? entry.impact : 'high').toBe('high');
@@ -107,8 +119,8 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 15 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 15 }), (tests) => {
+                const result = analyze(tests);
 
                 expect(result.potentialSavings).toBeGreaterThanOrEqual(0);
                 expect(result.potentialSavings).toBeLessThanOrEqual(result.totalDuration);
@@ -121,7 +133,7 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
                 const filtered = tests.filter((t) => {
                     const dur =
                         typeof t.duration === 'number' && Number.isFinite(t.duration) && t.duration >= 0
@@ -133,7 +145,7 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                             : 0;
                     return dur <= DEFAULT_SLOW && flk <= DEFAULT_FLAKY;
                 });
-                const result = analyzeSuiteOptimization(filtered);
+                const result = analyze(filtered);
 
                 expect(result.potentialSavings).toBe(0);
             }),
@@ -155,7 +167,7 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                     { minLength: 0, maxLength: 5 },
                 ),
                 (tests) => {
-                    const result = analyzeSuiteOptimization(tests);
+                    const result = analyze(tests);
 
                     expect(result.totalDuration).toBe(0);
                 },
@@ -170,8 +182,8 @@ describe('GenerateOptimizationHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
+                const result = analyze(tests);
                 const html = generateOptimizationHtml(result, 'PBT');
 
                 expect(html).toContain('<!DOCTYPE html>');
@@ -185,8 +197,8 @@ describe('GenerateOptimizationHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
+                const result = analyze(tests);
                 const html = generateOptimizationHtml(result);
                 for (const entry of result.optimizations) {
                     expect(html).toContain(entry.action !== 'none' ? entry.testTitle : '');
@@ -200,8 +212,8 @@ describe('GenerateOptimizationHtml — property-based', () => {
         expect.hasAssertions();
 
         fc.assert(
-            fc.property(fc.array(testArb, { minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyzeSuiteOptimization(tests);
+            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
+                const result = analyze(tests);
                 const html = generateOptimizationHtml(result);
 
                 expect(html).toContain('Tests to Optimize');

@@ -1,36 +1,36 @@
 import type { FlatTest, CtrfData } from '../../shared/result_parser.js';
 import type { FlakinessEntry, MetricsRun } from '../../shared/types/data-hub.js';
 import { calcRunPassRate } from '../../shared/data-hub/compute/run-pass-rate.js';
-import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
+import { icon } from '../../shared/icons.js';
+import { tokens } from '../../shared/ui/theme-tokens.js';
 
 export { isGitHubCi, isGitLabCi } from '../../shared/ci/ci-detect.js';
 
 function buildRunsBarChartHtml(runs: MetricsRun[]): string {
-    let html = '<div style="margin-bottom:8px">';
-    html +=
-        '<div style="font-size:0.8rem;color:#6b7280;margin-bottom:4px">Pass Rate — Last ' + runs.length + ' Runs</div>';
-    html += '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;padding:4px 0">';
+    let html = '<div class="runs-chart">';
+    html += '<div class="runs-chart-label">Pass Rate — Last ' + runs.length + ' Runs</div>';
+    html += '<div class="runs-chart-bars">';
     for (let i = 0; i < runs.length; i++) {
-        const run = runs[i];
+        const [run] = runs.slice(i, i + 1);
         if (!run) continue;
         const passRate = calcRunPassRate({ passed: run.passed, failed: run.failed });
         const h = Math.max(4, (passRate / 100) * 46);
         let color: string;
         if (passRate >= 90) {
-            color = '#22c55e';
+            color = tokens.color.chart.pass;
         } else if (passRate >= 70) {
-            color = '#f59e0b';
+            color = tokens.color.chart.skip;
         } else {
-            color = '#ef4444';
+            color = tokens.color.chart.fail;
         }
         const runLabel = `Run ${i + 1}`;
         html +=
-            '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
-            '<div style="width:100%;height:' +
+            '<div class="runs-chart-col">' +
+            '<div class="runs-chart-bar" style="--bar-h:' +
             h +
-            'px;background:' +
+            'px;--bar-color:' +
             color +
-            ';border-radius:3px 3px 0 0;min-height:4px" title="' +
+            '" title="' +
             runLabel +
             ': ' +
             passRate.toFixed(1) +
@@ -40,7 +40,7 @@ function buildRunsBarChartHtml(runs: MetricsRun[]): string {
             run.total +
             ')"' +
             '></div>' +
-            '<span style="font-size:0.6rem;color:#6b7280">' +
+            '<span class="runs-chart-date">' +
             run.timestamp.slice(5, 10) +
             '</span>' +
             '</div>';
@@ -59,44 +59,48 @@ function buildHtmlDetailsSection(flakyEntries: FlakinessEntry[], commits: string
     let html = '';
     if (flakyEntries.length > 0) {
         let table =
-            '<table style="margin:4px 0 0 8px;font-size:0.8rem;border-collapse:collapse;width:100%">' +
+            '<table class="case17-table">' +
             '<thead><tr>' +
-            '<th style="text-align:left;padding:2px 8px;border-bottom:1px solid #e5e7eb">Test</th>' +
-            '<th style="text-align:right;padding:2px 8px;border-bottom:1px solid #e5e7eb">Passes</th>' +
-            '<th style="text-align:right;padding:2px 8px;border-bottom:1px solid #e5e7eb">Failures</th>' +
-            '<th style="text-align:right;padding:2px 8px;border-bottom:1px solid #e5e7eb">Rate</th>' +
+            '<th class="case17-th">Test</th>' +
+            '<th class="case17-th case17-th-right">Passes</th>' +
+            '<th class="case17-th case17-th-right">Failures</th>' +
+            '<th class="case17-th case17-th-right">Rate</th>' +
             '</tr></thead><tbody>';
         for (const entry of flakyEntries) {
             const ratePct = (entry.rate * 100).toFixed(1) + '%';
             table +=
                 '<tr>' +
-                '<td style="padding:2px 8px">' +
+                '<td class="case17-td">' +
                 entry.title.replace(/</g, '&lt;') +
                 '</td>' +
-                '<td style="text-align:right;padding:2px 8px">' +
+                '<td class="case17-td case17-td-right">' +
                 String(entry.passCount) +
                 '</td>' +
-                '<td style="text-align:right;padding:2px 8px">' +
+                '<td class="case17-td case17-td-right">' +
                 String(entry.failCount) +
                 '</td>' +
-                '<td style="text-align:right;padding:2px 8px">' +
+                '<td class="case17-td case17-td-right">' +
                 ratePct +
                 '</td>' +
                 '</tr>';
         }
         table += '</tbody></table>';
         html +=
-            '<details style="margin-bottom:6px;font-size:0.85rem">' +
-            '<summary style="cursor:pointer;color:#8b5cf6;font-weight:600">⚠️ Flaky Tests</summary>' +
+            '<details class="case17-details">' +
+            '<summary class="case17-summary case17-summary-flaky">' +
+            icon('alert-triangle', 14) +
+            ' Flaky Tests</summary>' +
             table +
             '</details>';
     }
 
     if (commits) {
         html +=
-            '<details style="margin-bottom:4px;font-size:0.85rem">' +
-            '<summary style="cursor:pointer;color:#6366f1;font-weight:600">📝 Recent Commits</summary>' +
-            '<pre style="margin:4px 0 0 8px;font-size:0.8rem;white-space:pre-wrap">' +
+            '<details class="case17-details case17-details-commits">' +
+            '<summary class="case17-summary case17-summary-commits">' +
+            icon('file-text', 14) +
+            ' Recent Commits</summary>' +
+            '<pre class="case17-pre">' +
             commits.replace(/</g, '&lt;') +
             '</pre>' +
             '</details>';
@@ -106,17 +110,17 @@ function buildHtmlDetailsSection(flakyEntries: FlakinessEntry[], commits: string
 
 /**
  * Builds the git pipeline context HTML section with run chart, flaky entries, and commits.
- * Flaky entries are computed from store runs (not received as parameter).
+ * Flaky entries are consumed from the DataHub `computed` source (SSOT), not recomputed here.
  * @param commitLog - Formatted commit log string.
  * @param storeRuns - MetricsRun[] from MetricsStore (persisted test run history).
+ * @param flakyEntries - FlakinessEntry[] from `computed.flakinessEntries`.
  * @returns HTML string for the git pipeline context section.
  */
-export function buildGitTrendHtml(commitLog: string, storeRuns: MetricsRun[]): string {
-    const flakyEntries = storeRuns.length >= 2 ? calcFlakinessEntries(storeRuns) : [];
+export function buildGitTrendHtml(commitLog: string, storeRuns: MetricsRun[], flakyEntries: FlakinessEntry[]): string {
     if (storeRuns.length === 0 && !commitLog && flakyEntries.length === 0) return '';
 
-    let html = '<div class="chart-box" style="border-left:4px solid #6366f1;margin-bottom:12px">';
-    html += '<div class="label" style="margin-bottom:6px">📈 Git Pipeline Context</div>';
+    let html = '<div class="chart-box case17-box">';
+    html += '<div class="label case17-label">' + icon('trending-up', 14) + ' Git Pipeline Context</div>';
 
     if (storeRuns.length > 0) {
         html += buildRunsBarChartHtml(storeRuns);
@@ -129,10 +133,9 @@ export function buildGitTrendHtml(commitLog: string, storeRuns: MetricsRun[]): s
 
 export function buildJiraContextHtml(jiraContext: string): string {
     if (!jiraContext) return '';
-    let html = '<div class="chart-box" style="border-left:4px solid #0052cc;margin-bottom:12px">';
-    html += '<div class="label" style="margin-bottom:6px">🔗 Related Jira Issues</div>';
-    html +=
-        '<pre style="margin:0;font-size:0.85rem;white-space:pre-wrap">' + jiraContext.replace(/</g, '&lt;') + '</pre>';
+    let html = '<div class="chart-box case17-box-jira">';
+    html += '<div class="label case17-label">' + icon('link', 14) + ' Related Jira Issues</div>';
+    html += '<pre class="case17-pre-flat">' + jiraContext.replace(/</g, '&lt;') + '</pre>';
     html += '</div>';
     return html;
 }
@@ -140,19 +143,21 @@ export function buildJiraContextHtml(jiraContext: string): string {
 export function injectAnalysisSection(html: string, analysis: string): string {
     const bodyEnd = html.lastIndexOf('</body>');
     if (bodyEnd === -1) return html;
-    const section = `<div class="chart-box"><h2>Failure Analysis</h2><pre style="white-space:pre-wrap;font-size:0.85rem">${analysis.replace(/</g, '&lt;')}</pre></div>`;
+    const section = `<div class="chart-box"><h2>Failure Analysis</h2><pre class="case17-pre-flat">${analysis.replace(/</g, '&lt;')}</pre></div>`;
     return html.slice(0, bodyEnd) + section + html.slice(bodyEnd);
 }
 
 export function buildDiffSummary(diff: { newFailures: FlatTest[]; newPasses: FlatTest[]; flaky: FlatTest[] }): string {
     if (diff.newFailures.length === 0 && diff.newPasses.length === 0) return '';
-    let s = '<div class="chart-box" style="border-left:4px solid #6366f1;margin-bottom:12px">';
-    s += '<div class="label" style="margin-bottom:6px">📊 Differential vs Last Run</div>';
+    let s = '<div class="chart-box case17-box">';
+    s += '<div class="label case17-label">' + icon('bar-chart', 14) + ' Differential vs Last Run</div>';
     if (diff.newFailures.length > 0) {
         s +=
-            '<p style="margin:2px 0;color:#ef4444">🔴 <b>' +
+            '<p class="case17-diff-fail">' +
+            icon('x-circle', 14) +
+            ' <b>' +
             diff.newFailures.length +
-            ' new failure(s):</b></p><ul style="margin:2px 0 6px 16px;font-size:0.85rem">';
+            ' new failure(s):</b></p><ul class="case17-diff-list">';
         for (const f of diff.newFailures.slice(0, 5)) {
             s +=
                 '<li>' +
@@ -164,7 +169,12 @@ export function buildDiffSummary(diff: { newFailures: FlatTest[]; newPasses: Fla
         s += '</ul>';
     }
     if (diff.newPasses.length > 0) {
-        s += '<p style="margin:2px 0;color:#22c55e">✅ <b>' + diff.newPasses.length + ' new pass(es):</b></p>';
+        s +=
+            '<p class="case17-diff-pass">' +
+            icon('check-circle', 14) +
+            ' <b>' +
+            diff.newPasses.length +
+            ' new pass(es):</b></p>';
     }
     s += '</div>';
     return s;
@@ -182,8 +192,9 @@ function parsePublishArg(
     i: number,
     result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
 ): number {
-    if (args[i] !== '--publish' || i + 1 >= args.length) return i;
-    const val = Reflect.get(args, i + 1);
+    const [current] = args.slice(i);
+    if (current !== '--publish' || i + 1 >= args.length) return i;
+    const [val] = args.slice(i + 1);
     if (val) {
         result.publishTarget = val;
         return i + 1;
@@ -196,7 +207,8 @@ function parseRunArg(
     i: number,
     result: { publishTarget?: string; extraRuns: Array<{ name: string; file: string }> },
 ): number {
-    if (args[i] !== '--run' || i + 1 >= args.length) return i;
+    const [cur] = args.slice(i);
+    if (cur !== '--run' || i + 1 >= args.length) return i;
     const val = args[i + 1];
     if (!val) return i;
     const eqIdx = val.indexOf('=');

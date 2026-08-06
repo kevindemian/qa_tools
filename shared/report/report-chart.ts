@@ -9,7 +9,8 @@
 
 import type { TrendPoint } from '../types/data-hub.js';
 import type { ReportStats } from './report-types.js';
-import { BarChart, TrendChart, Card } from '../primitives/index.js';
+import { BarChart, TrendChart, Card, EmptyState } from '../primitives/index.js';
+import { icon } from '../icons.js';
 import { tokens } from '../ui/theme-tokens.js';
 
 export function buildChartSvg(stats: ReportStats): string {
@@ -27,6 +28,7 @@ export function buildChartSvg(stats: ReportStats): string {
 }
 
 export function buildMiniTrendChart(trends: TrendPoint[]): string {
+    // legitimate: nested SVG chart body (not a section) — <2 points cannot draw a trend line; caller buildTrendSection guards first; EmptyState (section block) invalid as chart body (Rule 25.3 intent).
     if (trends.length < 2) return '';
     return TrendChart({
         points: trends,
@@ -40,7 +42,16 @@ export function buildMiniTrendChart(trends: TrendPoint[]): string {
 }
 
 export function buildTrendSection(trends: TrendPoint[]): string {
-    if (trends.length < 2) return '';
+    // Rule 25: explicit no-data (insufficient trend points) instead of silent omission.
+    if (trends.length < 2) {
+        return EmptyState({
+            title: 'Insufficient trend data',
+            description:
+                'The pass rate trend requires at least two dated data points to draw a trend line. No usable trend was found.',
+            action: 'Run the report pipeline on two or more dates so a pass-rate trend can be plotted.',
+            icon: icon('trending-up', 16),
+        });
+    }
     return Card({
         title: 'Pass Rate Trend',
         children: buildMiniTrendChart(trends),
@@ -48,12 +59,22 @@ export function buildTrendSection(trends: TrendPoint[]): string {
 }
 
 export function buildChartSection(stats: ReportStats, wantChart: boolean): string {
-    if (!wantChart || stats.total === 0) return '';
+    // legitimate: feature toggle — charts disabled by config (wantChart=false); EmptyState would falsely claim "no data" (Rule 25.3).
+    if (!wantChart) return '';
+    // Rule 25: explicit no-data (zero tests) instead of silent omission.
+    if (stats.total === 0) {
+        return EmptyState({
+            title: 'No test distribution data available',
+            description: 'The distribution chart requires test execution results. No tests were found to chart.',
+            action: 'Run a test suite so the pass/fail/skip distribution can be rendered.',
+            icon: icon('bar-chart', 16),
+        });
+    }
     const legend =
         '<div class="legend">' +
-        `<span><span class="dot dot-pass" style="--color-chart-pass:${tokens.color.chart.pass}"></span> Passed (${stats.passed})</span>` +
-        `<span><span class="dot dot-fail" style="--color-chart-fail:${tokens.color.chart.fail}"></span> Failed (${stats.failed})</span>` +
-        `<span><span class="dot dot-skip" style="--color-chart-skip:${tokens.color.chart.skip}"></span> Skipped (${stats.skipped})</span>` +
+        `<span><span class="dot dot-pass"></span> Passed (${stats.passed})</span>` +
+        `<span><span class="dot dot-fail"></span> Failed (${stats.failed})</span>` +
+        `<span><span class="dot dot-skip"></span> Skipped (${stats.skipped})</span>` +
         '</div>';
     return Card({
         title: 'Distribution',

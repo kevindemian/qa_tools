@@ -8,6 +8,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
 import {
@@ -21,7 +22,7 @@ import {
 } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
 import { rootLogger } from '../logger.js';
-import type { RequirementScoreResult } from './requirement-score.js';
+import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import { icon } from '../icons.js';
 
 const OVERALL_SCORE_ERROR = 40;
@@ -89,6 +90,7 @@ function buildRecommendedActions(result: RequirementScoreResult): string {
 export function generateRequirementScoreHtml(
     result: RequirementScoreResult | null | undefined,
     title?: string,
+    generatedAt?: string,
 ): string {
     try {
         if (!result) {
@@ -110,7 +112,7 @@ export function generateRequirementScoreHtml(
         let bodyContent =
             `<div data-dashboard="requirement-score">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+            `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
             Section({
                 dataSection: 'summary',
                 title: 'Summary',

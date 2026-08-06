@@ -2,11 +2,9 @@
  * Tests for defect-seasonality — Defect Seasonality Dashboard aggregator and HTML generator.
  */
 
-import {
-    aggregateDefectSeasonality,
-    generateSeasonalityHtml,
-    type SeasonalityResult,
-} from '../quality/defect-seasonality.js';
+import { aggregateDefectSeasonality } from '../data-hub/compute/defect-aggregation.js';
+import { generateSeasonalityHtml } from '../quality/defect-seasonality.js';
+import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import type { FailureClassification } from '../types/data-hub.js';
 import { nonNull } from '../test-utils.js';
 
@@ -231,7 +229,11 @@ describe('AggregateDefectSeasonality', () => {
         expect(result.totalRecords).toBe(1);
         expect(result.peakDay).toBe('N/A');
         expect(result.peakHour).toBe(-1);
-        expect(result.byDayOfWeek.every((d) => d.total === 0)).toBeTruthy();
+
+        const unknown = nonNull(result.byDayOfWeek.find((d) => d.dayOfWeek === 'Unknown'));
+
+        expect(unknown.total).toBe(1);
+        expect(result.byDayOfWeek.filter((d) => d.dayOfWeek !== 'Unknown').every((d) => d.total === 0)).toBeTruthy();
         expect(result.byHour.every((h) => h.total === 0)).toBeTruthy();
     });
 
@@ -361,7 +363,7 @@ describe('GenerateSeasonalityHtml', () => {
 
     it('handles N/A peak hour in summary cards when peakHour is -1', () => {
         const base = aggregateDefectSeasonality([sampleClass]);
-        const result: SeasonalityResult = { ...base, peakHour: -1 };
+        const result: SeasonalityAggregationResult = { ...base, peakHour: -1 };
         const html = generateSeasonalityHtml(result);
 
         expect(html).toContain('N/A');
@@ -369,7 +371,7 @@ describe('GenerateSeasonalityHtml', () => {
 
     it('handles N/A peak day in summary cards when peakDay is N/A', () => {
         const base = aggregateDefectSeasonality([sampleClass]);
-        const result: SeasonalityResult = { ...base, peakDay: 'N/A' };
+        const result: SeasonalityAggregationResult = { ...base, peakDay: 'N/A' };
         const html = generateSeasonalityHtml(result);
 
         expect(html).toContain('N/A');

@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
+import { computeCrossSquadBenchmark } from '../data-hub/compute/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },

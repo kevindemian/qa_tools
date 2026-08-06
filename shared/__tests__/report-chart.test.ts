@@ -10,8 +10,8 @@ describe('BuildChartSvg', () => {
 
         expect(svg).toContain('<svg');
         expect(svg).toContain('data-component="bar-chart"');
-        expect(svg).toContain('#22c55e');
-        expect(svg).toContain('#ef4444');
+        expect(svg).toContain('#1a7f37');
+        expect(svg).toContain('#d1242f');
     });
 
     it('handles zero values gracefully', () => {
@@ -32,7 +32,7 @@ describe('BuildMiniTrendChart', () => {
         expect(svg).toContain('<svg');
         expect(svg).toContain('data-component="trend-chart"');
         expect(svg).toContain('path');
-        expect(svg).toContain('#6366f1');
+        expect(svg).toContain('#0969da');
     });
 
     it('handles empty data', () => {
@@ -43,10 +43,11 @@ describe('BuildMiniTrendChart', () => {
 });
 
 describe('BuildTrendSection', () => {
-    it('returns empty for <2 points', () => {
+    it('renders explicit empty-state for <2 points (I-5/F2, Rule 25)', () => {
         const html = buildTrendSection([{ label: 'Mon', passRate: 90, total: 10, failed: 1 }]);
 
-        expect(html).toBe('');
+        expect(html).toContain('data-component="empty-state"');
+        expect(html).toContain('Insufficient trend data');
     });
 
     it('returns card for >=2 points', () => {

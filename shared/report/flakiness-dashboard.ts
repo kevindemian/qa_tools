@@ -58,4 +58,6 @@ export interface FlakinessOptions {
     dataHub?: DataHub;
     /** Configurable thresholds for flakiness detection. */
     thresholds?: Partial<FlakinessThresholds>;
+    /** Fixed generation instant (ISO-8601) for deterministic output. Omit for wall-clock. */
+    generatedAt?: string;
 }

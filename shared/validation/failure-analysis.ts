@@ -10,7 +10,7 @@ import { llmPrompt } from '../llm/llm-client.js';
 import type { LlmPromptOptions } from '../types/llm.js';
 import { reviewWithLlm, type ReviewResult } from '../llm/llm-review.js';
 import { rootLogger } from '../logger.js';
-import { generateReportWithFallback } from '../report/report-generator.js';
+import { generateHtmlReport } from '../report/report-generator.js';
 import { snapshotLlmMetrics } from '../llm/llm-metrics.js';
 import Config from '../config-accessor.js';
 import { sanitizeForLlm } from '../sanitize.js';
@@ -150,12 +150,22 @@ function formatFailedTests(failed: FlatTest[]): string {
 }
 
 /** Analyze all failed tests via an LLM review, generate a full HTML report, and snapshot LLM metrics.
- * Returns empty content immediately when there are no failures. */
-export async function analyzeFailuresWithReport(
-    tests: FlatTest[],
-    context?: LlmContext,
-    options?: { dataHub?: DataHub | undefined },
-): Promise<AnalysisReport> {
+ * Returns empty content immediately when there are no failures.
+ *
+ * F0-T8: the hub is the single source of truth. The analyzed run is
+ * `dataHub.computed.metricsRuns[0]` — the caller MUST ensure the hub reflects
+ * the parse being analyzed (via `saveParseResult` reconciliation or
+ * `createDataHubFromParseResult`). A hub without a current run is a contract
+ * violation and throws explicitly (§25 — never silently analyze an empty/stale hub).
+ */
+export async function analyzeFailuresWithReport(dataHub: DataHub, context?: LlmContext): Promise<AnalysisReport> {
+    const currentRun = dataHub.computed.metricsRuns?.[0];
+    if (!currentRun) {
+        throw new Error(
+            'analyzeFailuresWithReport: hub sem metricsRuns[0] — o hub deve refletir o run atual (reconcilie via saveParseResult ou createDataHubFromParseResult).',
+        );
+    }
+    const tests = currentRun.tests;
     const failed = tests.filter((t) => t.state === 'failed');
     if (failed.length === 0) return { content: '', confidence: 'high', fallbackUsed: false };
 
@@ -174,16 +184,14 @@ export async function analyzeFailuresWithReport(
     if (context?.jiraIssues) {
         userMessage += 'Related Jira Issues:\n' + sanitizeForLlm(context.jiraIssues) + '\n\n';
     }
-    if (options?.dataHub) {
-        const cross = crossReferenceFailures(tests, options.dataHub);
-        if (cross.length > 0) {
-            const lines = cross.map((c) => {
-                const category = c.found ? `prior category=${c.priorCategory ?? 'unknown'}` : 'no prior failure record';
-                const qualityNote = c.qualityValid ? '' : ' [failure-records quality issue]';
-                return `- ${c.title}: ${category}${qualityNote}`;
-            });
-            userMessage += 'Prior Failure Records (cross-referenced by test name):\n' + lines.join('\n') + '\n\n';
-        }
+    const cross = crossReferenceFailures(tests, dataHub);
+    if (cross.length > 0) {
+        const lines = cross.map((c) => {
+            const category = c.found ? `prior category=${c.priorCategory ?? 'unknown'}` : 'no prior failure record';
+            const qualityNote = c.qualityValid ? '' : ' [failure-records quality issue]';
+            return `- ${c.title}: ${category}${qualityNote}`;
+        });
+        userMessage += 'Prior Failure Records (cross-referenced by test name):\n' + lines.join('\n') + '\n\n';
     }
     userMessage += 'Failed Tests:\n' + failedTests;
 
@@ -195,13 +203,14 @@ export async function analyzeFailuresWithReport(
         return { content: '', confidence: 'medium', fallbackUsed: true };
     }
 
-    const htmlReport = generateReportWithFallback(tests, {
+    const htmlReport = generateHtmlReport(tests, {
         title: 'Failure Analysis Report',
         llmAnalysis: result.content,
         llmConfidence: result.confidence,
         ...(result.fallbackUsed ? { llmFallback: result.fallbackUsed } : {}),
         generatedAt: new Date().toISOString(),
         source: 'AI Failure Analysis',
+        computed: dataHub.computed,
     });
 
     snapshotLlmMetrics();

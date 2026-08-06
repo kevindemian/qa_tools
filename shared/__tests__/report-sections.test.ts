@@ -10,6 +10,7 @@ import { nonNull } from '../test-utils.js';
 import type { FlatTest } from '../result_parser.js';
 import type { TestRunTab, ReportOptions, ReportStats } from '../report/report-types.js';
 import type { SuiteBreakdown, ComputedMetrics } from '../types/data-hub.js';
+import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
 import {
     buildTabs,
     buildTabContents,
@@ -17,7 +18,7 @@ import {
     buildTimeline,
     buildSummaryCards,
     buildLlmSection,
-    buildQualityGate,
+    buildQualityGateSection,
     buildFilterBar,
     buildFailedSummary,
     buildReleaseSection,
@@ -147,8 +148,9 @@ describe('BuildHierarchySidebar', () => {
 });
 
 describe('BuildTimeline', () => {
-    it('returns empty string for empty tests', () => {
-        expect(buildTimeline([])).toBe('');
+    it('renders explicit empty-state for empty tests (I-5/F2, Rule 25)', () => {
+        expect(buildTimeline([])).toContain('data-component="empty-state"');
+        expect(buildTimeline([])).toContain('No timeline data available');
     });
 
     it('returns timeline chart aggregated by suite', () => {
@@ -261,30 +263,60 @@ describe('BuildLlmSection', () => {
     });
 });
 
-describe('BuildQualityGate', () => {
-    it('returns empty string when pass rate meets threshold', () => {
-        expect(buildQualityGate(95, 90)).toBe('');
+describe('BuildQualityGateSection', () => {
+    const gate = (
+        overall: QualityGateStatus = 'pass',
+        checks: QualityGateResult['checks'] = [],
+    ): QualityGateResult => ({
+        overall,
+        checks,
+        score: 85,
     });
 
-    it('warns when pass rate is below threshold', () => {
-        const html = buildQualityGate(75, 90);
+    it('renders a structured section without a raw <pre> block', () => {
+        const html = buildQualityGateSection(gate());
 
-        expect(html).toContain('Quality Gate Failed');
-        expect(html).toContain('75.0%');
+        expect(html).toContain('data-section="quality-gate"');
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).not.toContain('<pre>');
+        expect(html).toContain('Score: 85/100');
     });
 
-    it('displays exact threshold value', () => {
-        const html = buildQualityGate(50, 75);
+    it('reflects the overall status as a fail badge', () => {
+        const html = buildQualityGateSection(gate('fail'));
 
-        expect(html).toContain('75%');
+        expect(html).toContain('data-variant="fail"');
+        expect(html).toContain('fail');
     });
 
-    it('handles zero pass rate', () => {
-        const html = buildQualityGate(0, 50);
+    it('renders every check with score, threshold and escaped details', () => {
+        const html = buildQualityGateSection(
+            gate('pass', [
+                { name: 'pass-rate', status: 'pass', score: 92, threshold: 90, details: 'Pass rate: 92%' },
+                { name: 'caution <x>', status: 'fail', score: 40, threshold: 90, details: '<script>alert(1)</script>' },
+            ]),
+        );
 
-        expect(html).toContain('0.0%');
+        expect(html).toContain(dataStatus('pass'));
+        expect(html).toContain(dataStatus('fail'));
+        expect(html).toContain('pass-rate');
+        expect(html).toContain('92/90');
+        expect(html).toContain('&lt;script&gt;');
+        expect(html).not.toContain('<script>');
+        expect(html).toContain('&lt;x&gt;');
+    });
+
+    it('surfaces a non-finite score as N/A — never a silent 0 (Rule 25)', () => {
+        const html = buildQualityGateSection({ overall: 'pass', checks: [], score: Number.NaN });
+
+        expect(html).toContain('Score: N/A/100');
+        expect(html).not.toContain('Score: 0');
     });
 });
+
+function dataStatus(status: QualityGateStatus): string {
+    return `data-status="${status}"`;
+}
 
 describe('BuildFilterBar', () => {
     it('returns filter bar HTML', () => {
@@ -438,13 +470,48 @@ describe('BuildHealthSection', () => {
     it('shows passing quality gate for healthy suite', () => {
         const html = buildHealthSection(passingHealth);
 
-        expect(html).toContain('Quality Gate: Pass');
+        expect(html).toContain('Health Gate: Pass');
     });
 
     it('shows failing quality gate for unhealthy suite', () => {
         const html = buildHealthSection(failingHealth);
 
-        expect(html).toContain('Quality Gate: Fail');
+        expect(html).toContain('Health Gate: Fail');
+    });
+
+    it('renders incomplete items note in gate section (F2)', () => {
+        const result: QualityGateResult = {
+            overall: 'pass',
+            checks: [
+                {
+                    name: 'health-score',
+                    status: 'pass',
+                    score: 85,
+                    threshold: 70,
+                    details: 'Health score: 85',
+                },
+            ],
+            score: 85,
+            incompleteItems: ['failureRecords', 'coverageFiles'],
+        };
+        const html = buildQualityGateSection(result);
+
+        expect(html).toContain('data-part="quality-gate-incomplete"');
+        expect(html).toContain('Dados ausentes (EIXO C)');
+        expect(html).toContain('failureRecords');
+        expect(html).toContain('coverageFiles');
+    });
+
+    it('omits incomplete items note when list is empty', () => {
+        const result: QualityGateResult = {
+            overall: 'pass',
+            checks: [],
+            score: 85,
+            incompleteItems: [],
+        };
+        const html = buildQualityGateSection(result);
+
+        expect(html).not.toContain('data-part="quality-gate-incomplete"');
     });
 
     it('renders dimension bars for each metric', () => {
@@ -504,5 +571,24 @@ describe('BuildHealthSection', () => {
         const html = buildHealthSection(healthEmptyProvenance);
 
         expect(html).not.toContain('Methodology & References');
+    });
+
+    it('b2: renders the PARTIAL banner (with excluded dimensions) when health is partial', () => {
+        const partialHealth = {
+            ...passingHealth,
+            partial: true,
+            partialReasons: ['coverage: no data available', 'executionRate: no data available'],
+        };
+        const html = buildHealthSection(partialHealth);
+
+        expect(html).toContain('PARTIAL');
+        expect(html).toContain('insufficient data');
+        expect(html).toContain('coverage: no data available');
+    });
+
+    it('does not render the PARTIAL banner when health is complete', () => {
+        const html = buildHealthSection(passingHealth);
+
+        expect(html).not.toContain('PARTIAL');
     });
 });

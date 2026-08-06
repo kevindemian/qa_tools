@@ -368,4 +368,20 @@ describe('GenerateAiEffectivenessHtml', () => {
 
         expect(html).not.toContain('data-part="sample-warning"');
     });
+
+    it('renders an explicit no-data panel for the version table when by-version data is empty', () => {
+        const base = computeAiEffectiveness({
+            records: [
+                {
+                    timestamp: '2026-06-01T00:00:00Z',
+                    promptVersion: 'v1',
+                    testTitle: 't1',
+                    accepted: true,
+                },
+            ],
+        });
+        const html = generateAiEffectivenessHtml({ ...base, byVersion: [], trend: [] });
+
+        expect(html).toContain('No version breakdown data available');
+    });
 });

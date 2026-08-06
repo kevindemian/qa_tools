@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { assertNullOr } from '../assertions.js';
+import { assertNullOr, containsEmoji } from '../assertions.js';
 
 describe('AssertNullOr', () => {
     it('calls the assert callback with the value when it is present', () => {
@@ -69,5 +69,41 @@ describe('AssertNullOr', () => {
 
         expect(() => assertNullOr(undefined, assert)).not.toThrow();
         expect(assert).not.toHaveBeenCalled();
+    });
+});
+
+describe('ContainsEmoji', () => {
+    it('returns true when the text contains an emoji in the supplementary range (astral plane)', () => {
+        expect.assertions(2);
+
+        expect(containsEmoji('status passed \u{1F600}')).toBeTruthy();
+        expect(containsEmoji('\u{1F512} completed')).toBeTruthy();
+    });
+
+    it('returns true for emoji in the 2600-27BF block', () => {
+        expect.assertions(2);
+
+        expect(containsEmoji('\u2764')).toBeTruthy();
+        expect(containsEmoji('warn \u26A0')).toBeTruthy();
+    });
+
+    it('returns false for plain ASCII text without emoji', () => {
+        expect.assertions(1);
+
+        expect(containsEmoji('recent commits - fix login')).toBeFalsy();
+    });
+
+    it('returns false for an empty string', () => {
+        expect.assertions(1);
+
+        expect(containsEmoji('')).toBeFalsy();
+    });
+
+    it('returns false for text with only non-emoji unicode symbols (arrows, geometric shapes)', () => {
+        expect.assertions(3);
+
+        expect(containsEmoji('\u2192 direction')).toBeFalsy();
+        expect(containsEmoji('\u25B6')).toBeFalsy();
+        expect(containsEmoji('a \u00E9')).toBeFalsy();
     });
 });

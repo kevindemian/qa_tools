@@ -405,23 +405,23 @@ export function checkDashboardExports(): CheckResult {
     const violations: Violation[] = [];
     const dashboards: Array<{ file: string; export_: string }> = [
         { file: 'shared/data-hub/compute/release-score.ts', export_: 'calcReleaseScore' },
-        { file: 'shared/quality/defect-trend.ts', export_: 'aggregateDefectTrends' },
+        { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectTrends' },
         { file: 'shared/quality/defect-trend.ts', export_: 'generateDefectTrendHtml' },
         { file: 'shared/report/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
         { file: 'shared/report/traceability-renderer.ts', export_: 'generateTraceabilityHtml' },
         { file: 'shared/report/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
         { file: 'shared/report/ai-effectiveness-renderer.ts', export_: 'generateAiEffectivenessHtml' },
-        { file: 'shared/quality/defect-seasonality.ts', export_: 'aggregateDefectSeasonality' },
+        { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectSeasonality' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
-        { file: 'shared/quality/silent-regression.ts', export_: 'detectSilentRegression' },
+        { file: 'shared/data-hub/compute/regression-detection.ts', export_: 'detectSilentRegressions' },
         { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
-        { file: 'shared/report/ai-comparison.ts', export_: 'compareAiVsManual' },
+        { file: 'shared/data-hub/compute/ai-comparison.ts', export_: 'compareAiVsManual' },
         { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
-        { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
+        { file: 'shared/data-hub/compute/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
         { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
         { file: 'shared/quality/developer-profile.ts', export_: 'generateDeveloperProfileHtml' },
-        { file: 'shared/quality/suite-optimization.ts', export_: 'analyzeSuiteOptimization' },
+        { file: 'shared/data-hub/compute/optimization-actions.ts', export_: 'computeOptimizationActions' },
         { file: 'shared/quality/suite-optimization.ts', export_: 'generateOptimizationHtml' },
         { file: 'shared/report/backlog-health.ts', export_: 'analyzeBacklogHealth' },
         { file: 'shared/report/backlog-health-renderer.ts', export_: 'generateBacklogHealthHtml' },
@@ -430,7 +430,7 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/report/impact-alert.ts', export_: 'analyzePipelineImpact' },
         { file: 'shared/report/impact-alert-renderer.ts', export_: 'generateImpactAlertHtml' },
         { file: 'shared/data-hub/compute/pipeline-cost.ts', export_: 'calcPipelineCost' },
-        { file: 'shared/quality/requirement-score.ts', export_: 'calculateRequirementScores' },
+        { file: 'shared/data-hub/compute/requirement-score.ts', export_: 'calculateRequirementScores' },
         { file: 'shared/quality/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
     ];
     for (const d of dashboards) {
@@ -469,7 +469,7 @@ function buildTemplateLineSet(lines: string[]): Set<number> {
     const templateLines = new Set<number>();
     let inTemplate = false;
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+        const [line] = lines.slice(i, i + 1);
         if (line === undefined) continue;
         for (const ch of line) {
             if (ch === '`') inTemplate = !inTemplate;
@@ -572,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:f658b96ee40991118a13c3182f390b6c59e2cd13a7ee42fd31a7db554ac013e1 */
+        /* HASH:141958d4ee415b84ab668eb10c5c3e53d0d57bb6f4ebb77ce42f6b0fd44d0a22 */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -635,7 +635,8 @@ function readRatchetThreshold(checkKey: string): number {
         const raw = readFileSync(RATCHET_FILE, 'utf-8');
         const parsed: unknown = JSON.parse(raw);
         const data = parsed as RatchetData;
-        const n = data.checks?.[checkKey]?.threshold;
+        const entry = data.checks ? Object.entries(data.checks).find(([k]) => k === checkKey) : undefined;
+        const n = entry?.[1]?.threshold;
         return typeof n === 'number' && n >= 0 ? n : Infinity;
     } catch {
         return Infinity;
@@ -650,7 +651,9 @@ function writeRatchetThreshold(checkKey: string, count: number, description: str
         rootLogger.warn('quality-check: ratchet file not found, creating new one');
     }
     if (!data.checks) data.checks = {};
-    data.checks[checkKey] = { threshold: count, description };
+    const checks = new Map(Object.entries(data.checks));
+    checks.set(checkKey, { threshold: count, description });
+    data.checks = Object.fromEntries(checks);
     writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 

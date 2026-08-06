@@ -1,11 +1,12 @@
 /** Pipeline health HTML renderer — accepts pre-computed metrics from DataHub.
  *  Pure rendering logic — no I/O, no side effects. */
 import { sanitizeHtml } from '../shared/escape.js';
+import { resolveGeneratedAt } from '../shared/date-utils.js';
 import { buildHtmlPage } from '../shared/report/html-factory.js';
 import { buildCss } from '../shared/report/report-styles.js';
+import { icon } from '../shared/icons.js';
 
-const ERROR_KEYWORDS = ['Error', 'Failure', 'Timeout', 'Exception', 'FATAL', 'OOMKilled'];
-const ERROR_LOG_PATTERN = new RegExp('(?:' + ERROR_KEYWORDS.join('|') + '):?\\s*(.+)$', 'gim');
+const ERROR_LOG_PATTERN = /(?:Error|Failure|Timeout|Exception|FATAL|OOMKilled)[: ]?(.+)$/gim;
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -44,20 +45,6 @@ export function extractErrorMessages(logText: string, maxEntries = 5): string[] 
 }
 
 /* ------------------------------------------------------------------ */
-/*  CSS                                                                */
-/* ------------------------------------------------------------------ */
-
-const _PIPELINE_CSS = `
-.summary{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
-.card{background:var(--color-surface-card);border:1px solid var(--color-border-default);border-radius:8px;padding:.75rem 1rem;flex:1;min-width:120px}
-.card .num{font-size:1.5rem;font-weight:700}
-.card .lbl{font-size:.75rem;color:var(--color-text-muted)}
-.ts{font-size:.8rem;color:var(--color-text-muted);margin-bottom:1.5rem}
-.failure-bar{font-family:monospace;font-size:0.8rem;color:var(--color-text-muted);white-space:nowrap}
-.error-msg{font-family:monospace;font-size:0.8rem}
-`;
-
-/* ------------------------------------------------------------------ */
 /*  HTML sub-helpers                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -73,7 +60,7 @@ function _renderJobsSection(data: PipelineHealthData): string {
         .map(
             (j) =>
                 `<tr><td><strong>${sanitizeHtml(j.name)}</strong></td><td>${j.failCount}</td><td>${j.totalCount}</td>` +
-                `<td><span style="color:var(--color-error)">${j.rate}%</span></td>` +
+                `<td data-color="error">${j.rate}%</td>` +
                 `<td><span class="failure-bar">${_bar(j.rate)}</span></td></tr>`,
         )
         .join('\n');
@@ -95,7 +82,7 @@ function _renderBranchSection(data: PipelineHealthData): string {
         .map(
             ([branch, info]) =>
                 `<tr><td><strong>${sanitizeHtml(branch)}</strong></td><td>${info.count}</td>` +
-                `<td><span style="color:${info.passRate >= 80 ? 'var(--color-success)' : 'var(--color-error)'}">${info.passRate}%</span></td></tr>`,
+                `<td data-status="${info.passRate >= 80 ? 'pass' : 'fail'}">${info.passRate}%</td></tr>`,
         )
         .join('\n');
     return `<table><tr><th>Branch</th><th>Runs</th><th>Pass Rate</th></tr>${rows}</table>`;
@@ -125,11 +112,14 @@ export function formatDuration(sec: number): string {
 
 /** Render a complete HTML report from a PipelineHealthData object.
  *  Pure function — no I/O, no side effects. */
-export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipeline Health Report'): string {
-    const ts = new Date().toISOString();
+export function renderPipelineHealthHtml(
+    data: PipelineHealthData,
+    title = 'Pipeline Health Report',
+    generatedAt?: string,
+): string {
+    const ts = resolveGeneratedAt(generatedAt);
     const safePassRate = sanitizeNumber(data.passRate);
     const safeAvgDuration = sanitizeNumber(data.avgDurationSec);
-    const passRateColor = safePassRate >= 80 ? 'var(--color-success)' : 'var(--color-error)';
     const periodLabel = data.period ? `${data.period.from} to ${data.period.to}` : 'N/A';
     const passedCount = data.totalRuns > 0 ? Math.round((data.totalRuns * safePassRate) / 100) : 0;
     const failedCount = data.totalRuns - passedCount;
@@ -138,27 +128,27 @@ export function renderPipelineHealthHtml(data: PipelineHealthData, title = 'Pipe
     const bodyContent = `<h1>${sanitizeHtml(title)}</h1>
 <div data-part="timestamp" data-dashboard="pipeline-health">${ts} &mdash; ${periodLabel}</div>
 <div data-section="summary" class="summary">
-  <div class="card"><div class="num" style="color:var(--color-info)">${data.totalRuns}</div><div class="lbl">Total Runs</div>${sampleWarning ? `<div data-part="sample-warning">${sampleWarning}</div>` : ''}</div>
-  <div class="card"><div class="num" style="color:var(--color-success)">${passedCount}</div><div class="lbl">Passed</div></div>
-  <div class="card"><div class="num" style="color:var(--color-error)">${failedCount}</div><div class="lbl">Failed</div></div>
-  <div class="card"><div class="num" style="color:${passRateColor}">${safePassRate}%</div><div class="lbl">Pass Rate</div><div data-part="target">target: 80%</div></div>
+  <div class="card"><div class="num" data-color="info">${data.totalRuns}</div><div class="lbl">Total Runs</div>${sampleWarning ? `<div data-part="sample-warning">${sampleWarning}</div>` : ''}</div>
+  <div class="card"><div class="num" data-color="success">${passedCount}</div><div class="lbl">Passed</div></div>
+  <div class="card"><div class="num" data-color="error">${failedCount}</div><div class="lbl">Failed</div></div>
+  <div class="card"><div class="num" data-status="${safePassRate >= 80 ? 'pass' : 'fail'}">${safePassRate}%</div><div class="lbl">Pass Rate</div><div data-part="target">target: 80%</div></div>
   <div class="card"><div class="num">${formatDuration(safeAvgDuration)}</div><div class="lbl">Avg Duration</div><div data-part="target">target: < 30m</div></div>
 </div>
-<h2>\uD83D\uDD25 Top Failing Jobs</h2>
+<h2>${icon('alert-triangle', 16, 'Top Failing Jobs')} Top Failing Jobs</h2>
 <div data-section="failing-jobs">
 ${_renderJobsSection(data)}
 </div>
-<h2>\uD83E\uDDE0 Failure Intelligence</h2>
+<h2>${icon('file-text', 16, 'Failure Intelligence')} Failure Intelligence</h2>
 <div data-section="failure-intelligence">
 ${_renderReasonsSection(data)}
 </div>
-<h2>\uD83D\uDD00 Branch Breakdown</h2>
+<h2>${icon('bar-chart', 16, 'Branch Breakdown')} Branch Breakdown</h2>
 <div data-section="branch-breakdown">
 ${_renderBranchSection(data)}
 </div>`;
     return buildHtmlPage({
         title,
-        styles: buildCss() + _PIPELINE_CSS,
+        styles: buildCss(),
         theme: 'system',
         bodyContent,
         footer: 'Generated by QA Tools \u2014 Pipeline Health Dashboard',

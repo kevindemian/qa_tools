@@ -33,7 +33,8 @@ export function buildHtmlPage(p: HtmlPageParams): string {
     head += themeScript;
 
     let body = p.bodyStart || '';
-    body += p.bodyContent;
+    body += '<a class="skip-link" href="#main-content">Skip to main content</a>';
+    body += `<main id="main-content">${p.bodyContent}</main>`;
     if (p.footer) {
         body += `<div class="footer">${p.footer}</div>`;
     }
@@ -66,7 +67,7 @@ const _toggleTheme = function toggleTheme() {
 
 const _ERROR_PAGE_CSS = `
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:40px 20px;background:var(--color-surface-page,#f9fafb);color:var(--color-text-primary,#111827)}
-h1{font-size:1.5rem;margin:0;color:var(--color-error,#ef4444)}
+h1{font-size:1.5rem;margin:0;color:var(--color-error,#d1242f)}
 .er-msg{margin-top:12px;color:var(--color-text-secondary,#4b5563)}
 .er-foot{margin-top:32px;font-size:0.75rem;color:var(--color-text-muted,#6b7280);text-align:center}
 html.dark h1{color:var(--color-error,#f87171)}

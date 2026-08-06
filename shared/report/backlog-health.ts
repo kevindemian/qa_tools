@@ -60,7 +60,7 @@ export interface BacklogHealthOptions {
 /**
  * Maps RawJiraIssue[] (from DataHub) to BacklogHealthIssue[] for analysis.
  * Epic field uses real `parentKey` when available; falls back to key prefix.
- * linkedTestCount defaults to 0 (caller can enrich from traceability if needed).
+ * linkedTestCount vem do raw (N6 — enriquecido no provider); 0 somente quando ausente.
  */
 export function mapJiraIssuesToBacklogHealth(issues: RawJiraIssue[]): BacklogHealthIssue[] {
     return issues.map((issue) => ({
@@ -70,7 +70,7 @@ export function mapJiraIssuesToBacklogHealth(issues: RawJiraIssue[]): BacklogHea
         updated: issue.updated,
         type: issue.type,
         priority: issue.priority ?? 'Medium',
-        linkedTestCount: 0,
+        linkedTestCount: issue.linkedTestCount ?? 0,
         epic: issue.parentKey ?? issue.key.split('-')[0] ?? 'UNKNOWN',
     }));
 }

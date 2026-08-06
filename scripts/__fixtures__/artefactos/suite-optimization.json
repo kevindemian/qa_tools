@@ -1,0 +1,18 @@
+{
+    "optimizations": [
+        {
+            "testTitle": "test-slow-integration",
+            "duration": 300,
+            "flakiness": 0.3,
+            "impact": "high",
+            "action": "parallelize",
+            "reason": "Long duration and high flakiness"
+        }
+    ],
+    "totalTests": 50,
+    "totalDuration": 3600,
+    "potentialSavings": 600,
+    "slowThreshold": 60,
+    "flakyThreshold": 0.2,
+    "timestamp": "2026-07-25T10:00:00Z"
+}

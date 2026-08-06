@@ -58,6 +58,11 @@ export interface BorderColors {
     subtle: ColorPair;
 }
 
+/** Brand accent colors for third-party integrations (e.g., Jira). */
+export interface BrandColors {
+    jira: ColorPair;
+}
+
 export interface BadgeColors {
     pass: BadgeToken;
     fail: BadgeToken;
@@ -70,6 +75,10 @@ export interface ChartColors {
     skip: string;
     line: string;
     ref: string;
+    /** Text color on dark fills (pass/fail) — theme-independent. */
+    onFillDark: string;
+    /** Text color on light fills (warn) — theme-independent. */
+    onFillLight: string;
 }
 
 export interface SpacingScale {
@@ -123,6 +132,7 @@ export interface DesignTokens {
         surface: SurfaceColors;
         text: TextColors;
         border: BorderColors;
+        brand: BrandColors;
         badge: BadgeColors;
         bg: {
             healthy: ColorPair;
@@ -151,10 +161,10 @@ export interface DesignTokens {
 export const tokens: DesignTokens = {
     color: {
         semantic: {
-            success: { light: '#22c55e', dark: '#4ade80' },
-            error: { light: '#ef4444', dark: '#f87171' },
-            warn: { light: '#facc15', dark: '#fbbf24' },
-            info: { light: '#6366f1', dark: '#a5b4fc' },
+            success: { light: '#1a7f37', dark: '#4ade80' },
+            error: { light: '#d1242f', dark: '#f87171' },
+            warn: { light: '#9a6700', dark: '#fbbf24' },
+            info: { light: '#0969da', dark: '#a5b4fc' },
         },
         surface: {
             page: { light: '#f9fafb', dark: '#0d1117' },
@@ -180,6 +190,9 @@ export const tokens: DesignTokens = {
             default: { light: '#d1d5db', dark: '#30363d' },
             subtle: { light: '#e5e7eb', dark: '#21262d' },
         },
+        brand: {
+            jira: { light: '#0052cc', dark: '#0052cc' },
+        },
         badge: {
             pass: { bg: { light: '#dcfce7', dark: '#052e16' }, text: { light: '#166534', dark: '#4ade80' } },
             fail: { bg: { light: '#fecaca', dark: '#450a0a' }, text: { light: '#991b1b', dark: '#f87171' } },
@@ -191,11 +204,13 @@ export const tokens: DesignTokens = {
             critical: { light: '#fef2f2', dark: '#2d0a0a' },
         },
         chart: {
-            pass: '#22c55e',
-            fail: '#ef4444',
-            skip: '#facc15',
-            line: '#6366f1',
-            ref: '#ef4444',
+            pass: '#1a7f37',
+            fail: '#d1242f',
+            skip: '#9a6700',
+            line: '#0969da',
+            ref: '#d1242f',
+            onFillDark: '#ffffff',
+            onFillLight: '#333333',
         },
     },
     spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 },

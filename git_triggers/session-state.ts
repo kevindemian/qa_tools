@@ -295,7 +295,6 @@ export function buildActionChoices(): JsonObject[] {
         { name: '      Comparar execuções (HTML)', value: 'c' },
         { name: '      Dashboards individuais', value: 'd' },
         { name: '      CI Data Hub (resumo)', value: 'h' },
-        { name: '      Git Metrics Adapter (doc)', value: 'e' },
         { name: '      Bug Report Interativo', value: 'g' },
         { name: '      AI PR Description', value: 'i' },
         { name: '      Configurar PR Report', value: 'f' },

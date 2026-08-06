@@ -32,6 +32,7 @@ import {
     Moon,
     ChevronRight,
     ArrowUpDown,
+    Link,
 } from 'lucide';
 
 /** Lucide icon path data: array of [tagName, attributes] tuples. */
@@ -63,22 +64,25 @@ const ICON_MAP: Record<string, IconPaths> = {
     moon: Moon as unknown as IconPaths,
     'chevron-right': ChevronRight as unknown as IconPaths,
     'arrow-up-down': ArrowUpDown as unknown as IconPaths,
+    link: Link as unknown as IconPaths,
 };
 
 export type IconName = keyof typeof ICON_MAP;
 
-const ATTR_MAP: Record<string, string> = {
-    class: 'class',
-    xmlns: 'xmlns',
-    viewBox: 'viewBox',
-    fill: 'fill',
-    stroke: 'stroke',
-    'stroke-width': 'stroke-width',
-    'stroke-linecap': 'stroke-linecap',
-    'stroke-linejoin': 'stroke-linejoin',
-    width: 'width',
-    height: 'height',
-};
+const ICON_LOOKUP = new Map(Object.entries(ICON_MAP));
+
+const ATTR_MAP = new Map<string, string>([
+    ['class', 'class'],
+    ['xmlns', 'xmlns'],
+    ['viewBox', 'viewBox'],
+    ['fill', 'fill'],
+    ['stroke', 'stroke'],
+    ['stroke-width', 'stroke-width'],
+    ['stroke-linecap', 'stroke-linecap'],
+    ['stroke-linejoin', 'stroke-linejoin'],
+    ['width', 'width'],
+    ['height', 'height'],
+]);
 
 /**
  * Convert a Lucide icon to an inline SVG string.
@@ -89,7 +93,7 @@ const ATTR_MAP: Record<string, string> = {
  * @returns SVG string, or empty string if icon name is invalid.
  */
 export function icon(name: IconName, size: number = 16, ariaLabel?: string): string {
-    const paths = ICON_MAP[name];
+    const paths = ICON_LOOKUP.get(name);
     if (!paths) return '';
 
     const attrs = [
@@ -114,7 +118,7 @@ export function icon(name: IconName, size: number = 16, ariaLabel?: string): str
         .map(([tag, attrs]) => {
             const attrStr = Object.entries(attrs)
                 .map(([k, v]) => {
-                    const attrName = ATTR_MAP[k] ?? k;
+                    const attrName = ATTR_MAP.get(k) ?? k;
                     return `${attrName}="${escapeAttr(String(v))}"`;
                 })
                 .join(' ');

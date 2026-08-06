@@ -64,8 +64,8 @@ gemini-code-*
 # === Container build context (local only, not part of the project) ===
 .container/
 
-# === Config duplicates (tautest TS vs JSON; only JSON is canonical) ===
-tautest.config.ts
+# === Config (Stryker canonical; diff-scoped via scripts/mutation-scope.ts) ===
+# stryker.config.mjs is the single mutation config source (tracked; env-driven STRYKER_BREAK/STRYKER_REPORT_FILE).
 
 # === Windows artifacts ===
 nul
@@ -83,7 +83,6 @@ qa-quarantine.json
 archive/
 .stryker-tmp/
 research/
-.tautest/
 
 # === vitest-affected cache (generated) ===
 .vitest-affected/

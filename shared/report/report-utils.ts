@@ -1,18 +1,8 @@
 /** Shared utility functions for HTML report generation — formatting and stats.
  * @module report-utils */
-import type { FlatTest } from '../result_parser.js';
 import type { MetricsRun } from '../types/data-hub.js';
 import { PASS_RATE_GOOD_THRESHOLD, PASS_RATE_WARN_THRESHOLD } from './report-types.js';
 import type { ReportStats } from './report-types.js';
-
-/** Build ReportStats from raw FlatTest[] (fallback when no pre-computed data). */
-export function statsFromTests(tests: FlatTest[]): ReportStats {
-    const passed = tests.filter((t) => t.state === 'passed').length;
-    const failed = tests.filter((t) => t.state === 'failed').length;
-    const skipped = tests.filter((t) => t.state === 'skipped').length;
-    const duration = tests.reduce((sum, t) => sum + t.duration, 0);
-    return { passed, failed, skipped, total: tests.length, duration };
-}
 
 /** Build ReportStats from pre-computed MetricsRun (SSOT — preferred). */
 export function statsFromMetricsRun(run: MetricsRun): ReportStats {
@@ -43,6 +33,7 @@ export function pct(value: number, total: number): string {
 }
 
 export function pctSub(value: number, total: number): string {
+    // legitimate: inline <span> metric subtitle — total===0 => percentage is undefined (division-by-zero); the raw count is already shown as the metric value, EmptyState (section block) invalid inline (Rule 25.3 intent).
     if (total === 0) return '';
     return ' <span class="metric-subtitle">(' + pct(value, total) + '%)</span>';
 }

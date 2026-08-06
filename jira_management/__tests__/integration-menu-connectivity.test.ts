@@ -56,16 +56,6 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
 vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
     calcFlakinessEntries: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../shared/report/traceability-matrix.js', () => ({
-    buildTraceabilityMatrix: vi.fn(() => ({
-        nodes: [],
-        totalEpics: 0,
-        totalTests: 0,
-        overallCoverage: 0,
-        timestamp: '',
-    })),
-    generateTraceabilityHtml: vi.fn(() => '<html/>'),
-}));
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
         overall: 80,
@@ -76,14 +66,7 @@ vi.mock('../../shared/quality/health-score.js', () => ({
         timestamp: '',
     })),
 }));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    calculateReleaseScore: vi.fn(() => ({
-        score: 85,
-        grade: 'good',
-        breakdown: [],
-        recommendation: '',
-        timestamp: '',
-    })),
+vi.mock('../../shared/quality/release-score-renderer.js', () => ({
     generateReleaseScoreHtml: vi.fn(() => '<html/>'),
 }));
 vi.mock('../../shared/report/coverage-gap.js', () => ({
@@ -145,7 +128,7 @@ describe('Jira_management — getHandler registry', () => {
         expect(typeof handler).toBe('function');
     });
 
-    it('returns handler for all 27 cases', () => {
+    it('returns handler for all 26 cases', () => {
         expect.hasAssertions();
 
         const cases = [
@@ -173,7 +156,6 @@ describe('Jira_management — getHandler registry', () => {
             '22',
             '23',
             '24',
-            '25',
             '26',
             '27',
         ];
@@ -203,7 +185,7 @@ describe('Jira_management — getHandler registry', () => {
     it('each handler is callable without throwing', async () => {
         expect.hasAssertions();
 
-        const cases = ['3', '5', '7', '9', '11', '13', '25', '26', '27'];
+        const cases = ['3', '5', '7', '9', '11', '13', '26', '27'];
         for (const c of cases) {
             const handler = getHandler(c);
 
@@ -251,21 +233,12 @@ describe('Jira_management — case handlers are connected', () => {
         expect(ctx.ctx.project_name).toBe('NEW_PROJ');
     });
 
-    it('case25 loads metrics and builds matrix', async () => {
+    it('case25 is not registered after traceability removal', () => {
         expect.hasAssertions();
 
         const handler = getHandler('25');
 
-        expect(handler).not.toBeNull();
-
-        const ctx = createMockContext();
-        const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
-        vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
-        } as never);
-        await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
-
-        expect(vi.mocked(getDataHub)).toHaveBeenCalledWith();
+        expect(handler).toBeNull();
     });
 
     it('case26 calculates release score', async () => {
@@ -278,7 +251,21 @@ describe('Jira_management — case handlers are connected', () => {
         const ctx = createMockContext();
         const { getDataHub } = await import('../../shared/data-hub/global-hub.js');
         vi.mocked(getDataHub).mockReturnValue({
-            loadMetricsStore: vi.fn().mockReturnValue({ runs: [] }),
+            computed: {
+                releaseScore: {
+                    score: 85,
+                    grade: 'good',
+                    breakdown: [
+                        { label: 'Pass Rate', score: 90, status: 'pass' as const },
+                        { label: 'Flaky Rate', score: 80, status: 'pass' as const },
+                        { label: 'Coverage', score: 85, status: 'pass' as const },
+                        { label: 'Suite Speed', score: 80, status: 'pass' as const },
+                        { label: 'Execution Rate', score: 90, status: 'pass' as const },
+                    ],
+                    recommendation: '',
+                    timestamp: '',
+                },
+            },
         } as never);
         await (handler as (ctx: ReturnType<typeof createMockContext>) => Promise<boolean | void>)(ctx);
 

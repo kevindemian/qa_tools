@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { aggregateDefectSeasonality, generateSeasonalityHtml } from '../quality/defect-seasonality.js';
+import { aggregateDefectSeasonality } from '../data-hub/compute/defect-aggregation.js';
+import { generateSeasonalityHtml } from '../quality/defect-seasonality.js';
 import type { FailureClassification } from '../types/data-hub.js';
 
 vi.mock('../logger.js', () => ({

@@ -149,61 +149,126 @@ jobs:
         with:
             project-name: qa_tools
 
-    mutation:
-        name: Mutation Testing (diff-scoped)
+    mutation-setup:
+        name: Mutation Setup (bucket coverage validation)
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
         runs-on: ubuntu-latest
-        needs: quality
-        timeout-minutes: 15
-        permissions:
-            contents: read
-            pull-requests: write
-            checks: write
+        timeout-minutes: 10
+        outputs:
+            buckets: ${{ steps.emit-buckets.outputs.buckets }}
         steps:
             - uses: actions/checkout@v5
-              with:
-                  fetch-depth: 2
             - uses: actions/setup-node@v6
               with:
                   node-version-file: .node-version
                   cache: npm
             - run: npm ci
-            - name: Initialize tautest
-              run: npx tautest init --yes --runner vitest --no-install
-            - name: Run diff-scoped mutation testing
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Validate bucket partition covers every source file (Rule 25)
+              run: |
+                  npx tsx scripts/mutation-buckets.ts --validate $(git ls-files)
+            - name: Emit bucket matrix from the canonical registry
+              id: emit-buckets
+              run: |
+                  BUCKETS=$(npx tsx scripts/mutation-buckets.ts --json)
+                  echo "buckets=${BUCKETS}" >> "$GITHUB_OUTPUT"
+
+    mutation:
+        name: Mutation Testing (${{ matrix.bucket.name }})
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
+        runs-on: ubuntu-latest
+        needs: [quality, mutation-setup]
+        timeout-minutes: 45
+        strategy:
+            fail-fast: false
+            matrix:
+                bucket: ${{ fromJSON(needs.mutation-setup.outputs.buckets) }}
+        env:
+            # Stryker roda o vitest in-process; o vitest.config.ts desativa o
+            # vitest-affected durante a mutação (determinismo do score) quando
+            # STRYKER_ACTIVE=true — mecanismo real, não mais a chave `env`
+            # ignorada pelo Stryker (ver dev/docs/internal/MUTATION-TESTING-PERF.md).
+            STRYKER_ACTIVE: 'true'
+            # Worker nunca falha sozinho (score por bucket é parcial); o gate
+            # agregado (job mutation-gate) aplica o break real 60 no score
+            # combinado. Config env-driven via stryker.config.mjs (Estratégia B).
+            STRYKER_BREAK: '0'
+            STRYKER_REPORT_FILE: reports/mutation/mutation-report-${{ matrix.bucket.name }}.json
+        permissions:
+            # Least privilege: checkout (contents) + upload de artefato
+            # (actions). pull-requests/checks write eram do tautest (removido).
+            contents: read
+            actions: write
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - name: Compute diff-scoped mutation scope
               run: |
                   if [ "${{ github.event_name }}" = "pull_request" ]; then
-                    TAUTEST_BASE=${{ github.base_ref }}
+                    MUTATION_BASE=${{ github.event.pull_request.base.sha }}
                   else
-                    TAUTEST_BASE=HEAD~1
+                    MUTATION_BASE=HEAD~1
                   fi
-                  # Inspect the mutate scope up front so we can skip when there is
-                  # nothing to mutate: no production files changed (tautest exit 2)
-                  # or files changed but no added lines (deletion-only commits, which
-                  # would otherwise make the real run exit 1 for an empty scope).
-                  DRY_RUN_EXIT=0
-                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode --dry-run > /tmp/tautest-scope.log || DRY_RUN_EXIT=$?
-                  if [ "${DRY_RUN_EXIT}" = "2" ]; then
-                    echo "No production files changed — skipping mutation testing"
+                  # Exit 2 = bucket sem arquivos-fonte com linhas adicionadas
+                  # (PR de teste/doc ou commit de deleção) → skip do bucket.
+                  # set -e é o default no GH Actions: desativa temporariamente
+                  # para capturar o exit code (senão o bash aborta antes do check).
+                  set +e
+                  MUTATE_SCOPE=$(npx tsx scripts/mutation-scope.ts --base "${MUTATION_BASE}" --dir "${{ matrix.bucket.specs }}")
+                  SCOPE_EXIT=$?
+                  set -e
+                  if [ "$SCOPE_EXIT" -eq 2 ]; then
+                    echo "No production files changed in this bucket — skipping mutation testing"
                     exit 0
                   fi
-                  if grep -q "Estimated mutation scope: none" /tmp/tautest-scope.log; then
-                    echo "No mutations possible (no added lines) — skipping mutation testing"
-                    exit 0
+                  if [ "$SCOPE_EXIT" -ne 0 ]; then
+                    echo "mutation-scope failed with exit code ${SCOPE_EXIT}"
+                    exit "$SCOPE_EXIT"
                   fi
-                  EXIT_CODE=0
-                  npx tautest run --config tautest.config.json --base "${TAUTEST_BASE}" --threshold 60 --prompt-style opencode || EXIT_CODE=$?
-                  # Exit code 2 = no production files to mutate (expected for test-only changes)
-                  if [ "${EXIT_CODE}" = "2" ]; then
-                    echo "No production files changed — skipping mutation testing"
-                    exit 0
-                  fi
-                  exit ${EXIT_CODE}
-            - name: Upload mutation report
+                  echo "MUTATE_SCOPE=${MUTATE_SCOPE}" >> "$GITHUB_ENV"
+            - name: Run diff-scoped mutation testing (bucket)
+              run: npx stryker run stryker.config.mjs --mutate "${MUTATE_SCOPE}"
+            - name: Upload mutation report (bucket)
               uses: actions/upload-artifact@v7
               if: always()
               with:
-                  name: mutation-report
-                  path: .tautest/
+                  name: mutation-report-${{ matrix.bucket.name }}
+                  path: reports/mutation/mutation-report-${{ matrix.bucket.name }}.json
+                  if-no-files-found: warn
+
+    mutation-gate:
+        name: Mutation Gate (combined score)
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
+        runs-on: ubuntu-latest
+        needs: mutation
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            actions: read
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: npm
+            - run: npm ci
+            - name: Download bucket mutation reports
+              uses: actions/download-artifact@v7
+              with:
+                  pattern: mutation-report-*
+                  path: reports/mutation/
+                  merge-multiple: true
+            - name: Merge bucket reports and enforce combined break
+              run: |
+                  shopt -s nullglob
+                  REPORTS=(reports/mutation/mutation-report-*.json)
+                  if [ "${#REPORTS[@]}" -eq 0 ]; then
+                    echo "No bucket reports produced (no production files changed) — skipping mutation gate"
+                    exit 0
+                  fi
+                  npx tsx scripts/merge-mutation-reports.ts --break 60 --output reports/mutation/mutation-report-combined.json "${REPORTS[@]}"

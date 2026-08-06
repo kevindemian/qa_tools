@@ -9,29 +9,18 @@
  * MetricsStore is NOT used — all data comes from DataHub.raw.* and DataHub.computed.*.
  */
 import { calculateHealthScore } from './health-score.js';
-import type { HealthScoreResult } from '../types.js';
+import type { HealthScoreResult, HealthScoreDimensionResult } from '../types.js';
 import type { DataHub } from '../types/data-hub.js';
 import type { QualityCategory } from '../data-hub/quality.js';
 import { rootLogger } from '../logger.js';
-import { icon } from '../icons.js';
 import { extractErrorMessage } from '../ui/prompt-errors.js';
 import { humanizeError } from '../ui/prompt-errors.js';
 
 /* ── Fixed thresholds — never overridable ─────────────────────────────── */
 
-import {
-    MIN_PASS_RATE,
-    MAX_FLAKY_PCT,
-    MIN_COVERAGE,
-    MAX_SUITE_SPEED,
-    MIN_HEALTH_SCORE,
-} from '../constants/thresholds.js';
+import { MIN_HEALTH_SCORE } from '../constants/thresholds.js';
 
 const THRESHOLDS = {
-    minPassRate: MIN_PASS_RATE,
-    maxFlakyPct: MAX_FLAKY_PCT,
-    minCoverage: MIN_COVERAGE,
-    maxSuiteSpeed: MAX_SUITE_SPEED,
     minHealthScore: MIN_HEALTH_SCORE,
 } as const;
 
@@ -77,79 +66,41 @@ function _healthCheck(health: HealthScoreResult): GateCheck {
         status: health.qualityGate,
         score: health.overall,
         threshold: THRESHOLDS.minHealthScore,
-        details: 'Health score: ' + health.overall + ' (' + health.grade + '), gate: ' + health.qualityGate,
+        details:
+            'Health score: ' +
+            health.overall +
+            ' (' +
+            health.grade +
+            '), gate: ' +
+            health.qualityGate +
+            ' — ' +
+            _dimensionBreakdown(health),
     };
 }
 
-function _availableStatus(dim: { available: boolean; score: number }, threshold: number): QualityGateStatus {
-    if (!dim.available) return 'unknown';
-    return dim.score >= threshold ? 'pass' : 'fail';
-}
-
-function _passRateCheck(health: HealthScoreResult): GateCheck {
-    const dim = health.dimensions.passRate;
-    const status = _availableStatus(dim, THRESHOLDS.minPassRate);
-    return {
-        name: 'pass-rate',
-        status,
-        score: dim.score,
-        threshold: THRESHOLDS.minPassRate,
-        details: !dim.available
-            ? 'Pass rate: dados indisponíveis (N/A)'
-            : 'Pass rate: ' + dim.score + '% (threshold: ' + THRESHOLDS.minPassRate + '%)',
-    };
-}
-
-/** Check flaky rate against threshold. Reads from DataHub.computed — SSOT. */
-function _flakyCheck(dataHub: DataHub): GateCheck {
-    const flakyPct = dataHub.computed.flakyPercentage ?? 0;
-    const status: GateCheck['status'] = flakyPct <= THRESHOLDS.maxFlakyPct ? 'pass' : 'fail';
-    return {
-        name: 'flaky-rate',
-        status,
-        score: Math.round(flakyPct),
-        threshold: THRESHOLDS.maxFlakyPct,
-        details: 'Flaky: ' + Math.round(flakyPct) + '% (threshold: ' + THRESHOLDS.maxFlakyPct + '%)',
-    };
-}
-
-function _coverageCheck(health: HealthScoreResult): GateCheck {
-    const dim = health.dimensions.coverage;
-    const status = _availableStatus(dim, THRESHOLDS.minCoverage);
-    return {
-        name: 'coverage',
-        status,
-        score: dim.score,
-        threshold: THRESHOLDS.minCoverage,
-        details: !dim.available
-            ? 'Coverage: dados indisponíveis (N/A)'
-            : 'Coverage: ' + dim.score + '% (threshold: ' + THRESHOLDS.minCoverage + '%)',
-    };
-}
-
-/** Check suite speed P95 against threshold. Reads from DataHub.computed — SSOT. */
-function _suiteSpeedCheck(health: HealthScoreResult, dataHub: DataHub): GateCheck {
-    const p95 = Number.isFinite(dataHub.computed.suiteSpeedP95) ? dataHub.computed.suiteSpeedP95 : 0;
-    const thresholdMs = THRESHOLDS.maxSuiteSpeed * 1000;
-    const status: GateCheck['status'] = p95 <= thresholdMs ? 'pass' : 'fail';
-    return {
-        name: 'suite-speed',
-        status,
-        score: health.dimensions.suiteSpeed.score,
-        threshold: THRESHOLDS.maxSuiteSpeed,
-        details: 'Suite speed p95: ' + p95 + 'ms (threshold: ' + THRESHOLDS.maxSuiteSpeed + 's)',
-    };
+/** Build the per-dimension breakdown text from the single source `health.dimensions`. */
+function _dimensionBreakdown(health: HealthScoreResult): string {
+    const entries: Array<[string, HealthScoreDimensionResult]> = [
+        ['Pass Rate', health.dimensions.passRate],
+        ['Flaky Rate', health.dimensions.flakyRate],
+        ['Coverage', health.dimensions.coverage],
+        ['Suite Speed', health.dimensions.suiteSpeed],
+        ['Execution Rate', health.dimensions.executionRate],
+    ];
+    return entries
+        .map(([label, dim]) => {
+            const value = dim.available ? String(dim.score) : 'N/A';
+            return `${label}: ${value} (${dim.status.toUpperCase()})`;
+        })
+        .join('; ');
 }
 
 /* ── Orchestration ────────────────────────────────────────────────────── */
 
-/** Build all quality gate checks, delegating to DataHub compute — SSOT. */
-function _buildChecks(checks: GateCheck[], health: HealthScoreResult, dataHub: DataHub): void {
+/** Build all quality gate checks. The dimension rule is implemented once in
+ *  evaluateQualityGate (health-score) — the gate consumes health.qualityGate. */
+function _buildChecks(checks: GateCheck[], health: HealthScoreResult): void {
     checks.push(_healthCheck(health));
-    checks.push(_passRateCheck(health));
-    checks.push(_flakyCheck(dataHub));
-    checks.push(_coverageCheck(health));
-    checks.push(_suiteSpeedCheck(health, dataHub));
 }
 
 function _aggregateResult(checks: GateCheck[]): QualityGateResult {
@@ -216,7 +167,7 @@ function _buildCategoryChecks(checks: GateCheck[], incompleteItems: string[], hu
         const valid = report ? report.valid : true;
         const provenance = hub.getProvenance()?.get(category);
         const confidence = provenance && Number.isFinite(provenance.confidence) ? provenance.confidence : 1;
-        const score = valid ? Math.round(confidence * 100) : 0;
+        const score = valid ? 100 : 0;
         checks.push({
             name: `data-quality:${category}`,
             status: valid ? 'pass' : 'fail',
@@ -264,7 +215,7 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
                   }
                 : { dataHub: hub, ...(options.project ? { branch: options.project } : {}) };
         const health = calculateHealthScore(healthConfig);
-        _buildChecks(checks, health, hub);
+        _buildChecks(checks, health);
         _buildCategoryChecks(checks, incompleteItems, hub);
         const result = _aggregateResult(checks);
         return { ...result, incompleteItems };
@@ -282,39 +233,4 @@ export function runQualityGate(options: QualityGateOptions): QualityGateResult {
         });
         return { overall: 'fail', checks, score: 0, incompleteItems: [] };
     }
-}
-
-function gateStatusIcon(status: QualityGateStatus): string {
-    if (status === 'pass') return `${icon('check-circle', 14)}`;
-    if (status === 'unknown') return `${icon('help-circle', 14)}`;
-    return `${icon('x-circle', 14)}`;
-}
-
-export function formatQualityGateJson(result: QualityGateResult): string {
-    return JSON.stringify(result, null, 2);
-}
-
-export function formatQualityGateText(result: QualityGateResult): string {
-    let output = '';
-    output += '\n=== Quality Gate ===\n';
-    const overallLabel = gateStatusIcon(result.overall) + ' ' + result.overall.toUpperCase();
-    output += 'Overall: ' + overallLabel + '\n';
-    output += 'Score: ' + result.score + '\n\n';
-    output += 'Checks:\n';
-    for (const check of result.checks) {
-        output +=
-            '  ' +
-            gateStatusIcon(check.status) +
-            ' ' +
-            check.name +
-            ' — ' +
-            check.score +
-            '/' +
-            check.threshold +
-            ' — ' +
-            check.details +
-            '\n';
-    }
-    output += '\n';
-    return output;
 }

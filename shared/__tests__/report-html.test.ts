@@ -7,10 +7,10 @@
  * reads. The real rootLogger is used (logs to stderr, harmless in tests).
  */
 
-import { nonNull, nullAs } from '../test-utils.js';
-import { generateHtmlReport, generateCoverageHtml, generateReportWithFallback } from '../report/report-html.js';
+import { nonNull } from '../test-utils.js';
+import { generateHtmlReport } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
-import type { CoverageEpic, TestRunTab } from '../report/report-types.js';
+import type { TestRunTab } from '../report/report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
 const MOCK_TESTS: FlatTest[] = [
@@ -23,7 +23,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const failed = tests.filter((t) => t.state === 'failed').length;
     const skipped = tests.filter((t) => t.state === 'skipped').length;
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: tests.length > 0 ? tests.reduce((s, t) => s + t.duration, 0) / tests.length : 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -35,7 +35,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped, total: tests.length },
         framework: '',
         metricsRuns: [
@@ -52,22 +52,6 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         ],
     } as unknown as ComputedMetrics;
 }
-
-const MOCK_EPICS: CoverageEpic[] = [
-    {
-        key: 'EPIC-1',
-        summary: 'First Epic',
-        issues: [
-            { key: 'ISSUE-1', summary: 'Task 1', status: 'Done', type: 'Task' },
-            { key: 'ISSUE-2', summary: 'Task 2', status: 'In Progress', type: 'Task' },
-        ],
-    },
-    {
-        key: 'EPIC-2',
-        summary: 'Second Epic',
-        issues: [{ key: 'ISSUE-3', summary: 'Bug 1', status: 'Open', type: 'Bug' }],
-    },
-];
 
 const HEALTH_SCORE: import('../types.js').HealthScoreResult = {
     overall: 85,
@@ -129,7 +113,43 @@ describe('GenerateHtmlReport', () => {
         });
 
         expect(html).toContain('Test Suite Health');
-        expect(html).toContain('Quality Gate: Pass');
+        expect(html).toContain('Health Gate: Pass');
+    });
+
+    it('renders composite quality gate section with incomplete items when qualityGateResult provided', () => {
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'QG',
+            qualityGateResult: {
+                overall: 'pass',
+                checks: [
+                    {
+                        name: 'health-score',
+                        status: 'pass',
+                        score: 85,
+                        threshold: 70,
+                        details: 'Health score: 85 (good)',
+                    },
+                ],
+                score: 85,
+                incompleteItems: ['failureRecords', 'deployments'],
+            },
+        });
+
+        expect(html).toContain('data-component="quality-gate"');
+        expect(html).toContain('health-score');
+        expect(html).toContain('Dados ausentes (EIXO C)');
+        expect(html).toContain('failureRecords');
+        expect(html).toContain('deployments');
+    });
+
+    it('renders NO quality gate section when neither qualityGateResult nor qualityGate provided (D2/Q3)', () => {
+        const html = generateHtmlReport(MOCK_TESTS, {
+            computed: computedFor(MOCK_TESTS),
+            title: 'NoGate',
+        });
+
+        expect(html).not.toContain('data-component="quality-gate"');
     });
 
     it('includes flakiness dashboard link when url and map provided', () => {
@@ -195,17 +215,65 @@ describe('GenerateHtmlReport', () => {
         expect(html).toContain('Other');
     });
 
-    it('includes trend section when trends provided', () => {
+    it('includes trend section when computed.metricsTrends provided', () => {
+        const computed = computedFor(MOCK_TESTS);
+        computed.metricsTrends = [
+            { label: 'Mon', passRate: 90, total: 10, failed: 1 },
+            { label: 'Tue', passRate: 85, total: 10, failed: 2 },
+        ];
         const html = generateHtmlReport(MOCK_TESTS, {
-            computed: computedFor(MOCK_TESTS),
+            computed,
             title: 'Trends',
-            trends: [
-                { label: 'Mon', passRate: 90, total: 10, failed: 1 },
-                { label: 'Tue', passRate: 85, total: 10, failed: 2 },
-            ],
         });
 
         expect(html).toContain('Pass Rate Trend');
+    });
+
+    it('renders computed.passRate=0 even when metricsRuns implies 100% (B5 — no derive fallback)', () => {
+        const computed = computedFor([]);
+        computed.passRate = 0;
+        computed.metricsRuns = [
+            {
+                timestamp: '2026-05-31T00:00:00Z',
+                project: 'p',
+                total: 2,
+                passed: 2,
+                failed: 0,
+                skipped: 0,
+                duration: 10,
+                tests: [
+                    { title: 'A', state: 'passed', duration: 5 },
+                    { title: 'B', state: 'passed', duration: 5 },
+                ],
+            },
+        ];
+
+        const html = generateHtmlReport([], { computed, title: 'ZeroRate' });
+
+        const passRateValue = /data-part="label">Pass Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(
+            html,
+        )?.[1];
+
+        expect(passRateValue).toBe('0.0%');
+    });
+
+    it('fails explicitly when computed.passRate is non-finite (B5 — SSOT required)', () => {
+        const computed = computedFor([]);
+        computed.passRate = Number.NaN;
+
+        const html = generateHtmlReport([], { computed, title: 'BadRate' });
+
+        expect(html).toContain('Error generating report');
+    });
+
+    it('renders failure classifications exclusively from computed.failureClassifications (F0-T4 — no dual source)', () => {
+        const computed = computedFor(MOCK_TESTS);
+        computed.failureClassifications = { 'Logout Test': 'UI' };
+
+        const html = generateHtmlReport(MOCK_TESTS, { computed, title: 'Cats' });
+
+        expect(html).toContain('category-badge');
+        expect(html).toContain('UI');
     });
 
     it('includes diff comparison when provided', () => {
@@ -222,74 +290,10 @@ describe('GenerateHtmlReport', () => {
 
         expect(html).toContain('Diff');
     });
-});
 
-describe('GenerateReportWithFallback', () => {
-    it('returns error page when generation fails', () => {
-        const badTests = nullAs<FlatTest[]>();
-        const html = generateReportWithFallback(badTests, { title: 'Fail' });
+    it('returns error page when computed is missing (SSOT required, no fallback)', () => {
+        const html = generateHtmlReport(MOCK_TESTS, { title: 'Fail' });
 
         expect(html).toContain('Error generating report');
-    });
-});
-
-describe('GenerateCoverageHtml', () => {
-    it('returns valid HTML for epics', () => {
-        const html = generateCoverageHtml(MOCK_EPICS, 'Coverage Report');
-
-        expect(html).toContain('Coverage Report');
-        expect(html).toContain('EPIC-1');
-        expect(html).toContain('ISSUE-2');
-        expect(html).toContain('ISSUE-3');
-    });
-
-    it('shows correct close percentage', () => {
-        const html = generateCoverageHtml(MOCK_EPICS);
-
-        expect(html).toContain('33.3');
-    });
-
-    it('shows 0.0 when no epics', () => {
-        const html = generateCoverageHtml([], 'Empty Report');
-
-        expect(html).toContain('0.0');
-    });
-
-    it('handles epic with Done and Closed statuses correctly', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-3',
-                summary: 'Status Test',
-                issues: [
-                    { key: 'T-1', summary: 'Done task', status: 'Done', type: 'Task' },
-                    { key: 'T-2', summary: 'Closed task', status: 'Closed', type: 'Task' },
-                    { key: 'T-3', summary: 'Open task', status: 'Open', type: 'Task' },
-                ],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('66.7');
-    });
-
-    it('handles In Progress coverage status', () => {
-        const epics: CoverageEpic[] = [
-            {
-                key: 'EPIC-4',
-                summary: 'Progress',
-                issues: [{ key: 'T-1', summary: 'WIP', status: 'In Progress', type: 'Task' }],
-            },
-        ];
-        const html = generateCoverageHtml(epics);
-
-        expect(html).toContain('In Progress');
-        expect(html).toContain('data-component="badge"');
-    });
-
-    it('returns error page on failure', () => {
-        const badEpics = nullAs<CoverageEpic[]>();
-        const html = generateCoverageHtml(badEpics);
-
-        expect(html).toContain('Error generating coverage report');
     });
 });

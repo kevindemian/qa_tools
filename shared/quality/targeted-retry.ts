@@ -42,6 +42,7 @@ const DEFAULT_CONFIG: RetryConfig = {
 
 function buildInvariantHint(results: ValidationResult[]): string {
     const errors = results.filter((r) => !r.passed && r.severity === 'error');
+    // legitimate: string hint helper (markdown lines) — zero errors => no hint; not a dashboard section, EmptyState inapplicable (Rule 25.3 intent).
     if (errors.length === 0) return '';
     return errors.map((e) => `- [${e.invariantId}] ${e.message}`).join('\n');
 }

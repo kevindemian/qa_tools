@@ -1,0 +1,29 @@
+{
+    "benchmarks": [
+        {
+            "project": "Frontend",
+            "healthScore": 85,
+            "grade": "A",
+            "passRate": 90,
+            "flakyRate": 5,
+            "coveragePct": 80,
+            "runCount": 50,
+            "trend": "up"
+        },
+        {
+            "project": "Backend",
+            "healthScore": 72,
+            "grade": "B",
+            "passRate": 80,
+            "flakyRate": 10,
+            "coveragePct": 65,
+            "runCount": 40,
+            "trend": "stable"
+        }
+    ],
+    "topSquad": "Frontend",
+    "bottomSquad": "Backend",
+    "averageScore": 78.5,
+    "stdDev": 9.2,
+    "timestamp": "2026-07-25T10:00:00Z"
+}

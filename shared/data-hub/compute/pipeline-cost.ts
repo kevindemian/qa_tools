@@ -9,11 +9,86 @@
  * - Duration calculated from run_started_at → updated_at
  */
 import type { PipelineRun } from '../../types/ci-cd.js';
-import type { CostEstimate } from '../../types/data-hub.js';
+import type { CostEstimate, PipelineCostResult, PipelineCostEntry } from '../../types/data-hub.js';
 import { rootLogger } from '../../logger.js';
 
 /** Default cost per compute minute in USD. */
 const DEFAULT_COST_PER_MINUTE = 0.01;
+
+/** Mapeia conclusion do CI para status legível. */
+function mapConclusionToStatus(conclusion: string | undefined): 'passed' | 'failed' | 'unknown' {
+    if (conclusion === 'success') return 'passed';
+    if (conclusion === 'failure') return 'failed';
+    return 'unknown';
+}
+
+/**
+ * SSOT projection: per-run cost breakdown (PipelineCostResult) from PerRunCost[] + run status.
+ * Pure function over hub raw data — renderers/reporters never compute this locally (hub-first).
+ *
+ * @param runs - Pipeline runs (for run->status mapping).
+ * @param perRunCosts - PerRunCost[] computed by the hub (minutes/cost per run).
+ * @param costPerMinute - Cost per compute minute (default: 0.01).
+ */
+export function computePipelineCostResult(
+    runs: PipelineRun[],
+    perRunCosts: import('../../types/data-hub.js').PerRunCost[],
+    costPerMinute?: number,
+): PipelineCostResult {
+    const cpm =
+        costPerMinute !== undefined && Number.isFinite(costPerMinute) && costPerMinute >= 0
+            ? costPerMinute
+            : DEFAULT_COST_PER_MINUTE;
+
+    if (perRunCosts.length === 0) {
+        return {
+            totalCost: 0,
+            avgCostPerRun: 0,
+            totalDurationSec: 0,
+            costPerMinute: cpm,
+            costByRun: [],
+            runCount: 0,
+            period: { from: '', to: '' },
+            timestamp: new Date().toISOString(),
+        };
+    }
+
+    const statusMap = new Map<number, string>();
+    for (const r of runs) {
+        const runId = typeof r.id === 'number' ? r.id : 0;
+        statusMap.set(runId, mapConclusionToStatus(r.conclusion));
+    }
+
+    const costByRun: PipelineCostEntry[] = perRunCosts.map((c) => ({
+        timestamp: c.timestamp,
+        durationSec: c.minutes * 60,
+        cost: Math.round(c.minutes * cpm * 100) / 100,
+        status: statusMap.get(c.runId) ?? 'unknown',
+    }));
+
+    costByRun.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+    const totalDurationSec = costByRun.reduce((s, e) => s + e.durationSec, 0);
+    const totalCost = costByRun.reduce((s, e) => s + e.cost, 0);
+    const sortedTimestamps = perRunCosts
+        .map((c) => c.timestamp)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+
+    return {
+        totalCost,
+        avgCostPerRun: costByRun.length > 0 ? totalCost / costByRun.length : 0,
+        totalDurationSec,
+        costPerMinute: cpm,
+        costByRun,
+        runCount: costByRun.length,
+        period: {
+            from: sortedTimestamps[0] ?? '',
+            to: sortedTimestamps[sortedTimestamps.length - 1] ?? '',
+        },
+        timestamp: new Date().toISOString(),
+    };
+}
 
 /**
  * Calculates pipeline cost from run durations.

@@ -2,8 +2,9 @@
  * Tests for ai-comparison — AI Test Effectiveness Comparison.
  */
 
-import { compareAiVsManual, generateAiComparisonHtml } from '../report/ai-comparison.js';
-import type { AiComparisonRecord, AiComparisonResult } from '../report/ai-comparison.js';
+import { compareAiVsManual } from '../data-hub/compute/ai-comparison.js';
+import { generateAiComparisonHtml } from '../report/ai-comparison.js';
+import type { AiComparisonRecord, AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 import * as htmlFactory from '../report/html-factory.js';
 
 function makeRecord(overrides: Partial<AiComparisonRecord> & { generatedBy: 'ai' | 'manual' }): AiComparisonRecord {
@@ -381,5 +382,12 @@ describe('GenerateAiComparisonHtml', () => {
         const html = generateAiComparisonHtml(sampleResult());
 
         expect(html).toContain('data-part="timestamp"');
+    });
+
+    it('renders an explicit no-data panel for the version table when by-version data is empty', () => {
+        const result = sampleResult({ aiTotal: 50, manualTotal: 50, byVersion: [] });
+        const html = generateAiComparisonHtml(result);
+
+        expect(html).toContain('No version comparison data available');
     });
 });

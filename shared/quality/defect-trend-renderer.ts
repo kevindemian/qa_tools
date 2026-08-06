@@ -1,26 +1,58 @@
 /**
  * Defect Trend Dashboard — HTML renderer.
  *
- * Extracted from defect-trend.ts (compute) to separate concerns.
- * This module handles ONLY HTML generation; all business logic remains in defect-trend.ts.
+ * This module handles ONLY HTML generation; the aggregation (SSOT) lives in
+ * `shared/data-hub/compute/defect-aggregation.ts`.
  *
  * @module defect-trend-renderer
  */
 
 import { rootLogger } from '../logger.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { sanitizeHtml } from '../escape.js';
 import { buildHtmlPage, buildErrorPage } from '../report/html-factory.js';
 import { buildCss } from '../report/report-styles.js';
 import { MetricCard, MetricGrid, DataTable, Section, EmptyState, RecommendedActions } from '../primitives/index.js';
 import type { TableColumn, TableRow } from '../primitives/index.js';
-import type { DefectTrendResult } from './defect-trend.js';
-import { sanitizeTrendResult } from './defect-trend.js';
+import type { DefectAggregationResult } from '../types/data-hub-extensions.js';
 import { icon } from '../icons.js';
 
 const AVG_DEFECTS_PER_DAY_TARGET = 10;
 
-function buildSummaryCards(result: DefectTrendResult): string {
-    if (result.topCategories.length === 0) return '';
+function sanitizeNumber(v: number): number {
+    return Number.isFinite(v) ? v : 0;
+}
+
+/**
+ * Sanitizes all numeric fields in a DefectAggregationResult at the HTML output
+ * boundary (Rule 5/24). Converts NaN and Infinity to 0 before rendering so no
+ * invalid numeric leaks into the generated markup.
+ */
+function sanitizeTrendResult(r: DefectAggregationResult): DefectAggregationResult {
+    return {
+        ...r,
+        trends: r.trends.map((t) => ({
+            date: t.date,
+            total: sanitizeNumber(t.total),
+            categories: Object.fromEntries(Object.entries(t.categories).map(([k, v]) => [k, sanitizeNumber(v)])),
+        })),
+        topCategories: r.topCategories.map((c) => ({
+            category: c.category,
+            count: sanitizeNumber(c.count),
+        })),
+    };
+}
+
+function buildSummaryCards(result: DefectAggregationResult): string {
+    // Rule 25: explicit no-data (defect summary unavailable) instead of silent omission.
+    if (result.topCategories.length === 0) {
+        return EmptyState({
+            title: 'No defect trend data available',
+            description: 'Defect trend summary requires aggregated defect categories. No category data was found.',
+            action: 'Run the defect aggregation pipeline to populate trend and category data.',
+            icon: icon('trending-up', 16),
+        });
+    }
 
     // Calculate trend direction
     const trends = result.trends;
@@ -70,7 +102,7 @@ function buildSummaryCards(result: DefectTrendResult): string {
     });
 }
 
-function buildTrendTable(result: DefectTrendResult): string {
+function buildTrendTable(result: DefectAggregationResult): string {
     if (result.trends.length === 0) {
         return EmptyState({
             title: 'No defect data available.',
@@ -129,7 +161,7 @@ function buildTrendTable(result: DefectTrendResult): string {
     });
 }
 
-function buildRecommendedActions(result: DefectTrendResult): string {
+function buildRecommendedActions(result: DefectAggregationResult): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: High categories
@@ -178,7 +210,15 @@ function buildRecommendedActions(result: DefectTrendResult): string {
     });
 }
 
-export function generateDefectTrendHtml(result: DefectTrendResult, title?: string): string {
+export function generateDefectTrendHtml(
+    result: DefectAggregationResult | null | undefined,
+    title?: string,
+    generatedAt?: string,
+): string {
+    if (!result) {
+        rootLogger.error('generateDefectTrendHtml: defect aggregation result is missing.');
+        return buildErrorPage('Error generating dashboard', 'Defect trend data is unavailable.');
+    }
     result = sanitizeTrendResult(result);
     try {
         const pageTitle = title || 'Defect Trend Dashboard';
@@ -204,7 +244,7 @@ export function generateDefectTrendHtml(result: DefectTrendResult, title?: strin
         const bodyContent =
             `<div data-dashboard="defect-trend">` +
             `<h1>${sanitizeHtml(pageTitle)}</h1>` +
-            `<div data-part="timestamp">${sanitizeHtml(new Date().toISOString())}</div>` +
+            `<div data-part="timestamp">${sanitizeHtml(resolveGeneratedAt(generatedAt))}</div>` +
             buildSummaryCards(result) +
             buildTrendTable(result) +
             buildRecommendedActions(result) +

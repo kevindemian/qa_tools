@@ -2,8 +2,9 @@
  * Tests for silent-regression — Silent Regression Detector.
  */
 
-import { detectSilentRegression, generateSilentRegressionHtml } from '../quality/silent-regression.js';
-import type { RegressionResult } from '../quality/silent-regression.js';
+import { detectSilentRegressions } from '../data-hub/compute/regression-detection.js';
+import { generateSilentRegressionHtml } from '../quality/silent-regression.js';
+import type { RegressionDetectionResult } from '../types/data-hub-extensions.js';
 import { nonNull } from '../test-utils.js';
 
 describe('DetectSilentRegression', () => {
@@ -13,7 +14,7 @@ describe('DetectSilentRegression', () => {
             'api test': [2.0, 2.1, 1.9, 2.0, 2.1],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
 
         expect(result.regressions).toHaveLength(1);
 
@@ -30,14 +31,14 @@ describe('DetectSilentRegression', () => {
             'stable test': [1.0, 1.1, 0.9, 1.0, 1.05],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
 
         expect(result.regressions).toHaveLength(0);
         expect(result.totalTests).toBe(1);
     });
 
     it('returns empty result for empty input', () => {
-        const result = detectSilentRegression({});
+        const result = detectSilentRegressions({});
 
         expect(result.regressions).toStrictEqual([]);
         expect(result.totalTests).toBe(0);
@@ -49,7 +50,7 @@ describe('DetectSilentRegression', () => {
             'empty array': [],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
 
         expect(result.regressions).toStrictEqual([]);
         expect(result.totalTests).toBe(0);
@@ -60,7 +61,7 @@ describe('DetectSilentRegression', () => {
             identical: [1.0, 1.0, 1.0, 1.0, 10.0],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
 
         expect(result.regressions).toHaveLength(1);
 
@@ -82,7 +83,7 @@ describe('DetectSilentRegression', () => {
         };
 
         // Use threshold=1 so low regression is included
-        const result = detectSilentRegression(histories, 1);
+        const result = detectSilentRegressions(histories, 1);
         const byTitle = (title: string) => result.regressions.find((r) => r.title === title);
 
         const crit = nonNull(byTitle('critical regression'));
@@ -113,7 +114,7 @@ describe('DetectSilentRegression', () => {
             'faster test': [1.0, 2.0, 3.0, 4.0, 1.0],
         };
 
-        const result = detectSilentRegression(histories, 1);
+        const result = detectSilentRegressions(histories, 1);
         const byTitle = (title: string) => result.regressions.find((r) => r.title === title);
 
         const low = nonNull(byTitle('low regression'));
@@ -133,7 +134,7 @@ describe('DetectSilentRegression', () => {
             'faster test': [1.0, 2.0, 3.0, 4.0, 1.0],
         };
 
-        const result = detectSilentRegression(histories, 1);
+        const result = detectSilentRegressions(histories, 1);
         const byTitle = (title: string) => result.regressions.find((r) => r.title === title);
 
         expect(byTitle('no regression')).toBeUndefined();
@@ -152,7 +153,7 @@ describe('DetectSilentRegression', () => {
             'calc test': [...hist, current],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
         const reg = nonNull(result.regressions[0]);
 
         expect(reg.zScore).toBeCloseTo(expectedZ, 10);
@@ -164,11 +165,11 @@ describe('DetectSilentRegression', () => {
             'mild increase': [1.0, 2.0, 3.0, 3.5],
         };
 
-        const defaultResult = detectSilentRegression(histories);
+        const defaultResult = detectSilentRegressions(histories);
 
         expect(defaultResult.regressions).toHaveLength(0);
 
-        const customResult = detectSilentRegression(histories, 1);
+        const customResult = detectSilentRegressions(histories, 1);
 
         expect(customResult.regressions).toHaveLength(1);
         expect(customResult.threshold).toBe(1);
@@ -179,14 +180,14 @@ describe('DetectSilentRegression', () => {
             test: [1.0, 2.0, 3.0, 10.0],
         };
 
-        const result = detectSilentRegression(histories);
+        const result = detectSilentRegressions(histories);
         const reg = nonNull(result.regressions[0]);
 
         expect(reg.previousDurations).toStrictEqual([1.0, 2.0, 3.0]);
     });
 
     it('sets timestamp to valid ISO string', () => {
-        const result = detectSilentRegression({});
+        const result = detectSilentRegressions({});
 
         expect(() => new Date(result.timestamp)).not.toThrow();
         expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -195,7 +196,7 @@ describe('DetectSilentRegression', () => {
     it('handles Infinity durations without producing NaN z-score', () => {
         expect.hasAssertions();
 
-        const result = detectSilentRegression({ 'inf test': [Infinity, Infinity, Infinity, 100] });
+        const result = detectSilentRegressions({ 'inf test': [Infinity, Infinity, Infinity, 100] });
         for (const reg of result.regressions) {
             expect(Number.isFinite(reg.zScore)).toBeTruthy();
         }
@@ -204,21 +205,21 @@ describe('DetectSilentRegression', () => {
     it('handles NaN durations without propagating NaN', () => {
         expect.hasAssertions();
 
-        const result = detectSilentRegression({ 'nan test': [NaN, NaN, NaN, 100] });
+        const result = detectSilentRegressions({ 'nan test': [NaN, NaN, NaN, 100] });
         for (const reg of result.regressions) {
             expect(Number.isFinite(reg.zScore)).toBeTruthy();
         }
     });
 
     it('handles negative durations without crashing', () => {
-        const result = detectSilentRegression({ 'neg test': [-5, -3, -1, 10] });
+        const result = detectSilentRegressions({ 'neg test': [-5, -3, -1, 10] });
 
         expect(Number.isFinite(result.regressions[0]?.zScore ?? 0)).toBeTruthy();
     });
 });
 
 describe('GenerateSilentRegressionHtml', () => {
-    function makeResult(overrides?: Partial<RegressionResult>): RegressionResult {
+    function makeResult(overrides?: Partial<RegressionDetectionResult>): RegressionDetectionResult {
         return {
             regressions: [
                 {

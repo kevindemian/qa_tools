@@ -329,6 +329,123 @@ describe('GenerateBacklogHealthHtml', () => {
         expect(html).toContain('PROJ-3');
         expect(html).toContain('PROJ-4');
     });
+
+    // I-4 (F0-T12 / INC-2 / N5): totalIssues é campo OBRIGATÓRIO — o `|| 0` foi
+    // removido; a ausência de dados é sinalizada por noData. (Rule 24/25.)
+    it('renders a REAL 0% rate as "% of total" when issues exist but none are flagged', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 5,
+            score: 90,
+            noData: false,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('0% of total');
+    });
+
+    it('does not fabricate a 0% rate when there is no data (noData=true)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 0,
+            score: 0,
+            noData: true,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+        expect(html).not.toContain('total issues');
+    });
+
+    it('surfaces a non-finite totalIssues explicitly instead of masking it as 0 (NaN || 0 === 0)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: Number.NaN,
+            score: 0,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+        expect(html).not.toContain('total issues');
+    });
+
+    it('rejects a negative totalIssues explicitly (boundary guard, Rule 24.1)', () => {
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: -3,
+            score: 60,
+            timestamp: new Date().toISOString(),
+        };
+
+        const html = generateBacklogHealthHtml(result);
+
+        expect(html).toContain('N/A');
+        expect(html).not.toContain('% of total');
+    });
+
+    // D5 / I-9.6: stale days MUST be deterministic — derived from the seeded
+    // `now`, never from a live `new Date()`. Same fixture + same seed => same output
+    // on ANY calendar day (cross-day reproducibility, not just same-day).
+    it('computes stale age deterministically from the seeded now (D5 determinism)', () => {
+        expect.hasAssertions();
+
+        const result: BacklogHealthResult = {
+            unassignedIssues: [],
+            staleIssues: [
+                {
+                    key: 'PROJ-1',
+                    summary: 'Stale issue',
+                    assignee: null,
+                    updated: '2026-07-25T00:00:00.000Z',
+                    type: 'Bug',
+                    priority: 'medium',
+                    linkedTestCount: 0,
+                },
+                {
+                    key: 'PROJ-2',
+                    summary: 'Another stale',
+                    assignee: null,
+                    updated: '2026-07-20T00:00:00.000Z',
+                    type: 'Task',
+                    priority: 'low',
+                    linkedTestCount: 1,
+                },
+            ],
+            bugsWithoutTests: [],
+            densityByEpic: [],
+            totalIssues: 2,
+            score: 40,
+            noData: false,
+            timestamp: '2026-08-01T00:00:00.000Z',
+        };
+
+        // Seeded reference: 2026-08-04. PROJ-1 (2026-07-25) => 10 days, PROJ-2 (2026-07-20) => 15 days.
+        // Average = round((10 + 15) / 2) = 13 days.
+        const html = generateBacklogHealthHtml(result, undefined, '2026-08-04T00:00:00.000Z');
+
+        expect(html).toContain('Average age: 13 days without update');
+        expect(html).toContain('Oldest: PROJ-2 (15 days old)');
+    });
 });
 
 describe('Characterization — backlog vazio nao reporta saude 100% (C6, verificacao 2026-07-20)', () => {

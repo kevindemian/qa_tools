@@ -77,8 +77,8 @@ describe('Requirement Score.Integration', () => {
             it('generates valid HTML from real score data', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -95,8 +95,8 @@ describe('Requirement Score.Integration', () => {
             it('shows correct summary card values', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -111,8 +111,8 @@ describe('Requirement Score.Integration', () => {
             it('generates HTML with no-data message when entries are empty', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores([]);
                 const html = generateRequirementScoreHtml(result);
 
@@ -146,8 +146,8 @@ describe('Requirement Score.Integration', () => {
             it('uses custom title in HTML and page title', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result, 'Sprint Review Scores');
 
@@ -158,8 +158,8 @@ describe('Requirement Score.Integration', () => {
             it('defaults to Requirement Quality Score when no title given', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -172,8 +172,8 @@ describe('Requirement Score.Integration', () => {
             it('includes data-part="target" with threshold values', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores(makeRecords());
                 const html = generateRequirementScoreHtml(result);
 
@@ -184,8 +184,8 @@ describe('Requirement Score.Integration', () => {
             it('includes data-part="timestamp"', async () => {
                 expect.hasAssertions();
 
-                const { calculateRequirementScores, generateRequirementScoreHtml } =
-                    await import('../../quality/requirement-score.js');
+                const { calculateRequirementScores } = await import('../../data-hub/compute/requirement-score.js');
+                const { generateRequirementScoreHtml } = await import('../../quality/requirement-score.js');
                 const result = calculateRequirementScores([]);
                 const html = generateRequirementScoreHtml(result);
 

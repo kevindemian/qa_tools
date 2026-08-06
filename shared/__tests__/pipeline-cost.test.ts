@@ -4,6 +4,7 @@
 
 import * as reportStyles from '../report/report-styles.js';
 import { calculatePipelineCost, generatePipelineCostHtml, DEFAULT_COST_PER_MINUTE } from '../quality/pipeline-cost.js';
+import { computePipelineCostResult } from '../data-hub/compute/pipeline-cost.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
 import type { DataHub, PerRunCost } from '../types/data-hub.js';
 import type { PipelineRun } from '../types/ci-cd.js';
@@ -296,6 +297,35 @@ describe('CalculatePipelineCost', () => {
         expect(result.totalCost).toBe(0);
         expect(result.avgCostPerRun).toBe(0);
         expect(nonNull(result.costByRun[0]).cost).toBe(0);
+    });
+});
+
+describe('ComputePipelineCostResult (direct compute contract)', () => {
+    const run = makeCiRun({ id: 1, conclusion: 'success' });
+
+    it('rejects negative cost per minute at the compute layer (Rule 24) — never emits negative cost', () => {
+        const result = computePipelineCostResult(
+            [run],
+            [{ runId: 1, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' }],
+            -5,
+        );
+
+        expect(result.costPerMinute).toBe(DEFAULT_COST_PER_MINUTE);
+        expect(nonNull(result.costByRun[0]).cost).toBeGreaterThanOrEqual(0);
+        expect(result.totalCost).toBeGreaterThanOrEqual(0);
+    });
+
+    it('excludes empty timestamps from the period (filter(Boolean) contract)', () => {
+        const result = computePipelineCostResult(
+            [],
+            [
+                { runId: 1, timestamp: '', minutes: 1, cost: 0.01, branch: 'main' },
+                { runId: 2, timestamp: '2026-06-01T12:01:00.000Z', minutes: 1, cost: 0.01, branch: 'main' },
+            ],
+        );
+
+        expect(result.period.from).toBe('2026-06-01T12:01:00.000Z');
+        expect(result.period.to).toBe('2026-06-01T12:01:00.000Z');
     });
 });
 

@@ -75,6 +75,7 @@ describe('Pr Report Core.Main', () => {
                         },
                     ],
                     testCounts: { passed: 1, failed: 0, skipped: 0, total: 1 },
+                    runPassRate: 100,
                 },
                 provider: 'github',
                 repo: 'test/repo',
@@ -103,6 +104,7 @@ describe('Pr Report Core.Main', () => {
                     computed: {
                         metricsRuns: [],
                         testCounts: { passed: 0, failed: 0, skipped: 0, total: 0 },
+                        runPassRate: 0,
                     },
                 }),
             );

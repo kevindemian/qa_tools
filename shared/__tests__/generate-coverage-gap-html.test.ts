@@ -2,13 +2,9 @@
  * Tests for generate-coverage-gap-html — coverage gap report using primitives.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 import type { CoverageGapResult } from '../types.js';
-
-vi.mock('../date-utils.js', () => ({
-    formatDateISO: vi.fn(() => '2026-06-19'),
-}));
 
 function makeFixture(): CoverageGapResult {
     return {
@@ -182,23 +178,29 @@ describe('GenerateCoverageGapHtml', () => {
         expect(html).not.toContain('GAP</span>');
     });
 
+    it('produces valid HTML for an empty result (no items, no epics, no hierarchy)', () => {
+        const empty: CoverageGapResult = {
+            items: [],
+            totals: { totalIssues: 0, covered: 0, gap: 0, weightedCoveragePct: 0, rawCoveragePct: 0 },
+            byEpic: {},
+            gateConfig: { minCoveragePct: 50, failingEpics: [] },
+            hierarchy: [],
+            trends: [],
+        };
+        const html = generateCoverageGapHtml(empty, 'Empty Coverage');
+
+        expect(html).toContain('<!DOCTYPE html>');
+        expect(html).toContain('Empty Coverage');
+        expect(html).toContain('No coverage gaps found');
+        expect(html).toContain('All epics pass');
+        expect(html).not.toContain('Error generating coverage gap report');
+    });
+
     it('uses custom title when provided', () => {
         const html = generateCoverageGapHtml(makeFixture(), 'My Report');
 
         expect(html).toContain('My Report');
         expect(html).not.toContain('Coverage Gap Analysis');
-    });
-
-    it('returns error HTML when date formatting fails', async () => {
-        expect.hasAssertions();
-
-        const { formatDateISO } = await import('../date-utils.js');
-        vi.mocked(formatDateISO).mockImplementationOnce(() => {
-            throw new Error('mock error');
-        });
-        const result = generateCoverageGapHtml(makeFixture());
-
-        expect(result).toContain('Error generating coverage gap report');
     });
 
     it('includes theme toggle script', () => {
@@ -236,5 +238,21 @@ describe('GenerateCoverageGapHtml', () => {
 
         expect(html).toContain('&lt;script&gt;alert');
         expect(html).not.toContain('<script>alert');
+    });
+
+    it('uses the provided generatedAt seed verbatim in the timestamp', () => {
+        const seed = '2026-08-04T00:00:00.000Z';
+        const html = generateCoverageGapHtml(makeFixture(), undefined, undefined, undefined, seed);
+
+        expect(html).toContain(`data-part="timestamp">${seed}`);
+        expect(html).toContain('2026-08-04');
+    });
+
+    it('emits the same output for the same generatedAt seed (deterministic)', () => {
+        const seed = '2026-08-04T00:00:00.000Z';
+        const a = generateCoverageGapHtml(makeFixture(), undefined, undefined, undefined, seed);
+        const b = generateCoverageGapHtml(makeFixture(), undefined, undefined, undefined, seed);
+
+        expect(a).toBe(b);
     });
 });

@@ -12,13 +12,17 @@ vi.mock('../../shared/config-accessor.js', () => ({ default: { get: vi.fn(() => 
 vi.mock('../../shared/ui/splash.js', () => ({ showSplash: vi.fn() }));
 vi.mock('../../shared/data-hub/global-hub.js', () => ({
     getDataHub: vi.fn().mockReturnValue({
-        computed: { metricsRuns: [] },
+        computed: { metricsRuns: [], passRate: 0, coverage: 0, executionRate: 0, suiteSpeedP95: 0 },
+        getRuns: () => [],
+        getQuality: () => null,
+        getProvenance: () => undefined,
     }),
 }));
 
-vi.mock('../../shared/data-hub/compute/flakiness-entries.js', () => ({
-    calcFlakinessEntries: vi.fn().mockReturnValue([]),
-}));
+vi.mock('../../shared/data-hub/compute/flakiness-entries.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/data-hub/compute/flakiness-entries.js')>();
+    return { ...actual, calcFlakinessEntries: vi.fn().mockReturnValue([]) };
+});
 vi.mock('../../shared/quality/run-comparison.js', () => ({ compareRuns: vi.fn(() => '') }));
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
@@ -88,7 +92,10 @@ vi.mock('../session-state', () => ({
     setProjectId: vi.fn(),
     setManager: vi.fn(),
     getDataHub: vi.fn().mockReturnValue({
-        computed: { metricsRuns: [] },
+        computed: { metricsRuns: [], passRate: 0, coverage: 0, executionRate: 0, suiteSpeedP95: 0 },
+        getRuns: () => [],
+        getQuality: () => null,
+        getProvenance: () => undefined,
     }),
     setDataHub: vi.fn(),
     ensureDataHub: vi.fn(() => undefined),
@@ -132,21 +139,6 @@ vi.mock('../schedule-handler', () => ({
     generateWeeklyQualityReport: vi.fn(),
 }));
 vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
-vi.mock('../../shared/quality/release-score.js', () => ({
-    generateReleaseScoreHtml: vi.fn(() => '<section>release-score: score=82 grade=good breakdown=4</section>'),
-    calculateReleaseScore: vi.fn(() => ({
-        score: 82,
-        grade: 'good',
-        breakdown: [
-            { label: 'tasks', score: 80, status: 'pass' as const },
-            { label: 'health', score: 85, status: 'pass' as const },
-            { label: 'coverage', score: 70, status: 'pass' as const },
-            { label: 'flakiness', score: 90, status: 'pass' as const },
-        ],
-        recommendation: 'Ship after hardening coverage gap.',
-        timestamp: new Date().toISOString(),
-    })),
-}));
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
@@ -296,11 +288,9 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
 }));
 vi.mock('../../shared/quality/requirement-score.js', () => ({
     generateRequirementScoreHtml: vi.fn(() => ''),
-    calculateRequirementScores: vi.fn(() => []),
 }));
-vi.mock('../../shared/quality/quality-gate.js', () => ({
-    runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
-    formatQualityGateText: vi.fn(() => ''),
+vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
+    calculateRequirementScores: vi.fn(() => []),
 }));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
@@ -320,12 +310,6 @@ vi.mock('../../shared/report/coverage-gap.js', () => ({
         }),
     ),
 }));
-vi.mock('../../shared/ci/git-metrics-adapter.js', () => ({
-    generateGitMetricsRuns: vi.fn(() => []),
-    generateGitFailureClassifications: vi.fn(() => []),
-    getLastGitLogError: vi.fn(() => undefined),
-    clearGitLogError: vi.fn(),
-}));
 vi.mock('../ui-helpers', () => ({ handleHelp: vi.fn(), handleShowHistory: vi.fn() }));
 vi.mock('../case00-handler', () => ({ handleSetupWizard: vi.fn() }));
 vi.mock('../../shared/report/show-docs.js', () => ({ showDocs: vi.fn() }));
@@ -342,9 +326,9 @@ import { showDashboardMenu } from '../../shared/ui/dashboard-menu.js';
 import { getDataHub as getSessionDataHub } from '../session-state.js';
 import { getCurrentProject } from '../../shared/project-context.js';
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { calculateReleaseScore } from '../../shared/quality/release-score.js';
-import { computeCrossSquadBenchmark } from '../../shared/quality/cross-squad-benchmark.js';
-import { analyzeBacklogHealth } from '../../shared/report/backlog-health.js';
+import { DataHubImpl } from '../../shared/data-hub/hub.js';
+import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
+import { createTestHub } from '../../shared/__tests__/test-hub.js';
 const mockWarn = vi.mocked(warn);
 const mockPrintError = vi.mocked(printError);
 const mockLoad = vi.mocked(load);
@@ -353,9 +337,6 @@ const mockSetupSigint = vi.mocked(setupSigint);
 const mockShowDashboardMenu = vi.mocked(showDashboardMenu);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
 const mockWriteReport = vi.mocked(writeReport);
-const mockCalculateReleaseScore = vi.mocked(calculateReleaseScore);
-const mockComputeCrossSquadBenchmark = vi.mocked(computeCrossSquadBenchmark);
-const mockAnalyzeBacklogHealth = vi.mocked(analyzeBacklogHealth);
 
 describe('Interactive-mode test exports', () => {
     beforeEach(() => {
@@ -580,89 +561,6 @@ describe('Interactive-mode test exports', () => {
 
             expect(result && result.projectRuns.length).toBe(2);
         });
-
-        it('returns null when git fallback has <2 runs', () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            const result = _testExports._loadProjectRunsHelper();
-
-            expect(result).toBeNull();
-            expect(mockWarn).toHaveBeenCalledWith('Menos de 2 execuções registradas. Execute pipelines primeiro.');
-        });
-
-        it('uses git fallback when metrics has <2 runs but git has >=2', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            const gitMod = await import('../../shared/ci/git-metrics-adapter.js');
-            (gitMod.generateGitMetricsRuns as ReturnType<typeof vi.fn>).mockReturnValue([
-                {
-                    project: 'proj1',
-                    timestamp: '2024-01-01',
-                    total: 1,
-                    passed: 1,
-                    failed: 0,
-                    skipped: 0,
-                    duration: 10,
-                    tests: [],
-                },
-                {
-                    project: 'proj1',
-                    timestamp: '2024-01-02',
-                    total: 1,
-                    passed: 1,
-                    failed: 0,
-                    skipped: 0,
-                    duration: 10,
-                    tests: [],
-                },
-            ]);
-            (gitMod.generateGitFailureClassifications as ReturnType<typeof vi.fn>).mockReturnValue([
-                { testTitle: 't1', category: 'cat1', timestamp: '' },
-            ]);
-            const result = _testExports._loadProjectRunsHelper();
-
-            expect(result && result.usingGitFallback).toBeTruthy();
-        });
     });
 
     describe('GenerateAndOpenDashboard', () => {
@@ -847,55 +745,39 @@ describe('Interactive-mode test exports', () => {
     });
 
     describe('DashboardReleaseScore', () => {
-        it('generates release score dashboard with real score data', async () => {
+        it('renders the hub computed release score with the REAL renderer (SSOT, integrated)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '2024-01-01',
-                            total: 1,
-                            passed: 1,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 10,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '2024-01-02',
-                            total: 1,
-                            passed: 1,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 10,
-                            tests: [],
-                        },
+            // Real DataHub built from a real parse result — no internal mocks.
+            const realHub = DataHubImpl.createFromParseResult(
+                {
+                    tests: [
+                        { title: 'test A', state: 'passed' as const, duration: 100 },
+                        { title: 'test B', state: 'passed' as const, duration: 120 },
                     ],
+                    stats: { passed: 2, failed: 0, skipped: 0, total: 2, duration: 220 },
                 },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
+                'proj1',
+                makeDataHubPersistenceMock(),
+            );
+            const firstRun = realHub.computed.metricsRuns?.[0];
+            if (firstRun !== undefined) realHub.computed.metricsRuns?.push(firstRun);
+            const expectedReleaseScore = realHub.computed.releaseScore;
+
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue(realHub);
             await _testExports._dashboardReleaseScore();
 
-            // (a) função de score chamada com args reais (não mock vazio)
-            expect(mockCalculateReleaseScore).toHaveBeenCalledWith(
-                undefined,
-                expect.any(Number),
-                expect.any(String),
-                undefined,
-                expect.any(Number),
-            );
-            // (b) efeito colateral real: HTML escrito contém o score
+            // (a) efeito colateral real: HTML escrito contém o score/grade reais
+            //     produzidos pela cadeia hub → compute → renderer (SSOT, sem mocks)
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
 
-            expect(writtenHtml).toContain('release-score: score=82 grade=good');
+            expect(writtenHtml).toContain('<!DOCTYPE html>');
+            expect(writtenHtml).toContain('Pass Rate');
+            expect(writtenHtml).toContain(String(expectedReleaseScore.score));
+            expect(writtenHtml).toContain(expectedReleaseScore.grade);
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Release Score',
@@ -914,12 +796,39 @@ describe('Interactive-mode test exports', () => {
             expect(mockWarn).toHaveBeenCalledWith('Nenhum projeto selecionado.');
         });
 
-        it('generates quality gate dashboard', async () => {
+        it('generates quality gate dashboard via buildHtmlPage (no raw <html><body>)', async () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            // Fronteira de sessão (anti-mock-theater): hub com shape fiel (createTestHub)
+            // para o runQualityGate REAL rodar o caminho `metrics-data` (Rule 25: sem dados
+            // históricos → fail explícito, nunca pass silencioso).
+            mockGetDataHub.mockReturnValue(
+                createTestHub({
+                    metricsRuns: [],
+                    passRate: 0,
+                    coverage: 0,
+                    executionRate: 0,
+                    suiteSpeedP95: 0,
+                    raw: { runs: [] },
+                }),
+            );
             await _testExports._dashboardQualityGate();
 
+            expect(mockWriteReport).toHaveBeenCalledTimes(1);
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+
+            // I-8.2 / F6-T2 (B13): HTML cru substituído por buildHtmlPage + CSS (Rule 6 — mesmo padrão dos 16 irmãos).
+            expect(writtenHtml).toMatch(/^<!DOCTYPE html>/);
+            expect(writtenHtml).toContain('data-dashboard="quality-gate"');
+            expect(writtenHtml).not.toMatch(/<html[^>]*>\s*<body[^>]*>/);
+            expect(writtenHtml).toContain('<style>');
+            expect(writtenHtml).toContain('skip-link');
+            // Anti-mock-theater: runQualityGate real roda com o DataHub (sem dados
+            // históricos) → gate fail explícito com check `metrics-data` (Rule 25:
+            // dados ausentes NUNCA viram pass silencioso).
+            expect(writtenHtml).toContain('metrics-data');
             expect(mockOpenWithFallback).toHaveBeenCalledWith(expect.any(String), 'Quality Gate', expect.any(Function));
         });
     });
@@ -928,9 +837,18 @@ describe('Interactive-mode test exports', () => {
         it('generates backlog health dashboard with real data', async () => {
             expect.hasAssertions();
 
+            vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [],
+                    backlogHealth: { score: 65 },
+                },
+                raw: {
+                    failureClassifications: [],
+                },
+            } as never);
             await _testExports._dashboardBacklogHealth();
 
-            expect(mockAnalyzeBacklogHealth).toHaveBeenCalledWith([]);
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
@@ -965,6 +883,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    pipelineCostResult: { totalCost: 0.5 },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1023,6 +942,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    defectAggregation: { trends: [], totalRecords: 0 },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1067,6 +987,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    traceabilityTree: { nodes: [] },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1111,6 +1032,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    seasonalityAggregation: { byDayOfWeek: [], peakDay: 'N/A' },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1155,6 +1077,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    regressionDetection: { regressions: [], totalTests: 0 },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1196,6 +1119,15 @@ describe('Interactive-mode test exports', () => {
         it('generates AI comparison dashboard', async () => {
             expect.hasAssertions();
 
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [],
+                    aiComparison: { aiAdvantage: 'none' },
+                },
+                raw: {
+                    failureClassifications: [],
+                },
+            } as never);
             await _testExports._dashboardAiComparison();
 
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
@@ -1213,6 +1145,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    crossSquad: { topSquad: 'proj1', benchmarks: [] },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1242,18 +1175,6 @@ describe('Interactive-mode test exports', () => {
             } as never);
             await _testExports._dashboardBenchmark();
 
-            const benchmarkInput = mockComputeCrossSquadBenchmark.mock.calls[0]?.[0] as Array<{
-                name: string;
-                runCount: number;
-                healthScore: number;
-                grade: string;
-                passRate: number;
-                flakyRate: number;
-                coveragePct: number;
-            }>;
-
-            expect(Array.isArray(benchmarkInput)).toBeTruthy();
-            expect(benchmarkInput.some((b) => b.name === 'proj1')).toBeTruthy();
             expect(mockWriteReport).toHaveBeenCalledTimes(1);
 
             const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
@@ -1274,6 +1195,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    developerProfile: { summary: [] },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1318,6 +1240,7 @@ describe('Interactive-mode test exports', () => {
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
             mockGetDataHub.mockReturnValue({
                 computed: {
+                    optimizationActions: { optimizations: [], totalTests: 0 },
                     metricsRuns: [
                         {
                             project: 'proj1',
@@ -1457,6 +1380,15 @@ describe('Interactive-mode test exports', () => {
             expect.hasAssertions();
 
             vi.mocked(getCurrentProject).mockReturnValue('proj1');
+            mockGetDataHub.mockReturnValue({
+                computed: {
+                    metricsRuns: [],
+                    coverageGap: { totals: { weightedCoveragePct: 65 } },
+                },
+                raw: {
+                    failureClassifications: [],
+                },
+            } as never);
             const configMod = await import('../../shared/config-accessor.js');
             (configMod.default.get as ReturnType<typeof vi.fn>).mockReturnValue('configured');
             await _testExports._dashboardCoverageGap();

@@ -8,6 +8,7 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { icon } from '../icons.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
@@ -179,7 +180,16 @@ function buildVersionTable(
     byVersion: Array<{ version: string; count: number; acceptanceRate: number }>,
     topVersion: string,
 ): string {
-    if (byVersion.length === 0) return '';
+    if (byVersion.length === 0) {
+        // Rule 25: explicit no-data (version breakdown unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No version breakdown data available',
+            description:
+                'Version breakdown requires AI acceptance results grouped by prompt version. No records were found.',
+            action: 'Run AI effectiveness tracking across prompt versions to populate the breakdown.',
+            icon: icon('bar-chart', 16),
+        });
+    }
 
     // Find best and worst versions for highlighting
     const sorted = [...byVersion].sort((a, b) => b.acceptanceRate - a.acceptanceRate);
@@ -229,7 +239,15 @@ function buildVersionTable(
 }
 
 function buildTrendChart(trend: Array<{ date: string; acceptanceRate: number; generated: number }>): string {
-    if (trend.length === 0) return '';
+    // Rule 25: explicit no-data (trend unavailable) instead of silent omission.
+    if (trend.length === 0) {
+        return EmptyState({
+            title: 'No trend data available',
+            description: 'The acceptance trend requires dated AI run results. No trend points were found.',
+            action: 'Run the AI effectiveness pipeline on multiple dates so the trend can be plotted.',
+            icon: icon('trending-up', 16),
+        });
+    }
 
     // Convert trend data to TrendChart points
     const points = trend.map((t) => ({

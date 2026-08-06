@@ -8,6 +8,8 @@
  */
 
 import { sanitizeHtml } from '../escape.js';
+import { icon } from '../icons.js';
+import { resolveGeneratedAt } from '../date-utils.js';
 import { buildHtmlPage, buildErrorPage } from './html-factory.js';
 import { buildCss } from './report-styles.js';
 import { rootLogger } from '../logger.js';
@@ -28,9 +30,21 @@ const SUMMARY_TRUNCATE_LENGTH = 80;
 const SCORE_THRESHOLD_SUCCESS = 80;
 const SCORE_THRESHOLD_WARN = 50;
 
-export function generateBacklogHealthHtml(result: BacklogHealthResult, title?: string): string {
+export function generateBacklogHealthHtml(
+    result: BacklogHealthResult | null | undefined,
+    title?: string,
+    now?: string,
+): string {
     try {
         const pageTitle = title || 'Backlog Health Dashboard';
+
+        if (!result) {
+            rootLogger.error('generateBacklogHealthHtml: backlog health result is missing.');
+            return buildErrorPage('Error generating dashboard', 'Backlog health data is unavailable.');
+        }
+
+        const referenceNow = resolveGeneratedAt(now);
+        const nowMs = Date.parse(referenceNow);
 
         const bodyContent = wrapContainer(
             pageTitle,
@@ -43,9 +57,9 @@ export function generateBacklogHealthHtml(result: BacklogHealthResult, title?: s
                           action: 'Configure Jira/issue tracker integration and run the backlog analysis pipeline to generate data.',
                       })
                     : '') +
-                buildIssueCards(result) +
+                buildIssueCards(result, nowMs) +
                 buildDensitySection(result) +
-                buildRecommendedActions(result),
+                buildRecommendedActions(result, nowMs),
             result.timestamp,
         );
 
@@ -85,8 +99,19 @@ function buildMetricSummary(result: BacklogHealthResult): string {
         scoreSeverity = 'error';
     }
 
-    // Calculate total issues for context
-    const totalIssues = result.totalIssues || 0;
+    // totalIssues is a REQUIRED field (BacklogHealthResult.totalIssues: number).
+    // A non-finite totalIssues signals a contract violation or corrupted data;
+    // it MUST surface explicitly (Rule 24.1/24.3/25.1), never silently masked as 0 (NaN || 0 === 0).
+    const totalIssues = result.totalIssues;
+    const hasValidTotal = Number.isFinite(totalIssues) && totalIssues >= 0;
+    const noData = result.noData === true || !hasValidTotal;
+
+    if (!hasValidTotal) {
+        rootLogger.warn(
+            `backlog-health-renderer: totalIssues inválido (${String(totalIssues)}) — contrato violado; renderizando como no-data. Causa provável: produtor emitiu valor não-finito. Correção: validar finitude na origem.`,
+        );
+    }
+
     const unassignedRate = totalIssues > 0 ? Math.round((result.unassignedIssues.length / totalIssues) * 100) : 0;
     const staleRate = totalIssues > 0 ? Math.round((result.staleIssues.length / totalIssues) * 100) : 0;
 
@@ -97,8 +122,8 @@ function buildMetricSummary(result: BacklogHealthResult): string {
             children:
                 MetricCard({
                     label: 'Backlog Score',
-                    value: result.noData ? 'N/A' : String(result.score) + '%',
-                    severity: result.noData ? 'warn' : scoreSeverity,
+                    value: noData ? 'N/A' : String(result.score) + '%',
+                    severity: noData ? 'warn' : scoreSeverity,
                     trend: totalIssues > 0 ? `${totalIssues} total issues` : '',
                     target: `target: >=${SCORE_THRESHOLD_SUCCESS}%`,
                 }) +
@@ -126,7 +151,7 @@ function buildMetricSummary(result: BacklogHealthResult): string {
     });
 }
 
-function buildIssueCards(result: BacklogHealthResult): string {
+function buildIssueCards(result: BacklogHealthResult, nowMs: number): string {
     let html = '';
 
     if (result.unassignedIssues.length > 0) {
@@ -139,12 +164,11 @@ function buildIssueCards(result: BacklogHealthResult): string {
     }
 
     if (result.staleIssues.length > 0) {
-        // Calculate how stale the issues are
-        const now = new Date();
+        // Calculate how stale the issues are (deterministic: nowMs derived from resolveGeneratedAt)
         const staleAges = result.staleIssues
             .map((issue) => {
                 const updated = new Date(issue.updated);
-                const daysSinceUpdate = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+                const daysSinceUpdate = Math.floor((nowMs - updated.getTime()) / (1000 * 60 * 60 * 24));
                 return daysSinceUpdate;
             })
             .filter((days) => days >= 0);
@@ -196,7 +220,16 @@ function buildIssueListCapped(issues: BacklogHealthIssue[], limit?: number): str
 }
 
 function buildDensitySection(result: BacklogHealthResult): string {
-    if (result.densityByEpic.length === 0) return '';
+    if (result.densityByEpic.length === 0) {
+        // Rule 25: explicit no-data (bug density unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No bug density data available',
+            description:
+                'Bug density by epic requires bugs linked to epics with test counts. No epic density data was found.',
+            action: 'Link bugs to epics and associate tests so the density analysis can run.',
+            icon: icon('bar-chart', 16),
+        });
+    }
 
     // Sort by ratio (worst first) for better visibility
     const sorted = [...result.densityByEpic].sort((a, b) => {
@@ -250,7 +283,7 @@ function buildDensitySection(result: BacklogHealthResult): string {
     });
 }
 
-function buildRecommendedActions(result: BacklogHealthResult): string {
+function buildRecommendedActions(result: BacklogHealthResult, nowMs: number): string {
     const actions: Array<{ severity: 'error' | 'warn' | 'info'; text: string }> = [];
 
     // Action 1: Low score
@@ -263,7 +296,6 @@ function buildRecommendedActions(result: BacklogHealthResult): string {
 
     // Action 2: Stale issues with context
     if (result.staleIssues.length > 0) {
-        const now = new Date();
         const oldestStale = result.staleIssues.reduce((oldest, issue) => {
             if (!oldest) return issue;
             const updated = new Date(issue.updated);
@@ -272,7 +304,7 @@ function buildRecommendedActions(result: BacklogHealthResult): string {
 
         if (oldestStale) {
             const daysSinceUpdate = Math.floor(
-                (now.getTime() - new Date(oldestStale.updated).getTime()) / (1000 * 60 * 60 * 24),
+                (nowMs - new Date(oldestStale.updated).getTime()) / (1000 * 60 * 60 * 24),
             );
             actions.push({
                 severity: 'warn',

@@ -2,12 +2,11 @@
  * Property-based tests — HTML Report (FT-17)
  *
  * Invariants:
- * - generateCoverageHtml: coverage pct matches global calc, per-epic badge matches local calc
  * - generateHtmlReport: always produces valid HTML, contains all test titles
  */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { generateCoverageHtml, generateHtmlReport } from '../report/report-html.js';
+import { generateHtmlReport } from '../report/report-html.js';
 import type { FlatTest } from '../result_parser.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
 
@@ -26,20 +25,6 @@ const safeString = (min: number, max: number) =>
         .map((s) => s.slice(0, max))
         .filter((s) => s.length >= min);
 
-const statusArb = fc.constantFrom('Done', 'Closed', 'In Progress', 'Open', 'To Do');
-const issueArb = fc.record({
-    key: safeString(1, 10),
-    summary: safeString(1, 30),
-    status: statusArb,
-    type: fc.constantFrom('Task', 'Bug', 'Story'),
-});
-
-const epicArb = fc.record({
-    key: safeString(1, 10),
-    summary: safeString(1, 30),
-    issues: fc.array(issueArb, { minLength: 0, maxLength: 10 }),
-});
-
 const flatTestArb: fc.Arbitrary<FlatTest> = fc.record({
     title: safeString(1, 20),
     state: fc.constantFrom('passed', 'failed', 'skipped'),
@@ -50,7 +35,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
     const passed = tests.filter((t) => t.state === 'passed').length;
     const failed = tests.filter((t) => t.state === 'failed').length;
     return {
-        passRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        passRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         avgDuration: 0,
         suiteSpeedP95: 0,
         flakyRate: [],
@@ -62,7 +47,7 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         topFailureReasons: [],
         releaseScore: { overall: 0, grade: 'unknown' as const, metrics: {} },
         quarantineStatus: { blocked: 0, quarantined: 0, passed: 0 },
-        testPassRate: tests.length > 0 ? (passed / (passed + failed)) * 100 : 0,
+        testPassRate: passed + failed > 0 ? (passed / (passed + failed)) * 100 : 0,
         testCounts: { passed, failed, skipped: 0, total: tests.length },
         framework: '',
         metricsRuns: [
@@ -79,80 +64,6 @@ function computedFor(tests: FlatTest[]): ComputedMetrics {
         ],
     } as unknown as ComputedMetrics;
 }
-
-describe('GenerateCoverageHtml — property-based', () => {
-    it('coverage MetricCard matches global calculation', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
-                const html = generateCoverageHtml(epics);
-                const total = epics.reduce((s, e) => s + e.issues.length, 0);
-                const closed = epics.reduce(
-                    (s, e) => s + e.issues.filter((i) => i.status === 'Done' || i.status === 'Closed').length,
-                    0,
-                );
-                const expectedPct = total > 0 ? ((closed / total) * 100).toFixed(1) + '%' : '0.0%';
-
-                expect(html).toContain(expectedPct);
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('each epic badge shows its own close percentage', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(epicArb, { minLength: 1, maxLength: 5 }), (epics) => {
-                const html = generateCoverageHtml(epics);
-                for (const e of epics) {
-                    const closed = e.issues.filter((i) => i.status === 'Done' || i.status === 'Closed').length;
-                    const expectedPct = e.issues.length > 0 ? ((closed / e.issues.length) * 100).toFixed(1) : '0.0';
-
-                    expect(html).toContain(expectedPct);
-                }
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('every epic key appears in output', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
-                const html = generateCoverageHtml(epics);
-                for (const e of epics) {
-                    expect(html).toContain(e.key);
-                }
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('every issue key appears in output', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
-                const html = generateCoverageHtml(epics);
-                for (const e of epics) {
-                    for (const issue of e.issues) {
-                        expect(html).toContain(issue.key);
-                    }
-                }
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('coverage is 0.0 when no epics', () => {
-        const html = generateCoverageHtml([]);
-
-        expect(html).toContain('0.0');
-    });
-});
 
 describe('GenerateHtmlReport — property-based', () => {
     it('contains all test titles', () => {
@@ -179,23 +90,6 @@ describe('GenerateHtmlReport — property-based', () => {
                 const html = generateHtmlReport(tests, {
                     computed: computedFor(tests),
                 });
-
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('<html');
-                expect(html).toContain('</html>');
-            }),
-            { numRuns: 50 },
-        );
-    });
-});
-
-describe('GenerateCoverageHtml — invariants (property-based)', () => {
-    it('always produces valid HTML structure', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(epicArb, { minLength: 0, maxLength: 5 }), (epics) => {
-                const html = generateCoverageHtml(epics);
 
                 expect(html).toContain('<!DOCTYPE html>');
                 expect(html).toContain('<html');

@@ -1,0 +1,16 @@
+{
+    "aiTotal": 30,
+    "aiPassRate": 80,
+    "aiFlakinessAvg": 0.1,
+    "aiAcceptanceRate": 75,
+    "manualTotal": 20,
+    "manualPassRate": 65,
+    "manualFlakinessAvg": 0.2,
+    "manualAcceptanceRate": 60,
+    "aiAdvantage": "pass_rate",
+    "byVersion": [
+        { "version": "v2.1", "count": 20, "passRate": 85 },
+        { "version": "v1.0", "count": 10, "passRate": 70 }
+    ],
+    "timestamp": "2026-07-25T10:00:00Z"
+}

@@ -32,7 +32,6 @@ Ao iniciar, um menu lista seus projetos (ver
 | b      | Executar batch                           |
 | c      | Comparar execuções (HTML)                |
 | d      | Dashboards individuais (submenu)         |
-| e      | Git Metrics Adapter (doc)                |
 | g      | Bug Report Interativo                    |
 | i      | AI PR Description                        |
 | p      | Pipeline health (HTML)                   |
@@ -175,7 +174,7 @@ Após o parse, se houver testes falhos, a CLI pergunta: _"Deseja analisar falhas
 
 **Métricas:** Cada análise gera um snapshot persistido em `~/.local/state/qa-tools/llm-metrics.json` via `llm-metrics.ts` (6 contadores: requests, falhas, validações rejeitadas, retries, confiança, latência).
 
-**Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/failure-analysis.ts`, `shared/llm-review.ts`, `shared/report-generator.ts`, `shared/llm-metrics.ts`, `shared/report-validator.ts`
+**Arquivos:** `git_triggers/llm-pipeline.ts`, `shared/validation/failure-analysis.ts`, `shared/llm/llm-review.ts`, `shared/report/report-html.ts`, `shared/llm/llm-metrics.ts`, `shared/validation/artifact-validator.ts`
 
 **Comportamento sem LLM:**
 
@@ -593,19 +592,6 @@ Alterna a criação automática de bugs Jira para novas falhas. O estado dura ap
 Para persistir entre sessões: `QA_AUTO_BUG=true` no `.env`.
 
 **Arquivo:** `git_triggers/interactive-mode.ts`
-
----
-
-## 21. Git Metrics Adapter (Opção `e`)
-
-Exibe informações sobre o adaptador que gera métricas sintéticas a partir do histórico Git quando não há pipelines (menos de 2 execuções).
-
-| Função                                | O que gera                         |
-| ------------------------------------- | ---------------------------------- |
-| `generateGitMetricsRuns()`            | Execuções simuladas do git history |
-| `generateGitFailureClassifications()` | Classificação de falhas simuladas  |
-
-**Arquivo:** `shared/git-metrics-adapter.ts`
 
 ---
 

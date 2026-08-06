@@ -131,6 +131,7 @@ function getGitDiff(): string {
         }).trim();
     } catch (err) {
         rootLogger.error('Failed to get git diff: ' + String(err));
+        // legitimate: explicit logged error path — git diff unavailable => no output; failure is surfaced (not silent); not a dashboard section (Rule 25.3 intent).
         return '';
     }
 }

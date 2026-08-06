@@ -14,7 +14,7 @@
             "description": "catch blocks que silenciam erros (AGENTS §25)"
         },
         "lint-warnings": {
-            "threshold": 755,
+            "threshold": 753,
             "description": "warnings ESLint (full codebase lint)"
         },
         "lint-errors": {

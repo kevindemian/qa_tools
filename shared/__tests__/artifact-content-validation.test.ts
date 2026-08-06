@@ -33,21 +33,21 @@ import { generateRequirementScoreHtml } from '../quality/requirement-score-rende
 import { generateCoverageGapHtml } from '../report/generate-coverage-gap-html.js';
 
 import type { AiMetricsResult } from '../types/data-hub-extensions.js';
-import type { AiComparisonResult } from '../report/ai-comparison.js';
+import type { AiComparisonResult } from '../data-hub/compute/ai-comparison.js';
 import type { IncidentReport } from '../report/incident-report.js';
 import type { ImpactAlertResult } from '../report/impact-alert.js';
 import type { TraceabilityResult } from '../report/traceability-matrix.js';
 import type { FlakinessEntry } from '../types/data-hub.js';
 import type { BacklogHealthResult } from '../report/backlog-health.js';
 import type { PipelineCostResult } from '../quality/pipeline-cost.js';
-import type { OptimizationResult } from '../quality/suite-optimization.js';
-import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
-import type { ReleaseScoreResult } from '../quality/release-score.js';
-import type { RegressionResult } from '../quality/silent-regression.js';
-import type { DefectTrendResult } from '../quality/defect-trend.js';
-import type { SeasonalityResult } from '../quality/defect-seasonality.js';
+import type { OptimizationResult } from '../types/data-hub-extensions.js';
+import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
+import type { ReleaseScoreResult } from '../types/data-hub.js';
+import type { RegressionDetectionResult } from '../types/data-hub-extensions.js';
+import type { DefectAggregationResult } from '../types/data-hub-extensions.js';
+import type { SeasonalityAggregationResult } from '../types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../quality/developer-profile.js';
-import type { RequirementScoreResult } from '../quality/requirement-score.js';
+import type { RequirementScoreResult } from '../data-hub/compute/requirement-score.js';
 import type { CoverageGapResult } from '../types/coverage.js';
 
 const ALL_SPECS: ArtifactSpec[] = [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS];
@@ -287,19 +287,27 @@ function makeCrossSquad(): CrossSquadResult {
 function makeReleaseScore(): ReleaseScoreResult {
     return {
         score: 82,
+        dimensions: {
+            passRate: { score: 85, status: 'pass' },
+            flakyRate: { score: 90, status: 'pass' },
+            coverage: { score: 75, status: 'pass' },
+            suiteSpeed: { score: 80, status: 'pass' },
+            executionRate: { score: 80, status: 'pass' },
+        },
         grade: 'good',
         breakdown: [
-            { label: 'Task Completion', score: 85, status: 'pass' },
-            { label: 'Health Score', score: 80, status: 'pass' },
+            { label: 'Pass Rate', score: 85, status: 'pass' },
+            { label: 'Flaky Rate', score: 90, status: 'pass' },
             { label: 'Coverage', score: 75, status: 'pass' },
-            { label: 'Flakiness', score: 90, status: 'pass' },
+            { label: 'Suite Speed', score: 80, status: 'pass' },
+            { label: 'Execution Rate', score: 80, status: 'pass' },
         ],
         recommendation: 'Release is ready with good quality metrics',
         timestamp: '2026-07-25T10:00:00Z',
     };
 }
 
-function makeSilentRegression(): RegressionResult {
+function makeSilentRegression(): RegressionDetectionResult {
     return {
         regressions: [
             {
@@ -318,7 +326,7 @@ function makeSilentRegression(): RegressionResult {
     };
 }
 
-function makeDefectTrend(): DefectTrendResult {
+function makeDefectTrend(): DefectAggregationResult {
     return {
         trends: [
             { date: '2026-07-20', categories: { bug: 5, vulnerability: 1 }, total: 6 },
@@ -326,20 +334,21 @@ function makeDefectTrend(): DefectTrendResult {
         ],
         topCategories: [{ category: 'bug', count: 8 }],
         period: { from: '2026-07-20', to: '2026-07-25' },
+        totalRecords: 9,
     };
 }
 
-function makeSeasonality(): SeasonalityResult {
+function makeSeasonality(): SeasonalityAggregationResult {
     return {
         byDayOfWeek: [
-            { dayOfWeek: 'Monday', total: 10, categories: { bug: 8, vulnerability: 2 } },
-            { dayOfWeek: 'Tuesday', total: 5, categories: { bug: 5 } },
+            { dayOfWeek: 'Mon', total: 10, categories: { bug: 8, vulnerability: 2 } },
+            { dayOfWeek: 'Tue', total: 5, categories: { bug: 5 } },
         ],
         byHour: [
             { hour: 9, total: 8, categories: { bug: 6, vulnerability: 2 } },
             { hour: 14, total: 7, categories: { bug: 7 } },
         ],
-        peakDay: 'Monday',
+        peakDay: 'Mon',
         peakHour: 9,
         totalRecords: 50,
         period: { from: '2026-07-20', to: '2026-07-25' },

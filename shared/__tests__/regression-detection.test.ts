@@ -21,6 +21,8 @@ describe('DetectSilentRegressions', () => {
             expect(r.regressions).toHaveLength(0);
             expect(r.totalTests).toBe(0);
             expect(r.threshold).toBe(2);
+            expect(r.timestamp).toBeDefined();
+            expect(Date.parse(r.timestamp)).not.toBeNaN();
         });
 
         it('returns empty for single-duration tests (need >= 2 for z-score)', () => {
@@ -84,47 +86,76 @@ describe('DetectSilentRegressions', () => {
             );
         });
 
-        it('severity classification matches z-score thresholds', () => {
+        it('severity classification matches z-score thresholds (history excludes current)', () => {
             expect.hasAssertions();
 
-            // Deterministic: [1,...,1,5] with n points produces z = sqrt(n-1)
-            // n=4: z≈1.73 → low, n=8: z≈2.65 → medium, n=17: z=4 → high, n=37: z=6 → critical
+            // Baseline histogram [1, 3] → mean 2, stdDev 1. zScore = current - 2.
+            // This is the CORRECT outlier test: the current run is never part of its
+            // own baseline (ISO 3534-2).
 
-            // z ≈ 1.73 → low (use threshold=1 since default=2 won't detect)
-            const lowR = detectSilentRegressions({ low: [1, 1, 1, 5] }, 1);
+            // z = 1.2 → low (> 1, <= 2); threshold=1 flags it
+            const lowR = detectSilentRegressions({ low: [1, 3, 3.2] }, 1);
 
             expect(lowR.regressions.length).toBeGreaterThanOrEqual(1);
             expect(lowR.regressions[0]?.severity).toBe('low');
 
-            // z ≈ 2.65 → medium (above default threshold 2)
-            const mediumR = detectSilentRegressions({ medium: [1, 1, 1, 1, 1, 1, 1, 5] });
+            // z = 2.2 → medium (above default threshold 2)
+            const mediumR = detectSilentRegressions({ medium: [1, 3, 4.2] });
 
             expect(mediumR.regressions.length).toBeGreaterThanOrEqual(1);
             expect(mediumR.regressions[0]?.severity).toBe('medium');
 
-            // z = 4.0 → high (above 3)
-            const highR = detectSilentRegressions({ high: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5] });
+            // z = 3.2 → high (above 3)
+            const highR = detectSilentRegressions({ high: [1, 3, 5.2] });
 
             expect(highR.regressions.length).toBeGreaterThanOrEqual(1);
             expect(highR.regressions[0]?.severity).toBe('high');
 
-            // z = 6.0 → critical (above 5)
-            const critData: Record<string, number[]> = { critical: new Array<number>(36).fill(1).concat([5]) };
-            const critR = detectSilentRegressions(critData);
+            // z = 5.5 → critical (above 5)
+            const critR = detectSilentRegressions({ critical: [1, 3, 7.5] });
 
             expect(critR.regressions.length).toBeGreaterThanOrEqual(1);
             expect(critR.regressions[0]?.severity).toBe('critical');
         });
 
-        it('meanDuration matches independent computation', () => {
+        it('severity boundaries: EXACT threshold z-scores classify as the LOWER severity (strict >, "exceeds N-sigma")', () => {
+            expect.hasAssertions();
+
+            // Baseline histogram [1, 3] → mean 2, stdDev 1. zScore = current - 2.
+            // Threshold 0.5 keeps every case flagged so ONLY severity is under test.
+            // Provenance: severity is assigned when the z-score EXCEEDS the sigma level
+            // (ISO 3534-2) — an exact boundary value does not exceed it.
+
+            // z = 1.0 → not > 1 → none
+            const z1 = detectSilentRegressions({ t: [1, 3, 3.0] }, 0.5);
+
+            expect(z1.regressions[0]?.severity).toBe('none');
+
+            // z = 2.0 → > 1 but not > 2 → low
+            const z2 = detectSilentRegressions({ t: [1, 3, 4.0] }, 0.5);
+
+            expect(z2.regressions[0]?.severity).toBe('low');
+
+            // z = 3.0 → > 2 but not > 3 → medium
+            const z3 = detectSilentRegressions({ t: [1, 3, 5.0] }, 0.5);
+
+            expect(z3.regressions[0]?.severity).toBe('medium');
+
+            // z = 5.0 → > 3 but not > 5 → high (critical requires EXCEEDING 5-sigma)
+            const z5 = detectSilentRegressions({ t: [1, 3, 7.0] }, 0.5);
+
+            expect(z5.regressions[0]?.severity).toBe('high');
+        });
+
+        it('meanDuration is computed over history excluding the current duration', () => {
             expect.hasAssertions();
 
             const durations = [10, 10, 10, 10, 10, 10, 10, 10, 10, 100];
-            const mean = durations.reduce((s, v) => s + v, 0) / durations.length;
             const r = detectSilentRegressions({ test: durations });
 
+            // History = [10 x9] → mean 10 (the 100 spike is excluded from its own baseline)
             expect(r.regressions.length).toBeGreaterThanOrEqual(1);
-            expect(r.regressions[0]?.meanDuration).toBe(Math.round(mean * 100) / 100);
+            expect(r.regressions[0]?.meanDuration).toBe(10);
         });
     });
 
@@ -168,8 +199,8 @@ describe('DetectSilentRegressions', () => {
         it('z-score below threshold → not detected', () => {
             expect.hasAssertions();
 
-            // data produces z-score ≈ 3.0 for last value; threshold=5 means z > 5 is required
-            const r = detectSilentRegressions({ test: [10, 10, 10, 10, 10, 10, 10, 10, 10, 12] }, 5);
+            // hist [1, 3] → mean 2, stdDev 1; current 2.5 → z ≈ 0.5. threshold=5 means z > 5 required.
+            const r = detectSilentRegressions({ test: [1, 3, 2.5] }, 5);
 
             expect(r.regressions).toHaveLength(0);
         });

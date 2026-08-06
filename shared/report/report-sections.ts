@@ -14,8 +14,9 @@ import type { FlatTest } from '../result_parser.js';
 import type { HealthScoreResult, HealthScoreProvenance } from '../types.js';
 import type { TestRunTab, TestHistoryRun, ReportOptions, ReportStats } from './report-types.js';
 import type { ComputedMetrics } from '../types/data-hub.js';
+import type { QualityGateResult, QualityGateStatus } from '../quality/quality-gate.js';
 import { buildTestTable } from './report-table.js';
-import { MetricCard, MetricGrid, Card, Badge } from '../primitives/index.js';
+import { MetricCard, MetricGrid, Card, Badge, EmptyState } from '../primitives/index.js';
 import { FilterBar, SearchInput, Button } from '../primitives/index.js';
 import { tokens } from '../ui/theme-tokens.js';
 import {
@@ -27,6 +28,7 @@ import {
 } from '../constants/thresholds.js';
 
 export function buildTabs(runs: TestRunTab[]): string {
+    // legitimate: with <=1 runs there is no tab structure to render — this is UI chrome, not a data-absence payload; EmptyState would falsely claim "no data" when a run exists (Rule 25.3).
     if (runs.length <= 1) return '';
     let html = '<div id="envTabs" class="tabs">';
     for (const [i, run] of runs.entries()) {
@@ -49,6 +51,7 @@ export function buildTabContents(
     history?: Record<string, TestHistoryRun[]>,
     flakinessMap?: Record<string, number>,
 ): string {
+    // legitimate: with <=1 runs there is no tab-panel structure to render — UI chrome, not a data-absence payload (Rule 25.3).
     if (runs.length <= 1) return '';
     let html = '<div id="tabContents">';
     let tabIdx = 0;
@@ -69,6 +72,7 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
         const suite = extractSuite(t);
         if (suite) suites.add(suite);
     }
+    // legitimate: no suites to hierarchically navigate — this is sidebar UI chrome derived from suite metadata, not a data-absence payload for a section; EmptyState block is inappropriate in the sidebar strip (Rule 25.3 intent).
     if (suites.size === 0) return '';
     const sorted = Array.from(suites).sort((a, b) => a.localeCompare(b));
     let html = '<div class="sidebar">';
@@ -87,7 +91,15 @@ export function buildHierarchySidebar(tests: FlatTest[]): string {
 }
 
 export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): string {
-    if (tests.length === 0) return '';
+    if (tests.length === 0) {
+        // Rule 25: explicit no-data (timing unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No timeline data available',
+            description: 'The test timeline requires per-suite execution durations. No tests were found to plot.',
+            action: 'Run a test suite so the timeline can display per-suite timing.',
+            icon: icon('clock', 16),
+        });
+    }
     const suites = computed?.suiteBreakdown ?? [];
     let maxDur = 0;
     for (const s of suites) {
@@ -114,12 +126,7 @@ export function buildTimeline(tests: FlatTest[], computed?: ComputedMetrics): st
         html += '<div class="timeline-row" onclick="scrollToTest(\'' + escapeHtml(s.suite) + '\')">';
         html += summary;
         html += '<span class="suite-name">' + escapeHtml(suiteLabel) + '</span>';
-        html +=
-            '<div class="timeline-bar timeline-bar-width" style="--bar-width:' +
-            barW.toFixed(0) +
-            'px;background:' +
-            tokens.color.chart.pass +
-            '"></div>';
+        html += '<div class="timeline-bar timeline-bar-width" style="--bar-width:' + barW.toFixed(0) + 'px"></div>';
         html += '<span class="timeline-duration">' + fmtDuration(s.totalDuration) + '</span>';
         html += '</div>';
     }
@@ -165,6 +172,7 @@ export function buildSummaryCards(stats: ReportStats, passRate: number, passRate
 }
 
 export function buildLlmSection(options: ReportOptions): string {
+    // legitimate: LLM analysis section is a FEATURE TOGGLE (options.llmAnalysis), not a data-absence payload; EmptyState would falsely claim "no data" when the feature is merely disabled (Rule 25.3).
     if (!options.llmAnalysis) return '';
     let content = '';
     if (options.llmFallback) {
@@ -189,14 +197,72 @@ export function buildLlmSection(options: ReportOptions): string {
     });
 }
 
-export function buildQualityGate(passRate: number, threshold: number): string {
-    if (passRate >= threshold) return '';
-    return Card({
-        variant: 'bordered',
-        severity: 'error',
-        children: `<div class="label qg-fail">${icon('x-circle', 16)} Quality Gate Failed</div>
-<p class="qg-fail">Pass rate ${passRate.toFixed(1)}% is below the configured threshold of ${threshold}%.</p>`,
-    });
+const QG_STATUS_VARIANT: Record<QualityGateStatus, 'pass' | 'fail' | 'info'> = {
+    pass: 'pass',
+    fail: 'fail',
+    unknown: 'info',
+};
+
+function qualityGateIcon(status: QualityGateStatus): string {
+    if (status === 'pass') return icon('check-circle', 14);
+    if (status === 'unknown') return icon('help-circle', 14);
+    return icon('x-circle', 14);
+}
+
+/**
+ * Structured HTML section for a `QualityGateResult` (single source of truth).
+ * Replaces the raw `<pre>`/`formatQualityGateText` blocks previously rendered in
+ * the interactive and schedule dashboards (B13) — no free-text `<pre>` output.
+ * All user-derived strings are HTML-escaped; non-finite scores surface as `N/A`
+ * (explicit, never a silent `0`) per Rule 24/25.
+ */
+export function buildQualityGateSection(result: QualityGateResult): string {
+    const score = Number.isFinite(result.score) ? String(result.score) : 'N/A';
+    const checks = result.checks
+        .map((c) => {
+            const cScore = Number.isFinite(c.score) ? String(c.score) : 'N/A';
+            const cThreshold = Number.isFinite(c.threshold) ? String(c.threshold) : 'N/A';
+            return (
+                '<li data-part="quality-gate-check" data-status="' +
+                c.status +
+                '">' +
+                qualityGateIcon(c.status) +
+                ' <strong>' +
+                escapeHtml(c.name) +
+                '</strong> <span data-part="quality-gate-score">' +
+                cScore +
+                '/' +
+                cThreshold +
+                '</span> <span data-part="quality-gate-details">' +
+                escapeHtml(c.details) +
+                '</span></li>'
+            );
+        })
+        .join('');
+    const incomplete =
+        result.incompleteItems && result.incompleteItems.length > 0
+            ? '<p data-part="quality-gate-incomplete" role="note">' +
+              icon('help-circle', 14) +
+              ' Dados ausentes (EIXO C): ' +
+              escapeHtml(result.incompleteItems.join(', ')) +
+              '</p>'
+            : '';
+    return (
+        '<div data-section="quality-gate" data-component="quality-gate" role="region" aria-label="Quality Gate">' +
+        '<div data-part="quality-gate-overall">' +
+        Badge({
+            variant: QG_STATUS_VARIANT[result.overall],
+            children: qualityGateIcon(result.overall) + ' ' + result.overall,
+        }) +
+        ' <span data-part="quality-gate-total-score">Score: ' +
+        score +
+        '/100</span></div>' +
+        '<ul data-part="quality-gate-checks" role="list">' +
+        checks +
+        '</ul>' +
+        incomplete +
+        '</div>'
+    );
 }
 
 export function buildFilterBar(): string {
@@ -210,6 +276,7 @@ export function buildFilterBar(): string {
 }
 
 export function buildFailedSummary(tests: FlatTest[], stats: ReportStats): string {
+    // legitimate: zero failures = condition-false (nothing to summarize) — absence IS the message, corroborated by the "Failed: 0" summary card; EmptyState would be redundant noise (Rule 25.3 intent).
     if (stats.failed === 0) return '';
     const failed = tests.filter((t) => t.state === 'failed');
     let items = '';
@@ -388,6 +455,16 @@ export function buildHealthSection(health: HealthScoreResult): string {
         provenanceHtml = buildProvenanceSection(health.provenance);
     }
 
+    const partialBanner =
+        health.partial === true
+            ? Badge({
+                  variant: 'warn',
+                  children: 'PARTIAL — insufficient data, low confidence',
+                  title: (health.partialReasons ?? []).join('; '),
+                  ariaLabel: 'Partial assessment: ' + (health.partialReasons ?? []).join(', '),
+              })
+            : '';
+
     const html = Card({
         variant: 'default',
         children:
@@ -397,8 +474,9 @@ export function buildHealthSection(health: HealthScoreResult): string {
             '<div class="health-grid">' +
             `<div class="score-value"><div class="health-overall-value" style="--overall-color:${overallColor}">${health.overall}</div>` +
             `<div class="health-grade-text">${health.grade.replace(/_/g, ' ')}</div></div>` +
-            `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Quality Gate: ${qc.text}</span>` +
+            `<span class="qc-badge qc-badge-dynamic" style="--qc-bg:${qc.bg};--qc-color:${qc.color}">${qc.icon} Health Gate: ${qc.text}</span>` +
             `<span class="health-meta">${health.runCount} run(s) · ${health.timestamp.slice(0, 10)}</span>` +
+            partialBanner +
             `</div>` +
             `<div class="categories-grid">${dimCards}</div>` +
             provenanceHtml,
@@ -408,7 +486,16 @@ export function buildHealthSection(health: HealthScoreResult): string {
 
 /** Renders provenance metadata as a compact collapsible section below the health score. */
 export function buildProvenanceSection(provenance: HealthScoreProvenance): string {
-    if (provenance.length === 0) return '';
+    if (provenance.length === 0) {
+        // Rule 25: explicit no-data (methodology metadata unavailable) instead of silent omission.
+        return EmptyState({
+            title: 'No provenance data available',
+            description:
+                'Methodology and reference metadata (formulas, sources, thresholds) were not provided for the health score.',
+            action: 'Ensure the health score pipeline emits provenance entries to document how each dimension was calculated.',
+            icon: icon('book-open', 16),
+        });
+    }
 
     let rows = '';
     for (const entry of provenance) {

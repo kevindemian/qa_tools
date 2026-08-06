@@ -18,18 +18,28 @@ vi.mock('../../jira_management/jira_resource.js', () => {
 });
 
 vi.mock('../../shared/logger.js', () => ({
-    rootLogger: { info: vi.fn(), error: vi.fn() },
+    rootLogger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
 vi.mock('../../shared/ui/cli_base.js', () => ({
     gracefulExit: vi.fn(),
 }));
 
+vi.mock('../../shared/data-hub/factory.js', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../../shared/data-hub/factory.js')>();
+    return { ...mod, createDataHubFromParseResult: vi.fn(mod.createDataHubFromParseResult) };
+});
+
+import { createDataHubFromParseResult } from '../../shared/data-hub/factory.js';
+
+const mockCreateHub = vi.mocked(createDataHubFromParseResult);
+
 describe('Gen-report-complete', () => {
     const originalArgv = process.argv;
 
     afterEach(() => {
         process.argv = originalArgv;
+        vi.clearAllMocks();
     });
 
     it('skips fetchXrayHistory when --skip-jira is set', async () => {
@@ -69,5 +79,16 @@ describe('Gen-report-complete', () => {
         await mod.main();
 
         expect(writeSpy).toHaveBeenCalledWith('report-e2e-complete.html', expect.stringContaining('html'));
+    });
+
+    it('creates the dedicated SSOT hub with the e2e repo identifier (F0-T8)', async () => {
+        expect.hasAssertions();
+
+        process.argv = ['node', 'gen-report-complete.ts', '--ctrf=e2e/fixtures/ctrf-report.json', '--skip-jira'];
+
+        const mod = await import('../gen-report-complete.js');
+        await mod.main();
+
+        expect(mockCreateHub).toHaveBeenCalledWith(expect.anything(), 'qa_tools_e2e');
     });
 });

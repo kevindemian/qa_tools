@@ -101,15 +101,51 @@ export async function createDataHub(
 }
 
 /**
- * Cria um DataHub a partir de um `ParseResult` fornecido manualmente (Camada 7).
- * Encapsula a criação de persistência — consumidores nunca criam `DataHubPersistence`.
+ * Cria um DataHub acionando a Camada 7 (User Fallback) — sem providers.
+ *
+ * Usado em contexto local (sem CI) quando o versionador/Jira não dispõe de
+ * dados: o pedido de arquivo manual é responsabilidade do DataHub (SSOT).
+ * Em não-TTY falha explicitamente via `Layer7UnavailableError` — o consumidor
+ * do PR report NÃO define `allowEmpty` e deve falhar de forma explícita.
+ *
+ * Não interage com o cache: o fallback manual é uma ação explícita do usuário,
+ * nunca reutilizável de execuções anteriores.
+ *
+ * @param repo - Nome do repositório.
+ * @param options - Persistência opcional (testes injetam mock; produção auto-cria).
+ */
+export async function createDataHubFromFallback(
+    repo: string,
+    options?: { persistence?: DataHubPersistence },
+): Promise<CreateDataHubResult> {
+    const persistence = options?.persistence ?? createDataHubPersistence(repo);
+    const { DataHubImpl } = await import('./hub.js');
+
+    return DataHubImpl.create([], { repo, allowEmpty: false }, persistence);
+}
+
+/**
+ * Cria um DataHub cujo run atual (`computed.metricsRuns[0]`) é exatamente o
+ * `parseResult` fornecido — sem providers, sem fetch, sem Camada 7.
+ *
+ * Usado por consumidores que JÁ possuem um `ParseResult` (arquivo manual,
+ * fixture E2E, run reconciliado) e precisam de um hub que o reflita como fonte
+ * única para o relatório HTML / análise de falhas (F0-T8).
+ *
+ * Síncrono: `DataHubImpl.createFromParseResult` não faz I/O de rede; a
+ * persistência é injetada (default: auto-detectada via `createDataHubPersistence`).
  *
  * @param parseResult - Resultado de `parseTestResultsFile` (CTRF/JUnit/Mochawesome).
- * @param repo - Nome do repositório.
+ * @param repo - Nome do repositório (contexto).
+ * @param persistence - Persistência opcional (testes injetam mock; produção auto-cria).
  */
-export function createDataHubFromParseResult(parseResult: ParseResult, repo: string): DataHub {
-    const persistence = createDataHubPersistence(repo);
-    return DataHubImpl.createFromParseResult(parseResult, repo, persistence);
+export function createDataHubFromParseResult(
+    parseResult: ParseResult,
+    repo: string,
+    persistence?: DataHubPersistence,
+): DataHub {
+    const p = persistence ?? createDataHubPersistence(repo);
+    return DataHubImpl.createFromParseResult(parseResult, repo, p);
 }
 
 function sleep(ms: number): Promise<void> {

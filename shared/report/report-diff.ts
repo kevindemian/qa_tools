@@ -73,6 +73,7 @@ export function buildDiffComparisonSection(diff: NonNullable<ReportOptions['diff
     const newFails = diff.newFailures.length;
     const newPasses = diff.newPasses.length;
     const flakyCount = diff.flaky.length;
+    // legitimate: zero changes between runs = condition-false (run comparison has nothing to report) — absence IS the message; EmptyState would be redundant noise (Rule 25.3 intent).
     if (newFails === 0 && newPasses === 0 && flakyCount === 0) return '';
 
     let content = '';

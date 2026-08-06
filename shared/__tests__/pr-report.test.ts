@@ -58,6 +58,7 @@ const mockDataHubComputed = {
     quarantineStatus: { flakyCount: 0, quarantinedCount: 0 },
     testPassRate: 80,
     testCounts: { passed: 1, failed: 1, skipped: 1, total: 3 },
+    runPassRate: 50,
     framework: 'vitest',
     executionRate: 90,
     flakyPercentage: 1,
@@ -387,7 +388,7 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         const commentBody = firstCall[0];
 
         expect(commentBody).toContain('Quarantine');
-        expect(commentBody).toContain(':warning: New');
+        expect(commentBody).toContain('[WARN] New');
         expect(commentBody).toContain('flaky-test-1');
         expect(commentBody).toContain('50%');
         expect(commentBody).toContain('2/5');
@@ -440,8 +441,8 @@ describe('Pr-report entry point — flaky detection with quarantine', () => {
         const firstCall2 = vi.mocked(postPrComment).mock.calls[0] as [string];
         const commentBody = firstCall2[0];
 
-        expect(commentBody).toContain(':heavy_plus_sign: Quarantined');
-        expect(commentBody).not.toContain(':warning: New');
+        expect(commentBody).toContain('[QUARANTINED] Quarantined');
+        expect(commentBody).not.toContain('[WARN] New');
 
         hub.getQuarantine = vi.fn<() => QuarantineStore>(() => ({ entries: [] }));
         exitSpy.mockRestore();

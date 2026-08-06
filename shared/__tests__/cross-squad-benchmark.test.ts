@@ -1,5 +1,6 @@
-import { computeCrossSquadBenchmark, generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
-import type { CrossSquadResult } from '../quality/cross-squad-benchmark.js';
+import { computeCrossSquadBenchmark } from '../data-hub/compute/cross-squad-benchmark.js';
+import { generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
+import type { CrossSquadResult } from '../data-hub/compute/cross-squad-benchmark.js';
 
 function makeSquads() {
     return [
@@ -245,6 +246,63 @@ describe('ComputeCrossSquadBenchmark', () => {
         expect(result.benchmarks.find((b) => b.project === 'Invalid Squad')).toBeUndefined();
     });
 
+    it('filters out squad with negative coveragePct (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'Neg Coverage',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: 5,
+                coveragePct: -1,
+                runCount: 20,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'Neg Coverage')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
+    it('filters out squad with negative runCount (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'Neg RunCount',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: 5,
+                coveragePct: 40,
+                runCount: -3,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'Neg RunCount')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
+    it('filters out squad with NaN flakyRate (G-02)', () => {
+        const projects = [
+            ...makeSquads(),
+            {
+                name: 'NaN Flaky',
+                healthScore: 50,
+                grade: 'C',
+                passRate: 70,
+                flakyRate: NaN,
+                coveragePct: 40,
+                runCount: 20,
+            },
+        ];
+        const result = computeCrossSquadBenchmark(projects);
+
+        expect(result.benchmarks.find((b) => b.project === 'NaN Flaky')).toBeUndefined();
+        expect(result.benchmarks).toHaveLength(4);
+    });
+
     it('handles null projects gracefully (G-02)', () => {
         const result = computeCrossSquadBenchmark(null);
 
@@ -281,44 +339,38 @@ describe('GenerateBenchmarkHtml', () => {
         expect(html).toContain('</html>');
     });
 
-    it('renders default title', () => {
-        const html = generateBenchmarkHtml(makeResult());
+    it.each([
+        ['renders default title', undefined, 'Cross-Squad Benchmark'],
+        ['uses custom title when provided', 'Sprint 11 Review', 'Sprint 11 Review'],
+    ])('%s', (_name, title, expectedTitle) => {
+        expect.hasAssertions();
 
-        expect(html).toContain('Cross-Squad Benchmark');
+        const html = generateBenchmarkHtml(makeResult(), title);
+
+        expect(html).toContain(expectedTitle);
     });
 
-    it('uses custom title when provided', () => {
+    it('custom title replaces default title', () => {
+        expect.hasAssertions();
+
         const html = generateBenchmarkHtml(makeResult(), 'Sprint 11 Review');
 
-        expect(html).toContain('Sprint 11 Review');
         expect(html).not.toContain('Cross-Squad Benchmark');
     });
 
-    it('renders summary cards with average score', () => {
+    it.each([
+        ['renders summary cards with average score', ['Average Score', '69.8']],
+        ['renders summary card with std deviation', ['Std Deviation']],
+        ['renders summary card with top squad name', ['Top Squad', 'Squad Alpha']],
+        ['renders summary card with bottom squad name', ['Bottom Squad', 'Squad Delta']],
+    ])('%s', (_name, expected) => {
+        expect.hasAssertions();
+
         const html = generateBenchmarkHtml(makeResult());
 
-        expect(html).toContain('Average Score');
-        expect(html).toContain('69.8');
-    });
-
-    it('renders summary card with std deviation', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Std Deviation');
-    });
-
-    it('renders summary card with top squad name', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Top Squad');
-        expect(html).toContain('Squad Alpha');
-    });
-
-    it('renders summary card with bottom squad name', () => {
-        const html = generateBenchmarkHtml(makeResult());
-
-        expect(html).toContain('Bottom Squad');
-        expect(html).toContain('Squad Delta');
+        for (const text of expected) {
+            expect(html).toContain(text);
+        }
     });
 
     it('renders leaderboard heading', () => {
