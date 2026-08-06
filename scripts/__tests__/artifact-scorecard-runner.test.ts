@@ -4,26 +4,31 @@ import { join } from 'node:path';
 import { runScorecard } from '../artifact-scorecard-runner.js';
 import { ARTIFACT_SPECS, ADDITIONAL_ARTIFACT_SPECS } from '../../shared/types/artifact-specs.js';
 
+// F0.6: only artifacts vigentes (8 survivors + 2 renderable reconstructed) are scored.
+// The 9 deleted dashboards are removed from the scorecard/harness evaluation.
 const HTML_RENDERABLE_SPECS = [
     'report-html',
-    'pipeline-health',
-    'ai-effectiveness',
-    'ai-comparison',
     'incident-report',
     'impact-alert',
-    'traceability',
-    'flakiness',
     'backlog-health',
     'pipeline-cost',
-    'suite-optimization',
-    'cross-squad-benchmark',
     'release-score',
-    'silent-regression',
     'defect-trend',
     'defect-seasonality',
     'developer-profile',
-    'requirement-score',
     'coverage-gap',
+];
+
+const DELETED_ARTIFACT_IDS = [
+    'ai-effectiveness',
+    'ai-comparison',
+    'traceability',
+    'flakiness',
+    'suite-optimization',
+    'cross-squad-benchmark',
+    'silent-regression',
+    'requirement-score',
+    'pipeline-health',
 ];
 
 const ALL_SPEC_IDS = [...ARTIFACT_SPECS, ...ADDITIONAL_ARTIFACT_SPECS].map((s) => s.id);
@@ -56,12 +61,13 @@ describe('ArtifactScorecardRunner', () => {
         }
     });
 
-    it('registers the 5 non-renderable specs explicitly (24 total accounted)', () => {
+    it('registers the 5 non-renderable specs explicitly (15 total accounted)', () => {
         expect.hasAssertions();
 
         const scorecard = runScorecard();
 
-        // 19 scored + 5 unscored = 24 (all specs accounted, I-9.4).
+        // 10 scored + 5 unscored = 15 (only artifacts vigentes are accounted, I-9.4).
+        // The 9 deleted dashboards are not registered (orphan specs removed).
         expect(scorecard.artifacts).toHaveLength(HTML_RENDERABLE_SPECS.length);
         expect(scorecard.unscored).toHaveLength(5);
 
@@ -78,7 +84,24 @@ describe('ArtifactScorecardRunner', () => {
 
         const registeredIds = [...scorecard.artifacts.map((a) => a.specId), ...unscoredIds];
         for (const id of ALL_SPEC_IDS) {
+            if (DELETED_ARTIFACT_IDS.includes(id)) continue;
+
             expect(registeredIds).toContain(id);
+        }
+    });
+
+    it('does not score or register any deleted artifact (orphan specs removed, F0.6)', () => {
+        expect.hasAssertions();
+
+        const scorecard = runScorecard();
+
+        const registeredIds = new Set([
+            ...scorecard.artifacts.map((a) => a.specId),
+            ...scorecard.unscored.map((u) => u.specId),
+        ]);
+
+        for (const id of DELETED_ARTIFACT_IDS) {
+            expect(registeredIds.has(id), `deleted artifact still registered: ${id}`).toBeFalsy();
         }
     });
 

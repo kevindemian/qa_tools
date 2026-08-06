@@ -19,7 +19,7 @@ const FIXTURE_DIR = join(import.meta.dirname, '__fixtures__', 'artefactos');
 /**
  * Load a committed JSON fixture by its spec id.
  *
- * @param id - artifact spec id matching `<id>.json` (e.g. `ai-effectiveness`).
+ * @param id - artifact spec id matching `<id>.json` (e.g. `backlog-health`).
  * @param dir - optional fixture directory override (defaults to the committed
  *   `scripts/__fixtures__/artefactos`). Used by hermetic tests only.
  * @returns the parsed fixture value.

@@ -21,44 +21,27 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ARTIFACT_SPECS, ADDITIONAL_ARTIFACT_SPECS, type ArtifactSpec } from '../shared/types/artifact-specs.js';
 import { computeArtifactScorecard, type ArtifactScorecard } from '../shared/quality/artifact-scorecard.js';
-import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness-renderer.js';
-import { generateAiComparisonHtml } from '../shared/report/ai-comparison-renderer.js';
 import { generateIncidentReportHtml } from '../shared/report/incident-report-renderer.js';
 import { generateImpactAlertHtml } from '../shared/report/impact-alert-renderer.js';
-import { generateTraceabilityHtml } from '../shared/report/traceability-renderer.js';
-import { generateFlakinessHtml } from '../shared/report/flakiness-renderer.js';
 import { generateBacklogHealthHtml } from '../shared/report/backlog-health-renderer.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost-renderer.js';
-import { generateOptimizationHtml } from '../shared/quality/suite-optimization-renderer.js';
-import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark-renderer.js';
 import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
-import { generateSilentRegressionHtml } from '../shared/quality/silent-regression-renderer.js';
 import { generateDefectTrendHtml } from '../shared/quality/defect-trend-renderer.js';
 import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality-renderer.js';
 import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile-renderer.js';
-import { generateRequirementScoreHtml } from '../shared/quality/requirement-score-renderer.js';
 import { generateCoverageGapHtml } from '../shared/report/generate-coverage-gap-html.js';
 import { generateHtmlReport } from '../shared/report/report-html.js';
 import { createDataHubFromParseResult } from '../shared/data-hub/factory.js';
-import { renderPipelineHealthHtml } from '../git_triggers/pipeline-health-renderer.js';
 import type { FlatTest } from '../shared/result_parser.js';
 import { loadFixture } from './artifact-fixtures.js';
-import type { AiMetricsResult } from '../shared/types/data-hub-extensions.js';
-import type { AiComparisonResult } from '../shared/data-hub/compute/ai-comparison.js';
 import type { IncidentReport } from '../shared/report/incident-report.js';
 import type { ImpactAlertResult } from '../shared/report/impact-alert.js';
-import type { TraceabilityResult } from '../shared/report/traceability-matrix.js';
-import type { FlakinessEntry } from '../shared/types/data-hub.js';
 import type { BacklogHealthResult } from '../shared/report/backlog-health.js';
 import type { PipelineCostResult } from '../shared/quality/pipeline-cost.js';
-import type { OptimizationResult } from '../shared/types/data-hub-extensions.js';
-import type { CrossSquadResult } from '../shared/data-hub/compute/cross-squad-benchmark.js';
 import type { ReleaseScoreResult } from '../shared/types/data-hub.js';
-import type { RegressionDetectionResult } from '../shared/types/data-hub-extensions.js';
 import type { DefectAggregationResult } from '../shared/types/data-hub-extensions.js';
 import type { SeasonalityAggregationResult } from '../shared/types/data-hub-extensions.js';
 import type { DeveloperProfileResult } from '../shared/quality/developer-profile.js';
-import type { RequirementScoreResult } from '../shared/data-hub/compute/requirement-score.js';
 import type { CoverageGapResult } from '../shared/types/coverage.js';
 
 const OUT_DIR = join(import.meta.dirname, '..', 'reports', 'validation');
@@ -97,41 +80,11 @@ function renderTestReportHtml(): string {
     return generateHtmlReport(tests, { computed: hub.computed, generatedAt: GENERATED_AT });
 }
 
-function renderPipelineHealthOutput(): string {
-    return renderPipelineHealthHtml(
-        {
-            totalRuns: 12,
-            passRate: 66.7,
-            avgDurationSec: 1800,
-            topFailingJobs: [
-                { name: 'e2e', failCount: 4, totalCount: 10, rate: 40 },
-                { name: 'unit', failCount: 1, totalCount: 10, rate: 10 },
-            ],
-            failureReasons: ['flaky: login', 'timeout: checkout'],
-            branchBreakdown: { main: { passRate: 80, count: 8 }, dev: { passRate: 40, count: 4 } },
-        },
-        undefined,
-        GENERATED_AT,
-    );
-}
-
 function buildRendererEntries(): RendererEntry[] {
     return [
         {
             specId: 'report-html',
             render: () => renderTestReportHtml(),
-        },
-        {
-            specId: 'pipeline-health',
-            render: () => renderPipelineHealthOutput(),
-        },
-        {
-            specId: 'ai-effectiveness',
-            render: () => generateAiEffectivenessHtml(loadFixture<AiMetricsResult>('ai-effectiveness')),
-        },
-        {
-            specId: 'ai-comparison',
-            render: () => generateAiComparisonHtml(loadFixture<AiComparisonResult>('ai-comparison')),
         },
         {
             specId: 'incident-report',
@@ -140,17 +93,6 @@ function buildRendererEntries(): RendererEntry[] {
         {
             specId: 'impact-alert',
             render: () => generateImpactAlertHtml(loadFixture<ImpactAlertResult>('impact-alert')),
-        },
-        {
-            specId: 'traceability',
-            render: () => generateTraceabilityHtml(loadFixture<TraceabilityResult>('traceability')),
-        },
-        {
-            specId: 'flakiness',
-            render: () =>
-                generateFlakinessHtml(loadFixture<FlakinessEntry[]>('flakiness'), undefined, {
-                    generatedAt: GENERATED_AT,
-                }),
         },
         {
             specId: 'backlog-health',
@@ -162,26 +104,8 @@ function buildRendererEntries(): RendererEntry[] {
             render: () => generatePipelineCostHtml(loadFixture<PipelineCostResult>('pipeline-cost')),
         },
         {
-            specId: 'suite-optimization',
-            render: () =>
-                generateOptimizationHtml(
-                    loadFixture<OptimizationResult>('suite-optimization'),
-                    undefined,
-                    GENERATED_AT,
-                ),
-        },
-        {
-            specId: 'cross-squad-benchmark',
-            render: () =>
-                generateBenchmarkHtml(loadFixture<CrossSquadResult>('cross-squad-benchmark'), undefined, GENERATED_AT),
-        },
-        {
             specId: 'release-score',
             render: () => generateReleaseScoreHtml(loadFixture<ReleaseScoreResult>('release-score'), GENERATED_AT),
-        },
-        {
-            specId: 'silent-regression',
-            render: () => generateSilentRegressionHtml(loadFixture<RegressionDetectionResult>('silent-regression')),
         },
         {
             specId: 'defect-trend',
@@ -200,15 +124,6 @@ function buildRendererEntries(): RendererEntry[] {
         {
             specId: 'developer-profile',
             render: () => generateDeveloperProfileHtml(loadFixture<DeveloperProfileResult>('developer-profile')),
-        },
-        {
-            specId: 'requirement-score',
-            render: () =>
-                generateRequirementScoreHtml(
-                    loadFixture<RequirementScoreResult>('requirement-score'),
-                    undefined,
-                    GENERATED_AT,
-                ),
         },
         {
             specId: 'coverage-gap',
@@ -247,7 +162,8 @@ export function runScorecard(): ArtifactScorecard {
     const scoreableSpecs = allSpecs.filter((spec) => rendererById.has(spec.id));
     // Non-renderable specs (I-9.4): orchestrators have no standalone artifact;
     // pr-report artifacts carry their own gate (teto T2) — registered explicitly,
-    // never scored or flagged removable (the scorecard must account for all 24).
+    // never scored or flagged removable (the scorecard must account for the 15
+    // artifacts vigentes; the 9 deleted dashboards are not registered).
     const unscored: Array<{ specId: string; status: 'gate-proprio' | 'nao-aplicavel'; note: string }> = [
         { specId: 'schedule-handler', status: 'nao-aplicavel', note: 'orchestrator — não gera artefato standalone' },
         { specId: 'interactive-mode', status: 'nao-aplicavel', note: 'orchestrator — não gera artefato standalone' },

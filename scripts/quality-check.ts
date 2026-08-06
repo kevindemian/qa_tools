@@ -415,26 +415,16 @@ export function checkArtifactValidatorsExist(): CheckResult {
 
 export function checkDashboardExports(): CheckResult {
     const violations: Violation[] = [];
+    // F0.6: only artifacts vigentes are validated (8 survivors + 3 reconstructed).
+    // The 9 deleted dashboards are not part of the dashboard export contract.
     const dashboards: Array<{ file: string; export_: string }> = [
         { file: 'shared/data-hub/compute/release-score.ts', export_: 'calcReleaseScore' },
         { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectTrends' },
         { file: 'shared/quality/defect-trend.ts', export_: 'generateDefectTrendHtml' },
-        { file: 'shared/report/traceability-matrix.ts', export_: 'buildTraceabilityMatrix' },
-        { file: 'shared/report/traceability-renderer.ts', export_: 'generateTraceabilityHtml' },
-        { file: 'shared/report/ai-effectiveness.ts', export_: 'computeAiEffectiveness' },
-        { file: 'shared/report/ai-effectiveness-renderer.ts', export_: 'generateAiEffectivenessHtml' },
         { file: 'shared/data-hub/compute/defect-aggregation.ts', export_: 'aggregateDefectSeasonality' },
         { file: 'shared/quality/defect-seasonality.ts', export_: 'generateSeasonalityHtml' },
-        { file: 'shared/data-hub/compute/regression-detection.ts', export_: 'detectSilentRegressions' },
-        { file: 'shared/quality/silent-regression-renderer.ts', export_: 'generateSilentRegressionHtml' },
-        { file: 'shared/data-hub/compute/ai-comparison.ts', export_: 'compareAiVsManual' },
-        { file: 'shared/report/ai-comparison-renderer.ts', export_: 'generateAiComparisonHtml' },
-        { file: 'shared/data-hub/compute/cross-squad-benchmark.ts', export_: 'computeCrossSquadBenchmark' },
-        { file: 'shared/quality/cross-squad-benchmark.ts', export_: 'generateBenchmarkHtml' },
         { file: 'shared/quality/developer-profile.ts', export_: 'buildDeveloperProfile' },
         { file: 'shared/quality/developer-profile.ts', export_: 'generateDeveloperProfileHtml' },
-        { file: 'shared/data-hub/compute/optimization-actions.ts', export_: 'computeOptimizationActions' },
-        { file: 'shared/quality/suite-optimization.ts', export_: 'generateOptimizationHtml' },
         { file: 'shared/report/backlog-health.ts', export_: 'analyzeBacklogHealth' },
         { file: 'shared/report/backlog-health-renderer.ts', export_: 'generateBacklogHealthHtml' },
         { file: 'shared/report/incident-report.ts', export_: 'buildIncidentReport' },
@@ -442,8 +432,6 @@ export function checkDashboardExports(): CheckResult {
         { file: 'shared/report/impact-alert.ts', export_: 'analyzePipelineImpact' },
         { file: 'shared/report/impact-alert-renderer.ts', export_: 'generateImpactAlertHtml' },
         { file: 'shared/data-hub/compute/pipeline-cost.ts', export_: 'calcPipelineCost' },
-        { file: 'shared/data-hub/compute/requirement-score.ts', export_: 'calculateRequirementScores' },
-        { file: 'shared/quality/requirement-score.ts', export_: 'generateRequirementScoreHtml' },
     ];
     for (const d of dashboards) {
         if (!existsSync(path.resolve(d.file))) {
@@ -584,7 +572,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:7e11a1eafa851930e537fdfb7a9b317d97ef3e4d5251bc9f6766f568ba2917ad */
+        /* HASH:73c81e9dba52555599fa648bcdeafa3d115ca66eab3b668a205728944261816e */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
