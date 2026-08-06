@@ -261,7 +261,7 @@ describe('GenerateFlakinessHtml', () => {
 
         const rateValue = /data-part="label">Flaky Rate<\/div>\s*<div data-part="value">([^<]+)<\/div>/.exec(html)?.[1];
 
-        // BUG: renderer shows 1/100=1% (wrong). Should show 25% (SSOT).
+        // C-5 fix: renderer uses computed.flakyTestRate SSOT → 25%, not testCounts.total (1/100=1%). Regression test.
         expect(rateValue).toBe('25%');
     });
 

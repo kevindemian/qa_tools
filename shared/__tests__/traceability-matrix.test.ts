@@ -420,7 +420,7 @@ describe('BuildTraceabilityMatrix', () => {
 
         const firstTest = nonNull(nonNull(result.nodes[0]).stories[0]).tests[0];
 
-        // Latest run (2026-01-03) says 'passed'. Current code picks [length-1] = 2026-01-01 (oldest) → 'skipped' (WRONG).
+        // C-4 fix: selectLatestRun picks max timestamp (2026-01-03, 'passed') — order-independent. Regression test.
         expect(firstTest?.status).toBe('passed');
     });
 });
