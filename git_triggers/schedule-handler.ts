@@ -1,31 +1,20 @@
-/** Scheduled tasks — run metrics, flakiness analysis, flaky auto-actions, and generate scheduled reports. */
+/** Scheduled tasks — run metrics, flaky auto-actions, and generate scheduled reports. */
 import { print, success, warn, info, prompt, printError, withSpinner } from '../shared/ui/prompt.js';
 import type { GitProvider, StateContainer } from '../shared/types.js';
-import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
 import { calculateHealthScore } from '../shared/quality/health-score.js';
 import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
 import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
-import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
-import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
 
-import { openWithFallback } from '../shared/open.js';
-import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import { buildHtmlPage } from '../shared/report/html-factory.js';
 import { buildCss } from '../shared/primitives/report-styles.js';
 import { resolveGeneratedAt } from '../shared/date-utils.js';
 import { generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
 import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
-import { generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
-import { generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
-import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
 import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
-import { generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
 import { buildIncidentReport, generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact, generateImpactAlertHtml } from '../shared/report/impact-alert.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
-import { calculateRequirementScores } from '../shared/data-hub/compute/requirement-score.js';
-import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
 import { runQualityGate } from '../shared/quality/quality-gate.js';
 import { buildQualityGateSection } from '../shared/report/report-sections.js';
 
@@ -158,16 +147,9 @@ export function generateWeeklyQualityReport(): void {
             throw new Error('Invariant violated: hub.computed.backlogHealth is undefined.');
         }
 
-        const aiRecords = dataHub.raw.aiRecords ?? null;
-        const aiResult = dataHub.computed.aiMetrics;
-        const requirementScores = calculateRequirementScores(aiRecords ?? undefined);
-
         const seasonality = dataHub.computed.seasonalityAggregation;
         const regression = dataHub.computed.regressionDetection;
         const devProfile = dataHub.computed.developerProfile;
-        const aiComparison = dataHub.computed.aiComparison;
-        const optimization = dataHub.computed.optimizationActions;
-        const benchmark = dataHub.computed.crossSquad;
         const coverageGap = dataHub.computed.coverageGap;
 
         if (seasonality == null) {
@@ -175,12 +157,6 @@ export function generateWeeklyQualityReport(): void {
         }
         if (regression == null) {
             throw new Error('Invariant violated: hub.computed.regressionDetection is undefined.');
-        }
-        if (optimization == null) {
-            throw new Error('Invariant violated: hub.computed.optimizationActions is undefined.');
-        }
-        if (benchmark == null) {
-            throw new Error('Invariant violated: hub.computed.crossSquad is undefined.');
         }
 
         const failRate = calcRunFailureRate(projectRuns);
@@ -223,11 +199,6 @@ export function generateWeeklyQualityReport(): void {
         const timestamp = resolveGeneratedAt();
         sections.push('<h2>Quality Gate</h2>' + buildQualityGateSection(qualityGate));
         sections.push(
-            '<div data-section="cross-squad-benchmark"><h2>Cross-Squad Benchmark</h2>' +
-                generateBenchmarkHtml(benchmark) +
-                '</div>',
-        );
-        sections.push(
             '<div data-section="defect-seasonality"><h2>Defect Seasonality</h2>' +
                 generateSeasonalityHtml(seasonality) +
                 '</div>',
@@ -241,33 +212,8 @@ export function generateWeeklyQualityReport(): void {
             '<div data-section="defect-trends"><h2>Defect Trends</h2>' + generateDefectTrendHtml(defects) + '</div>',
         );
         sections.push(
-            '<div data-section="silent-regression"><h2>Silent Regression</h2>' +
-                generateSilentRegressionHtml(regression) +
-                '</div>',
-        );
-        sections.push(
-            '<div data-section="traceability"><h2>Traceability Matrix</h2>' +
-                generateTraceabilityHtml(matrix) +
-                '</div>',
-        );
-        sections.push(
-            '<div data-section="ai-effectiveness"><h2>AI Effectiveness</h2>' +
-                generateAiEffectivenessHtml(aiResult) +
-                '</div>',
-        );
-        sections.push(
-            '<div data-section="ai-comparison"><h2>AI Test Comparison</h2>' +
-                generateAiComparisonHtml(aiComparison) +
-                '</div>',
-        );
-        sections.push(
             '<div data-section="developer-profile"><h2>Developer Profile</h2>' +
                 generateDeveloperProfileHtml(devProfile) +
-                '</div>',
-        );
-        sections.push(
-            '<div data-section="suite-optimization"><h2>Suite Optimization</h2>' +
-                generateOptimizationHtml(optimization) +
                 '</div>',
         );
         sections.push(
@@ -288,11 +234,6 @@ export function generateWeeklyQualityReport(): void {
         sections.push(
             '<div data-section="pipeline-cost"><h2>Pipeline Cost Analytics</h2>' +
                 generatePipelineCostHtml(pipelineCost) +
-                '</div>',
-        );
-        sections.push(
-            '<div data-section="requirement-score"><h2>Requirement Quality Score</h2>' +
-                generateRequirementScoreHtml(requirementScores) +
                 '</div>',
         );
 
@@ -318,39 +259,5 @@ export function generateWeeklyQualityReport(): void {
         pushHistory('weekly-quality-report', getCurrentProject() ?? '', 'ok');
     } catch (err) {
         printError('Falha ao gerar relatório semanal de qualidade', err);
-    }
-}
-
-export async function handleFlakinessDashboard(): Promise<void> {
-    try {
-        if (!getCurrentProject()) {
-            warn('Nenhum projeto selecionado.');
-            return;
-        }
-        const hub = getDataHub();
-        const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === (getCurrentProject() ?? ''));
-        if (projectRuns.length < 2) {
-            warn(
-                'Menos de 2 execuções registradas para ' +
-                    (getCurrentProject() ?? '') +
-                    '. Execute pipelines primeiro.',
-            );
-            return;
-        }
-        const flaky = calcFlakinessEntries(projectRuns, 2);
-        if (flaky.length === 0) {
-            info('Nenhum teste flaky detectado em ' + (getCurrentProject() ?? '') + '.');
-            return;
-        }
-        const html = generateFlakinessHtml(flaky, 'Flakiness — ' + (getCurrentProject() ?? ''), { dataHub: hub });
-        const outPath = writeReport('flakiness-' + (getCurrentProject() ?? '') + '.html', html);
-        await openWithFallback(outPath, 'Dashboard de flaky', info);
-        pushHistory(
-            'flakiness',
-            (getCurrentProject() ?? '') + ' (' + flaky.filter((f: { rate: number }) => f.rate > 0.3).length + ' >30%)',
-            'ok',
-        );
-    } catch (err) {
-        printError('Falha ao gerar dashboard de flaky', err);
     }
 }

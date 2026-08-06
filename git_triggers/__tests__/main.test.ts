@@ -921,16 +921,6 @@ describe('Main', () => {
         });
     });
 
-    // ---------- handleFlakinessDashboard ----------
-
-    describe('HandleFlakinessDashboard', () => {
-        it('warns when fewer than 2 runs exist for current project', () => {
-            void mainModule.handleFlakinessDashboard();
-
-            expect(prompt.warn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2 execuções registradas'));
-        });
-    });
-
     // ---------- parseCliArgs (batch mode) ----------
 
     describe('ParseCliArgs (batch mode)', () => {
@@ -1302,7 +1292,6 @@ describe('Main', () => {
 
         const handlerCases = [
             { choice: '9', label: 'handler 9 calls handleChangeProject' },
-            { choice: 'a', label: 'handler a calls handleFlakinessDashboard (void)' },
             { choice: '00', label: 'handler 00 calls handleSetupWizard' },
         ];
 
@@ -1317,7 +1306,7 @@ describe('Main', () => {
         it('has handler keys for all new menu entries', () => {
             const keys = Object.keys(mainModule.ACTION_HANDLERS);
 
-            const expected = ['c', 'd', 'g', 'i', 'p', 'q', 't', 'b', 'r'];
+            const expected = ['c', 'd', 'g', 'i', 'q', 't', 'b', 'r'];
 
             expect(expected.every((k) => keys.includes(k))).toBeTruthy();
         });

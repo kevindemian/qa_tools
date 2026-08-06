@@ -67,32 +67,23 @@ import {
     handleListSchedules,
     handleRunSchedule,
     handleChangeProject,
-    handleFlakinessDashboard,
     generateWeeklyQualityReport,
 } from './schedule-handler.js';
-import { tryBatchMode, handlePipelineHealth } from './batch-mode.js';
+import { tryBatchMode } from './batch-mode.js';
 import { interactiveBugReportFlow } from '../shared/report/bug-report.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 
 import { generateReleaseScoreHtml } from '../shared/quality/release-score-renderer.js';
 import { generateDefectTrendHtml } from '../shared/quality/defect-trend.js';
-import { generateTraceabilityHtml } from '../shared/report/traceability-matrix.js';
-import { generateAiEffectivenessHtml } from '../shared/report/ai-effectiveness.js';
 import { generateSeasonalityHtml } from '../shared/quality/defect-seasonality.js';
-import { generateSilentRegressionHtml } from '../shared/quality/silent-regression.js';
-import { generateAiComparisonHtml } from '../shared/report/ai-comparison.js';
-import { generateBenchmarkHtml } from '../shared/quality/cross-squad-benchmark.js';
 import { generateDeveloperProfileHtml } from '../shared/quality/developer-profile.js';
-import { generateOptimizationHtml } from '../shared/quality/suite-optimization.js';
 import { generateBacklogHealthHtml } from '../shared/report/backlog-health.js';
 import { generateIncidentReportHtml } from '../shared/report/incident-report.js';
 import { generatePipelineCostHtml } from '../shared/quality/pipeline-cost.js';
 import { generateImpactAlertHtml } from '../shared/report/impact-alert.js';
-import { generateRequirementScoreHtml } from '../shared/quality/requirement-score.js';
 import { buildIncidentReport } from '../shared/report/incident-report.js';
 import { analyzePipelineImpact } from '../shared/report/impact-alert.js';
-import { calculateRequirementScores } from '../shared/data-hub/compute/requirement-score.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
 import { runQualityGate } from '../shared/quality/quality-gate.js';
 import { openWithFallback } from '../shared/open.js';
@@ -264,14 +255,6 @@ async function handleRunComparison(): Promise<boolean> {
 }
 
 /**
- * Handler for pipeline health report — generates standalone pipeline health HTML.
- */
-async function handlePipelineHealthWrapper(m: GitProvider): Promise<boolean> {
-    await handlePipelineHealth(m);
-    return false;
-}
-
-/**
  * Handler for AI PR Description — generates PR/MR description from git diff.
  */
 async function handleAiPrDescription(m: GitProvider): Promise<boolean> {
@@ -366,26 +349,6 @@ async function _dashboardDefectTrends(): Promise<void> {
     await _generateAndOpenDashboard(generateDefectTrendHtml(defects), 'defect-trends', 'Defect Trends');
 }
 
-async function _dashboardTraceabilityMatrix(): Promise<void> {
-    if (!getCurrentProject()) {
-        warn('Nenhum projeto selecionado.');
-        return;
-    }
-    const hub = getDataHub();
-    const matrix = hub.computed.traceabilityTree;
-    if (!matrix) {
-        warn('Nenhuma matriz de rastreabilidade disponível no DataHub.');
-        return;
-    }
-    await _generateAndOpenDashboard(generateTraceabilityHtml(matrix), 'traceability', 'Traceability Matrix');
-}
-
-async function _dashboardAiEffectiveness(): Promise<void> {
-    const hub = getDataHub();
-    const aiResult = hub.computed.aiMetrics;
-    await _generateAndOpenDashboard(generateAiEffectivenessHtml(aiResult), 'ai-effectiveness', 'AI Effectiveness');
-}
-
 async function _dashboardSeasonality(): Promise<void> {
     if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
@@ -400,44 +363,6 @@ async function _dashboardSeasonality(): Promise<void> {
     await _generateAndOpenDashboard(generateSeasonalityHtml(seasonality), 'seasonality', 'Defect Seasonality');
 }
 
-async function _dashboardSilentRegression(): Promise<void> {
-    if (!getCurrentProject()) {
-        warn('Nenhum projeto selecionado.');
-        return;
-    }
-    const hub = getDataHub();
-    const regression = hub.computed.regressionDetection;
-    if (!regression) {
-        warn('Nenhum dado de regressão silenciosa disponível no DataHub.');
-        return;
-    }
-    await _generateAndOpenDashboard(generateSilentRegressionHtml(regression), 'silent-regression', 'Silent Regression');
-}
-
-async function _dashboardAiComparison(): Promise<void> {
-    const hub = getDataHub();
-    const aiComparison = hub.computed.aiComparison;
-    if (!aiComparison) {
-        warn('Nenhum dado de comparação AI vs Manual disponível no DataHub.');
-        return;
-    }
-    await _generateAndOpenDashboard(generateAiComparisonHtml(aiComparison), 'ai-comparison', 'AI Test Comparison');
-}
-
-async function _dashboardBenchmark(): Promise<void> {
-    if (!getCurrentProject()) {
-        warn('Nenhum projeto selecionado.');
-        return;
-    }
-    const hub = getDataHub();
-    const benchmark = hub.computed.crossSquad;
-    if (!benchmark) {
-        warn('Nenhum dado de benchmark entre squads disponível no DataHub.');
-        return;
-    }
-    await _generateAndOpenDashboard(generateBenchmarkHtml(benchmark), 'benchmark', 'Cross-Squad Benchmark');
-}
-
 async function _dashboardDeveloperProfile(): Promise<void> {
     if (!getCurrentProject()) {
         warn('Nenhum projeto selecionado.');
@@ -450,20 +375,6 @@ async function _dashboardDeveloperProfile(): Promise<void> {
         return;
     }
     await _generateAndOpenDashboard(generateDeveloperProfileHtml(devProfile), 'developer-profile', 'Developer Profile');
-}
-
-async function _dashboardSuiteOptimization(): Promise<void> {
-    if (!getCurrentProject()) {
-        warn('Nenhum projeto selecionado.');
-        return;
-    }
-    const hub = getDataHub();
-    const optimization = hub.computed.optimizationActions;
-    if (!optimization) {
-        warn('Nenhuma análise de otimização de suíte disponível no DataHub.');
-        return;
-    }
-    await _generateAndOpenDashboard(generateOptimizationHtml(optimization), 'suite-optimization', 'Suite Optimization');
 }
 
 async function _dashboardBacklogHealth(): Promise<void> {
@@ -542,15 +453,6 @@ async function _dashboardImpactAlert(): Promise<void> {
         coverageGap,
     );
     await _generateAndOpenDashboard(generateImpactAlertHtml(impactAlert), 'impact-alert', 'Pipeline Impact Alert');
-}
-
-async function _dashboardRequirementScore(): Promise<void> {
-    const requirementScores = calculateRequirementScores([]);
-    await _generateAndOpenDashboard(
-        generateRequirementScoreHtml(requirementScores),
-        'requirement-score',
-        'Requirement Score',
-    );
 }
 
 async function _dashboardQualityGate(): Promise<void> {
@@ -703,21 +605,14 @@ async function _showDashboardMenu(): Promise<void> {
     const dashboards: DashboardDef[] = [
         { id: '1', label: 'Release Score', handler: _dashboardReleaseScore },
         { id: '2', label: 'Defect Trends', handler: _dashboardDefectTrends },
-        { id: '3', label: 'Traceability Matrix', handler: _dashboardTraceabilityMatrix },
-        { id: '4', label: 'AI Effectiveness', handler: _dashboardAiEffectiveness },
-        { id: '5', label: 'Defect Seasonality', handler: _dashboardSeasonality },
-        { id: '6', label: 'Silent Regression', handler: _dashboardSilentRegression },
-        { id: '7', label: 'AI Test Comparison', handler: _dashboardAiComparison },
-        { id: '8', label: 'Cross-Squad Benchmark', handler: _dashboardBenchmark },
-        { id: '9', label: 'Developer Profile', handler: _dashboardDeveloperProfile },
-        { id: '10', label: 'Suite Optimization', handler: _dashboardSuiteOptimization },
-        { id: '11', label: 'Backlog Health', handler: _dashboardBacklogHealth },
-        { id: '12', label: 'Incident Report', handler: _dashboardIncidentReport },
-        { id: '13', label: 'Pipeline Cost', handler: _dashboardPipelineCost },
-        { id: '14', label: 'Pipeline Impact Alert', handler: _dashboardImpactAlert },
-        { id: '15', label: 'Requirement Score', handler: _dashboardRequirementScore },
-        { id: '16', label: 'Quality Gate', handler: _dashboardQualityGate },
-        { id: '17', label: 'Coverage Gap', handler: _dashboardCoverageGap },
+        { id: '3', label: 'Defect Seasonality', handler: _dashboardSeasonality },
+        { id: '4', label: 'Developer Profile', handler: _dashboardDeveloperProfile },
+        { id: '5', label: 'Backlog Health', handler: _dashboardBacklogHealth },
+        { id: '6', label: 'Incident Report', handler: _dashboardIncidentReport },
+        { id: '7', label: 'Pipeline Cost', handler: _dashboardPipelineCost },
+        { id: '8', label: 'Pipeline Impact Alert', handler: _dashboardImpactAlert },
+        { id: '9', label: 'Quality Gate', handler: _dashboardQualityGate },
+        { id: '10', label: 'Coverage Gap', handler: _dashboardCoverageGap },
     ];
     await showDashboardMenu(getCurrentProject() ?? '', dashboards);
 }
@@ -734,10 +629,6 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
     '7': withErrorHandling((m) => nivelarBranchesWrapper(m)),
     '8': withErrorHandling((m) => handleExportVariables(m)),
     '9': withErrorHandling((_m, _pn, ns) => handleChangeProject(ns)),
-    a: () => {
-        void handleFlakinessDashboard().catch((err: unknown) => printError('Dashboard error', err));
-        return Promise.resolve(false);
-    },
     b: async () => {
         await tryBatchMode();
         return false;
@@ -760,7 +651,6 @@ const ACTION_HANDLERS: Record<string, (m: GitProvider, pn: string, ns: string[])
     },
     g: withErrorHandling((m) => handleBugReportFlow(m)),
     i: withErrorHandling((m) => handleAiPrDescription(m)),
-    p: withErrorHandling((m) => handlePipelineHealthWrapper(m)),
     q: async () => {
         await _dashboardQualityGate();
         return false;
@@ -1050,7 +940,6 @@ export const _testExports = {
     printSessionSummary,
     displayProjects,
     displayRecentPipelines,
-    handleFlakinessDashboard,
     handleSetupWizard: _handleSetupWizard,
     tryBatchMode,
     _loadProjectRunsHelper,
@@ -1059,21 +948,13 @@ export const _testExports = {
     handleAiPrDescription,
     handleRunComparison,
     _showDashboardMenu,
-    handlePipelineHealthWrapper,
     _dashboardReleaseScore,
     _dashboardQualityGate,
     _dashboardBacklogHealth,
-    _dashboardRequirementScore,
     _dashboardPipelineCost,
-    _dashboardAiEffectiveness,
     _dashboardDefectTrends,
-    _dashboardTraceabilityMatrix,
     _dashboardSeasonality,
-    _dashboardSilentRegression,
-    _dashboardAiComparison,
-    _dashboardBenchmark,
     _dashboardDeveloperProfile,
-    _dashboardSuiteOptimization,
     _dashboardIncidentReport,
     _dashboardImpactAlert,
     _dashboardCoverageGap,

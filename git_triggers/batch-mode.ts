@@ -1,20 +1,16 @@
 /**
- * Batch mode — run metrics, flakiness dashboard, pipeline failure analysis, and test-impact selection headlessly.
+ * Batch mode — run metrics, pipeline failure analysis, and test-impact selection headlessly.
  * Uses unified CLI args from cli-args.ts.
  */
 import { success, error, info, printError, warn, withSpinner } from '../shared/ui/prompt.js';
 import { extractErrorMessage } from '../shared/ui/prompt-errors.js';
 import { getDataHub, setDataHub } from '../shared/data-hub/global-hub.js';
-import { calcFlakinessEntries } from '../shared/data-hub/compute/flakiness-entries.js';
-import { generateFlakinessHtml } from '../shared/report/flakiness-dashboard.js';
 import {
     expireQuarantine,
     listQuarantined,
     quarantineRatio,
     generatePipelineQuarantine,
 } from '../shared/validation/quarantine.js';
-import { renderPipelineHealthHtml } from './pipeline-health-renderer.js';
-import type { PipelineHealthData } from './pipeline-health-renderer.js';
 import { exportTestsCsv, exportTestsJson } from '../shared/report/report-export.js';
 import { analyzeTestImpact, generateTestSelectionJson } from '../shared/quality/test-impact.js';
 import { offerPipelineFailureAnalysis } from './llm-pipeline.js';
@@ -28,7 +24,6 @@ import Config from '../shared/config-accessor.js';
 import JiraClient from '../shared/jira/jira-client.js';
 import JiraLinkManager from '../jira_management/jira_link_manager.js';
 import { writeReport } from '../shared/infra/temp-dir.js';
-import { publishReport } from '../shared/publish.js';
 import {
     currentProvider,
     pushHistory,
@@ -38,12 +33,7 @@ import {
     setManager,
     getProjects,
 } from './session-state.js';
-import {
-    getCurrentProject,
-    setCurrentProject,
-    ensureSelfHostProject,
-    getSelfHostEntry,
-} from '../shared/project-context.js';
+import { setCurrentProject, ensureSelfHostProject, getSelfHostEntry } from '../shared/project-context.js';
 import type { ProjectEntry } from '../shared/types/project.js';
 import { pollPipeline } from './pipeline-handler.js';
 import type { BatchCliArgs } from './cli-args.js';
@@ -187,7 +177,7 @@ async function _collectPipelineResults(
         if (parsed) {
             const dataHub = await _reconcileDataHub(m, projectName, parsed, pipelineId);
             // Register DataHub in the global singleton so downstream consumers
-            // (quality-gate, health-score, flakiness) can access it via getDataHub().
+            // (quality-gate, health-score, session summary) can access it via getDataHub().
             if (dataHub) {
                 setDataHub(dataHub);
                 await generatePrReportIfNeeded(projectName, dataHub);
@@ -280,25 +270,6 @@ async function _runPruneCommand(projectName: string, force: boolean): Promise<bo
     return true;
 }
 
-function generateFlakinessDashboard(projectName: string, publishTarget?: string): void {
-    if (!projectName) return;
-    const hub = getDataHub();
-    const projectRuns = (hub.computed.metricsRuns ?? []).filter((r) => r.project === projectName);
-    if (projectRuns.length < 2) {
-        warn(
-            `Dados insuficientes para flakiness dashboard de '${projectName}' — precisava de 2+ execuções e computed.metricsRuns tem ${projectRuns.length}. Execute pipelines primeiro.`,
-        );
-        return;
-    }
-    const flaky = calcFlakinessEntries(projectRuns);
-    const html = generateFlakinessHtml(flaky, 'Flakiness — ' + projectName, { dataHub: hub });
-    const outPath = writeReport('flakiness-' + projectName + '.html', html);
-    success('Dashboard de flakiness gerado: ' + outPath);
-    if (publishTarget) {
-        publishReport({ target: publishTarget as 's3' | 'gh-pages', filePath: outPath });
-    }
-}
-
 /**
  * Tries to run in batch mode.
  * @param batchArgs Optional pre-parsed batch args (if not provided, parses from process.argv)
@@ -339,15 +310,13 @@ export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
         info('  1. Trigger pipeline on ' + setup.branch);
         info('  2. Poll pipeline result');
         info('  3. Collect test results');
-        info('  4. Generate flakiness dashboard');
-        info('  5. Generate test export');
-        info('  6. Generate pipeline health report');
+        info('  4. Generate test export');
         if (Config.get('jiraBaseUrl') && Config.get('jiraPersonalToken')) {
-            info('  7. Run flaky auto-actions');
+            info('  5. Run flaky auto-actions');
         }
-        info('  8. Run quarantine maintenance');
+        info('  6. Run quarantine maintenance');
         if (batch.runImpactedTests) {
-            info('  9. Run test impact selection');
+            info('  7. Run test impact selection');
         }
         printSessionSummary();
         return true;
@@ -364,9 +333,7 @@ export async function tryBatchMode(batchArgs?: BatchCliArgs): Promise<boolean> {
     );
     if (done) return true;
 
-    generateFlakinessDashboard(setup.projectName, batch.publish);
     generateTestExport(setup.projectName);
-    await generatePipelineHealthReport(setup.m);
     runQuarantineMaintenance();
     if (batch.runImpactedTests) {
         runTestImpactSelection(batch.conservative);
@@ -445,53 +412,4 @@ function generateTestExport(projectName: string): void {
     } catch (err) {
         printError('Falha ao exportar testes', err);
     }
-}
-
-async function generatePipelineHealthReport(m: import('../shared/types.js').GitProvider): Promise<void> {
-    try {
-        const { getOrFetchDataHub } = await import('../shared/ci/ci-data.js');
-        const dataHub = await getOrFetchDataHub(m, getCurrentProject() ?? '');
-        if (!dataHub || dataHub.raw.runs.length === 0) return;
-
-        const runs = dataHub.raw.runs;
-        const computed = dataHub.computed;
-
-        const from = runs[0]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-        const to = runs[runs.length - 1]?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-
-        const healthData: PipelineHealthData = {
-            totalRuns: runs.length,
-            passRate: computed.passRate,
-            avgDurationSec: computed.avgDuration,
-            topFailingJobs: computed.topFailingJobs.map((j) => ({
-                name: j.name,
-                failCount: j.count,
-                totalCount: Math.round((j.count * 100) / (j.failureRate || 1)),
-                rate: j.failureRate,
-            })),
-            failureReasons: computed.topFailureReasons.map((r) => r.pattern),
-            branchBreakdown: Object.fromEntries(
-                Object.entries(computed.branchBreakdown).map(([branch, info]) => [
-                    branch,
-                    { passRate: info.passRate, count: info.count },
-                ]),
-            ),
-            period: { from, to },
-        };
-
-        const html = renderPipelineHealthHtml(healthData, 'Pipeline Health \u2014 ' + (getCurrentProject() ?? ''));
-        const outPath = writeReport('pipeline-health-' + (getCurrentProject() ?? '') + '.html', html);
-        success('Pipeline health report gerado: ' + outPath);
-    } catch (err) {
-        printError('Falha ao gerar pipeline health', err);
-    }
-}
-
-/**
- * Standalone handler for pipeline health report — callable from interactive mode.
- * @param m GitProvider instance for the current project
- */
-export async function handlePipelineHealth(m: import('../shared/types.js').GitProvider): Promise<boolean> {
-    await generatePipelineHealthReport(m);
-    return false;
 }

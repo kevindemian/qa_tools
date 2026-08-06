@@ -135,90 +135,20 @@ vi.mock('../schedule-handler', () => ({
     handleListSchedules: vi.fn(),
     handleRunSchedule: vi.fn(),
     handleChangeProject: vi.fn(),
-    handleFlakinessDashboard: vi.fn(),
     generateWeeklyQualityReport: vi.fn(),
 }));
-vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn(), handlePipelineHealth: vi.fn() }));
+vi.mock('../batch-mode', () => ({ tryBatchMode: vi.fn() }));
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     generateDefectTrendHtml: vi.fn(() => ''),
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
-}));
-vi.mock('../../shared/report/traceability-matrix.js', () => ({
-    generateTraceabilityHtml: vi.fn(() => ''),
-    buildTraceabilityMatrix: vi.fn(() => ({ nodes: [] })),
-}));
-vi.mock('../../shared/report/ai-effectiveness.js', () => ({
-    generateAiEffectivenessHtml: vi.fn(() => '<section>ai-effectiveness: rate=0.75</section>'),
-    computeAiEffectiveness: vi.fn(() => ({
-        acceptanceRate: 0.75,
-        totalRecords: 4,
-        totalGenerated: 4,
-        totalModified: 1,
-        totalDeleted: 0,
-        topPromptVersion: 'v2',
-        byVersion: [{ version: 'v2', count: 4, acceptanceRate: 0.75 }],
-        trend: [{ date: '2026-01-01', acceptanceRate: 0.75, generated: 4 }],
-        timestamp: new Date().toISOString(),
-    })),
 }));
 vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     generateSeasonalityHtml: vi.fn(() => ''),
     aggregateDefectSeasonality: vi.fn(() => ({ peakDay: '' })),
 }));
-vi.mock('../../shared/quality/silent-regression.js', () => ({
-    generateSilentRegressionHtml: vi.fn(() => ''),
-    detectSilentRegression: vi.fn(() => ({ regressions: [] })),
-}));
-vi.mock('../../shared/report/ai-comparison.js', () => ({
-    generateAiComparisonHtml: vi.fn(() => ''),
-    compareAiVsManual: vi.fn(() => []),
-}));
-vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
-    generateBenchmarkHtml: vi.fn(() => '<section>benchmark: top=proj1 avg=70</section>'),
-    computeCrossSquadBenchmark: vi.fn(() => ({
-        benchmarks: [
-            {
-                project: 'proj1',
-                healthScore: 70,
-                grade: 'good',
-                passRate: 80,
-                flakyRate: 5,
-                coveragePct: 70,
-                runCount: 2,
-                trend: 'up' as const,
-            },
-        ],
-        topSquad: 'proj1',
-        bottomSquad: 'proj1',
-        averageScore: 70,
-        stdDev: 0,
-        timestamp: new Date().toISOString(),
-    })),
-}));
 vi.mock('../../shared/quality/developer-profile.js', () => ({
     generateDeveloperProfileHtml: vi.fn(() => ''),
     buildDeveloperProfile: vi.fn(() => []),
-}));
-vi.mock('../../shared/quality/suite-optimization.js', () => ({
-    generateOptimizationHtml: vi.fn(() => '<section>optimization: savings=5</section>'),
-    analyzeSuiteOptimization: vi.fn(() => ({
-        optimizations: [
-            {
-                testTitle: 't1',
-                duration: 10,
-                flakiness: 0.4,
-                impact: 'high' as const,
-                action: 'quarantine',
-                reason: 'flaky',
-            },
-        ],
-        totalTests: 1,
-        totalDuration: 10,
-        potentialSavings: 5,
-        slowThreshold: 5,
-        flakyThreshold: 0.3,
-        timestamp: new Date().toISOString(),
-    })),
 }));
 vi.mock('../../shared/report/backlog-health.js', () => ({
     generateBacklogHealthHtml: vi.fn(() => '<section>backlog: score=65</section>'),
@@ -286,12 +216,6 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
         timestamp: new Date().toISOString(),
     })),
 }));
-vi.mock('../../shared/quality/requirement-score.js', () => ({
-    generateRequirementScoreHtml: vi.fn(() => ''),
-}));
-vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
-    calculateRequirementScores: vi.fn(() => []),
-}));
 vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
 vi.mock('../../shared/report/generate-coverage-gap-html.js', () => ({ generateCoverageGapHtml: vi.fn(() => '') }));
 vi.mock('../../shared/report/coverage-gap.js', () => ({
@@ -314,7 +238,6 @@ vi.mock('../ui-helpers', () => ({ handleHelp: vi.fn(), handleShowHistory: vi.fn(
 vi.mock('../case00-handler', () => ({ handleSetupWizard: vi.fn() }));
 vi.mock('../../shared/report/show-docs.js', () => ({ showDocs: vi.fn() }));
 vi.mock('../../shared/ui/dashboard-menu.js', () => ({ showDashboardMenu: vi.fn() }));
-vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '') }));
 
 import { _testExports } from '../interactive-mode.js';
 import { warn, printError } from '../../shared/ui/prompt.js';
@@ -732,15 +655,39 @@ describe('Interactive-mode test exports', () => {
 
             expect(mockShowDashboardMenu).toHaveBeenCalledWith(expect.any(String), expect.any(Array));
         });
-    });
 
-    describe('HandlePipelineHealthWrapper', () => {
-        it('calls handlePipelineHealth and returns false', async () => {
+        it('exposes only surviving dashboards, no deleted artifacts (F0.5)', async () => {
             expect.hasAssertions();
 
-            const result = await _testExports.handlePipelineHealthWrapper({} as never);
+            await _testExports._showDashboardMenu();
 
-            expect(result).toBeFalsy();
+            const dashboards = mockShowDashboardMenu.mock.calls[0]?.[1] as Array<{ label: string }> | undefined;
+
+            expect(dashboards).toBeDefined();
+
+            const labels = (dashboards ?? []).map((d) => d.label);
+
+            const deletedLabels = [
+                'Traceability Matrix',
+                'AI Effectiveness',
+                'Silent Regression',
+                'AI Test Comparison',
+                'Cross-Squad Benchmark',
+                'Suite Optimization',
+                'Requirement Score',
+            ];
+            for (const label of deletedLabels) {
+                expect(labels, `deleted dashboard still exposed: ${label}`).not.toContain(label);
+            }
+        });
+    });
+
+    describe('ActionHandlers F0.5', () => {
+        it('does not dispatch actions for deleted artifacts (a/p)', () => {
+            const keys = Object.keys(_testExports.ACTION_HANDLERS);
+
+            expect(keys, `deleted artifact action still dispatched`).not.toContain('a');
+            expect(keys).not.toContain('p');
         });
     });
 
@@ -862,20 +809,6 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('DashboardRequirementScore', () => {
-        it('generates requirement score dashboard', async () => {
-            expect.hasAssertions();
-
-            await _testExports._dashboardRequirementScore();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'Requirement Score',
-                expect.any(Function),
-            );
-        });
-    });
-
     describe('DashboardPipelineCost', () => {
         it('generates pipeline cost dashboard', async () => {
             expect.hasAssertions();
@@ -916,20 +849,6 @@ describe('Interactive-mode test exports', () => {
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Pipeline Cost',
-                expect.any(Function),
-            );
-        });
-    });
-
-    describe('DashboardAiEffectiveness', () => {
-        it('generates AI effectiveness dashboard', async () => {
-            expect.hasAssertions();
-
-            await _testExports._dashboardAiEffectiveness();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'AI Effectiveness',
                 expect.any(Function),
             );
         });
@@ -980,51 +899,6 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('DashboardTraceabilityMatrix', () => {
-        it('generates traceability matrix dashboard', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    traceabilityTree: { nodes: [] },
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            await _testExports._dashboardTraceabilityMatrix();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'Traceability Matrix',
-                expect.any(Function),
-            );
-        });
-    });
-
     describe('DashboardSeasonality', () => {
         it('generates seasonality dashboard', async () => {
             expect.hasAssertions();
@@ -1070,124 +944,6 @@ describe('Interactive-mode test exports', () => {
         });
     });
 
-    describe('DashboardSilentRegression', () => {
-        it('generates silent regression dashboard', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    regressionDetection: { regressions: [], totalTests: 0 },
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            await _testExports._dashboardSilentRegression();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'Silent Regression',
-                expect.any(Function),
-            );
-        });
-    });
-
-    describe('DashboardAiComparison', () => {
-        it('generates AI comparison dashboard', async () => {
-            expect.hasAssertions();
-
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [],
-                    aiComparison: { aiAdvantage: 'none' },
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            await _testExports._dashboardAiComparison();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'AI Test Comparison',
-                expect.any(Function),
-            );
-        });
-    });
-
-    describe('DashboardBenchmark', () => {
-        it('generates benchmark dashboard', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    crossSquad: { topSquad: 'proj1', benchmarks: [] },
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            await _testExports._dashboardBenchmark();
-
-            expect(mockWriteReport).toHaveBeenCalledTimes(1);
-
-            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
-
-            expect(writtenHtml).toContain('benchmark: top=proj1 avg=70');
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'Cross-Squad Benchmark',
-                expect.any(Function),
-            );
-        });
-    });
-
     describe('DashboardDeveloperProfile', () => {
         it('generates developer profile dashboard', async () => {
             expect.hasAssertions();
@@ -1228,51 +984,6 @@ describe('Interactive-mode test exports', () => {
             expect(mockOpenWithFallback).toHaveBeenCalledWith(
                 expect.any(String),
                 'Developer Profile',
-                expect.any(Function),
-            );
-        });
-    });
-
-    describe('DashboardSuiteOptimization', () => {
-        it('generates suite optimization dashboard', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    optimizationActions: { optimizations: [], totalTests: 0 },
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: {
-                    failureClassifications: [],
-                },
-            } as never);
-            await _testExports._dashboardSuiteOptimization();
-
-            expect(mockOpenWithFallback).toHaveBeenCalledWith(
-                expect.any(String),
-                'Suite Optimization',
                 expect.any(Function),
             );
         });

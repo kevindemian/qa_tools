@@ -76,12 +76,6 @@ vi.mock('../../shared/infra/temp-dir.js', () => ({
 vi.mock('../../shared/open.js', () => ({
     openWithFallback: vi.fn(),
 }));
-vi.mock('../../shared/report/flakiness-dashboard.js', () => ({
-    generateFlakinessHtml: vi.fn(() => '<html/>'),
-}));
-vi.mock('../pipeline-health-renderer.js', () => ({
-    renderPipelineHealthHtml: vi.fn(() => '<html/>'),
-}));
 vi.mock('../../shared/validation/quarantine.js', () => ({
     expireQuarantine: vi.fn(),
     listQuarantined: vi.fn(),
@@ -326,24 +320,5 @@ describe('HandleMergeMR', () => {
 
         expect(m.acceptMergeRequest).toHaveBeenCalledWith('42');
         expect(vi.mocked(pushHistory)).toHaveBeenCalledWith('pr-merge', '42', 'ok');
-    });
-});
-
-describe('HandleFlakinessDashboard', () => {
-    beforeEach(() => {
-        _currentProvider = 'gitlab';
-        vi.mocked(getCurrentProject).mockReturnValue('TEST');
-        vi.clearAllMocks();
-    });
-
-    it('warns when no project selected', async () => {
-        expect.hasAssertions();
-
-        vi.mocked(getCurrentProject).mockReturnValue('');
-        const { handleFlakinessDashboard } = await import('../schedule-handler.js');
-        const { warn } = await import('../../shared/ui/prompt.js');
-        await handleFlakinessDashboard();
-
-        expect(vi.mocked(warn)).toHaveBeenCalledTimes(1);
     });
 });

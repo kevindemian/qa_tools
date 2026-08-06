@@ -46,11 +46,6 @@ vi.mock('../../shared/data-hub/global-hub.js', () => ({
     }),
 }));
 
-vi.mock('../../shared/data-hub/compute/flakiness-entries.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../shared/data-hub/compute/flakiness-entries.js')>();
-    return { ...actual, calcFlakinessEntries: vi.fn().mockReturnValue([]) };
-});
-
 vi.mock('../../shared/quality/health-score.js', () => ({
     calculateHealthScore: vi.fn(() => ({
         overall: 50,
@@ -62,30 +57,6 @@ vi.mock('../../shared/quality/health-score.js', () => ({
 vi.mock('../../shared/quality/defect-trend.js', () => ({
     aggregateDefectTrends: vi.fn(() => ({ trends: [] })),
     generateDefectTrendHtml: vi.fn(() => ''),
-}));
-vi.mock('../../shared/report/ai-effectiveness.js', () => ({
-    computeAiEffectiveness: vi.fn(() => ({
-        acceptanceRate: 0.75,
-        totalRecords: 4,
-        totalGenerated: 4,
-        totalModified: 1,
-        totalDeleted: 0,
-        topPromptVersion: 'v2',
-        byVersion: [{ version: 'v2', count: 4, acceptanceRate: 0.75 }],
-        trend: [{ date: '2026-01-01', acceptanceRate: 0.75, generated: 4 }],
-        timestamp: new Date().toISOString(),
-    })),
-    generateAiEffectivenessHtml: vi.fn(() => '<section>ai</section>'),
-    convertGenerationRecordsToFeedback: vi.fn(() => ({ records: [] })),
-}));
-vi.mock('../../shared/report/traceability-matrix.js', () => ({
-    buildTraceabilityMatrix: vi.fn(() => ({
-        nodes: [
-            { epic: 'EPIC-1', coverage: 100, requirement: 'R1', tests: ['t1'] },
-            { epic: 'EPIC-2', coverage: 40, requirement: 'R2', tests: ['t2'] },
-        ],
-    })),
-    generateTraceabilityHtml: vi.fn(() => '<section>trace</section>'),
 }));
 vi.mock('../../shared/report/backlog-health.js', () => ({
     analyzeBacklogHealth: vi.fn(() => ({
@@ -113,60 +84,9 @@ vi.mock('../../shared/quality/defect-seasonality.js', () => ({
     aggregateDefectSeasonality: vi.fn(() => ({ peakDay: 'Monday', byDay: { Monday: 3 } })),
     generateSeasonalityHtml: vi.fn(() => '<section>seasonality</section>'),
 }));
-vi.mock('../../shared/quality/silent-regression.js', () => ({
-    detectSilentRegression: vi.fn(() => ({ regressions: [{ test: 't1', from: 100, to: 90 }] })),
-    generateSilentRegressionHtml: vi.fn(() => '<section>regression</section>'),
-}));
-vi.mock('../../shared/report/ai-comparison.js', () => ({
-    compareAiVsManual: vi.fn(() => [{ dimension: 'speed', ai: 10, manual: 30, delta: -20 }]),
-    generateAiComparisonHtml: vi.fn(() => '<section>aicomp</section>'),
-}));
-vi.mock('../../shared/quality/cross-squad-benchmark.js', () => ({
-    computeCrossSquadBenchmark: vi.fn(() => ({
-        benchmarks: [
-            {
-                project: 'proj1',
-                healthScore: 70,
-                grade: 'good',
-                passRate: 80,
-                flakyRate: 5,
-                coveragePct: 70,
-                runCount: 2,
-                trend: 'up' as const,
-            },
-        ],
-        topSquad: 'proj1',
-        bottomSquad: 'proj1',
-        averageScore: 70,
-        stdDev: 0,
-        timestamp: new Date().toISOString(),
-    })),
-    generateBenchmarkHtml: vi.fn(() => '<section>benchmark</section>'),
-}));
 vi.mock('../../shared/quality/developer-profile.js', () => ({
     buildDeveloperProfile: vi.fn(() => [{ developer: 'dev1', defectCount: 1, flakyCount: 0 }]),
     generateDeveloperProfileHtml: vi.fn(() => '<section>devprofile</section>'),
-}));
-vi.mock('../../shared/quality/suite-optimization.js', () => ({
-    analyzeSuiteOptimization: vi.fn(() => ({
-        optimizations: [
-            {
-                testTitle: 't1',
-                duration: 10,
-                flakiness: 0.4,
-                impact: 'high' as const,
-                action: 'quarantine',
-                reason: 'flaky',
-            },
-        ],
-        totalTests: 1,
-        totalDuration: 10,
-        potentialSavings: 5,
-        slowThreshold: 5,
-        flakyThreshold: 0.3,
-        timestamp: new Date().toISOString(),
-    })),
-    generateOptimizationHtml: vi.fn(() => '<section>optimization</section>'),
 }));
 vi.mock('../../shared/report/incident-report.js', () => ({
     buildIncidentReport: vi.fn(() => ({
@@ -202,12 +122,6 @@ vi.mock('../../shared/report/impact-alert.js', () => ({
 vi.mock('../../shared/quality/pipeline-cost.js', () => ({
     generatePipelineCostHtml: vi.fn(() => '<section>pipelinecost</section>'),
 }));
-vi.mock('../../shared/quality/requirement-score.js', () => ({
-    generateRequirementScoreHtml: vi.fn(() => '<section>reqscore</section>'),
-}));
-vi.mock('../../shared/data-hub/compute/requirement-score.js', () => ({
-    calculateRequirementScores: vi.fn(() => [{ requirement: 'R1', score: 90, coverage: 100 }]),
-}));
 vi.mock('../../shared/quality/quality-gate.js', () => ({
     runQualityGate: vi.fn(() => ({ overall: 'pass', checks: [], score: 85 })),
 }));
@@ -233,10 +147,6 @@ vi.mock('../../shared/report/coverage-gap.js', () => ({
     })),
 }));
 
-vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
-
-vi.mock('../../shared/open', () => ({ openWithFallback: vi.fn() }));
-
 vi.mock('../../shared/state', () => ({ update: vi.fn() }));
 
 vi.mock('fs', () => ({
@@ -255,19 +165,15 @@ import {
     setManager,
     getDataHub as getSessionDataHub,
 } from '../session-state.js';
-import { calcFlakinessEntries } from '../../shared/data-hub/compute/flakiness-entries.js';
-import { generateFlakinessHtml } from '../../shared/report/flakiness-dashboard.js';
 import {
     handleListSchedules,
     handleRunSchedule,
     handleChangeProject,
-    handleFlakinessDashboard,
     generateWeeklyQualityReport,
 } from '../schedule-handler.js';
 import { createMockGitProvider } from '../../shared/test-utils/factories/index.js';
 
 import { writeReport } from '../../shared/infra/temp-dir.js';
-import { generateBenchmarkHtml } from '../../shared/quality/cross-squad-benchmark.js';
 import { analyzePipelineImpact } from '../../shared/report/impact-alert.js';
 import { runQualityGate } from '../../shared/quality/quality-gate.js';
 import { buildIncidentReport } from '../../shared/report/incident-report.js';
@@ -275,7 +181,6 @@ import { aggregateDefectTrends } from '../../shared/data-hub/compute/defect-aggr
 import { DataHubImpl } from '../../shared/data-hub/hub.js';
 import { makeDataHubPersistenceMock } from '../../shared/test-utils/factories/data-hub-mock.js';
 import type { DataHub } from '../../shared/types/data-hub.js';
-const mockGenerateHtml = vi.mocked(generateFlakinessHtml);
 
 const mockManager = createMockGitProvider();
 
@@ -283,25 +188,13 @@ const mockPrompt = vi.mocked(prompt);
 const mockPushHistory = vi.mocked(pushHistory);
 const mockPrintError = vi.mocked(printError);
 const mockWarn = vi.mocked(warn);
-const mockInfo = vi.mocked(info);
 const mockGetDataHub = vi.mocked(getSessionDataHub);
-const mockCalcFlakinessEntries = vi.mocked(calcFlakinessEntries);
 const mockWriteReport = vi.mocked(writeReport);
-const mockGenerateBenchmarkHtml = vi.mocked(generateBenchmarkHtml);
 const mockAnalyzePipelineImpact = vi.mocked(analyzePipelineImpact);
 const mockRunQualityGate = vi.mocked(runQualityGate);
 const mockBuildIncidentReport = vi.mocked(buildIncidentReport);
 
 describe('Schedule Handler', () => {
-    beforeAll(async () => {
-        const openModule = (await import('../../shared/open.js')) as {
-            openWithFallback: (...args: unknown[]) => unknown;
-        };
-        if (!vi.isMockFunction(openModule.openWithFallback)) {
-            throw new Error('Guard FAILED: openWithFallback is NOT mocked. Browser would open!');
-        }
-    });
-
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.currentProvider = 'gitlab';
@@ -429,129 +322,6 @@ describe('Schedule Handler', () => {
             await handleChangeProject(names);
 
             expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('inválida'));
-        });
-    });
-
-    describe('HandleFlakinessDashboard', () => {
-        it('warns when no project selected', () => {
-            void handleFlakinessDashboard();
-
-            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Nenhum projeto'));
-        });
-
-        it('warns when less than 2 runs', () => {
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: { failureClassifications: [] },
-            } as never);
-
-            void handleFlakinessDashboard();
-
-            expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('Menos de 2'));
-        });
-
-        it('informs when no flaky tests', () => {
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: { failureClassifications: [] },
-            } as never);
-            mockCalcFlakinessEntries.mockReturnValue([]);
-
-            void handleFlakinessDashboard();
-
-            expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste flaky'));
-        });
-
-        it('generates dashboard HTML and opens browser', async () => {
-            expect.hasAssertions();
-
-            vi.mocked(getCurrentProject).mockReturnValue('proj1');
-            mockGetDataHub.mockReturnValue({
-                computed: {
-                    metricsRuns: [
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                        {
-                            project: 'proj1',
-                            timestamp: '',
-                            total: 0,
-                            passed: 0,
-                            failed: 0,
-                            skipped: 0,
-                            duration: 0,
-                            tests: [],
-                        },
-                    ],
-                },
-                raw: { failureClassifications: [] },
-            } as never);
-            mockCalcFlakinessEntries.mockReturnValue([
-                { title: 't1', project: 'test', rate: 0.5, passCount: 1, failCount: 0, skipCount: 0, totalRuns: 1 },
-            ]);
-
-            await handleFlakinessDashboard();
-
-            expect(mockGenerateHtml).toHaveBeenCalledWith(
-                expect.any(Array),
-                expect.any(String),
-                expect.objectContaining({ dataHub: mockGetDataHub() }),
-            );
-
-            const { openWithFallback } = (await import('../../shared/open.js')) as {
-                openWithFallback: (...args: unknown[]) => unknown;
-            };
-
-            expect(openWithFallback).toHaveBeenCalledWith(
-                expect.stringContaining('flakiness'),
-                'Dashboard de flaky',
-                info,
-            );
         });
     });
 
@@ -777,20 +547,6 @@ describe('Schedule Handler', () => {
             expect(writtenHtml).toContain(String(hubReleaseScore?.grade));
         });
 
-        it('renders the hub computed cross-squad benchmark into the report', () => {
-            expect.hasAssertions();
-
-            seedTwoRunsHub();
-            generateWeeklyQualityReport();
-
-            const benchmarkInput = mockGenerateBenchmarkHtml.mock.calls[0]?.[0] as
-                { topSquad: string; benchmarks: Array<{ project: string; runCount: number }> } | undefined;
-
-            expect(benchmarkInput, `benchmarkInput=${JSON.stringify(benchmarkInput)}`).toBeTruthy();
-            expect(benchmarkInput?.topSquad).toBe('proj1');
-            expect(benchmarkInput?.benchmarks.some((b) => b.project === 'proj1' && b.runCount === 2)).toBeTruthy();
-        });
-
         it('invokes the score/dashboard analyzers with real run data', () => {
             expect.hasAssertions();
 
@@ -830,6 +586,27 @@ describe('Schedule Handler', () => {
             expect(writtenPath).toContain('weekly-quality-proj1.html');
         });
 
+        it('f0.5 — does not render deleted artifact sections in the weekly report', () => {
+            expect.hasAssertions();
+
+            seedTwoRunsHub();
+            generateWeeklyQualityReport();
+
+            const writtenHtml = mockWriteReport.mock.calls[0]?.[1] as string;
+            const deletedSections = [
+                'data-section="cross-squad-benchmark"',
+                'data-section="silent-regression"',
+                'data-section="traceability"',
+                'data-section="ai-effectiveness"',
+                'data-section="ai-comparison"',
+                'data-section="suite-optimization"',
+                'data-section="requirement-score"',
+            ];
+            for (const section of deletedSections) {
+                expect(writtenHtml, `deleted section still rendered: ${section}`).not.toContain(section);
+            }
+        });
+
         it('renders every dashboard section in the generated HTML', () => {
             expect.hasAssertions();
 
@@ -841,12 +618,9 @@ describe('Schedule Handler', () => {
 
             expect(writtenHtml).toContain('<h1>Weekly Quality Report — proj1</h1>');
             expect(writtenHtml).toContain('<h2>Quality Gate</h2>');
-            expect(writtenHtml).toContain('<h2>Cross-Squad Benchmark</h2>');
             expect(writtenHtml).toContain('<h2>Release Score</h2>');
-            expect(writtenHtml).toContain('<h2>Silent Regression</h2>');
             expect(writtenHtml).toContain('<h2>Incident Investigation Report</h2>');
             expect(writtenHtml).toContain('<h2>Pipeline Cost Analytics</h2>');
-            expect(writtenHtml).toContain('<h2>Requirement Quality Score</h2>');
         });
     });
 });

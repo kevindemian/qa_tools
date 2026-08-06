@@ -91,8 +91,6 @@ vi.mock('../../shared/project-context', () => ({
     getSelfHostEntry: vi.fn(() => undefined),
 }));
 
-vi.mock('../../shared/report/flakiness-dashboard.js', () => ({ generateFlakinessHtml: vi.fn(() => '<html>') }));
-
 vi.mock('../gitlab_manager', () => {
     return {
         __esModule: true,
@@ -213,6 +211,18 @@ describe('Session-state', () => {
 
             expect(mgr).toBeTruthy();
             expect(typeof mgr.getRecentPipelines).toBe('function');
+        });
+    });
+
+    describe('BuildActionChoices F0.5', () => {
+        it('excludes menu entries for deleted artifacts (flakiness a / pipeline health p)', () => {
+            expect.hasAssertions();
+
+            const choices = sessionState.buildActionChoices();
+            const values = choices.map((c) => c['value']);
+
+            expect(values, 'menu still exposes deleted artifact entry').not.toContain('a');
+            expect(values).not.toContain('p');
         });
     });
 
