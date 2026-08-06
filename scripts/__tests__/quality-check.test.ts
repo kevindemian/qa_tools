@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -207,10 +207,52 @@ describe('Quality check integrated', () => {
             expect(typeof r.result.passed).toBe('boolean');
             expect(Array.isArray(r.result.violations)).toBeTruthy();
             expect(typeof r.warningCount).toBe('number');
+            expect(typeof r.measurementValid).toBe('boolean');
             // Full-repo ESLint pass: under a loaded CI runner this can exceed the default
             // wall without any assertion failure. The budget is operational headroom only;
             // the eslint contract (real lint + structured result) is unchanged.
         }, 600000);
+    });
+
+    describe('CheckLintWarningRatchet', () => {
+        let originalContent: string | null;
+
+        beforeEach(() => {
+            originalContent = fs.readFileSync('.quality_ratchet.json', 'utf-8');
+        });
+
+        afterEach(() => {
+            if (originalContent !== null) {
+                fs.writeFileSync('.quality_ratchet.json', originalContent, 'utf-8');
+            }
+        });
+
+        it('does NOT modify the ratchet file when the eslint measurement is invalid', async () => {
+            expect.hasAssertions();
+
+            const { checkLintWarningRatchet } = await load();
+
+            const before = fs.readFileSync('.quality_ratchet.json', 'utf-8');
+            const r = checkLintWarningRatchet(0, false);
+            const after = fs.readFileSync('.quality_ratchet.json', 'utf-8');
+
+            expect(after).toBe(before);
+            expect(r.passed).toBeFalsy();
+        });
+
+        it('lowers the threshold only when the measurement is valid', async () => {
+            expect.hasAssertions();
+
+            const { checkLintWarningRatchet } = await load();
+
+            checkLintWarningRatchet(0, true);
+
+            const after = JSON.parse(fs.readFileSync('.quality_ratchet.json', 'utf-8')) as {
+                checks: { 'lint-warnings': { threshold: number } };
+            };
+
+            expect(after.checks['lint-warnings'].threshold).toBe(0);
+        });
     });
 
     describe('Main', () => {

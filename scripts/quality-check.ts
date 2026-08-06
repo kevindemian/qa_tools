@@ -146,7 +146,7 @@ function parseLintResults(out: string): LintResult[] {
     return results;
 }
 
-function processLintResults(out: string, violations: Violation[]): number {
+function processLintResults(out: string, violations: Violation[]): number | null {
     let warningCount = 0;
     try {
         const results = parseLintResults(out);
@@ -165,6 +165,8 @@ function processLintResults(out: string, violations: Violation[]): number {
         }
     } catch (parseErr) {
         violations.push({ file: 'eslint-output', line: 1, content: `ESLint: invalid JSON: ${String(parseErr)}` });
+        rootLogger.warn('quality-check: saída do eslint inválida (JSON): ' + String(parseErr));
+        return null;
     }
     return warningCount;
 }
@@ -187,9 +189,14 @@ function runEslintBatchAsync(dirs: string[]): Promise<{ out: string | null; erro
     });
 }
 
-export async function checkEslintBaseline(): Promise<{ result: CheckResult; warningCount: number }> {
+export async function checkEslintBaseline(): Promise<{
+    result: CheckResult;
+    warningCount: number;
+    measurementValid: boolean;
+}> {
     const violations: Violation[] = [];
     let warningCount = 0;
+    let measurementValid = false;
 
     // Lint the entire codebase (all .ts files via eslint config)
     const [result] = await Promise.all([runEslintBatchAsync(['.'])]);
@@ -197,12 +204,17 @@ export async function checkEslintBaseline(): Promise<{ result: CheckResult; warn
     if (result.error) {
         violations.push({ file: 'eslint-batch', line: 1, content: `ESLint: ${result.error}` });
     } else if (result.out) {
-        warningCount += processLintResults(result.out, violations);
+        const n = processLintResults(result.out, violations);
+        if (n !== null) {
+            warningCount += n;
+            measurementValid = true;
+        }
     }
 
     return {
         result: { name: 'eslint (zero violations)', passed: violations.length === 0, violations },
         warningCount,
+        measurementValid,
     };
 }
 
@@ -572,7 +584,7 @@ export function checkIntegrity(): CheckResult {
         const selfContent = readFileSync('scripts/quality-check.ts', 'utf-8');
         const contentWithoutHash = selfContent.replace(/\/\* HASH:[0-9a-f]{64} \*\//g, '');
         const currentHash = createHash('sha256').update(contentWithoutHash, 'utf-8').digest('hex');
-        /* HASH:141958d4ee415b84ab668eb10c5c3e53d0d57bb6f4ebb77ce42f6b0fd44d0a22 */
+        /* HASH:7e11a1eafa851930e537fdfb7a9b317d97ef3e4d5251bc9f6766f568ba2917ad */
         const match = /\/\* HASH:([0-9a-f]{64}) \*\//.exec(selfContent);
         if (!match) {
             violations.push({ file: 'scripts/quality-check.ts', line: 1, content: 'Missing HASH comment' });
@@ -657,12 +669,18 @@ function writeRatchetThreshold(checkKey: string, count: number, description: str
     writeFileSync(RATCHET_FILE, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
-export function checkLintWarningRatchet(warningCount: number): CheckResult {
+export function checkLintWarningRatchet(warningCount: number, measurementValid = true): CheckResult {
     const violations: Violation[] = [];
     const current = warningCount;
     const threshold = readRatchetThreshold('lint-warnings');
 
-    if (current > threshold) {
+    if (!measurementValid) {
+        violations.push({
+            file: '.quality_ratchet.json',
+            line: 1,
+            content: `MEDIÇÃO INVÁLIDA: eslint não produziu saída confiável; ratchet NÃO foi alterado (threshold: ${threshold}).`,
+        });
+    } else if (current > threshold) {
         violations.push({
             file: '.quality_ratchet.json',
             line: 1,
@@ -676,8 +694,12 @@ export function checkLintWarningRatchet(warningCount: number): CheckResult {
         );
     }
 
+    const name = measurementValid
+        ? `lint-warnings ratchet (${current} <= ${threshold})`
+        : `lint-warnings ratchet (medição inválida — threshold não alterado)`;
+
     return {
-        name: `lint-warnings ratchet (${current} <= ${threshold})`,
+        name,
         passed: violations.length === 0,
         violations,
     };
@@ -692,9 +714,9 @@ export async function main(): Promise<void> {
     const isCI = process.env['CI'] === 'true';
 
     if (isCI) {
-        const { result: eslintResult, warningCount } = await checkEslintBaseline();
+        const { result: eslintResult, warningCount, measurementValid } = await checkEslintBaseline();
         checks.push(eslintResult);
-        checks.push(checkLintWarningRatchet(warningCount));
+        checks.push(checkLintWarningRatchet(warningCount, measurementValid));
     }
     checks.push(checkHandlerConsistency());
 
