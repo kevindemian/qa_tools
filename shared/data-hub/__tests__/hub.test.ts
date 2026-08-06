@@ -16,6 +16,7 @@ import type {
     DataHubPersistence,
     CoverageSnapshot,
     FailureClassification,
+    ReleaseScoreBreakdownEntry,
 } from '../../types/data-hub.js';
 import type { PipelineJob, PipelineRun } from '../../types/ci-cd.js';
 import type { ParseResult } from '../../result_parser.js';
@@ -449,7 +450,7 @@ describe('DataHubImpl', () => {
 });
 
 describe('DataHubImpl — data availability (B2/§25)', () => {
-    function dim(hub: DataHub, label: string): { noData?: boolean } | undefined {
+    function dim(hub: DataHub, label: string): ReleaseScoreBreakdownEntry | undefined {
         return (hub.computed.releaseScore.breakdown ?? []).find((d) => d.label === label);
     }
 
@@ -532,13 +533,73 @@ describe('DataHubImpl — data availability (B2/§25)', () => {
         expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
     });
 
-    it('b2: Coverage is noData when raw.coverage percentage is zero', async () => {
+    it('b2: Coverage is available from raw.coverage reporting a measured 0% (Rule 25)', async () => {
         expect.hasAssertions();
 
+        // Domínio (§25): um report de coverage presente com 0% é um valor MEDIDO —
+        // escondê-lo como noData mascararia condição crítica (projeto sem cobertura).
         const raw: RawData = {
             ...makeRawDataWithRuns([makeRun()]),
             coverage: { total: 0, covered: 0, percentage: 0 },
         };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is available from parsed-artifact coverage reporting a measured 0% (Rule 25)', async () => {
+        expect.hasAssertions();
+
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 0, covered: 0, percentage: 0 })]],
+        ]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is available when raw.coverage is a real 0% (statements instrumented, none covered)', async () => {
+        expect.hasAssertions();
+
+        // Domínio (§25): 100 statements instrumentados e 0 cobertos = 0% REAL,
+        // não ausência de dados. Deve aparecer como 0%, nunca como "N/A".
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 100, covered: 0, percentage: 0 },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
+        expect(dim(hub, 'Coverage')?.score).toBe(0);
+    });
+
+    it('b2: Coverage is noData when raw.coverage percentage is not finite (missing measurement)', async () => {
+        expect.hasAssertions();
+
+        // Domínio (§25): percentage não-finito = medição ausente (não um 0% medido).
+        const raw: RawData = {
+            ...makeRawDataWithRuns([makeRun()]),
+            coverage: { total: 0, covered: 0, percentage: NaN },
+        };
+
+        const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
+
+        expect(dim(hub, 'Coverage')?.noData).toBeTruthy();
+    });
+
+    it('b2: Coverage is noData when parsed-artifact coverage percentage is not finite', async () => {
+        expect.hasAssertions();
+
+        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
+            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 0, covered: 0, percentage: NaN })]],
+        ]);
+        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
 
         const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
 
@@ -558,17 +619,16 @@ describe('DataHubImpl — data availability (B2/§25)', () => {
         expect(dim(hub, 'Coverage')?.noData).toBeFalsy();
     });
 
-    it('b2: Coverage is noData when parsed-artifact coverage percentage is zero', async () => {
+    it('b2: Pass Rate is available from a run with conclusion even when test counts are zero', async () => {
         expect.hasAssertions();
 
-        const parsedArtifacts = new Map<number, ArtifactParseResult[]>([
-            [1, [makeArtifact({ passed: 1, failed: 0 }, { total: 0, covered: 0, percentage: 0 })]],
-        ]);
-        const raw: RawData = { ...makeEmptyRawData(), parsedArtifacts };
+        // Domínio: uma pipeline run com conclusion é fonte REAL de passRate mesmo sem
+        // contagens de teste — o primeiro operando do || sozinho já indica presença.
+        const raw: RawData = makeRawDataWithRuns([makeRun({ id: 1, conclusion: 'success' })]);
 
         const { hub } = await DataHubImpl.create([makeProvider(raw)], { repo: 'test/repo' }, createMockPersistence());
 
-        expect(dim(hub, 'Coverage')?.noData).toBeTruthy();
+        expect(dim(hub, 'Pass Rate')?.noData).toBeFalsy();
     });
 
     it('b2: Suite Speed is available from run timing data (zero-duration run is still a source)', async () => {

@@ -975,15 +975,16 @@ export class DataHubImpl implements DataHub {
 
     private static computeCoverage(raw: RawData): number {
         // First, try to get coverage from raw.coverage (extracted from job logs)
-        if (raw.coverage != null) {
-            const result = calcCoverageFromRaw(raw.coverage);
-            if (result.total > 0) return result.total;
+        // A finite percentage (including a measured 0%) is a real data source —
+        // hiding 0% as noData would mask a critical condition (AGENTS.md §25).
+        if (raw.coverage != null && Number.isFinite(raw.coverage.percentage)) {
+            return calcCoverageFromRaw(raw.coverage).total;
         }
         // Fallback: extract coverage from parsed CTRF artifacts
         if (raw.parsedArtifacts != null) {
             for (const artifacts of raw.parsedArtifacts.values()) {
                 for (const artifact of artifacts) {
-                    if (artifact.coverage != null && artifact.coverage.percentage > 0) {
+                    if (artifact.coverage != null && Number.isFinite(artifact.coverage.percentage)) {
                         return artifact.coverage.percentage;
                     }
                 }
@@ -994,14 +995,15 @@ export class DataHubImpl implements DataHub {
 
     /** Whether a real coverage source exists (mirrors computeCoverage sources). */
     private static coverageSourcePresent(raw: RawData): boolean {
-        if (raw.coverage != null) {
-            const result = calcCoverageFromRaw(raw.coverage);
-            if (result.total > 0) return true;
+        // A coverage report is a real data source even at 0% — only absent reports
+        // or non-finite percentages (missing measurement) count as "no data".
+        if (raw.coverage != null && Number.isFinite(raw.coverage.percentage)) {
+            return true;
         }
         if (raw.parsedArtifacts != null) {
             for (const artifacts of raw.parsedArtifacts.values()) {
                 for (const artifact of artifacts) {
-                    if (artifact.coverage != null && artifact.coverage.percentage > 0) {
+                    if (artifact.coverage != null && Number.isFinite(artifact.coverage.percentage)) {
                         return true;
                     }
                 }
