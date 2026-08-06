@@ -223,6 +223,79 @@ describe('IssueLinkService', () => {
         });
     });
 
+    describe('linkSourceToTargets — normalização para Test Coverage (§1.1)', () => {
+        function makeRealInstance() {
+            const ltm = makeLinkTypeManager();
+            vi.mocked(ltm.getLinkTypeByName).mockImplementation(async (name: string) => {
+                const lower = name.trim().toLowerCase();
+                if (lower === 'is a test for' || lower === 'is tested by' || lower === 'test') {
+                    return { id: '10042', name: 'Test', inward: 'is tested by', outward: 'is a test for' };
+                }
+                if (lower === 'tests' || lower === 'tested by') {
+                    return { id: '10007', name: 'Tests', inward: 'tested by', outward: 'tests' };
+                }
+                return null;
+            });
+            const jira = makeJiraResource({
+                getJiraResource: vi.fn().mockResolvedValue({ fields: { issuelinks: [] } }),
+            });
+            return { service: new IssueLinkService(jira, ltm), jira, ltm };
+        }
+
+        it('CSV "is a test for" → cria link com tipo Tests (coverage), NÃO Test', async () => {
+            expect.hasAssertions();
+            const { service, jira } = makeRealInstance();
+
+            const result = await service.linkSourceToTargets('ECSPOL-1847', [
+                { key: 'ECSPOL-1498', linkType: 'is a test for' },
+            ]);
+
+            expect(result).toEqual({ created: 1, skipped: 0, failed: [], missing: [] });
+            expect(jira.postJiraResource).toHaveBeenCalledWith(
+                'issueLink',
+                expect.objectContaining({
+                    type: { id: '10007' },
+                    inwardIssue: { key: 'ECSPOL-1498' },
+                    outwardIssue: { key: 'ECSPOL-1847' },
+                }),
+            );
+        });
+
+        it('linkType "is tested by" (inward do tipo Test) → normaliza para Tests', async () => {
+            expect.hasAssertions();
+            const { service, jira } = makeRealInstance();
+
+            await service.linkSourceToTargets('ECSPOL-1847', [{ key: 'ECSPOL-1498', linkType: 'is tested by' }]);
+
+            expect(jira.postJiraResource).toHaveBeenCalledWith(
+                'issueLink',
+                expect.objectContaining({ type: { id: '10007' } }),
+            );
+        });
+
+        it('linkType não relacionado a test (ex: Relates) → NÃO normaliza', async () => {
+            expect.hasAssertions();
+            const ltm = makeLinkTypeManager();
+            vi.mocked(ltm.getLinkTypeByName).mockImplementation(async (name: string) => {
+                const lower = name.trim().toLowerCase();
+                if (lower === 'relates')
+                    return { id: '11701', name: 'Relates', inward: 'relates to', outward: 'relates to' };
+                return null;
+            });
+            const jira = makeJiraResource({
+                getJiraResource: vi.fn().mockResolvedValue({ fields: { issuelinks: [] } }),
+            });
+            const service = new IssueLinkService(jira, ltm);
+
+            await service.linkSourceToTargets('ECSPOL-1847', [{ key: 'ECSPOL-1498', linkType: 'Relates' }]);
+
+            expect(jira.postJiraResource).toHaveBeenCalledWith(
+                'issueLink',
+                expect.objectContaining({ type: { id: '11701' } }),
+            );
+        });
+    });
+
     describe('resolveDirection — validação de orientação por instância (§4.3)', () => {
         afterEach(() => {
             vi.restoreAllMocks();

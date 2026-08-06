@@ -394,6 +394,44 @@ describe('TestCaseFactory', () => {
             Config.set('targetKeys', '');
         });
 
+        it('uses explicitly set target keys over global Config when provided', async () => {
+            expect.hasAssertions();
+
+            factory.setTargetKeys(['ECSPOL-1605']);
+            mockJiraResource.getJiraResource.mockResolvedValue({ key: 'ECSPOL-1605' });
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Some Title',
+                testIdx: 0,
+                totalTests: 3,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
+            expect(mockJiraResource['getJiraResource']).toHaveBeenCalledWith('issue/ECSPOL-1605');
+        });
+
+        it('parses a single target key as one element, not per-character', async () => {
+            expect.hasAssertions();
+
+            Config.set('targetKeys', 'ECSPOL-1605');
+            mockJiraResource.getJiraResource.mockResolvedValue({ key: 'ECSPOL-1605' });
+
+            const result = await factory.createIssue({
+                testData,
+                testTitle: 'Some Title',
+                testIdx: 0,
+                totalTests: 1,
+                opLog,
+                skipExisting: true,
+            });
+
+            expect(result).toStrictEqual({ key: 'ECSPOL-1605', updated: true });
+            expect(mockJiraResource['getJiraResource']).toHaveBeenCalledWith('issue/ECSPOL-1605');
+        });
+
         it('updates by target key when targetKeys is set', async () => {
             expect.hasAssertions();
 

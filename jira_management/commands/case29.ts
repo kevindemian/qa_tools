@@ -37,9 +37,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             .split(',')
             .map((k) => k.trim())
             .filter(Boolean);
-        if (targetKeys.length > 0) {
-            Config.set('targetKeys', targetKeys.join(','));
-        }
 
         Config.set('dryRun', true);
 
@@ -56,10 +53,10 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 c.ctx.isBusy = val;
             },
             csvPath: csvPath,
+            ...(targetKeys.length > 0 ? { targetKeys } : {}),
         });
 
         Config.set('dryRun', false);
-        Config.set('targetKeys', '');
 
         if (!result.ok) {
             const detail = describeCsvFailure(result.reason, csvPath);
@@ -72,7 +69,6 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         c.ctx.lastOperation = result.result.summary;
     } catch (err: unknown) {
         Config.set('dryRun', false);
-        Config.set('targetKeys', '');
         const msg = 'Falha ao simular importação CSV';
         printError(msg, err);
         rootLogger.error('case29 handler failed', { error: String(err), project: c.ctx.project_name });

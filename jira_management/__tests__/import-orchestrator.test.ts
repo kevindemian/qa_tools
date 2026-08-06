@@ -4,6 +4,7 @@ vi.mock('../../shared/ui/prompt.js', () => ({
     print: vi.fn(),
     printSummary: vi.fn(),
     isQuiet: vi.fn().mockReturnValue(true),
+    prompt: vi.fn().mockReturnValue(''),
 }));
 
 vi.mock('../../shared/state', () => ({
@@ -42,7 +43,7 @@ vi.mock('../import-loop', () => ({
     updateFinalState: vi.fn(),
 }));
 
-import { createMockLogger } from '../../shared/test-utils.js';
+import { createMockLogger, nonNull } from '../../shared/test-utils.js';
 import { createMockLinkManager } from '../../shared/test-utils/factories/index.js';
 import IssueLinker from '../issue-linker.js';
 import type { JiraResourceLike } from '../../shared/types.js';
@@ -93,6 +94,113 @@ describe('Import Orchestrator', () => {
     });
 
     describe('PrepareTestRun', () => {
+        it('does not reuse manually-entered target keys from a previous run (state leak)', async () => {
+            expect.hasAssertions();
+
+            const jiraResource: JiraResourceLike = {
+                getJiraResource: vi.fn(),
+                postJiraResource: vi.fn(),
+                putJiraResource: vi.fn(),
+                deleteJiraResource: vi.fn(),
+                searchJiraIssues: vi.fn(),
+                getTransitionsForIssue: vi.fn(),
+                transitionIssue: vi.fn(),
+            };
+
+            const promptMock = (await import('../../shared/ui/prompt.js')).prompt as ReturnType<typeof vi.fn>;
+
+            promptMock.mockReset();
+            promptMock.mockReturnValue('ECSPOL-1835');
+
+            await prepareTestRun({
+                tests: makeTestCases(2),
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                onBusy,
+                warn,
+                jiraResource,
+            });
+
+            const Config = (await import('../../shared/config-accessor.js')).default;
+            expect(Config.get('targetKeys')).toBe('');
+        });
+
+        it('parses a single target key as one element, not per-character', async () => {
+            expect.hasAssertions();
+
+            const jiraResource: JiraResourceLike = {
+                getJiraResource: vi.fn(),
+                postJiraResource: vi.fn(),
+                putJiraResource: vi.fn(),
+                deleteJiraResource: vi.fn(),
+                searchJiraIssues: vi.fn(),
+                getTransitionsForIssue: vi.fn(),
+                transitionIssue: vi.fn(),
+            };
+
+            const promptMock = (await import('../../shared/ui/prompt.js')).prompt as ReturnType<typeof vi.fn>;
+            promptMock.mockReset();
+            promptMock.mockReturnValue('ECSPOL-1835');
+
+            await prepareTestRun({
+                tests: makeTestCases(1),
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                onBusy,
+                warn,
+                jiraResource,
+            });
+
+            const info = (await import('../../shared/ui/prompt.js')).info as ReturnType<typeof vi.fn>;
+            const orderedLine = info.mock.calls.find((c) => String(c[0]).includes('CSV[1]'));
+            expect(orderedLine).toBeDefined();
+            expect(String(nonNull(orderedLine)[0])).toBe('  CSV[1] → ECSPOL-1835');
+        });
+
+        it('uses explicit targetKeys param and never prompts nor reads Config', async () => {
+            expect.hasAssertions();
+
+            const jiraResource: JiraResourceLike = {
+                getJiraResource: vi.fn(),
+                postJiraResource: vi.fn(),
+                putJiraResource: vi.fn(),
+                deleteJiraResource: vi.fn(),
+                searchJiraIssues: vi.fn(),
+                getTransitionsForIssue: vi.fn(),
+                transitionIssue: vi.fn(),
+            };
+
+            const promptMock = (await import('../../shared/ui/prompt.js')).prompt as ReturnType<typeof vi.fn>;
+            promptMock.mockReset();
+            promptMock.mockReturnValue('ECSPOL-9999');
+
+            const Config = (await import('../../shared/config-accessor.js')).default;
+            Config.set('targetKeys', 'ECSPOL-8888');
+
+            await prepareTestRun({
+                tests: makeTestCases(2),
+                sourcePath: '/p.csv',
+                sourceType: 'csv',
+                project_name: 'PROJ',
+                jiraLabels: [],
+                onBusy,
+                warn,
+                jiraResource,
+                targetKeys: ['ECSPOL-1001', 'ECSPOL-1002'],
+            });
+
+            expect(promptMock).not.toHaveBeenCalled();
+            const info = (await import('../../shared/ui/prompt.js')).info as ReturnType<typeof vi.fn>;
+            const orderedLine = info.mock.calls.find((c) => String(c[0]).includes('CSV[1]'));
+            expect(orderedLine).toBeDefined();
+            expect(String(nonNull(orderedLine)[0])).toBe('  CSV[1] → ECSPOL-1001');
+            Config.set('targetKeys', '');
+        });
+
         it('user cancels via confirmOrCancel', async () => {
             vi.mocked(confirmOrCancel).mockReturnValue(false);
             const result = await prepareTestRun({

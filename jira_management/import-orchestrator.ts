@@ -32,6 +32,7 @@ interface CreateTestsFromTestCasesParams {
     sourceType: string;
     jiraLabels: string[];
     batchFields?: BatchFields;
+    targetKeys?: string[];
 }
 
 export type CreateTestsFromTestCasesResult = {
@@ -52,6 +53,7 @@ type PrepareTestRunResult =
           inMemoryTasksId: string[];
           inMemoryTasksText: string[];
           opLog: ReturnType<typeof rootLogger.child>;
+          targetKeys: string[];
       }
     | undefined;
 
@@ -65,6 +67,7 @@ interface PrepareTestRunOptions {
     onBusy: (busy: boolean) => void;
     warn: (msg: string) => void;
     jiraResource?: JiraResourceLike;
+    targetKeys?: string[];
 }
 
 async function findExistingMatches(
@@ -95,8 +98,18 @@ async function resolveTargetKeys(
     project_name: string,
     warn: (msg: string) => void,
     info: (msg: string) => void,
+    explicit?: string[],
 ): Promise<string[]> {
-    let targetKeys = Config.get<string[]>('targetKeys');
+    let targetKeys = explicit ? [...explicit] : [];
+    if (targetKeys.length === 0) {
+        const raw = Config.get<string>('targetKeys');
+        targetKeys = raw
+            ? raw
+                  .split(',')
+                  .map((k) => k.trim())
+                  .filter(Boolean)
+            : [];
+    }
     if (targetKeys.length === 0 && !Config.get('autoConfirm') && jiraResource) {
         const targetKeysInput = prompt('Mapear por chave Jira? (ex: ECSPOL-1605,ECSPOL-1606,... ou Enter para skip)');
         if (targetKeysInput.trim()) {
@@ -104,7 +117,6 @@ async function resolveTargetKeys(
                 .split(',')
                 .map((k) => k.trim())
                 .filter(Boolean);
-            Config.set('targetKeys', targetKeys.join(','));
         }
     }
     if (targetKeys.length > 0) {
@@ -134,7 +146,18 @@ async function resolveTargetKeys(
 }
 
 async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestRunResult> {
-    const { tests, sourcePath, sourceType, project_name, jiraLabels, batchFields, onBusy, warn, jiraResource } = opts;
+    const {
+        tests,
+        sourcePath,
+        sourceType,
+        project_name,
+        jiraLabels,
+        batchFields,
+        onBusy,
+        warn,
+        jiraResource,
+        targetKeys,
+    } = opts;
     const validationResult = validateImportBatch(tests, sourcePath, sourceType, project_name);
     if (validationResult === undefined) return;
     const { resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = validationResult;
@@ -146,7 +169,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     const filtered = filterTests(tests);
     if (filtered === null) return;
 
-    await resolveTargetKeys(jiraResource, filtered, project_name, warn, info);
+    const resolvedTargetKeys = await resolveTargetKeys(jiraResource, filtered, project_name, warn, info, targetKeys);
 
     if (!confirmOrCancel()) {
         warn(OPERATION_CANCELLED);
@@ -166,7 +189,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
         };
     }
 
-    return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog };
+    return { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog, targetKeys: resolvedTargetKeys };
 }
 
 interface FinalizeTestCreationParams {
@@ -349,9 +372,21 @@ function testCreationSetup(
     jiraResource: JiraResourceLike,
     jiraResourceXray: JiraResourceLike,
     linkManager: JiraLinkManager,
+    targetKeys: string[] = [],
 ): { stepImporter: XrayStepImporter; factory: TestCaseFactory; linker: IssueLinker; results: TestResult[] } {
-    const stepImporter = createStepImporter(jiraResourceXray, Config.get('xrayMode'));
+    const xrayMode = Config.get('xrayMode');
+    const mode: 'server' | 'cloud' = xrayMode === 'cloud' ? 'cloud' : 'server';
+    // The step importer resource depends on the mode (root cause of BUG 8, §4):
+    //  - Cloud mode: CloudStepImporter resolves the Jira numeric id via
+    //    GET issue/{key} — it needs the JIRA resource (base Jira URL).
+    //  - Server mode: ServerStepImporter POSTs test/{key}/steps to the Xray
+    //    Server base — it needs the XRAY resource.
+    // Passing a single hardcoded resource breaks one of the two modes (§7
+    // system consistency): server mode got a Jira base URL, cloud mode got an
+    // Xray base URL that does not serve `issue/*`.
+    const stepImporter = createStepImporter(mode === 'cloud' ? jiraResource : jiraResourceXray, mode);
     const factory = new TestCaseFactory(jiraResource, stepImporter);
+    factory.setTargetKeys(targetKeys);
     const snapshotCtx = buildSnapshotContext(jiraResource, linkManager);
     if (snapshotCtx) {
         factory.setSnapshotContext(snapshotCtx);
@@ -438,6 +473,7 @@ async function createTestsFromTestCases(
         onBusy: params.onBusy,
         warn,
         jiraResource: params.jiraResource,
+        ...(params.targetKeys && params.targetKeys.length > 0 ? { targetKeys: params.targetKeys } : {}),
     });
     if (prepared === undefined || 'summary' in prepared) {
         if (prepared === undefined) {
@@ -448,13 +484,14 @@ async function createTestsFromTestCases(
         }
         return prepared;
     }
-    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog } = prepared;
+    const { tests: filtered, resumeFrom, inMemoryTasksId, inMemoryTasksText, opLog, targetKeys } = prepared;
 
     info('Passo 2 de 5: Preparando criação de testes...');
     const { factory, linker, results } = testCreationSetup(
         params.jiraResource,
         params.jiraResourceXray,
         params.linkManager,
+        targetKeys,
     );
     params.onBusy(true);
     opLog.info('Iniciando criação de ' + filtered.length + ' teste(s)');

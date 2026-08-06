@@ -53,6 +53,23 @@ export const ORIENTATION_HINTS: Readonly<Record<string, OrientationHint>> = {
     Tests: { inward: 'is tested by', outward: 'tests' },
 };
 
+/** Phrasings of the legacy/duplicate `Test` link type that do NOT populate Xray
+ *  Test Coverage. They describe the same semantic relation (a test covers a
+ *  requirement) as the `Tests` type, so they MUST be normalized to `Tests` —
+ *  otherwise the created link is invisible to Xray's Test Coverage field
+ *  (defect: coverage silently not computed, §25). Non-coverage link types
+ *  (Relates, Blocks, Pre-Condition, ...) are left untouched. */
+const TEST_COVERAGE_LINK_TYPE_ALIASES = new Set(['is a test for', 'is tested by', 'test', 'tested by', 'tests']);
+
+/** Normalize a raw link-type phrase to the semantic `Tests` type when it
+ *  describes a test→requirement coverage relation. Returns the input unchanged
+ *  for every other link type (no speculative normalization, §9). */
+function normalizeCoverageLinkType(linkType: string): string {
+    const normalized = linkType.trim().toLowerCase();
+    if (TEST_COVERAGE_LINK_TYPE_ALIASES.has(normalized)) return 'Tests';
+    return linkType.trim();
+}
+
 /** Normalize a phrase for comparison: lowercase, collapsed whitespace, trimmed. */
 function normPhrase(s: string | undefined): string {
     return (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -564,7 +581,7 @@ export class IssueLinkService {
             }
             try {
                 const outcome = await this.createLink({
-                    linkType: target.linkType.trim(),
+                    linkType: normalizeCoverageLinkType(target.linkType),
                     inwardKey: target.key.trim(),
                     outwardKey: sourceKey.trim(),
                 });

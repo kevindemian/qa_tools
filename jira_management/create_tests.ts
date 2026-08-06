@@ -34,6 +34,7 @@ interface CreateFromFileParams {
     onBusy: (busy: boolean) => void;
     filePath?: string;
     jiraLabels?: string[];
+    targetKeys?: string[];
 }
 
 /** Why a CSV/JSON read did not yield tests. Empty and missing must stay distinguishable (AGENTS.md §25). */
@@ -120,6 +121,7 @@ async function createTestsFromCsv({
     onBusy,
     csvPath: csvPathInput,
     jiraLabels: jiraLabelsInput,
+    targetKeys: targetKeysInput,
 }: CreateFromFileParams & {
     csvResource: CsvResource;
     csvPath?: string;
@@ -147,6 +149,7 @@ async function createTestsFromCsv({
             sourceType: 'csv',
             jiraLabels,
             ...(batchFields ? { batchFields } : {}),
+            ...(targetKeysInput && targetKeysInput.length > 0 ? { targetKeys: targetKeysInput } : {}),
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -172,6 +175,7 @@ async function createTestsFromJson({
     onBusy,
     jsonPath: jsonPathInput,
     jiraLabels: jiraLabelsInput,
+    targetKeys: targetKeysInput,
 }: CreateFromFileParams & {
     jsonPath?: string;
 }): Promise<CsvImportOutcome> {
@@ -198,6 +202,7 @@ async function createTestsFromJson({
         sourceType: 'json',
         jiraLabels,
         ...(batchFields ? { batchFields } : {}),
+        ...(targetKeysInput && targetKeysInput.length > 0 ? { targetKeys: targetKeysInput } : {}),
     });
     if (!result) return { ok: false, reason: 'read-error', error: 'Falha ao criar testes a partir do JSON.' };
     return {

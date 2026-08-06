@@ -109,7 +109,7 @@ describe('Case29', () => {
         expect(resetCall).toBeDefined();
     });
 
-    it('parses target-keys from comma-separated input', async () => {
+    it('parses target-keys from comma-separated input and passes them as param', async () => {
         expect.hasAssertions();
 
         mockAsk.mockImplementation(async (q: string) => {
@@ -131,10 +131,13 @@ describe('Case29', () => {
 
         await case29.handler(mockContext);
 
-        expect(mockConfigSet).toHaveBeenCalledWith('targetKeys', 'KEY-1,KEY-2');
+        const call = mockCreateTests.mock.calls[0]?.[0] as { targetKeys?: string[] };
+        expect(call.targetKeys).toEqual(['KEY-1', 'KEY-2']);
+        const setTargetKeysCalls = mockConfigSet.mock.calls.filter(([k]) => k === 'targetKeys');
+        expect(setTargetKeysCalls).toHaveLength(0);
     });
 
-    it('does not set targetKeys to a value when input is empty', async () => {
+    it('does not pass targetKeys param when input is empty', async () => {
         expect.hasAssertions();
 
         mockAsk.mockResolvedValue('');
@@ -153,9 +156,10 @@ describe('Case29', () => {
 
         await case29.handler(mockContext);
 
+        const call = mockCreateTests.mock.calls[0]?.[0] as { targetKeys?: string[] };
+        expect(call.targetKeys).toBeUndefined();
         const setTargetKeysCalls = mockConfigSet.mock.calls.filter(([k]) => k === 'targetKeys');
-        const nonEmptySets = setTargetKeysCalls.filter(([, v]) => v !== '');
-        expect(nonEmptySets).toHaveLength(0);
+        expect(setTargetKeysCalls).toHaveLength(0);
     });
 
     it('records history on success', async () => {
@@ -203,7 +207,7 @@ describe('Case29', () => {
         expect(mockContext.pushHistory).toHaveBeenCalledWith('dry-run', 'erro', 'error');
     });
 
-    it('resets targetKeys after completion', async () => {
+    it('never writes targetKeys to Config (no state leak)', async () => {
         expect.hasAssertions();
 
         mockAsk.mockImplementation(async (q: string) => {
@@ -225,7 +229,7 @@ describe('Case29', () => {
 
         await case29.handler(mockContext);
 
-        const resetKeys = mockConfigSet.mock.calls.find(([k, v]) => k === 'targetKeys' && v === '');
-        expect(resetKeys).toBeDefined();
+        const setTargetKeysCalls = mockConfigSet.mock.calls.filter(([k]) => k === 'targetKeys');
+        expect(setTargetKeysCalls).toHaveLength(0);
     });
 });

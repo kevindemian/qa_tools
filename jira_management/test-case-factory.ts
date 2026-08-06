@@ -44,10 +44,17 @@ class TestCaseFactory {
     stepImporter: XrayStepImporter;
     private _snapshotCtx: SnapshotContext | null = null;
     private _stepFailureHandler: StepFailureHandler | null = null;
+    private _targetKeys: string[] | null = null;
 
     constructor(jiraResource: JiraResourceLike, stepImporter: XrayStepImporter) {
         this.jiraResource = jiraResource;
         this.stepImporter = stepImporter;
+    }
+
+    /** Set target keys explicitly for this import run. When set, they take
+     *  precedence over global Config (CLI --target-keys). */
+    setTargetKeys(keys: string[]): void {
+        this._targetKeys = keys;
     }
 
     /** Set the snapshot context for clean-slate updates.
@@ -63,6 +70,7 @@ class TestCaseFactory {
     }
 
     private _getTargetKeys(): string[] {
+        if (this._targetKeys !== null) return this._targetKeys;
         const raw = Config.get<string>('targetKeys');
         return raw ? raw.split(',').filter(Boolean) : [];
     }
