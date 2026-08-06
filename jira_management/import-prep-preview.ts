@@ -1,9 +1,9 @@
-/** Preview rendering — Markdown generation, terminal/HTML preview, test filtering, confirmation. */
+/** Preview rendering — Markdown generation, terminal/HTML preview, confirmation. */
 import Config from '../shared/config-accessor.js';
 import { md, mdToHtml } from '../shared/report/markdown.js';
 import { writeEphemeral } from '../shared/infra/temp-dir.js';
 import { openWithOsOrFallback } from '../shared/open.js';
-import { confirm, info, warn, print, title, divider, prompt } from '../shared/ui/prompt.js';
+import { confirm, info, print, title, divider } from '../shared/ui/prompt.js';
 import type { TestCase, BatchFields, TestExecutionDeclaration } from '../shared/types.js';
 
 /** Options for {@link generatePreviewMarkdown}. */
@@ -140,24 +140,6 @@ export async function showPreview(
         info('Nao foi possivel abrir o navegador. Preview salvo em: ' + mdPath);
         info('HTML alternativo: ' + htmlPath);
     }
-}
-
-export function filterTests(tests: TestCase[]): TestCase[] | null {
-    if (Config.get('autoConfirm')) return tests;
-
-    const filterText = prompt('Filtrar testes por titulo? (Enter para todos)');
-    if (!filterText.trim()) return tests;
-
-    const filtered = tests.filter((t) => t.title.toLowerCase().includes(filterText.trim().toLowerCase()));
-    if (filtered.length === 0) {
-        warn('Nenhum teste corresponde a "' + filterText.trim() + '".');
-        return null;
-    }
-    info(filtered.length + '/' + tests.length + ' testes correspondem a "' + filterText.trim() + '"');
-    if (!confirm('Criar apenas estes ' + filtered.length + ' testes?')) {
-        throw new Error('Importacao cancelada pelo usuario na etapa de filtragem.');
-    }
-    return filtered;
 }
 
 export function confirmOrCancel(): boolean {

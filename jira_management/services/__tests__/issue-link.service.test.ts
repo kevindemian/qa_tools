@@ -223,7 +223,7 @@ describe('IssueLinkService', () => {
         });
     });
 
-    describe('linkSourceToTargets — normalização para Test Coverage (§1.1)', () => {
+    describe('linkSourceToTargets — resolução de tipo sem normalização (§1.1)', () => {
         function makeRealInstance() {
             const ltm = makeLinkTypeManager();
             vi.mocked(ltm.getLinkTypeByName).mockImplementation(async (name: string) => {
@@ -242,7 +242,7 @@ describe('IssueLinkService', () => {
             return { service: new IssueLinkService(jira, ltm), jira, ltm };
         }
 
-        it('CSV "is a test for" → cria link com tipo Tests (coverage), NÃO Test', async () => {
+        it('CSV "is a test for" → resolve para Test (10042), direção inward=US, outward=TC', async () => {
             expect.hasAssertions();
             const { service, jira } = makeRealInstance();
 
@@ -254,14 +254,14 @@ describe('IssueLinkService', () => {
             expect(jira.postJiraResource).toHaveBeenCalledWith(
                 'issueLink',
                 expect.objectContaining({
-                    type: { id: '10007' },
+                    type: { id: '10042' },
                     inwardIssue: { key: 'ECSPOL-1498' },
                     outwardIssue: { key: 'ECSPOL-1847' },
                 }),
             );
         });
 
-        it('linkType "is tested by" (inward do tipo Test) → normaliza para Tests', async () => {
+        it('linkType "is tested by" (inward do tipo Test) → resolve para Test (10042)', async () => {
             expect.hasAssertions();
             const { service, jira } = makeRealInstance();
 
@@ -269,11 +269,15 @@ describe('IssueLinkService', () => {
 
             expect(jira.postJiraResource).toHaveBeenCalledWith(
                 'issueLink',
-                expect.objectContaining({ type: { id: '10007' } }),
+                expect.objectContaining({
+                    type: { id: '10042' },
+                    inwardIssue: { key: 'ECSPOL-1498' },
+                    outwardIssue: { key: 'ECSPOL-1847' },
+                }),
             );
         });
 
-        it('linkType não relacionado a test (ex: Relates) → NÃO normaliza', async () => {
+        it('linkType não relacionado a test (ex: Relates) → resolve normalmente', async () => {
             expect.hasAssertions();
             const ltm = makeLinkTypeManager();
             vi.mocked(ltm.getLinkTypeByName).mockImplementation(async (name: string) => {
@@ -301,35 +305,43 @@ describe('IssueLinkService', () => {
             vi.restoreAllMocks();
         });
 
-        it('orientação consistente (inward=is tested by) → link criado SEM warn', async () => {
+        it('orientação consistente (inward=is tested by, outward=is a test for) → link criado SEM warn', async () => {
             expect.hasAssertions();
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
             const { service, ltm } = setupLinks();
             vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({
-                id: '10600',
-                name: 'Tests',
+                id: '10042',
+                name: 'Test',
                 inward: 'is tested by',
-                outward: 'tests',
+                outward: 'is a test for',
             });
 
-            const outcome = await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+            const outcome = await service.createLink({
+                linkType: 'Test',
+                inwardKey: 'US-1',
+                outwardKey: 'TEST-1',
+            });
 
             expect(outcome).toBe('created');
             expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
         });
 
-        it('orientação INVERTIDA (inward=tests, outward=is tested by) → warn explícito mas link criado', async () => {
+        it('orientação INVERTIDA (inward=is a test for, outward=is tested by) → warn explícito mas link criado', async () => {
             expect.hasAssertions();
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
             const { service, ltm, jira } = setupLinks();
             vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({
-                id: '10600',
-                name: 'Tests',
-                inward: 'tests',
+                id: '10042',
+                name: 'Test',
+                inward: 'is a test for',
                 outward: 'is tested by',
             });
 
-            const outcome = await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+            const outcome = await service.createLink({
+                linkType: 'Test',
+                inwardKey: 'US-1',
+                outwardKey: 'TEST-1',
+            });
 
             expect(outcome).toBe('created');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
@@ -340,9 +352,9 @@ describe('IssueLinkService', () => {
             expect.hasAssertions();
             const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => undefined);
             const { service, ltm } = setupLinks();
-            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({ id: '10600', name: 'Tests' });
+            vi.mocked(ltm.getLinkTypeByName).mockResolvedValue({ id: '10042', name: 'Test' });
 
-            await service.createLink({ linkType: 'Tests', inwardKey: 'US-1', outwardKey: 'TEST-1' });
+            await service.createLink({ linkType: 'Test', inwardKey: 'US-1', outwardKey: 'TEST-1' });
 
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('orientação divergente') as string);
         });

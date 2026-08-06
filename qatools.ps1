@@ -10,10 +10,15 @@ param(
 $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
 if ($wsl -or $env:WSL_DISTRO_NAME) {
     $shPath = Join-Path $PSScriptRoot "qatools.sh"
+    $shWslPath = (wsl.exe wslpath -u ($shPath -replace '\\', '/')).Trim()
+    if ([string]::IsNullOrWhiteSpace($shWslPath)) {
+        Write-Host "`n  ERRO: nao foi possivel converter o caminho para WSL." -ForegroundColor Red
+        exit 1
+    }
     if ($tool) {
-        wsl.exe -e bash $shPath $tool $args
+        wsl.exe -e bash $shWslPath $tool $args
     } else {
-        wsl.exe -e bash $shPath $args
+        wsl.exe -e bash $shWslPath $args
     }
     exit $LASTEXITCODE
 }

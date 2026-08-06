@@ -7,7 +7,7 @@ import IssueLinker from './issue-linker.js';
 import MappingFileGenerator from './mapping-file-generator.js';
 import { rootLogger } from '../shared/logger.js';
 import { update as updateState } from '../shared/state.js';
-import { showPreview, filterTests, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
+import { showPreview, confirmOrCancel, validateImportBatch, handleDryRun } from './import-prep.js';
 import { executeTestCreationLoop, updateFinalState, type TestCreationLoopOptions } from './import-loop.js';
 import { OPERATION_CANCELLED } from './constants.js';
 import { info, warn, isQuiet, print, printSummary, prompt } from '../shared/ui/prompt.js';
@@ -170,17 +170,14 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     const groupsCount = new Set(tests.map((t) => t.group).filter(Boolean)).size;
     await showPreview(tests, jiraLabels, totalSteps, groupsCount, undefined, batchFields);
 
-    const filtered = filterTests(tests);
-    if (filtered === null) return;
-
-    const resolvedTargetKeys = await resolveTargetKeys(jiraResource, filtered, project_name, warn, info, targetKeys);
+    const resolvedTargetKeys = await resolveTargetKeys(jiraResource, tests, project_name, warn, info, targetKeys);
 
     if (!confirmOrCancel()) {
         warn(OPERATION_CANCELLED);
         return;
     }
 
-    const dryRunResult = await handleDryRun(filtered, onBusy, sourcePath);
+    const dryRunResult = await handleDryRun(tests, onBusy, sourcePath);
     if (dryRunResult) {
         return {
             inMemoryTasksId: dryRunResult.inMemoryTasksId,
@@ -194,7 +191,7 @@ async function prepareTestRun(opts: PrepareTestRunOptions): Promise<PrepareTestR
     }
 
     return {
-        tests: filtered,
+        tests,
         resumeFrom,
         inMemoryTasksId,
         inMemoryTasksText,

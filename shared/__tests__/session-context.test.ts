@@ -159,7 +159,7 @@ describe('ResolveSessionContext', () => {
         vi.mocked(getDataHub).mockReturnValue(makeDataHubMock());
 
         const ctx = new SessionContext();
-        const result = resolveSessionContext(ctx, 'test-project');
+        const result = await resolveSessionContext(ctx, 'test-project');
 
         expect(result.sha).toBe('abc123def456');
         expect(result.branch).toBe('main');
@@ -178,7 +178,7 @@ describe('ResolveSessionContext', () => {
         vi.mocked(getDataHub).mockReturnValue(makeDataHubMock());
 
         const ctx = new SessionContext();
-        const result = resolveSessionContext(ctx, 'test-project');
+        const result = await resolveSessionContext(ctx, 'test-project');
 
         expect(result.sha).toBeNull();
         expect(result.branch).toBeNull();

@@ -2,10 +2,7 @@ import chalk from 'chalk';
 import * as readline from 'readline';
 import { print, success, error, warn, info, divider, confirm } from './prompt.js';
 import { rootLogger } from '../logger.js';
-import { formatErr } from '../errors.js';
 import Config from '../config-accessor.js';
-import { getDataHub } from '../data-hub/global-hub.js';
-import { calculateHealthScore } from '../quality/health-score.js';
 import { ExitCode } from '../types.js';
 import { cleanupTempDirs } from '../infra/temp-dir.js';
 
@@ -13,7 +10,10 @@ const _sessionStart = Date.now();
 const CREDENTIAL_MIN_LENGTH = 20;
 const MASK_VISIBLE_CHARS = 4;
 const LAST_OPS_COUNT = 5;
-const EXIT_DELAY_MS = 2000;
+/** Drain window for piped stdout/stderr (non-TTY/CI) before process.exit.
+ * Writes are synchronous (appendFileSync / TTY line-buffered), so this only
+ * covers pipe buffering for the short CLI outputs; 2s was overkill. */
+const EXIT_PIPE_DRAIN_MS = 300;
 
 interface EnvConfig {
     key: string;
@@ -81,19 +81,26 @@ export function sanitizeUrl(url: string): string {
 }
 
 /**
- * Graceful shutdown: logs message and exits after EXIT_DELAY_MS to allow pending I/O to flush.
+ * Graceful shutdown: logs message and exits after allowing pending I/O to flush.
  *
  * NOTA: NÃO use .unref() — .unref() permite que Node.js saia naturalmente com exit code 0
- * antes do setTimeout disparar process.exit(code). Em scripts não-interativos sem handles
+ * antes do timer disparar process.exit(code). Em scripts não-interativos sem handles
  * mantendo o event loop vivo, o exit code correto nunca é aplicado, quebrando o blocking
  * do pre-push hook e de qualquer script que dependa do exit code.
  *
- * O timer sem .unref() mantém o event loop vivo por EXIT_DELAY_MS, tempo suficiente para
- * pending I/O (stdout, stderr) flusharem. Em contextos interativos, event loop já tem
- * handles (readline, stdin) que mantêm o processo vivo — timer sempre dispara.
+ * Os timers abaixo NÃO têm .unref(), então mantêm o event loop vivo até dispararem
+ * process.exit(code) — o contrato de exit code é preservado.
+ *
+ * TTY (interativo): stdout/stderr são line-buffered e já foram gravados na escrita;
+ * sair no próximo turno do event loop é suficiente (2s era desperdício perceptível).
+ * Pipe/CI: precisa de uma janela curta para drenar o buffer do pipe antes do exit.
  */
 export function gracefulExit(code: ExitCode): void {
-    setTimeout(() => process.exit(code), EXIT_DELAY_MS);
+    if (process.stdout.isTTY) {
+        setImmediate(() => process.exit(code));
+        return;
+    }
+    setTimeout(() => process.exit(code), EXIT_PIPE_DRAIN_MS);
 }
 
 export function setupSigint(getIsBusy: (() => boolean) | null, onExit: (() => void) | null): void {
@@ -118,7 +125,7 @@ function _createSigintHandler(getIsBusy: (() => boolean) | null, onExit: (() => 
         cleanupTempDirs();
         if (onExit) onExit();
         info('Até logo!');
-        setTimeout(() => process.exit(ExitCode.OK), EXIT_DELAY_MS);
+        gracefulExit(ExitCode.OK);
     }
 
     return function handler(): void {
@@ -179,7 +186,6 @@ export function printSessionSummary(
     info('Sessão encerrada.');
     _printSessionCounters(sessionCounters);
     _printLastOperations(history);
-    _tryPrintHealthScore();
     _printSessionLine(lastOperation, logPath);
     divider();
     const ok = sessionCounters.filter((c) => c.status === 'ok').length;
@@ -211,30 +217,6 @@ function _printLastOperations(history?: HistoryEntry[]): void {
         const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');
         print(`  ${icon} ${h.op}: ${h.detail}`);
     });
-}
-
-function _tryPrintHealthScore(): void {
-    try {
-        const hub = getDataHub();
-        if ((hub.computed.metricsRuns ?? []).length < 5) return;
-        const hs = calculateHealthScore({ dataHub: hub });
-        let gradeIcon: string;
-        if (hs.grade === 'excellent') {
-            gradeIcon = '🟢';
-        } else if (hs.grade === 'good') {
-            gradeIcon = '🟡';
-        } else if (hs.grade === 'needs_attention') {
-            gradeIcon = '🟠';
-        } else {
-            gradeIcon = '🔴';
-        }
-        let gateIcon = '✗';
-        if (hs.qualityGate === 'pass') gateIcon = '✓';
-        else if (hs.qualityGate === 'unknown') gateIcon = '?';
-        info(`Saúde: ${hs.overall}/100 ${gradeIcon} · Quality Gate: ${gateIcon}`);
-    } catch (err) {
-        rootLogger.debug('Health score unavailable: ' + formatErr(err));
-    }
 }
 
 function _printSessionLine(lastOperation: string | null, logPath: string | null): void {

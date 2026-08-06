@@ -25,7 +25,6 @@ vi.mock('../../shared/logger', () => ({
 vi.mock('../import-prep', () => ({
     validateImportBatch: vi.fn(),
     showPreview: vi.fn(),
-    filterTests: vi.fn(),
     confirmOrCancel: vi.fn(),
     handleDryRun: vi.fn(),
 }));
@@ -48,7 +47,7 @@ import { createMockLinkManager } from '../../shared/test-utils/factories/index.j
 import IssueLinker from '../issue-linker.js';
 import type { JiraResourceLike } from '../../shared/types.js';
 import { prepareTestRun, finalizeTestCreation, postProcessCheckpoint } from '../import-orchestrator.js';
-import { validateImportBatch, filterTests, confirmOrCancel, handleDryRun } from '../import-prep.js';
+import { validateImportBatch, confirmOrCancel, handleDryRun } from '../import-prep.js';
 import * as STATE from '../../shared/state.js';
 import { updateFinalState } from '../import-loop.js';
 const makeTestCases = (count: number) =>
@@ -89,7 +88,6 @@ describe('Import Orchestrator', () => {
             inMemoryTasksText: [],
             opLog: createMockLogger(),
         });
-        vi.mocked(filterTests).mockImplementation((t: unknown[]) => t as []);
         vi.mocked(confirmOrCancel).mockReturnValue(true);
     });
 
@@ -216,8 +214,7 @@ describe('Import Orchestrator', () => {
             expect(warn).toHaveBeenCalledWith(expect.stringContaining('cancelada'));
         });
 
-        it('filterTests returns null', async () => {
-            vi.mocked(filterTests).mockReturnValue(null);
+        it('filterTests removed: pipeline uses the full CSV test set without a filtering prompt', async () => {
             const result = await prepareTestRun({
                 tests: makeTestCases(2),
                 sourcePath: '/p.csv',
@@ -227,7 +224,10 @@ describe('Import Orchestrator', () => {
                 onBusy,
                 warn,
             });
-            expect(result).toBeUndefined();
+            expect(result).toBeDefined();
+            if (result && 'tests' in result) {
+                expect(result.tests).toHaveLength(2);
+            }
         });
 
         it('dry-run returns early', async () => {

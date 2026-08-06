@@ -18,6 +18,7 @@ import { makeMockCommandContext } from '../../../shared/test-utils.js';
 import configModule from '../../../shared/config-accessor.js';
 import createTestsModule from '../../create_tests.js';
 import * as testExecFlow from '../test-execution-flow.js';
+import { ask, onError, warn } from '../../../shared/ui/prompt.js';
 
 const mockConfigGet = vi.spyOn(configModule, 'get');
 const mockCreateTestsFromCsv = vi
@@ -205,6 +206,115 @@ describe('Case01.Integration', () => {
             mockCreateTestsFromCsv.mockRejectedValue(new Error('Jira API error'));
 
             await expect(case01.handler(makeContext())).resolves.toBeUndefined();
+        });
+    });
+
+    describe('FT-41e: count-driven import mode', () => {
+        it('derives hybrid mode and passes targetKeys when N < total', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'csvPath') return '/custom/path.csv';
+                if (key === 'csvDefaultPath') return '/default/path.csv';
+                return undefined;
+            });
+            vi.mocked(ask).mockResolvedValueOnce('1');
+            vi.mocked(ask).mockResolvedValueOnce('JIRA-77');
+            mockCreateTestsFromCsv.mockResolvedValue({
+                ok: true,
+                result: {
+                    inMemoryTasksId: [],
+                    inMemoryTasksText: [],
+                    summary: 'imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
+            } as never);
+
+            await case01.handler(makeContext());
+
+            expect(mockCreateTestsFromCsv).toHaveBeenCalledWith(
+                expect.objectContaining({ csvPath: '/custom/path.csv', importMode: 'hybrid', targetKeys: ['JIRA-77'] }),
+            );
+        });
+
+        it('derives update mode when N equals total', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'csvPath') return '/custom/path.csv';
+                return undefined;
+            });
+            vi.mocked(ask).mockResolvedValueOnce('2');
+            vi.mocked(ask).mockResolvedValueOnce('JIRA-1,JIRA-2');
+            mockCreateTestsFromCsv.mockResolvedValue({
+                ok: true,
+                result: {
+                    inMemoryTasksId: [],
+                    inMemoryTasksText: [],
+                    summary: 'imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
+            } as never);
+
+            await case01.handler(makeContext());
+
+            expect(mockCreateTestsFromCsv).toHaveBeenCalledWith(
+                expect.objectContaining({ importMode: 'update', targetKeys: ['JIRA-1', 'JIRA-2'] }),
+            );
+        });
+
+        it('aborts the import when a declared key does not exist', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'csvPath') return '/custom/path.csv';
+                return undefined;
+            });
+            vi.mocked(ask).mockResolvedValueOnce('1');
+            vi.mocked(ask).mockResolvedValueOnce('JIRA-404');
+            const ctx = makeContext();
+            vi.mocked(ctx.jiraResource.getJiraResource).mockRejectedValue(new Error('404'));
+
+            await case01.handler(ctx);
+
+            expect(mockCreateTestsFromCsv).not.toHaveBeenCalled();
+            expect(ctx.pushHistory).toHaveBeenCalledWith('csv-import', 'cancelada pelo usuário', 'error');
+        });
+
+        it('skips a nonexistent key, keeps it in targetKeys, and warns at the end', async () => {
+            expect.hasAssertions();
+
+            mockConfigGet.mockImplementation((key: string) => {
+                if (key === 'csvPath') return '/custom/path.csv';
+                return undefined;
+            });
+            vi.mocked(ask).mockResolvedValueOnce('1');
+            vi.mocked(ask).mockResolvedValueOnce('JIRA-404');
+            vi.mocked(onError).mockReturnValue('skip' as never);
+            const ctx = makeContext();
+            vi.mocked(ctx.jiraResource.getJiraResource).mockRejectedValue(new Error('404'));
+            mockCreateTestsFromCsv.mockResolvedValue({
+                ok: true,
+                result: {
+                    inMemoryTasksId: [],
+                    inMemoryTasksText: [],
+                    summary: 'imported',
+                    status: 'OK',
+                    sourcePath: '/x.csv',
+                    failedLinks: [],
+                },
+            } as never);
+
+            await case01.handler(ctx);
+
+            expect(mockCreateTestsFromCsv).toHaveBeenCalledWith(
+                expect.objectContaining({ importMode: 'hybrid', targetKeys: ['JIRA-404'] }),
+            );
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('ignoradas'));
         });
     });
 });

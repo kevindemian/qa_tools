@@ -66,7 +66,6 @@ vi.mock('../../shared/report/markdown.js', () => ({ md: mockMd, mdToHtml: mockMd
 
 import {
     _checkResumeCheckpoint,
-    filterTests,
     validateImportBatch,
     generatePreviewMarkdown,
     showPreview,
@@ -146,38 +145,6 @@ describe('CheckResumeCheckpoint', () => {
         const result = _checkResumeCheckpoint(tests, '/different/path.csv', 'csv', 'TESTPROJ');
 
         expect(result.resumeFrom).toBe(0);
-    });
-});
-
-describe('FilterTests', () => {
-    const tests = makeTestCases(5);
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('no matches -> warn + null', () => {
-        vi.spyOn(PROMPT, 'prompt').mockReturnValue('zzzzzz');
-        const result = filterTests(tests);
-
-        expect(result).toBeNull();
-        expect(PROMPT.warn).toHaveBeenCalledWith(expect.stringContaining('Nenhum teste'));
-    });
-
-    it('matches + user declines -> throws', () => {
-        vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test');
-        vi.spyOn(PROMPT, 'confirm').mockReturnValue(false);
-
-        expect(() => filterTests(tests)).toThrow(/cancelada pelo usuario/);
-    });
-
-    it('matches + user accepts -> filtered list', () => {
-        vi.spyOn(PROMPT, 'prompt').mockReturnValue('Test 1');
-        vi.spyOn(PROMPT, 'confirm').mockReturnValue(true);
-        const result = filterTests(tests);
-
-        expect(result).toHaveLength(1);
-        expect(nonNull(nonNull(result)[0]).title).toBe('Test 1');
     });
 });
 

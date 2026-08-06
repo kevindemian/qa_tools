@@ -3,6 +3,13 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Load nvm (if installed) so node is available even in the non-interactive shell
+# spawned by `wsl.exe -e bash` from the Windows launchers (qatools.bat/.ps1).
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.nvm/nvm.sh" || echo "  AVISO: falha ao carregar nvm; verificando node..." >&2
+fi
+
 # Node check
 if ! command -v node &>/dev/null; then
     echo "  ERRO: Node.js não encontrado." >&2

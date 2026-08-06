@@ -44,7 +44,6 @@ describe('E2E: CSV Import', () => {
         nock.cleanAll();
         nock.disableNetConnect();
         const jira = nock('http://localhost:9999/jira/rest/api/2');
-        jira.persist().get('/search').query(true).reply(200, { issues: [] });
         let issueCount = 0;
         jira.post('/issue')
             .times(2)

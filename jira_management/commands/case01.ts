@@ -1,6 +1,6 @@
 /** Import CSV → Create Test Cases: configure CSV path and start the import pipeline. */
 import Config from '../../shared/config-accessor.js';
-import { ask, askFilePath, printError, warn, info } from '../../shared/ui/prompt.js';
+import { ask, askFilePath, onError, printError, warn, info } from '../../shared/ui/prompt.js';
 import { loadTypedState } from '../../shared/state.js';
 import { rootLogger } from '../../shared/logger.js';
 import path from 'path';
@@ -9,6 +9,7 @@ import type { CommandContext } from './context.js';
 import createTests from '../create_tests.js';
 import { offerTestExecutionAssociation, showResults } from './test-execution-flow.js';
 import type { TestExecutionAssociationResult } from './test-execution-flow.js';
+import type { ImportMode } from '../../shared/types.js';
 
 /** Human-readable message for each distinguishable CSV read failure (never generic). */
 function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath: string): string {
@@ -22,19 +23,24 @@ function describeCsvFailure(reason: 'empty' | 'missing' | 'read-error', csvPath:
     }
 }
 
+function _isMissingFile(err: unknown): boolean {
+    return err instanceof Error && (err.message.includes('ENOENT') || err.message.includes('no such file'));
+}
+
+/** First pass over the CSV to learn how many tests it holds. Failures stay explicit and distinguishable. */
+async function readCsvTotal(c: CommandContext, csvPath: string): Promise<number | 'empty' | 'missing' | 'read-error'> {
+    try {
+        const parsed = await c.csvResource.readBulkCsvWithMeta(csvPath);
+        if (!parsed || parsed.tests.length === 0) return 'empty';
+        return parsed.tests.length;
+    } catch (err) {
+        return _isMissingFile(err) ? 'missing' : 'read-error';
+    }
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     try {
         const state = loadTypedState();
-
-        let importMode = Config.get<string>('importMode') || '';
-        if (!['create', 'update', 'hybrid'].includes(importMode)) {
-            const modeInput = await ask('Modo de importação?', {
-                hint: '1 = criar novo | 2 = atualizar existente | 3 = híbrido',
-                default: '1',
-            });
-            importMode = modeInput === '2' ? 'update' : modeInput === '3' ? 'hybrid' : 'create';
-        }
-        Config.set('importMode', importMode);
 
         const csvDefaultPath = Config.get('csvDefaultPath') || path.join(import.meta.dirname, '../test_steps.csv');
         const csvPath =
@@ -43,6 +49,102 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                 extensions: ['.csv'],
                 default: state.lastCsvPath || csvDefaultPath,
             }));
+
+        const totalResult = await readCsvTotal(c, csvPath);
+        if (typeof totalResult !== 'number') {
+            const detail = describeCsvFailure(totalResult, csvPath);
+            warn(detail);
+            c.pushHistory('csv-import', detail, 'error');
+            c.ctx.lastOperation = detail;
+            return;
+        }
+        const total = totalResult;
+
+        let targetKeys: string[] = [];
+        let importMode: ImportMode = 'create';
+        let keysHint = '';
+        for (;;) {
+            const nInput = await ask('Quantas issues serão atualizadas?', {
+                hint:
+                    'se quiser atualizar issues existentes, informe a quantidade e Enter; ' +
+                    'caso contrário, Enter cria todas as ' +
+                    total +
+                    ' (' +
+                    total +
+                    ' = atualizar todas' +
+                    (total > 1 ? ' | 1..' + (total - 1) + ' = atualizar parte' : '') +
+                    ')' +
+                    (keysHint ? ' | já informadas: ' + keysHint : ''),
+                default: '0',
+            });
+            const trimmed = nInput.trim();
+            if (trimmed === '' || trimmed === '0') {
+                targetKeys = [];
+                importMode = 'create';
+                break;
+            }
+            const n = Number(trimmed);
+            if (!Number.isInteger(n) || n <= 0) {
+                warn(
+                    'Valor inválido. Informe um número inteiro entre 1 e ' + total + ' (ou Enter para não atualizar).',
+                );
+                continue;
+            }
+            if (n > total) {
+                warn('N (' + n + ') é maior que o total de testes no CSV (' + total + '). Informe um valor menor.');
+                continue;
+            }
+            const keysInput = await ask('Informe as ' + n + ' chaves Jira (separadas por vírgula)', {
+                hint: 'ordem = ordem dos testes no CSV',
+            });
+            const keys = keysInput
+                .split(',')
+                .map((k) => k.trim())
+                .filter((k) => k.length > 0);
+            if (keys.length !== n) {
+                keysHint = keys.join(', ');
+                warn(
+                    'Você informou ' +
+                        keys.length +
+                        ' chave(s), mas declarou ' +
+                        n +
+                        '. Informe exatamente ' +
+                        n +
+                        ' chaves.',
+                );
+                continue;
+            }
+            targetKeys = keys;
+            importMode = n === total ? 'update' : 'hybrid';
+            break;
+        }
+
+        const missingKeys: string[] = [];
+        for (const key of targetKeys) {
+            for (;;) {
+                try {
+                    const issue = await c.jiraResource.getJiraResource<{ fields?: { summary?: string } }>(
+                        'issue/' + key,
+                    );
+                    info('Chave encontrada ' + key + (issue?.fields?.summary ? ': ' + issue.fields.summary : ''));
+                    break;
+                } catch (err) {
+                    const choice = onError('Chave ' + key + ' não encontrada no Jira', err, { retry: true });
+                    if (choice === 'retry') continue;
+                    if (choice === 'skip') {
+                        missingKeys.push(key);
+                        break;
+                    }
+                    warn('Importação cancelada pelo usuário.');
+                    c.pushHistory('csv-import', 'cancelada pelo usuário', 'error');
+                    c.ctx.lastOperation = 'cancelada pelo usuário';
+                    return;
+                }
+            }
+        }
+
+        Config.set('targetKeys', targetKeys.join(','));
+        Config.set('importMode', importMode);
 
         const labelsHint = state.lastLabels ? 'último: ' + state.lastLabels : 'vazio para nenhuma';
         const jiraLabelsInput =
@@ -76,6 +178,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             },
             csvPath: csvPath,
             jiraLabels: jiraLabels,
+            ...(targetKeys.length > 0 ? { targetKeys } : {}),
             importMode: importMode,
         });
         if (!result.ok) {
@@ -91,6 +194,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         c.pushHistory('csv-import', result.result.summary, result.result.status);
         c.ctx.lastOperation = result.result.summary;
         if (isDryRun) Config.set('dryRun', false);
+        if (missingKeys.length > 0) {
+            warn('Chaves não encontradas no Jira e ignoradas: ' + missingKeys.join(', '));
+        }
         if (c.ctx.inMemoryTasksId.length > 0) {
             const csvName = state.lastCsvPath ? path.basename(state.lastCsvPath, '.csv') : 'Automated Execution';
             let teResult: TestExecutionAssociationResult;

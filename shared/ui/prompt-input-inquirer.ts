@@ -160,11 +160,16 @@ export async function smartPrompt(
     return options.default !== undefined ? String(options.default) : '';
 }
 
-/** Async text input. Uses `@inquirer/input` in TTY mode, falls back to `prompt()`. */
+/** Async text input. Uses `@inquirer/input` in TTY mode, falls back to `prompt()`.
+ * The optional `hint` is rendered as a muted instruction line above the input
+ * (`@inquirer/input` has no native hint/description field, so it is printed first). */
 export async function ask(label: string, options: PromptOptions = {}): Promise<string> {
     const mod: unknown = await _loadInput();
     if (mod && isTTY()) {
         try {
+            if (options.hint) {
+                output.print(palette.muted('  ' + options.hint));
+            }
             const answer = await (mod as { default: (...args: unknown[]) => unknown }).default({
                 message: label,
                 default: options.default,
@@ -175,7 +180,9 @@ export async function ask(label: string, options: PromptOptions = {}): Promise<s
             return (answer as string).trim();
         } catch (err) {
             warn('Inquirer prompt failed, using sync fallback: ' + getErrorMessage(err));
-            return prompt(label, options);
+            const fallbackOptions: PromptOptions = { ...options };
+            fallbackOptions.hint = undefined;
+            return prompt(label, fallbackOptions);
         }
     }
     return prompt(label, options);

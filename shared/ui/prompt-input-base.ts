@@ -8,7 +8,7 @@ import { CancelError, getConfig, icon, warn } from './prompt-ui.js';
 
 export interface PromptOptions {
     default?: string;
-    hint?: string;
+    hint?: string | undefined;
     maxRetries?: number;
     minLength?: number;
 }

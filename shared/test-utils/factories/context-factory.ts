@@ -26,6 +26,12 @@ export function createMockContext(overrides?: Partial<MockProxy<CommandContext>>
             parsePrecondition: vi.fn(),
             parseLinkedIssues: vi.fn(),
             readBulkCsv: vi.fn(),
+            readBulkCsvWithMeta: vi.fn().mockResolvedValue({
+                tests: [
+                    { title: 'Test 1', steps: [{ fields: { Action: 'a' } }] },
+                    { title: 'Test 2', steps: [{ fields: { Action: 'b' } }] },
+                ],
+            }),
         },
         packageManager: undefined,
         ctx: {

@@ -49,6 +49,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
+                importMode: 'create',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-123' });
@@ -61,7 +62,14 @@ describe('TestCaseFactory', () => {
 
             mockJiraResource.postJiraResource.mockResolvedValue({ key: 'TEST-123' });
             mockPrompt.isQuiet.mockReturnValue(false);
-            await factory.createIssue({ testData, testTitle: 'Test Title', testIdx: 0, totalTests: 5, opLog });
+            await factory.createIssue({
+                testData,
+                testTitle: 'Test Title',
+                testIdx: 0,
+                totalTests: 5,
+                opLog,
+                importMode: 'create',
+            });
 
             expect(mockPrompt.success).toHaveBeenCalledWith('Issue criada: TEST-123');
         });
@@ -77,6 +85,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
+                importMode: 'create',
             });
 
             expect(result).toStrictEqual({ action: 'abort' });
@@ -93,6 +102,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
+                importMode: 'create',
             });
 
             expect(result).toStrictEqual({ action: 'skip' });
@@ -108,6 +118,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
+                importMode: 'create',
             });
 
             expect(result).toStrictEqual({ action: 'rollback' });
@@ -126,6 +137,7 @@ describe('TestCaseFactory', () => {
                 testIdx: 0,
                 totalTests: 5,
                 opLog,
+                importMode: 'create',
             });
 
             expect(result).toStrictEqual({ key: 'TEST-123' });

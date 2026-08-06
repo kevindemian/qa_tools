@@ -55,6 +55,13 @@ function hasSecretPattern(val: string): string | null {
 export function warnSecretsInFile(filePath: string, label: string): void {
     try {
         const content = fs.readFileSync(path.resolve(filePath), 'utf-8');
+        // §24 null/undefined guard: readFileSync with 'utf-8' contractually returns a string,
+        // but a non-string content (mock/custom fs) must fail explicitly — never let an
+        // unguarded `.split` run on undefined.
+        if (typeof content !== 'string') {
+            process.stderr.write(`[env-loader] Secret scan skipped for ${label}: file content is not a string.\n`);
+            return;
+        }
         const lines = content.split('\n');
         for (const line of lines) {
             const trimmed = line.trim();

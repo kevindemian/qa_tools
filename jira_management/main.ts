@@ -16,7 +16,6 @@ import {
 import { rootLogger } from '../shared/logger.js';
 import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../shared/ui/breadcrumbs.js';
 import { loadTypedState, update as updateState, getStatePath } from '../shared/state.js';
-import { getDataHub, isDataHubInitialized } from '../shared/data-hub/global-hub.js';
 import type { SessionContext } from '../shared/session-context.js';
 import { ExitCode, type StateSchema } from '../shared/types.js';
 import type { CommandContext } from './commands/context.js';
@@ -38,16 +37,29 @@ function updateStateTyped(fn: (state: StateSchema) => void): void {
     updateState((s) => fn(s));
 }
 
-export interface RuntimeResources {
+/** Lightweight session resources created at startup — deliberately free of the
+ * heavy domain resource graph (jira_resource/csv_resource/link_manager ~4s),
+ * which is loaded lazily on first command dispatch so the menu renders instantly. */
+export interface SessionResources {
+    ctx: SessionContext;
+    pushHistory: (op: string, detail: string, status: string) => void;
+    printSessionSummary: () => void;
+}
+
+/** Full runtime resources incl. the Jira/CSV/link domain clients — assembled on
+ * demand for headless CLI paths (runHeadlessCsvImport/runAssociateTe). */
+export interface RuntimeResources extends SessionResources {
     jiraResource: JiraResource;
     jiraResourceXray: JiraResource;
     linkManager: JiraLinkManager;
     linkManagerXray: JiraLinkManager;
     csvResource: CsvResource;
-    ctx: SessionContext;
-    pushHistory: (op: string, detail: string, status: string) => void;
-    printSessionSummary: () => void;
 }
+
+type DomainResources = Pick<
+    RuntimeResources,
+    'jiraResource' | 'jiraResourceXray' | 'linkManager' | 'linkManagerXray' | 'csvResource'
+>;
 
 /** Extract the CSV path from `--csv <path>`; falls back to CSV_PATH env (used with --auto). */
 export function parseCsvArg(argv: string[]): string | undefined {
@@ -289,24 +301,41 @@ const _validateEnvConfigs = (): Array<{ key: string; label: string; example: str
 
 const validateEnv = createValidateEnv(_validateEnvConfigs());
 
-async function initializeSession() {
+let _domainResourcesPromise: Promise<DomainResources> | null = null;
+/** Lazily instantiate the domain resource clients (jira_resource, jira_link_manager,
+ * csv_resource — ~4s combined import+construct) on first command dispatch instead of
+ * blocking the menu render. Memoized for the process lifetime; on rejection the cache
+ * is cleared so a later dispatch may retry (no silent swallowing). */
+function getDomainResources(): Promise<DomainResources> {
+    if (!_domainResourcesPromise) {
+        _domainResourcesPromise = (async () => {
+            const [{ default: JiraResource }, { default: JiraLinkManager }, { default: CsvResource }] =
+                await Promise.all([
+                    import('./jira_resource.js'),
+                    import('./jira_link_manager.js'),
+                    import('./csv_resource.js'),
+                ]);
+
+            const jiraResource = new JiraResource(personal_token, base_url, jira_mode);
+            const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
+            const linkManager = new JiraLinkManager(jiraResource);
+            const linkManagerXray = new JiraLinkManager(jiraResourceXray);
+            const csvResource = new CsvResource();
+            return { jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource };
+        })().catch((err: unknown) => {
+            _domainResourcesPromise = null;
+            throw err;
+        });
+    }
+    return _domainResourcesPromise;
+}
+
+async function initializeSession(): Promise<SessionResources> {
     if (!_isJiraConfigured()) {
         info('ℹ Jira não configurado. Comandos que dependem de Jira exibirão orientação de configuração.');
     }
 
-    const [{ default: JiraResource }, { default: JiraLinkManager }, { default: CsvResource }, { SessionContext }] =
-        await Promise.all([
-            import('./jira_resource.js'),
-            import('./jira_link_manager.js'),
-            import('./csv_resource.js'),
-            import('../shared/session-context.js'),
-        ]);
-
-    const jiraResource = new JiraResource(personal_token, base_url, jira_mode);
-    const jiraResourceXray = new JiraResource(personal_token, xray_url, jira_mode);
-    const linkManager = new JiraLinkManager(jiraResource);
-    const linkManagerXray = new JiraLinkManager(jiraResourceXray);
-    const csvResource = new CsvResource();
+    const { SessionContext } = await import('../shared/session-context.js');
     const ctx = new SessionContext();
     const { default: PackageVersionManager } = await import('./package_version_manager.js');
     ctx.createPackageManager = (dir: string) => new PackageVersionManager(dir);
@@ -345,12 +374,7 @@ async function initializeSession() {
         });
     }
 
-    const res: RuntimeResources = {
-        jiraResource,
-        jiraResourceXray,
-        linkManager,
-        linkManagerXray,
-        csvResource,
+    const res: SessionResources = {
         ctx,
         pushHistory,
         printSessionSummary,
@@ -358,29 +382,19 @@ async function initializeSession() {
     return res;
 }
 
-function buildCommandContext(res: RuntimeResources): CommandContext {
-    const {
-        jiraResource,
-        jiraResourceXray,
-        linkManager,
-        linkManagerXray,
-        csvResource,
-        ctx,
-        pushHistory,
-        printSessionSummary,
-    } = res;
+async function buildCommandContext(res: SessionResources): Promise<CommandContext> {
+    const { jiraResource, jiraResourceXray, linkManager, linkManagerXray, csvResource } = await getDomainResources();
     return {
         jiraResource,
         jiraResourceXray,
         linkManager,
         linkManagerXray,
         csvResource,
-        ctx,
-        pushHistory,
-        printSessionSummary,
+        ctx: res.ctx,
+        pushHistory: res.pushHistory,
+        printSessionSummary: res.printSessionSummary,
         base_url,
         sessionLog,
-        ...(isDataHubInitialized() ? { dataHub: getDataHub() } : {}),
     };
 }
 
@@ -399,11 +413,11 @@ async function dispatchAndHandleResult(
     return 'continue';
 }
 
-async function _executeChoice(choice: string, res: RuntimeResources): Promise<void> {
+async function _executeChoice(choice: string, res: SessionResources): Promise<void> {
     updateStateTyped((s) => {
         s.lastChoice = choice;
     });
-    const cmdCtx = buildCommandContext(res);
+    const cmdCtx = await buildCommandContext(res);
     await dispatchAndHandleResult(choice, cmdCtx, res.ctx);
 }
 
@@ -426,7 +440,7 @@ function _classifyChoice(choice: string | null): { action: string; category?: st
     return { action: 'continue' };
 }
 
-async function runMainLoop(res: RuntimeResources): Promise<void> {
+async function runMainLoop(res: SessionResources): Promise<void> {
     const { ctx, printSessionSummary } = res;
     let currentLevel = 'main';
     clearBreadcrumbs();
@@ -605,16 +619,7 @@ async function initStartup(): Promise<void> {
     ensureDirs();
     registerCleanup();
 
-    let healthScore: { score: number; grade: string } | undefined;
-    try {
-        const hub = getDataHub();
-        const { calculateHealthScore } = await import('../shared/quality/health-score.js');
-        const health = calculateHealthScore({ dataHub: hub });
-        healthScore = { score: health.overall, grade: health.grade };
-    } catch (err) {
-        rootLogger.debug('[startup] Health score unavailable: ' + String(err));
-    }
-    await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
+    await showSplash(getStatePath());
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
 
     if (offerEnvSetup(envResult)) {
@@ -649,14 +654,16 @@ async function main(): Promise<void> {
     const associateTestKeysStr = Config.get<string | undefined>('associateTestKeys');
     const associateTestKeys = associateTestKeysStr ? associateTestKeysStr.split(',').filter(Boolean) : [];
     if (associateTeKey && associateTestKeys.length > 0) {
-        const code = await runAssociateTe(res, associateTeKey, associateTestKeys);
+        const fullRes: RuntimeResources = { ...res, ...(await getDomainResources()) };
+        const code = await runAssociateTe(fullRes, associateTeKey, associateTestKeys);
         gracefulExit(code);
         return;
     }
 
     const headlessCsvPath = parseCsvArg(process.argv);
     if (headlessCsvPath) {
-        const code = await runHeadlessCsvImport(res, headlessCsvPath);
+        const fullRes: RuntimeResources = { ...res, ...(await getDomainResources()) };
+        const code = await runHeadlessCsvImport(fullRes, headlessCsvPath);
         gracefulExit(code);
         return;
     }

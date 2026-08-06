@@ -1,4 +1,7 @@
-# Prod Run ECSPOL-1498 — Plano Consolidado
+# FUTURE-PLANS — Plano Consolidado (run prod + planos futuros + débitos)
+
+**Arquivo de planos futuros e débitos a quitar** (renomeado de
+`PROD-RUN-ECSPOL-1498-PLAN.md` em 2026-08-06 para identificação clara).
 
 **Data**: 2026-08-06
 **Branch**: `feature/associate-te-cli`
@@ -144,6 +147,45 @@ funcionalidade. G5: runtime consumer (não documentation-only).
   `createTestsFromCsv` → `createTestsFromTestCases` → `prepareTestRun` →
   `resolveTargetKeys(explicit)`), precedência: param > Config (CLI) > prompt.
 - `case29.ts` consumidor do motor universal; `services/` não envolvido.
+
+### T7 — Débito: rework anti-mock dos testes do case01 (count-driven) — PENDENTE
+
+**Estado**: Task 2 (count-driven import, `dev/docs/plans/COUNT-DRIVEN-IMPORT-PLAN.md`)
+código-fonte completo e suite verde (554 arquivos / 7718 testes; floors 90/80/90 ok).
+Falhas de teste pré-existentes resolvidas na fonte (default `'create'` do
+`prepareTestRun` confirmado como contrato no plano, D2) + testes estale atualizados.
+
+**Problema (diretriz ANTI-MOCK THEATER, não-negociável)**: os testes de handler do
+case01 ainda mockam lógica interna `createTestsFromCsv`:
+
+- `jira_management/commands/__tests__/case01.test.ts` → `vi.mock('../../create_tests')`.
+- `jira_management/commands/__tests__/case01.integration.test.ts` →
+  `vi.spyOn(createTestsModule, 'createTestsFromCsv').mockResolvedValue(...)`.
+
+Diretriz: proibido mockar classes/funções/helpers/módulos locais; se A interage com B o
+fluxo roda real e integrado; mocks estritos de fronteira (HTTP externo via `nock`);
+validar side effects (estado mutado, Config, `pushHistory`, HTTP consumido via
+`nock.isDone()`), não só o retorno.
+
+**Ação correta (iniciada em 2026-08-06, não concluída)**: reescrever os dois arquivos
+para rodar o pipeline real (`createTestsFromCsv` → `import-orchestrator` →
+`test-case-factory`) com:
+
+- `nock` na fronteira HTTP (Jira `http://localhost:9999/jira/rest/api/2` + Xray),
+  `JIRA_MODE=server`, `HOME=tmpHome` (hermético), `setTestSleep(noop)`.
+- Config REAL (`Config.reset()` por teste; `set` é override in-memory — sem mock).
+- Prompts interativos mockados (fronteira UI): `ask`, `askFilePath`, `onError`,
+  `warn`, `info`, `askConfirm`.
+- CSV real em tmpHome (leitura real via `readBulkCsvWithMeta`).
+- Assertions de side effects: `nock.isDone()`, `pushHistory`, `ctx.inMemoryTasksId`,
+  `Config.get('importMode'|'targetKeys')` pós-handler, mensagens `warn`
+  (re-asks / ignoradas / cancelada).
+
+**Escopo também afetado**: `jira_management/__tests__/integration-handlers.test.ts` e
+`jira_management/commands/__tests__/handlers.test.ts` (Case01) continuam mockando
+`createTestsFromCsv` — aplicar o mesmo tratamento se dentro do escopo.
+
+**Verificação**: suite completa + typecheck + lint + coverage (floors) verdes.
 
 ---
 

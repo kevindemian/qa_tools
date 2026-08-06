@@ -5,8 +5,15 @@ setlocal enabledelayedexpansion
 REM WSL detection — delegate to .sh (which launches the canonical entry-menu)
 wsl.exe -e bash -c "exit" >nul 2>&1
 if %errorlevel% equ 0 (
-    for %%I in ("%~dp0.") do set "SH_PATH=%%~dpIqatools.sh"
-    wsl.exe -e bash "!SH_PATH!" %*
+    set "SH_PATH=%~dp0qatools.sh"
+    set "SH_PATH=!SH_PATH:\=/!"
+    for /f "delims=" %%P in ('wsl.exe wslpath -u "!SH_PATH!"') do set "SH_WSL_PATH=%%P"
+    if "!SH_WSL_PATH!"=="" (
+        echo   ERRO: nao foi possivel converter o caminho para WSL.
+        pause
+        exit /b 1
+    )
+    wsl.exe -e bash "!SH_WSL_PATH!" %*
     exit /b !errorlevel!
 )
 

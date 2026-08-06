@@ -54,7 +54,7 @@ vi.mock('../../../shared/infra/store-backend.js', () => ({
 
 vi.mock('../../../shared/session-context', () => ({
     resolveTestDataSource: vi.fn().mockResolvedValue(null),
-    resolveSessionContext: vi.fn().mockReturnValue({
+    resolveSessionContext: vi.fn().mockResolvedValue({
         sha: null,
         branch: null,
         store: {
@@ -85,7 +85,23 @@ vi.mock('../../../shared/logger', () => ({
     },
 }));
 
-vi.mock('fs');
+vi.mock('fs', async (importOriginal) => {
+    // Auto-mock every fs function (same coverage as vi.mock('fs')), but give
+    // readFileSync a string default (''): the real env-loader secret scan runs
+    // at Config.load() during module import (config-accessor.ts top-level), and
+    // an undefined default would crash on `undefined.split`. Mock shape fidelity
+    // (§19.2/§26.1): real readFileSync returns a string. Individual tests still
+    // override readFileSync/existsSync/etc. with their own values.
+    const actual = await importOriginal<typeof import('fs')>();
+    const mock: Record<string, unknown> = {};
+    for (const key of Object.keys(actual)) {
+        if (key === 'default') continue;
+        mock[key] = vi.fn();
+    }
+    mock['readFileSync'] = vi.fn().mockReturnValue('');
+    mock['default'] = mock;
+    return mock;
+});
 
 vi.mock('../../../shared/infra/http-client.js', () => ({
     createHttpClient: vi.fn(),

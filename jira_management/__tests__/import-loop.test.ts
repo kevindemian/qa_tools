@@ -255,6 +255,7 @@ describe('Import Loop', () => {
                 t: 0,
                 total: 3,
                 opLog,
+                importMode: 'create',
                 results: resultSink,
             });
 
@@ -275,6 +276,7 @@ describe('Import Loop', () => {
                 t: 0,
                 total: 3,
                 opLog,
+                importMode: 'create',
                 results: resultSink,
             });
 
@@ -300,6 +302,7 @@ describe('Import Loop', () => {
                 t: 0,
                 total: 3,
                 opLog,
+                importMode: 'create',
                 results: resultSink,
             });
 
@@ -322,6 +325,7 @@ describe('Import Loop', () => {
                 t: 0,
                 total: 3,
                 opLog,
+                importMode: 'create',
                 results: resultSink,
             });
 
@@ -342,6 +346,7 @@ describe('Import Loop', () => {
                 t: 0,
                 total: 3,
                 opLog,
+                importMode: 'create',
                 results: resultSink,
             });
 
@@ -381,6 +386,7 @@ describe('Import Loop', () => {
                 reportInfo: vi.fn(),
                 reportPrint: vi.fn(),
                 failedLinks: [],
+                importMode: 'create',
             });
 
             expect(inMemoryTasksId).toStrictEqual(['T-NEW']);
@@ -419,6 +425,7 @@ describe('Import Loop', () => {
                 reportInfo: vi.fn(),
                 reportPrint: vi.fn(),
                 failedLinks: [],
+                importMode: 'create',
             });
 
             // Should have attempted to delete the partially-created issue

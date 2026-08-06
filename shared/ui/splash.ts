@@ -88,18 +88,7 @@ function statusDot(status: string): string {
     return palette.muted('○');
 }
 
-function healthColor(grade: string): (s: string) => string {
-    if (grade === 'excellent' || grade === 'good') return palette.green;
-    if (grade === 'needs_attention') return palette.yellow;
-    return palette.red;
-}
-
-export function buildSplashLines(
-    logo: string,
-    statePath?: string,
-    statusChecks?: StatusCheck[],
-    healthScore?: { score: number; grade: string },
-): string[] {
+export function buildSplashLines(logo: string, statePath?: string, statusChecks?: StatusCheck[]): string[] {
     const splash: string[] = [''];
     const logoLines = logo.split('\n');
     for (const line of logoLines) {
@@ -112,11 +101,6 @@ export function buildSplashLines(
         for (const c of statusChecks) {
             splash.push('  ' + statusDot(c.status) + ' ' + c.label + ': ' + palette.muted(c.detail));
         }
-        splash.push('');
-    }
-    if (healthScore) {
-        const hColor = healthColor(healthScore.grade);
-        splash.push(hColor('  Health: ' + healthScore.score + '/100 (' + healthScore.grade + ')'));
         splash.push('');
     }
     if (statePath) {
@@ -140,7 +124,6 @@ export async function showSplash(
     jiraBaseUrl?: string,
     jiraToken?: string,
     jiraMode?: JiraMode,
-    healthScore?: { score: number; grade: string },
 ): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -171,7 +154,7 @@ export async function showSplash(
             detail: jiraToken ? '✓ configurado' : 'não configurado',
         });
 
-        const splash = buildSplashLines(colored, statePath, checks.length > 0 ? checks : undefined, healthScore);
+        const splash = buildSplashLines(colored, statePath, checks.length > 0 ? checks : undefined);
         defaultOutput.box(splash, { border: 'double', padding: 1 });
     } catch (err) {
         rootLogger.debug('Splash rendering failed: ' + (err instanceof Error ? err.message : String(err)));

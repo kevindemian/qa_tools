@@ -645,9 +645,7 @@ describe('Handlers Happy Paths', () => {
             Config.setAutoConfirm(true);
 
             const { api, xray } = freshScope();
-            // createTestsFromJson creates 1 test from JSON fixture:
-            // 1a. GET /search (skipExisting check in createIssue)
-            api.get('/search').query(true).reply(200, { issues: [] });
+            // createTestsFromJson creates 1 test from JSON fixture (importMode default 'create' → no search):
             // 1. POST /issue to create the test case
             api.post('/issue').reply(201, { key: 'TEST-1', id: '10001' });
             // 2. POST /test/{key}/steps via jiraResourceXray (baseURL = HOST)

@@ -944,6 +944,16 @@ describe('Handlers', () => {
 
             mockConfigMod['csvPath'] = '/fake/test.csv';
             mockConfigMod['csvLabels'] = 'label1, label2';
+            vi.mocked(stateModule.loadTypedState).mockReturnValue({ lastCsvPath: '', lastLabels: '' } as never);
+            (baseContext.csvResource as unknown as { readBulkCsvWithMeta: Mock }).readBulkCsvWithMeta = vi
+                .fn()
+                .mockResolvedValue({
+                    tests: [
+                        { title: 'Test 1', steps: [] },
+                        { title: 'Test 2', steps: [] },
+                    ],
+                } as never);
+            vi.mocked(promptModule.ask).mockResolvedValue('');
             mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
                 ok: true,
                 result: {
@@ -970,6 +980,16 @@ describe('Handlers', () => {
 
             mockConfigMod['csvPath'] = '/fake/test.csv';
             mockConfigMod['csvLabels'] = 'label1';
+            vi.mocked(stateModule.loadTypedState).mockReturnValue({ lastCsvPath: '', lastLabels: '' } as never);
+            (baseContext.csvResource as unknown as { readBulkCsvWithMeta: Mock }).readBulkCsvWithMeta = vi
+                .fn()
+                .mockResolvedValue({
+                    tests: [
+                        { title: 'Test 1', steps: [] },
+                        { title: 'Test 2', steps: [] },
+                    ],
+                } as never);
+            vi.mocked(promptModule.ask).mockResolvedValue('');
             mockCreateTests.createTestsFromCsv.mockImplementationOnce(
                 async (_opts: { onBusy: (v: boolean) => void }) => {
                     await Promise.resolve();
@@ -1004,6 +1024,15 @@ describe('Handlers', () => {
             const state = vi.mocked(stateModule);
             state.load.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
             state.loadTypedState.mockReturnValue({ lastCsvPath: '/fake/test.csv' });
+            (baseContext.csvResource as unknown as { readBulkCsvWithMeta: Mock }).readBulkCsvWithMeta = vi
+                .fn()
+                .mockResolvedValue({
+                    tests: [
+                        { title: 'Test 1', steps: [] },
+                        { title: 'Test 2', steps: [] },
+                    ],
+                } as never);
+            vi.mocked(promptModule.ask).mockResolvedValue('');
             mockCreateTests.createTestsFromCsv.mockResolvedValueOnce({
                 ok: true,
                 result: {

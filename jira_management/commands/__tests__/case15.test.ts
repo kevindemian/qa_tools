@@ -56,7 +56,7 @@ const mockContext = makeMockCommandContext();
 describe('Case15', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(resolveSessionContext).mockReturnValue({
+        vi.mocked(resolveSessionContext).mockResolvedValue({
             sha: 'abc123def456',
             branch: 'main',
             store: mockStore(),
@@ -96,7 +96,7 @@ describe('Case15', () => {
             expect.hasAssertions();
 
             const store = mockStore();
-            vi.mocked(resolveSessionContext).mockReturnValue({
+            vi.mocked(resolveSessionContext).mockResolvedValue({
                 sha: 'abc123def456',
                 branch: 'main',
                 store,
@@ -172,7 +172,7 @@ describe('Case15', () => {
         it('does not call resolveTestDataSource when SHA is null', async () => {
             expect.hasAssertions();
 
-            vi.mocked(resolveSessionContext).mockReturnValue({
+            vi.mocked(resolveSessionContext).mockResolvedValue({
                 sha: null,
                 branch: null,
                 store: mockStore(),
@@ -212,7 +212,7 @@ describe('Case15', () => {
         it('reports the branch name in the baseline source message (no truncated text)', async () => {
             expect.hasAssertions();
 
-            vi.mocked(resolveSessionContext).mockReturnValue({
+            vi.mocked(resolveSessionContext).mockResolvedValue({
                 sha: 'abc123def456',
                 branch: 'release/2.8',
                 store: mockStore(),

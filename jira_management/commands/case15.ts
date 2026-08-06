@@ -41,7 +41,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
         return;
     }
 
-    const { sha, branch, store } = resolveSessionContext(c.ctx, projectName);
+    const { sha, branch, store } = await resolveSessionContext(c.ctx, projectName);
 
     /* Attempt automated resolution: SHA cache → CI download → branch baseline */
     const resolvedData = sha ? await resolveTestDataSource(projectName, sha, branch, store) : null;

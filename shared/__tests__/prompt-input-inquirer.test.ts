@@ -71,6 +71,7 @@ vi.mock('@inquirer/confirm', () => ({ default: vi.fn() }));
 import readlineSync from 'readline-sync';
 import ConfigAccessor from '../config-accessor.js';
 import { getConfig, warn, CancelError } from '../ui/prompt-ui.js';
+import { defaultOutput } from '../ui/output.js';
 import {
     smartPrompt,
     ask,
@@ -237,6 +238,35 @@ describe('Prompt Input Inquirer', () => {
 
             expect(result).toBe('inquirer answer');
             expect(mockMod).toHaveBeenCalledWith(expect.objectContaining({ message: 'Label' }));
+        });
+
+        it('prints the hint as a muted instruction line before the inquirer input', async () => {
+            expect.hasAssertions();
+
+            const mockMod = vi.fn().mockResolvedValue('answer');
+            __setInputMod({ default: mockMod });
+            const result = await ask('Quantas issues?', { hint: 'tecle Enter para criar todas' });
+
+            expect(result).toBe('answer');
+            const callArgs = mockMod.mock.calls[0]?.[0] as { message: string };
+            expect(callArgs.message).toBe('Quantas issues?');
+            expect(callArgs.message).not.toContain('tecle Enter');
+            expect(defaultOutput.print).toHaveBeenCalledWith('  tecle Enter para criar todas');
+        });
+
+        it('does not duplicate the hint when falling back to prompt after inquirer failure', async () => {
+            expect.hasAssertions();
+
+            const mockMod = vi.fn().mockRejectedValue(new Error('boom'));
+            __setInputMod({ default: mockMod });
+            mockReadlineQuestion.mockReturnValue('fallback');
+            const promptSpy = vi.spyOn(await import('../ui/prompt-input-base.js'), 'prompt');
+            const result = await ask('Q', { hint: 'dica informativa' });
+
+            expect(result).toBe('fallback');
+            expect(promptSpy).toHaveBeenCalledWith('Q', expect.objectContaining({ hint: undefined }));
+            expect(defaultOutput.print).toHaveBeenCalledTimes(1);
+            promptSpy.mockRestore();
         });
 
         it('falls through to prompt when navigation command from inquirer', async () => {

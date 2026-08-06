@@ -353,7 +353,7 @@ async function _chooseFileDataSource(): Promise<{ result: ParseResult; source: '
 }
 
 async function handler(c: CommandContext): Promise<boolean | void> {
-    const { sha, branch, store } = resolveSessionContext(c.ctx, c.ctx.project_name);
+    const { sha, branch, store } = await resolveSessionContext(c.ctx, c.ctx.project_name);
     let data: Awaited<ReturnType<typeof resolveTestDataSource>> | Awaited<ReturnType<typeof _chooseFileDataSource>> =
         await resolveTestDataSource(c.ctx.project_name, sha, branch, store);
     if (!data) {

@@ -18,10 +18,24 @@ import { withSpinner } from './ui/prompt.js';
 import { getHeadSha, getCurrentBranch } from './ci/git-sha.js';
 import type { DataHub, ReportMeta, ComputedMetrics } from './types/data-hub.js';
 // ci-test-downloader removed — DataHub.raw.parsedArtifacts is SSOT (Invariant 6)
-import { isDataHubInitialized, getDataHub } from './data-hub/global-hub.js';
 import type { ParseResult } from './result_parser.js';
 import { rootLogger } from './logger.js';
 import { statsFromTests, statsFromMetricsRun } from './report/report-utils.js';
+
+let _globalHubPromise: Promise<typeof import('./data-hub/global-hub.js')> | null = null;
+/** Lazily load the DataHub module so the interactive menu never pays its heavy
+ * dependency graph (global-hub pulls the whole data-hub cluster) at startup.
+ * Memoized: subsequent calls reuse the in-flight promise; on rejection the
+ * cache is cleared so a later call may retry (no silent swallowing). */
+function loadGlobalHub(): Promise<typeof import('./data-hub/global-hub.js')> {
+    if (!_globalHubPromise) {
+        _globalHubPromise = import('./data-hub/global-hub.js').catch((err: unknown) => {
+            _globalHubPromise = null;
+            throw err;
+        });
+    }
+    return _globalHubPromise;
+}
 
 interface SessionCountersItem {
     op: string;
@@ -109,16 +123,17 @@ export class SessionContext {
  * `_projectName` is retained for API compatibility with immutable callers
  * (case15.ts is `chattr +i`-guarded); the cache is keyed by the global
  * DataHub's repo, not by projectName. */
-export function resolveSessionContext(
+export async function resolveSessionContext(
     ctx: SessionContext,
     _projectName: string,
-): {
+): Promise<{
     sha: string | null;
     branch: string | null;
     store: DataHub;
-} {
+}> {
     const sha = getHeadSha();
     const branch = getCurrentBranch();
+    const { getDataHub } = await loadGlobalHub();
     const store = getDataHub();
 
     ctx.sha = sha;
@@ -180,7 +195,8 @@ function trySaveCiResult(
  * Returns null when DataHub is not initialized or has no parsed artifacts.
  * Replaces fetchLatestTestRun() which made direct CI API calls (Invariant 6).
  */
-function _getLatestTestResultFromDataHub(): ParseResult | null {
+async function _getLatestTestResultFromDataHub(): Promise<ParseResult | null> {
+    const { isDataHubInitialized, getDataHub } = await loadGlobalHub();
     if (!isDataHubInitialized()) return null;
     const hub = getDataHub();
     const artifacts = hub.raw.parsedArtifacts;
@@ -231,7 +247,7 @@ export async function resolveTestDataSource(
     if (cached) return cached;
 
     // DataHub SSOT: read parsed artifacts instead of downloading directly (Invariant 6)
-    const downloaded = _getLatestTestResultFromDataHub();
+    const downloaded = await _getLatestTestResultFromDataHub();
     if (downloaded && downloaded.stats.total > 0) {
         trySaveCiResult(downloaded, sha, branch, projectName, store);
         return { result: downloaded, source: 'ci' };
