@@ -25,17 +25,18 @@
 
 | # | Pendência | Origem | Prioridade | Status |
 |---|-----------|--------|------------|--------|
-| C-1 | `calcCoverageFromRaw` mapeia NaN/±Infinity → `0` silencioso (viola JSDoc próprio) | `shared/data-hub/compute/coverage.ts:31-33` | 🔴 Safety (§25) | ⏳ PENDENTE |
+| C-1 | `calcCoverageFromRaw` mapeia NaN/±Infinity → `0` silencioso (viola JSDoc próprio) | `shared/data-hub/compute/coverage.ts:31-33` | 🔴 Safety (§25) | ✅ DONE (`1544ba61`) |
 | C-2 | Oráculo "SSOT deliberately disagrees" codifica bug como feature | `shared/__tests__/pr-report-core.test.ts:604` | 🔴 Correctness | ⏳ PENDENTE |
 | C-3 | Oráculo `'0.0%'` fixa valor incorreto quando há testes | `shared/__tests__/report-html.test.ts:257` | 🔴 Correctness | ⏳ PENDENTE |
 | C-4 | Bug: run mais antiga como base | `shared/primitives/traceability.ts:75` | 🔴 Correctness | ⏳ PENDENTE |
 | C-5 | Bug: denominador cumulativo de flakiness | `shared/report/flakiness-renderer.ts:40,86,247` | 🔴 Correctness | ⏳ PENDENTE |
 | C-6 | Bug: `metrics-runs.ts` newest-first | `shared/data-hub/compute/metrics-runs.ts:48` | 🔴 Correctness | ⏳ PENDENTE |
-| C-7 | 9 specs órfãs de artefatos deletados | `shared/types/artifact-specs.ts` (IDs 93/207/496/591/867/963/1152/1469/1752) | 🟡 Limpeza | ⏳ PENDENTE |
-| C-8 | Fixtures sintéticas dos deletados | `scripts/__fixtures__/artefactos/*` | 🟡 Limpeza | ⏳ PENDENTE |
-| C-9 | Orquestradores referenciam os 9 deletados | `git_triggers/interactive-mode.ts:702-723`, `schedule-handler.ts:216-296`, `batch-mode.ts` | 🟡 Limpeza | ⏳ PENDENTE |
-| C-10 | `quality-check.ts:406-435` falha em dashboards deletados | `scripts/quality-check.ts`, `artifact-scorecard-runner.ts`, `artifact-validation-harness.ts` | 🟡 Limpeza | ⏳ PENDENTE |
+| C-7 | ~~9 specs órfãs de artefatos deletados~~ | ~~`shared/types/artifact-specs.ts` (IDs 93/207/496/591/867/963/1152/1469/1752)~~ | 🟡 Limpeza | ❌ N/A — premissa falsa (ver §3.3) |
+| C-8 | ~~Fixtures sintéticas dos deletados~~ | ~~`scripts/__fixtures__/artefactos/*`~~ | 🟡 Limpeza | ❌ N/A — premissa falsa (ver §3.3) |
+| C-9 | ~~Orquestradores referenciam os 9 deletados~~ | ~~`git_triggers/interactive-mode.ts:702-723`, `schedule-handler.ts:216-296`, `batch-mode.ts`~~ | 🟡 Limpeza | ❌ N/A — premissa falsa (ver §3.3) |
+| C-10 | ~~`quality-check.ts:406-435` falha em dashboards deletados~~ | ~~`scripts/quality-check.ts`, `artifact-scorecard-runner.ts`, `artifact-validation-harness.ts`~~ | 🟡 Limpeza | ❌ N/A — premissa falsa (ver §3.3) |
 | C-11 | `audit-mock-boundaries.ts` existe mas não está wireado | `package.json` / CI quality job | 🟡 Limpeza | ⏳ PENDENTE |
+| C-12 | Runs acumulam sem limite nem saneamento (3 índices + cache SHA) | `shared/data-hub/persistence.ts` (`put`/`saveReport`) | 🟡 Higiene de storage | ⏳ PENDENTE (design acordado 2026-08-06) |
 
 ### Pendências registradas, NÃO correções (decisões de autoridade do usuário)
 
@@ -47,13 +48,14 @@
 | P-4 | `pr-report-duration-sourcing.md` (untracked) | Design doc pré-existente, implementação pendente |
 | P-5 | `stryker.scope.config.mjs` / `vitest.stryker-scope.config.ts` (untracked) | Tooling de escopo; commit exige mudança em `tsconfig.eslint.json` (churn Tier 4) |
 | P-6 | Docs com paths obsoletos (ex.: `1790000000000-completion-plan.md`) | Referenciam arquivos inexistentes; revisar status antes de qualquer execução |
+| P-7 | Granularidade per-projeto de retenção (política nomeada) | YAGNI até evidência; v1 da retenção é global-only para evitar confusão (UX acordada) |
 
 ---
 
 ## 2. Ordem de execução (Safety primeiro)
 
 ```
-C-1 (Safety) → C-2..C-6 (Correctness) → C-7..C-10 (Limpeza) → C-11 (CI) → suite + push único + CI monitor
+C-1 (Safety) ✅ → C-2..C-6 (Correctness) ✅ → C-7..C-10 ❌ N/A (premissa falsa, ver §3.3) → C-11 (CI) → C-12 (Storage) → suite + push único + CI monitor
 ```
 
 Sequência estrita; cada tarefa verificada antes da próxima (SOP §22.2). Checkpoint em `dev/docs/plans/context-graph-insights-PROGRESS.md` e/ou neste documento ao fim de cada bloco.
@@ -116,48 +118,38 @@ npx tsc --noEmit
 
 ---
 
-### 3.3 — C-7/C-8: Remover specs órfãs e fixtures sintéticas
+### 3.3 — C-7/C-8: ~~Remover specs órfãs e fixtures sintéticas~~ → **N/A — premissa falsa**
 
-**Arquivo(s):** `shared/types/artifact-specs.ts`, `scripts/__fixtures__/artefactos/*`, `setup/templates/*`
+**Decisão (2026-08-06, autorização explícita do usuário):** C-7/C-8 **NÃO são executados**. A auditoria verificou contra o código real que **nenhum dos 9 artefatos listados é órfão**:
 
-**Mudança:** Remover as 9 specs dos deletados (IDs 93, 207, 496, 591, 867, 963, 1152, 1469, 1752). Specs de coverage-gap (1568) e pr-report (2025/2122/2164) permanecem para reconstrução. Remover fixtures sintéticas dos deletados.
+**Evidência (data: 2026-08-06):**
+- Os "IDs 93/207/496/591/867/963/1152/1469/1752" do plano são na verdade **números de linha** de `shared/types/artifact-specs.ts`, mapeando para: ai-effectiveness(93), ai-comparison(207), traceability(496), flakiness(591), suite-optimization(867), cross-squad-benchmark(963), silent-regression(1152), requirement-score(1469), pipeline-health(1752).
+- **Todos os 9 têm renderer em disco:** `ai-effectiveness-renderer.ts`, `ai-comparison-renderer.ts`, `suite-optimization-renderer.ts`, `cross-squad-benchmark-renderer.ts`, `silent-regression-renderer.ts`, `requirement-score-renderer.ts`, `git_triggers/pipeline-health-renderer.ts`, `traceability-matrix.ts`, `flakiness-dashboard.ts`.
+- **Consumers ativos (5 entry points):** `git_triggers/interactive-mode.ts:386,414,424,433-438,466,551`; `git_triggers/schedule-handler.ts:226,244,249,254,259,269,294`; `git_triggers/batch-mode.ts:269,339,420-453`; scorecard/harness (`artifact-scorecard-runner.ts:125`, `artifact-validation-harness.ts:220`).
+- **Fixtures existem:** `scripts/__fixtures__/artefactos/` contém `ai-effectiveness.json`, `ai-comparison.json`, `cross-squad-benchmark.json`, `silent-regression.json`, `suite-optimization.json`, `requirement-score.json`, `traceability.json`, `flakiness.json`.
+- **`artifact-specs.ts` é consumido em runtime:** `scripts/artifact-scorecard-runner.ts:22`, `shared/quality/artifact-quality-gate.ts:20` — deletar specs quebraria o quality gate.
+- **Sem commit de deleção no git history:** último refactor de artefatos relevante foi `de901295` (F0.4, removeu case25 — não artefatos).
+- **traceability/flakiness receberam correções recém-aplicadas** (C-4 `e8015c82`, C-5 `394f3b0c`) — impossível serem artefatos deletados.
 
-**TDD (RED):** teste de schema que falha se spec órfã existe.
+Executar C-7..C-10 à letra destruiria ~20 consumers em 5 entry points ativos e violaria Regras 4/6/7 e Architecture Contract G5. A correção correta é corrigir o plano (origem do erro), não o código.
 
-**Critério de Aceitação:** `artifact-specs.ts` contém apenas 8 sobreviventes + 3 reconstruídos + orquestradores.
-
-**Auditoria:**
-```bash
-for id in ai-effectiveness ai-comparison traceability flakiness suite-optimization cross-squad-benchmark silent-regression requirement-score pipeline-health; do
-  rg -l "'$id'" shared/types/artifact-specs.ts && echo "STILL EXISTS: $id"
-done
-```
-
-**Commit:** `refactor(specs): remover specs/fixtures de artefatos deletados (F0.7)`
+**Commit:** N/A (sem mudança de código).
 
 ---
 
-### 3.4 — C-9: Podar orquestradores
+### 3.4 — C-9: ~~Podar orquestradores~~ → **N/A — premissa falsa**
 
-**Arquivo(s):** `git_triggers/interactive-mode.ts`, `git_triggers/schedule-handler.ts`, `git_triggers/batch-mode.ts`
+Ver §3.3. Os orquestradores `interactive-mode.ts`, `schedule-handler.ts`, `batch-mode.ts` referenciam artefatos **vivos**, não deletados. Nenhuma poda.
 
-**Mudança:** Remover handlers `_dashboard*`/entries de menu dos 9 deletados; remover 9 seções do relatório semanal; remover `generateFlakinessDashboard`, `handlePipelineHealth`, `generatePrReportIfNeeded` (batch-mode).
-
-**Critério de Aceitação:** menu expõe apenas os 8 sobreviventes; schedule sem seções deletadas; batch-mode sem imports órfãos.
-
-**Commit:** `refactor(orchestrators): podar menu/schedule/batch dos artefatos deletados (F0.5)`
+**Commit:** N/A (sem mudança de código).
 
 ---
 
-### 3.5 — C-10: Sanear scripts de CI e harness
+### 3.5 — C-10: ~~Sanear scripts de CI e harness~~ → **N/A — premissa falsa**
 
-**Arquivo(s):** `scripts/quality-check.ts:406-435`, `scripts/artifact-scorecard-runner.ts`, `scripts/artifact-validation-harness.ts`
+Ver §3.3. `quality-check.ts`, `artifact-scorecard-runner.ts`, `artifact-validation-harness.ts` avaliam artefatos **vivos**. Nenhuma mudança.
 
-**Mudança:** Remover checks de dashboards deletados; scorecard avalia 8 sobreviventes + 3 reconstruídos; harness não renderiza artefatos deletados.
-
-**Critério de Aceitação:** `npm run lint` (executa quality-check) verde; scorecard sem specs órfãs.
-
-**Commit:** `refactor(ci): scorecard e harness avaliam apenas artefatos vigentes (F0.6)`
+**Commit:** N/A (sem mudança de código).
 
 ---
 
@@ -170,6 +162,39 @@ done
 **Critério de Aceitação:** script roda no CI; violações de mock interno falham o check.
 
 **Commit:** `ci(quality): wire audit-mock-boundaries no job quality`
+
+---
+
+### 3.7 — C-12: Política de retenção de runs (design acordado 2026-08-06)
+
+**Arquivo(s):** `shared/data-hub/persistence.ts` (hook em `put`), `shared/validation/config-schema.ts`, `shared/validation/config-validator.ts`, `git_triggers/cli-args.ts`/`batch-mode.ts` (comando manual)
+
+**Evidência (consumidores):** `session-context.ts:131-153` (`loadReport(sha)` — cache por SHA exata) e `:203-215` (`getBranch(branch)` — só `entries[0]`, o mais recente). Tendências/flakiness/cobertura **não** leem o cache persistido (usam `raw.runs`/`parsedArtifacts` do fetch atual). Conclusão: retenção não quebra agregações se preservar (1) entry do SHA atual e (2) entry mais recente de cada branch.
+
+**Mudança (na origem):**
+1. **Dois knobs globais, opt-in, default OFF (retrocompatível — §10):**
+   - `REPORT_RETENTION_COUNT` (number, default `0`=off) — "manter os últimos N runs por projeto" (mental model natural).
+   - `REPORT_RETENTION_MAX_AGE_DAYS` (number, default `0`=off) — rede de segurança por idade.
+2. **Semântica union (menos destrutivo):** entry removido se **não** está nos últimos N **e** **não** é mais jovem que X dias. Protegidos: SHA atual do HEAD + entry mais recente de cada branch.
+3. **Saneamento atômico (Regra 7):** hook pós-`put` (limitado: roda quando count excede a política). Ler índices → calcular keep-set → apagar `{sha}.json` → reescrever global+project index **e** branch-index consistentemente (sem dangling refs), via temp-file + rename; falha = nada commitado + log alto (Regra 25).
+4. **Loga cada deleção** (`rootLogger.info` com sha/projeto/razão) — nunca silencioso.
+5. **Validação (Regra 24):** `int >= 0` via `config-validator.ts`; valor inválido falha alto.
+6. **UX de comando:** `--prune-reports` (dry-run) + `--prune-reports --force` (executa). SPA futura (F3) apenas exibe política efetiva e dispara prune — config sempre via env/schema (fonte única).
+
+**TDD (RED):** teste de persistência com 7 runs + política count=5 → após `put`, 5 runs; protegidos preservados; índices consistentes; dry-run não apaga.
+
+**Critério de Aceitação:** índices nunca ficam em estado parcial; nenhuma deleção silenciosa; default OFF = comportamento idêntico (§10).
+
+**Comando de Verificação:**
+```bash
+npx vitest run shared/data-hub/__tests__/persistence.test.ts
+npx tsc --noEmit
+npm run lint
+```
+
+**Testes:** `shared/data-hub/__tests__/persistence.retention.test.ts` (novo)
+
+**Commit:** `feat(storage): política de retenção de runs com saneamento atômico (C-12)`
 
 ---
 
@@ -188,6 +213,6 @@ done
 | Risco | Mitigação |
 |-------|-----------|
 | C-2..C-6 tocam renderers/oráculos com muitos consumidores | Identificar produtores/consumidores antes; TDD RED prova o bug antes da correção (Regra 19.11) |
-| Deleção de specs órfãs quebra consumidor residual | Auditoria `rg` por ID antes de deletar; suite completa por commit |
+| Deleção de specs órfãs quebra consumidor residual | ~~Auditoria `rg` por ID antes de deletar; suite completa por commit~~ → **C-7..C-10 cancelados (premissa falsa, §3.3)** — nenhuma deleção executada |
 | CI gerado (G2) impede edição manual | Alterar `ci-injector.ts`/templates, regenerar, validar diffs |
 | Retomada por agente sem contexto | Este documento é auto-contido (§1 inventário, §3 tarefas, §4 protocolo) |
