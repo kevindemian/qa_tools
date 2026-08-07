@@ -12,12 +12,15 @@ import {
 } from '../infra/temp-dir.js';
 import { rootLogger } from '../logger.js';
 
-vi.mock('fs', (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
-    mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
-    writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
-    existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
-    rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
-}));
+vi.mock(
+    'fs',
+    (): Pick<typeof fs, 'mkdirSync' | 'writeFileSync' | 'existsSync' | 'rmSync'> => ({
+        mkdirSync: vi.fn<(...args: Parameters<typeof fs.mkdirSync>) => ReturnType<typeof fs.mkdirSync>>(),
+        writeFileSync: vi.fn<(...args: Parameters<typeof fs.writeFileSync>) => ReturnType<typeof fs.writeFileSync>>(),
+        existsSync: vi.fn<(...args: Parameters<typeof fs.existsSync>) => ReturnType<typeof fs.existsSync>>(() => false),
+        rmSync: vi.fn<(...args: Parameters<typeof fs.rmSync>) => ReturnType<typeof fs.rmSync>>(),
+    }),
+);
 
 describe('Temp Dir', () => {
     beforeEach(() => {
@@ -108,6 +111,42 @@ describe('Temp Dir', () => {
 
             expect(() => writeReport('test.json', '{}')).toThrow('ENOSPC');
             expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
+        });
+
+        it('blocks path traversal via ../ filename and does not write outside base (OPP-5)', () => {
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+
+            expect(() => writeReport('../../evil.json', '{}')).toThrow('Path traversal detected');
+            expect(fs.writeFileSync).not.toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
+        });
+
+        it('blocks deep path traversal escaping multiple levels (OPP-5)', () => {
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+
+            expect(() => writeReport('a/../../../../../evil.json', '{}')).toThrow('Path traversal detected');
+            expect(fs.writeFileSync).not.toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
+        });
+
+        it('blocks absolute-path filename escaping the base (OPP-5)', () => {
+            const warnSpy = vi.spyOn(rootLogger, 'warn').mockImplementation(() => {});
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+
+            expect(() => writeReport(path.resolve(os.tmpdir(), 'absolute-evil.json'), '{}')).toThrow(
+                'Path traversal detected',
+            );
+            expect(fs.writeFileSync).not.toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('writeReport'));
+        });
+
+        it('blocks null-byte filename instead of writing to disk (OPP-5)', () => {
+            process.env['QA_TOOLS_REPORTS_DIR'] = path.join(os.tmpdir(), 'qa-test-reports');
+
+            expect(() => writeReport('evil\u0000.json', '{}')).toThrow(/Path traversal|null|invalid/i);
+            expect(fs.writeFileSync).not.toHaveBeenCalled();
         });
     });
 

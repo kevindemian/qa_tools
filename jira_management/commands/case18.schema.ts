@@ -28,7 +28,14 @@ export const CoverageItemSchema = z.object({
 
 export const TestCaseDataSchema = z.object({
     title: z.string().min(5, 'title must be at least 5 characters'),
-    steps: z.array(z.string()).min(1, 'steps array must not be empty'),
+    steps: z
+        .array(z.string())
+        .min(1, 'steps array must not be empty')
+        .refine(
+            (steps) => steps.every((s) => s.trim().length > 0),
+            'each step must be a non-empty, non-whitespace string',
+        )
+        .refine((steps) => steps.every((s) => s.length <= 1000), 'each step must be at most 1000 characters'),
     expectedResult: z.string().min(10, 'expectedResult must be at least 10 characters'),
     preConditions: z.array(PreConditionInputSchema).optional(),
     coverage: z.array(CoverageItemSchema).optional(),

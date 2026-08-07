@@ -329,7 +329,13 @@ function evaluatePreconditionSpecificity(testCases: GeneratedTestCase[]): Metric
     }
 
     if (total === 0) {
-        return { score: 100, weight, passed: ['No preconditions to evaluate'], failed: [], warnings: [] };
+        return {
+            score: 0,
+            weight,
+            passed: [],
+            failed: ['No preconditions declared; prompt requires at least one preConditions per test case'],
+            warnings: ['Zero preconditions across the whole suite — missing-data signal'],
+        };
     }
 
     const score = Math.round((specific / total) * 100);

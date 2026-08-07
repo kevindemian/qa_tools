@@ -9,7 +9,7 @@
  *      — matches found → resolved as reference
  *      — unmatched → create in Jira
  *   4. output JSON with resolved preConditions */
-import { formatErr } from '../../shared/errors.js';
+import { formatErr, LlmRateLimitError, LlmAuthError, LlmTimeoutError, LlmProviderError } from '../../shared/errors.js';
 import { z } from '../../shared/validation/validation.js';
 import { ImportJsonItemSchema } from '../csv-import-schema.js';
 import crypto from 'crypto';
@@ -106,6 +106,69 @@ function recordAttempt(
     recordAiGeneration(generationRecord);
 }
 
+export interface LlmFailureInfo {
+    kind: 'rate-limit' | 'auth' | 'timeout' | 'provider' | 'unknown';
+    message: string;
+    hint: string;
+}
+
+/** Classify an LLM infrastructure failure into an actionable, recovery-oriented message.
+ *
+ *  UX3: a provider failure must not leave the user without a way forward. Each
+ *  known failure kind carries an explicit recovery hint (retry guidance and, when
+ *  applicable, an alternative model suggestion). Unknown errors are still surfaced
+ *  explicitly (kind 'unknown') — never swallowed. */
+export function describeLlmFailure(err: unknown): LlmFailureInfo {
+    const raw = err instanceof Error ? err.message : String(err);
+    if (
+        err instanceof LlmRateLimitError ||
+        /429|rate limit|too many requests|quota|tokens? per minute|TPM/i.test(raw)
+    ) {
+        return {
+            kind: 'rate-limit',
+            message: 'Limite de requisições do provedor LLM atingido (rate limit).',
+            hint:
+                'Aguarde alguns segundos e tente novamente — o cliente LLM aplica backoff e circuit-breaker automaticamente. ' +
+                'Se o limite persistir, reduza a carga (menos itens por execução) ou troque o modelo em LLM_MODEL no .env.local.',
+        };
+    }
+    if (err instanceof LlmAuthError || /401|403|unauthorized|invalid api key|api key missing|auth/i.test(raw)) {
+        return {
+            kind: 'auth',
+            message: 'Falha de autenticação no provedor LLM.',
+            hint:
+                'Verifique a API key em LLM_API_KEY / LLM_BASE_URL no .env.local (ou via /setup). ' +
+                'Um token inválido ou expirado impede todas as chamadas.',
+        };
+    }
+    if (err instanceof LlmTimeoutError || /timeout|timed out|ETIMEDOUT|abort|network|econn/i.test(raw)) {
+        return {
+            kind: 'timeout',
+            message: 'O provedor LLM não respondeu a tempo (timeout/erro de rede).',
+            hint:
+                'Verifique sua conexão e a acessibilidade de LLM_BASE_URL. ' +
+                'Tente novamente; se persistir, use um modelo alternativo (LLM_MODEL) ou provedor com menor latência.',
+        };
+    }
+    if (
+        err instanceof LlmProviderError ||
+        /all llm providers? failed|provider.*fail|\b5\d\d\b|server error|service unavailable|internal error/i.test(raw)
+    ) {
+        return {
+            kind: 'provider',
+            message: 'O provedor LLM está indisponível ou retornou erro.',
+            hint:
+                'Confira LLM_PROVIDER / LLM_MODEL / LLM_BASE_URL no .env.local. ' +
+                'Sugestão: troque para um modelo alternativo (ex.: outro LLM_MODEL no mesmo provedor) e reexecute.',
+        };
+    }
+    return {
+        kind: 'unknown',
+        message: 'Falha ao gerar casos de teste com IA',
+        hint: 'Verifique os logs acima. Se o erro persistir, revise sua configuração e tente novamente.',
+    };
+}
+
 async function handler(c: CommandContext): Promise<boolean | void> {
     const input = await gatherInput(c);
     if (!input) return;
@@ -144,7 +207,9 @@ async function handler(c: CommandContext): Promise<boolean | void> {
             });
         } catch (err: unknown) {
             rootLogger.warn('case18: Falha ao gerar casos de teste com IA: ' + formatErr(err));
-            printError('Falha ao gerar casos de teste com IA', err);
+            const info = describeLlmFailure(err);
+            printError(info.message, err);
+            warn('Recuperação: ' + info.hint);
             return;
         }
 
@@ -241,6 +306,11 @@ async function gatherInput(c: CommandContext): Promise<{
     }
 
     const acceptanceCriteria = await askMultiline('Critérios de aceitação');
+
+    if (!acceptanceCriteria.trim()) {
+        warn('Critérios de aceitação vazios. Operação cancelada.');
+        return null;
+    }
 
     const project = c.ctx.project_name || (await ask('Projeto Jira', { hint: 'ex: ECSPOL' }));
     if (!project.trim()) {
@@ -393,7 +463,7 @@ function _buildGenerationRecord(
     const record: AiGenerationRecord = {
         id: crypto.randomUUID(),
         generatedAt: new Date().toISOString(),
-        promptVersion: computePromptVersion(),
+        promptVersion: resolvePromptVersion(),
         userStory: input.userStory,
         acceptanceCriteria: input.acceptanceCriteria,
         generatedTests: testCases.map((tc) => ({
@@ -456,7 +526,7 @@ export function writeQualityArtifacts(
 
     try {
         const generated = toGeneratedTestCases(testCases, [], new Map());
-        const table = buildCoverageTable(generated, acceptanceCriteria, computePromptVersion());
+        const table = buildCoverageTable(generated, acceptanceCriteria, resolvePromptVersion());
         writeReport('case18-coverage-table.json', coverageTableToJson(table));
         writeReport('case18-coverage-table.html', coverageTableToHtml(table));
     } catch (err: unknown) {
@@ -465,15 +535,36 @@ export function writeQualityArtifacts(
 }
 
 /** Compute a content hash of the prompt template as the prompt version.
- *  Any edit to the prompt file yields a new version automatically. */
+ *  Any edit to the prompt file yields a new version automatically.
+ *  Throws explicitly when the template cannot be read — the template is a
+ *  bundled asset and `gatherInput` already read it successfully before this
+ *  is reached, so a read failure here is a genuine infrastructure defect and
+ *  must not be masked as real data (see `resolvePromptVersion`). */
 export function computePromptVersion(): string {
     const templatePath = path.join(import.meta.dirname, '../../shared/prompts/user-story-to-tests.md');
+    const content = fs.readFileSync(templatePath, 'utf8');
+    return 'v' + crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+}
+
+/** Resolve the prompt version for persistence, recovering from infra failures
+ *  instead of hard-failing the whole flow.
+ *
+ *  On failure: logs the error explicitly, surfaces actionable recovery options,
+ *  and returns `'unreadable'` — a value that is explicitly NOT a real version
+ *  (consumers can distinguish it from `v<hash>`). Never returns a value that
+ *  looks like a real prompt version when the template could not be read. */
+export function resolvePromptVersion(): string {
     try {
-        const content = fs.readFileSync(templatePath, 'utf8');
-        return 'v' + crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+        return computePromptVersion();
     } catch (err: unknown) {
-        rootLogger.warn('case18: Falha ao calcular versão do prompt: ' + formatErr(err));
-        return 'unknown';
+        rootLogger.error('case18: Não foi possível ler o template do prompt: ' + formatErr(err));
+        warn(
+            'Não foi possível calcular a versão do prompt (template ausente ou ilegível). ' +
+                'O registro será salvo com promptVersion="unreadable". ' +
+                'Recuperação: restaure shared/prompts/user-story-to-tests.md (git checkout -- <arquivo> ' +
+                'ou reinstale o pacote) e reexecute.',
+        );
+        return 'unreadable';
     }
 }
 
@@ -620,6 +711,8 @@ export function serializeForImport(tests: TestCase[]): ImportJsonItem[] {
             ...(tc.environment ? { environment: tc.environment } : {}),
             ...(tc.components ? { components: tc.components } : {}),
             ...(tc.priority ? { priority: tc.priority } : {}),
+            ...(tc.coverage && tc.coverage.length > 0 ? { coverage: tc.coverage } : {}),
+            ...(tc.evidence && tc.evidence.length > 0 ? { evidence: tc.evidence } : {}),
         };
     });
 }
@@ -655,9 +748,14 @@ export function convertTestCases(
     createdKeys: Map<string, string>,
 ): TestCase[] {
     return llmOutput.map((item, idx) => {
-        const steps: TestStep[] = item.steps.map((stepText: string) => ({
-            fields: { Action: stepText },
-        }));
+        const steps: TestStep[] = item.steps.map((stepText: string, stepIdx: number) => {
+            const fields: TestStep['fields'] = { Action: stepText };
+            const isLastStep = stepIdx === item.steps.length - 1;
+            if (isLastStep && item.expectedResult) {
+                fields['Expected Result'] = item.expectedResult;
+            }
+            return { fields };
+        });
 
         const pcs = (Reflect.get(resolvedPreConditions, idx) as TestCasePreCondition[] | undefined) ?? [];
         const precondition = pcs.flatMap((entry) => resolvePrecondition(entry, createdKeys));
@@ -670,6 +768,8 @@ export function convertTestCases(
             ...(item.environment ? { environment: item.environment } : {}),
             ...(item.components ? { components: item.components } : {}),
             ...(item.priority ? { priority: item.priority } : {}),
+            ...(item.coverage && item.coverage.length > 0 ? { coverage: item.coverage } : {}),
+            ...(item.evidence && item.evidence.length > 0 ? { evidence: item.evidence } : {}),
         };
     });
 }
@@ -706,7 +806,11 @@ export function toGeneratedTestCases(
         const pcs = (Reflect.get(resolvedPreConditions, idx) as TestCasePreCondition[] | undefined) ?? [];
         const preConditions = pcs.map((pc) => {
             const entry = resolvePrecondition(pc, createdKeys)[0];
-            return { type: entry?.type ?? 'inline', description: entry?.value ?? pc.summary ?? pc.type };
+            const description = entry?.value ?? pc.summary;
+            return {
+                type: entry?.type ?? 'inline',
+                ...(description ? { description } : {}),
+            };
         });
         return {
             title: item.title,

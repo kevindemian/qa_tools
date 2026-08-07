@@ -79,6 +79,31 @@ describe('PBT: Temp Dir', () => {
                 { numRuns: 50 },
             );
         });
+
+        it('never writes outside the reports base, even for malicious filenames (OPP-5)', async () => {
+            expect.hasAssertions();
+
+            const { writeReport, reportsDir } = await import('../infra/temp-dir.js');
+            const base = reportsDir();
+            const TraversalArb = fc
+                .string({ minLength: 1, maxLength: 40 })
+                .map((s) => s.replace(/[\u0000]/g, ''))
+                .filter((s) => s.length > 0);
+            fc.assert(
+                fc.property(TraversalArb, (filename) => {
+                    const resolvedBase = path.resolve(base);
+                    let result: string;
+                    try {
+                        result = writeReport(filename, 'x');
+                    } catch {
+                        return;
+                    }
+                    const resolved = path.resolve(result);
+                    expect(resolved.startsWith(resolvedBase + path.sep) || resolved === resolvedBase).toBeTruthy();
+                }),
+                { numRuns: 100 },
+            );
+        });
     });
 
     describe('WriteEphemeral invariants', () => {

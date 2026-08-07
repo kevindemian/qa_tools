@@ -270,6 +270,8 @@ function _mapJsonItems(validated: JsonTestItem[], aliasWarnedRef: { value: boole
             ...(item.environment ? { environment: item.environment } : {}),
             ...(item.components ? { components: item.components } : {}),
             ...(item.priority ? { priority: item.priority } : {}),
+            ...(item.coverage ? { coverage: item.coverage } : {}),
+            ...(item.evidence ? { evidence: item.evidence } : {}),
         }),
     );
 }

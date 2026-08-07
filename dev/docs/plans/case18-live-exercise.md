@@ -158,11 +158,17 @@ mas significa que o matching real raramente aproveita as >100 pre-conditions do 
 | `shared/__tests__/llm-cache.test.ts` | +4 testes fences/array |
 | `shared/__tests__/case18-evaluator.test.ts` | +2 testes QA7 (extractCriteria, baseline 98/A) |
 
+**Status atual:** todos estes fixes + os itens de Fase 1 desta sessão (N1 3 camadas, QA1,
+QA2, OPP-3/4/5/6, UX3, DW-1) estão **no working tree, sem commit** — commit único pendente
+(Fase 6).
+
 ### 4.3 Bugs pendentes
 
 | ID | Bug | Local | Status |
 |----|-----|-------|--------|
-| BUG-3 | Acceptance criteria vazia sem validação | `case18.ts:243` | 📋 S1 |
+| BUG-3 | Acceptance criteria vazia sem validação | `case18.ts:243` | ✅ resolvido (gatherInput aborta) |
+
+**Nota:** erros de tipo do baseline (preconditions com `description`) foram corrigidos na origem nesta sessão (interface `TestCasePreCondition` + `as const` no teste).
 
 ---
 
@@ -174,7 +180,7 @@ mas significa que o matching real raramente aproveita as >100 pre-conditions do 
 |----|----------|-----------|--------|
 | UX1 | case18 sem caminho "salvar local sem criar" — gate só create/regenerate/reject | UX/Arq | Pendente |
 | UX2 | `fetchUserStoryFromJira` busca só description/summary — ACs sempre manuais | UX | Pendente |
-| UX3 | Falha de infra de provider emudrece — sem mensagem acionável nem sugestão de modelo alternativo | UX | Pendente |
+| UX3 | Falha de infra de provider emudrece — sem mensagem acionável nem sugestão de modelo alternativo | UX | ✅ resolvido |
 
 ### QA — Qualidade do artefato/pipeline
 
@@ -194,10 +200,10 @@ mas significa que o matching real raramente aproveita as >100 pre-conditions do 
 |----|-------------|-----------|--------|
 | OPP-1 | Inconsistência path resolution writeTestOutput vs writeQualityArtifacts | Arquitetura | Registrado |
 | OPP-2 | Funções internas sem testes dedicados | Cobertura | Registrado |
-| OPP-3 | `matchPreconditionByDualThreshold` sem testes de propriedade | Cobertura | Pendente |
-| OPP-4 | Steps sem validação de edge case | Robustez | Pendente |
-| OPP-5 | `writeReport` path traversal guard sem testes | Segurança | Pendente |
-| OPP-6 | `computePromptVersion` fallback silencioso | Observabilidade | Pendente |
+| OPP-3 | `matchPreconditionByDualThreshold` sem testes de propriedade | Cobertura | ✅ resolvido (10 PBT) |
+| OPP-4 | Steps sem validação de edge case | Robustez | ✅ resolvido (refine vazio/whitespace/max) |
+| OPP-5 | `writeReport` path traversal guard sem testes | Segurança | ✅ resolvido (guard + 5 testes + PBT) |
+| OPP-6 | `computePromptVersion` fallback silencioso | Observabilidade | ✅ resolvido (throw + resolvePromptVersion) |
 
 ---
 
@@ -205,14 +211,18 @@ mas significa que o matching real raramente aproveita as >100 pre-conditions do 
 
 | ID | Achado | Onde | Tipo | Status |
 |----|--------|------|------|--------|
-| N1 | **Tensão prompt×schema**: prompt exige ≥1 preConditions por test case; schema permite 0 | prompt:119 × schema:33 | Atrito de contrato | 📋 |
+| N1 | **Tensão prompt×schema**: prompt exige ≥1 preConditions por test case; schema permite 0 | prompt:119 × schema:33 | Atrito de contrato | ✅ resolvido (3 camadas) |
 | N2 | **Gate `create` escreve preconditions sem confirmação** e `dryRun` não cobre (já era UX1); o único caminho seguro local é `reject`, que **não salva artefatos** (sem `writeTestOutput`) | case18.ts:203 | Confusão UX | 📋 |
-| N3 | **`toGeneratedTestCases` corrompe reference**: `description: entry?.value ?? pc.summary ?? pc.type` — reference sem key cai em `'inline'`/`pc.type` | case18.ts:707-709 | Dados | 📋 atacar |
+| N3 | **`toGeneratedTestCases` corrompe reference**: `description: entry?.value ?? pc.summary ?? pc.type` — reference sem key cai em `'inline'`/`pc.type` | case18.ts:707-709 | Dados | ✅ resolvido |
 | N4 | **BVA/EP retornam 100 "grátis"** sem ranges/campos restritos → score inflado em stories não-numéricas (ECSPOL-960 é caso) | case18-deterministic.ts:350,417 | Calibração | 📋 |
-| N5 | **Matcher dual-threshold não usa stopwords no Jaccard≥0.7** (só no ramo [0.5,0.7)) — short-query vs long-summary pode falsamente matchar | precondition-matcher.ts:183-199 | Robustez | 📋 |
+| N5 | **Matcher dual-threshold não usa stopwords no Jaccard≥0.7** (só no ramo [0.5,0.7)) — short-query vs long-summary pode falsamente matchar | precondition-matcher.ts:183-199 | Robustez | 📋 calibração (decisão adiada) |
 | N6 | **Prompt pede `coverage.criterionText` EXATO** mas `evaluateCoverage` só pontua content-match como warning (QA3) — LLM que segue prompt recebe score correto; LLM que parafraseia é penalizado | prompt:124 × deterministic:262 | Consistência | 📋 |
 | N7 | **6 arquivos de fix sem commit** — live test depende de fixes não persistidos (QA5/QA6/QA7) | working tree | Risco de processo | ✅ em commit |
 | N8 | `.env.local` LLM_PROVIDER=groq + llama-3.1-8b-instant tem histórico de 429 TPM (limite 6000) — live test deve prever retry/circuit-breaker | run anterior | Resiliência | 📋 |
+| N1-1 | **Baseline perdeu preconditions na conversão** — mapping original (`.json`/`.md`) tem preconditions em 100% dos 14 casos (ECSPOL-812/813/1124/1125/1202/1603/1604/1606); baseline TS não tinha | case18-benchmarks.ts | Dados | ✅ resolvido |
+| N1-2 | **Evaluator dava 100 "grátis"** para suíte sem preconditions (`total===0` → score 100) | case18-deterministic.ts:331 | Avaliação | ✅ resolvido |
+| N1-3 | **Prompt não exigia preconditions** (atrito N1); agora "MUST have at least one preConditions" + exceção rara | prompt:119 | Contrato | ✅ resolvido |
+| N9 | **QA2 round-trip lossless**: coverage/evidence descartados em `convertTestCases`/`serializeForImport` (já QA2) | case18.ts + schema | Dados | ✅ resolvido (contrato autorizado) |
 
 ---
 
@@ -271,7 +281,18 @@ mas significa que o matching real raramente aproveita as >100 pre-conditions do 
 
 | ID | Achado/Sugestão | Categoria | Onde apareceu | Status |
 |----|-----------------|-----------|---------------|--------|
-| (preencher) | | | | |
+| N1-1 | Baseline perdeu preconditions na conversão do mapping original | Dados | case18-benchmarks.ts | ✅ baseline com preconditions reais (14/14) |
+| N1-2 | Evaluator dava 100 "grátis" para suíte sem preconditions | Avaliação | case18-deterministic.ts:331 | ✅ total===0 → score 0 + failed + warning |
+| N1-3 | Prompt não exigia preconditions | Contrato | user-story-to-tests.md:119 | ✅ "MUST have at least one preConditions" + exceção rara |
+| QA1 | `convertTestCases` descartava `expectedResult` | Dados | case18.ts convertTestCases | ✅ mapeado ao último step 'Expected Result' |
+| QA2 | coverage/evidence descartados no round-trip | Dados | case18.ts + schema | ✅ contrato autorizado: TestCase/ImportJsonItemSchema + propagação |
+| OPP-6 | `computePromptVersion` retornava `'unknown'` silencioso | Observabilidade | case18.ts | ✅ throw explícito + resolvePromptVersion (recuperação, sem hard fail) |
+| OPP-3 | Matcher sem testes de propriedade | Cobertura | precondition-matcher.ts | ✅ 10 PBT (exact/empty/create-null-key/reference-real-key/determinismo/subsumption/disjoint) |
+| OPP-4 | Steps aceitavam vazio/whitespace/sem limite | Robustez | case18.schema.ts | ✅ refine non-empty + max 1000 chars (3 testes) |
+| OPP-5 | Guard de path traversal de writeReport sem testes | Segurança | shared/infra/temp-dir.ts | ✅ assertSafeFilename + 5 testes + PBT "never writes outside base" |
+| UX3 | Falha de provider sem mensagem acionável | UX | case18.ts | ✅ describeLlmFailure (rate-limit/auth/timeout/provider/unknown) + hint de recuperação |
+| DW-1 | PBT em jira_management importava fast-check direto | Arquitetura | precondition-matcher.property.test.ts | ✅ DepWall → import via shared/deps.js |
+| N5 | Stopwords não aplicadas no ramo Jaccard≥0.7 | Robustez | precondition-matcher.ts:183 | 📋 decisão de calibração adiada (testes existentes fixam comportamento) |
 
 ---
 

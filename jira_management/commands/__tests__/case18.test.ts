@@ -63,7 +63,8 @@ import os from 'os';
 import path from 'path';
 import * as orchestratorModule from '../../import-orchestrator.js';
 import * as pickerModule from '../../services/issue-picker.js';
-import case18Module, { toGeneratedTestCases } from '../case18.js';
+import { LlmRateLimitError, LlmAuthError, LlmTimeoutError, LlmProviderError } from '../../../shared/errors.js';
+import case18Module, { toGeneratedTestCases, describeLlmFailure } from '../case18.js';
 import { createMockContext } from '../../../shared/test-utils/factories/context-factory.js';
 
 const baseContext = createMockContext();
@@ -120,6 +121,20 @@ describe('Case18', () => {
             await mod.handler(baseContext);
 
             expect(prompt.warn).toHaveBeenCalledWith('História vazia. Operação cancelada.');
+        });
+
+        it('aborts when acceptance criteria is empty (BUG-3)', async () => {
+            expect.hasAssertions();
+
+            const prompt = vi.mocked(promptModule);
+            prompt.showSelect.mockResolvedValueOnce('manual').mockResolvedValue('create');
+            prompt.askMultiline.mockResolvedValueOnce('User wants to login').mockResolvedValueOnce('');
+
+            const mod = case18Module;
+            await mod.handler(baseContext);
+
+            expect(prompt.warn).toHaveBeenCalledWith('Critérios de aceitação vazios. Operação cancelada.');
+            expect(llmClientModule.llmPrompt).not.toHaveBeenCalled();
         });
 
         it('handles LLM error', async () => {
@@ -998,6 +1013,48 @@ describe('Case18', () => {
 
             expect(result[0]?.coverage).toBeUndefined();
             expect(result[0]?.evidence).toBeUndefined();
+        });
+    });
+
+    describe('describeLlmFailure (UX3)', () => {
+        it('classifies LlmRateLimitError with actionable recovery hint', () => {
+            const info = describeLlmFailure(new LlmRateLimitError('LLM API error: HTTP 429 rate limit exceeded'));
+
+            expect(info).not.toBeNull();
+            expect(info?.kind).toBe('rate-limit');
+            expect(info?.message).toMatch(/limite|rate/i);
+            expect(info?.hint).toMatch(/aguarde|wait|retry|tente/i);
+        });
+
+        it('classifies LlmAuthError with API key recovery hint', () => {
+            const info = describeLlmFailure(new LlmAuthError('API key missing for tier'));
+
+            expect(info).not.toBeNull();
+            expect(info?.kind).toBe('auth');
+            expect(info?.hint).toMatch(/API key|token|\.env/i);
+        });
+
+        it('classifies LlmTimeoutError with connection recovery hint', () => {
+            const info = describeLlmFailure(new LlmTimeoutError('LLM request timed out after 60s'));
+
+            expect(info).not.toBeNull();
+            expect(info?.kind).toBe('timeout');
+            expect(info?.hint).toMatch(/rede|conexão|timeout|network/i);
+        });
+
+        it('classifies LlmProviderError with provider/model recovery hint', () => {
+            const info = describeLlmFailure(new LlmProviderError('All LLM providers failed'));
+
+            expect(info).not.toBeNull();
+            expect(info?.kind).toBe('provider');
+            expect(info?.hint).toMatch(/modelo|model|provedor|provider|LLM_MODEL/i);
+        });
+
+        it('classifies generic errors as unknown without a hard fail', () => {
+            const info = describeLlmFailure(new Error('LLM response failed schema validation'));
+
+            expect(info).not.toBeNull();
+            expect(info?.kind).toBe('unknown');
         });
     });
 });

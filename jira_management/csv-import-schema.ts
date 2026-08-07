@@ -68,6 +68,8 @@ export const ImportJsonItemSchema = z.object({
     environment: z.string().optional(),
     components: z.array(z.string()).optional(),
     priority: z.string().optional(),
+    coverage: z.array(z.object({ criterionId: z.string(), criterionText: z.string() })).optional(),
+    evidence: z.array(z.string()).optional(),
 });
 
 export const ImportJsonRootSchema = z.object({

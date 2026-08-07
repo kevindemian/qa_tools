@@ -122,9 +122,10 @@ describe('evaluateDeterministic', () => {
     });
 
     describe('precondition specificity', () => {
-        it('scores 100 when no preconditions', () => {
+        it('penalizes a suite with zero preconditions (no free 100)', () => {
             const result = evaluateDeterministic([{ title: 'Test', steps: ['Step'], expectedResult: 'Result' }], '');
-            expect(result.metrics.preconditionSpecificity.score).toBe(100);
+            expect(result.metrics.preconditionSpecificity.score).toBe(0);
+            expect(result.metrics.preconditionSpecificity.failed.length).toBeGreaterThan(0);
         });
 
         it('scores high for specific preconditions', () => {
@@ -304,6 +305,32 @@ describe('ECSPOL-960 baseline', () => {
         for (const tc of ECSPOL960_BASELINE) {
             expect(tc.coverage).toBeDefined();
             expect((tc.coverage ?? []).length).toBeGreaterThan(0);
+        }
+    });
+
+    it('all tests declare preconditions faithful to the original Jira mapping', () => {
+        for (const tc of ECSPOL960_BASELINE) {
+            expect(tc.preConditions).toBeDefined();
+            expect((tc.preConditions ?? []).length).toBeGreaterThan(0);
+        }
+    });
+
+    it('preconditions match the original mapping file (ECSPOL-812/813/1124/1125/1202/1603/1604/1606)', () => {
+        const allKeys = ECSPOL960_BASELINE.flatMap((tc) =>
+            (tc.preConditions ?? []).map((pc) => pc.description || pc.summary || ''),
+        );
+        const known = new Set([
+            'ECSPOL-812',
+            'ECSPOL-813',
+            'ECSPOL-1124',
+            'ECSPOL-1125',
+            'ECSPOL-1202',
+            'ECSPOL-1603',
+            'ECSPOL-1604',
+            'ECSPOL-1606',
+        ]);
+        for (const key of allKeys) {
+            expect(known.has(key), `unexpected precondition key: ${key}`).toBe(true);
         }
     });
 

@@ -50,6 +50,36 @@ describe('TestCaseDataSchema', () => {
             }),
         ).toThrow(/./i);
     });
+
+    it('rejects a step that is an empty string (OPP-4)', () => {
+        expect(() =>
+            TestCaseDataSchema.parse({
+                title: 'Login with valid credentials',
+                steps: ['Enter user', ''],
+                expectedResult: 'User is redirected to dashboard',
+            }),
+        ).toThrow(/step/i);
+    });
+
+    it('rejects a step that is only whitespace (OPP-4)', () => {
+        expect(() =>
+            TestCaseDataSchema.parse({
+                title: 'Login with valid credentials',
+                steps: ['Enter user', '   '],
+                expectedResult: 'User is redirected to dashboard',
+            }),
+        ).toThrow(/step/i);
+    });
+
+    it('rejects a step longer than the maximum length (OPP-4)', () => {
+        expect(() =>
+            TestCaseDataSchema.parse({
+                title: 'Login with valid credentials',
+                steps: ['Enter user', 'x'.repeat(1001)],
+                expectedResult: 'User is redirected to dashboard',
+            }),
+        ).toThrow(/step/i);
+    });
 });
 
 describe('PreConditionInputSchema', () => {

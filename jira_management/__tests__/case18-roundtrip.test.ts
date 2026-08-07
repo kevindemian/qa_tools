@@ -127,6 +127,30 @@ describe('Case18 → import round-trip', () => {
         expect(result.tests[0]?.priority).toBe('High');
     });
 
+    it('preserves coverage and evidence through the round-trip (QA2)', () => {
+        const tests: TestCase[] = [
+            {
+                title: 'Coverage round-trip test',
+                description: '',
+                steps: [{ fields: { Action: 'Open page', 'Expected Result': 'Page shown' } }],
+                coverage: [
+                    {
+                        criterionId: 'C-1',
+                        criterionText: 'Regulations section is displayed on the Policy Details page',
+                    },
+                ],
+                evidence: ['Policy Details page must show Regulations section'],
+            },
+        ];
+
+        const result = writeAndParse(tests);
+
+        expect(result.tests[0]?.coverage).toStrictEqual([
+            { criterionId: 'C-1', criterionText: 'Regulations section is displayed on the Policy Details page' },
+        ]);
+        expect(result.tests[0]?.evidence).toStrictEqual(['Policy Details page must show Regulations section']);
+    });
+
     it('omits precondition key when absent', () => {
         const tests: TestCase[] = [
             {

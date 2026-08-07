@@ -16,6 +16,25 @@ function isPathWithinBase(resolvedPath: string, baseDir: string): boolean {
     return normalized.startsWith(normalizedBase + path.sep) || normalized === normalizedBase;
 }
 
+/** Reject unsafe filenames before any filesystem operation:
+ *  absolute paths, traversal segments (.. / .), and null bytes.
+ *  Returns the original filename when safe, throws explicitly otherwise. */
+function assertSafeFilename(filename: string, context: string): void {
+    if (!filename || filename.includes('\0')) {
+        rootLogger.warn(context + ': invalid filename (empty or null byte) rejected: ' + JSON.stringify(filename));
+        throw new Error('Invalid filename: empty or null byte');
+    }
+    if (path.isAbsolute(filename)) {
+        rootLogger.warn(context + ': absolute path rejected: ' + filename);
+        throw new Error('Path traversal detected');
+    }
+    const segments = filename.split(/[\\/]+/).filter(Boolean);
+    if (segments.some((s) => s === '..' || s === '.')) {
+        rootLogger.warn(context + ': path traversal detected in filename: ' + filename);
+        throw new Error('Path traversal detected');
+    }
+}
+
 function resolveEnvOrPath(envVar: string, defaultValue: string): string {
     return Config.get(envVar) ? resolve(Config.get(envVar)) : join(PROJECT_ROOT, defaultValue);
 }
@@ -71,6 +90,7 @@ function tempDir(): string {
 
 /** Write a dated report file under `reportsDir/YYYY-MM-DD/`. Creates intermediate dirs. */
 export function writeReport(filename: string, content: string): string {
+    assertSafeFilename(filename, 'writeReport');
     const dir = reportsDir();
     const dateStr = formatDateISO();
     const targetDir = join(dir, dateStr);
@@ -106,6 +126,7 @@ export function writeReport(filename: string, content: string): string {
 
 /** Write a temp file under `tempDir/{category}/`. Cleaned up on exit via {@link registerCleanup}. */
 export function writeEphemeral(category: string, filename: string, content: string): string {
+    assertSafeFilename(filename, 'writeEphemeral');
     const dir = join(tempDir(), category);
     try {
         const resolvedDir = path.resolve(dir);

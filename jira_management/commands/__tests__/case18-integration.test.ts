@@ -179,6 +179,18 @@ describe('convertTestCases', () => {
         const r = convertTestCases(input, resolved, new Map());
         expect(r[0]?.precondition).toHaveLength(2);
     });
+
+    it('maps expectedResult to the last step Expected Result (QA1)', () => {
+        const r = convertTestCases(
+            [{ title: 'T', steps: ['Open page', 'Submit'], expectedResult: 'Order is confirmed' }],
+            [[]],
+            new Map(),
+        );
+        expect(r[0]?.steps).toStrictEqual([
+            { fields: { Action: 'Open page' } },
+            { fields: { Action: 'Submit', 'Expected Result': 'Order is confirmed' } },
+        ]);
+    });
 });
 
 describe('toGeneratedTestCases', () => {
@@ -198,6 +210,53 @@ describe('toGeneratedTestCases', () => {
         const r = toGeneratedTestCases(WITH_META, [[]], new Map());
         expect(r[0]?.coverage).toStrictEqual([{ criterionId: 'C-1', criterionText: 'User can log in' }]);
         expect(r[0]?.evidence).toStrictEqual(['Login flow works']);
+    });
+
+    it('never falls back to the enum value as description (N3)', () => {
+        const input = [
+            {
+                title: 'T',
+                steps: ['S'],
+                expectedResult: 'R',
+                preConditions: [
+                    { type: 'reference' as const },
+                    { type: 'create' as const },
+                    { type: 'create' as const, description: 'User must be seeded' },
+                ],
+            },
+        ];
+        const resolved = [
+            [
+                { type: 'reference' as const },
+                { type: 'create' as const },
+                { type: 'create' as const, summary: 'User must be seeded' },
+            ],
+        ];
+        const r = toGeneratedTestCases(input, resolved, new Map());
+        const pcs = r[0]?.preConditions ?? [];
+        expect(pcs).toHaveLength(3);
+        for (const pc of pcs) {
+            expect(pc.description).not.toBe('create');
+            expect(pc.description).not.toBe('reference');
+            expect(pc.description).not.toBe('inline');
+        }
+        expect(pcs[2]?.description).toBe('User must be seeded');
+    });
+
+    it('uses created key as description when create resolved (N3)', () => {
+        const input = [
+            {
+                title: 'T',
+                steps: ['S'],
+                expectedResult: 'R',
+                preConditions: [{ type: 'create', summary: 'User must be seeded' }],
+            },
+        ];
+        const resolved = [[{ type: 'create' as const, summary: 'User must be seeded' }]];
+        const keys = new Map([['User must be seeded', 'PC-42']]);
+        const r = toGeneratedTestCases(input, resolved, keys);
+        expect(r[0]?.preConditions?.[0]?.type).toBe('reference');
+        expect(r[0]?.preConditions?.[0]?.description).toBe('PC-42');
     });
 });
 

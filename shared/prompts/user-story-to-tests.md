@@ -116,7 +116,7 @@ The user will provide the story and acceptance criteria below.
 1. Check coverage: happy path, edge cases, error scenarios, boundary values — all present?
 2. Check each step: is it concrete and executable? (not vague like "Log in")
 3. Check each expectedResult: is it specific and measurable?
-4. Check each preConditions: is the summary specific and descriptive? Each test case MUST have at least one preConditions entry.
+4. Check each preConditions: is the summary specific and descriptive? Each test case MUST have at least one preConditions entry. Omission is only acceptable for a test that is fully self-contained (pure static/visual check with no setup, no state, no data) — this is rare; if in doubt, include one.
 5. Check each evidence: does every claim cite real text from the requirements?
 6. Check test design techniques: EP applied to all input fields? BVA applied to numeric ranges? State transitions covered if applicable?
 7. Check no merged invalid partitions (each invalid partition MUST be a separate test)

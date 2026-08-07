@@ -45,12 +45,19 @@ Acceptance Criteria:
 14. Header stays static while interacting with grid`,
 };
 
-/** ECSPOL-960 baseline test cases (converted from Jira mapping format). */
+/** ECSPOL-960 baseline test cases (converted from Jira mapping format).
+ *  Preconditions are the real Jira precondition keys (ECSPOL-812/813/1124/1125/1202/1603/1604/1606)
+ *  from reports/TEST_SUIT_ECSPOL-960-jira-mapping.json — every test has ≥1. */
 export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
     {
         title: 'Display Regulations section and connected regulations',
         steps: ['Open Policy Details page', 'Review Regulations section', 'Review displayed regulations'],
         expectedResult: 'Regulations section is displayed with connected regulations',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1603' },
+        ],
         coverage: [
             { criterionId: 'C-1', criterionText: 'Regulations section is displayed on the Policy Details page' },
         ],
@@ -60,6 +67,10 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Display Connect Regulations action in Connections tab',
         steps: ['Open Connections tab', 'Review available actions'],
         expectedResult: 'Connect Regulations action is displayed',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1124' },
+        ],
         coverage: [
             { criterionId: 'C-3', criterionText: 'Connect Regulations action is available in the Connections tab' },
         ],
@@ -69,6 +80,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Allow policy owner to connect regulations',
         steps: ['Open Connections tab as policy owner', 'Review available actions'],
         expectedResult: 'Connect Regulations action is available for policy owner',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-812' },
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1124' },
+        ],
         coverage: [{ criterionId: 'C-4', criterionText: 'Policy owner can access the Connect Regulations action' }],
         evidence: ['Policy owner must have access to Connect Regulations'],
     },
@@ -76,6 +92,10 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Prevent non-owner from connecting regulations',
         steps: ['Open Connections tab as non-owner', 'Review available actions'],
         expectedResult: 'Connect Regulations action is not available for execution',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1202' },
+        ],
         coverage: [{ criterionId: 'C-5', criterionText: 'Non-owner cannot connect regulations' }],
         evidence: ['Non-owner must not have access to Connect Regulations'],
     },
@@ -83,6 +103,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Display Connect Regulations modal',
         steps: ['Click Connect Regulations action', 'Review modal content'],
         expectedResult: 'Connect Regulations modal is displayed with search and selection',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-812' },
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1124' },
+        ],
         coverage: [{ criterionId: 'C-6', criterionText: 'Connect Regulations modal allows search and selection' }],
         evidence: ['Modal must allow search and selection of regulations'],
     },
@@ -90,6 +115,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Search and select one or multiple regulations',
         steps: ['Open Connect Regulations modal', 'Search for regulations', 'Select one or multiple regulations'],
         expectedResult: 'Regulations can be searched and selected',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-812' },
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1604' },
+        ],
         coverage: [{ criterionId: 'C-6', criterionText: 'Connect Regulations modal allows search and selection' }],
         evidence: ['Search and selection must work correctly'],
     },
@@ -97,6 +127,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Prevent duplicate regulation selection',
         steps: ['Open Connect Regulations modal', 'Select a regulation', 'Attempt to select the same regulation again'],
         expectedResult: 'Duplicate regulation is not selected',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-812' },
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1604' },
+        ],
         coverage: [{ criterionId: 'C-7', criterionText: 'Duplicate regulation selection is prevented' }],
         evidence: ['System must prevent duplicate selection'],
     },
@@ -104,6 +139,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Submit regulation connections and update grid',
         steps: ['Select regulations in modal', 'Click Submit', 'Review Regulations grid'],
         expectedResult: 'Regulation connections are saved and grid updates',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-812' },
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1604' },
+        ],
         coverage: [{ criterionId: 'C-8', criterionText: 'Regulation connections are submitted and grid updates' }],
         evidence: ['Grid must update after submission'],
     },
@@ -111,6 +151,10 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Display empty state when no regulations are connected',
         steps: ['Open Policy Details page', 'Review Regulations section'],
         expectedResult: 'Empty state is displayed when no regulations are connected',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+        ],
         coverage: [{ criterionId: 'C-9', criterionText: 'Empty state is displayed when no regulations are connected' }],
         evidence: ['Empty state must be shown'],
     },
@@ -118,6 +162,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Display 3 regulations by default',
         steps: ['Open Policy Details page', 'Review Regulations grid'],
         expectedResult: 'Regulations grid displays 3 regulations by default',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1606' },
+        ],
         coverage: [{ criterionId: 'C-10', criterionText: 'Default view shows 3 regulations' }],
         evidence: ['Default view must show 3 regulations'],
     },
@@ -125,6 +174,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Adjust visible rows and reset after refresh',
         steps: ['Open Policy Details page', 'Adjust visible rows', 'Refresh page'],
         expectedResult: 'Visible rows are adjusted and reset after refresh',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1606' },
+        ],
         coverage: [{ criterionId: 'C-11', criterionText: 'Visible rows can be adjusted and reset after refresh' }],
         evidence: ['Row adjustment must work and reset on refresh'],
     },
@@ -132,6 +186,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Apply pagination independently to Regulations grid',
         steps: ['Open Policy Details page', 'Navigate through pagination'],
         expectedResult: 'Pagination applies independently to Regulations grid',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1606' },
+        ],
         coverage: [{ criterionId: 'C-12', criterionText: 'Pagination applies independently to Regulations grid' }],
         evidence: ['Pagination must work independently'],
     },
@@ -139,6 +198,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Apply sorting independently to Regulations grid',
         steps: ['Open Policy Details page', 'Sort columns in Regulations grid'],
         expectedResult: 'Sorting applies independently to Regulations grid',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1603' },
+        ],
         coverage: [{ criterionId: 'C-13', criterionText: 'Sorting applies independently to Regulations grid' }],
         evidence: ['Sorting must work independently'],
     },
@@ -146,6 +210,11 @@ export const ECSPOL960_BASELINE: GeneratedTestCase[] = [
         title: 'Keep header static while interacting with Regulations grid',
         steps: ['Open Policy Details page', 'Scroll through Regulations grid'],
         expectedResult: 'Header stays static while scrolling',
+        preConditions: [
+            { type: 'reference', description: 'ECSPOL-813' },
+            { type: 'reference', description: 'ECSPOL-1125' },
+            { type: 'reference', description: 'ECSPOL-1606' },
+        ],
         coverage: [{ criterionId: 'C-14', criterionText: 'Header stays static while interacting with grid' }],
         evidence: ['Header must remain fixed'],
     },

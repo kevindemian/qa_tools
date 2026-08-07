@@ -67,6 +67,11 @@ export interface TestCase {
     components?: string[];
     /** Jira priority name (batch field). */
     priority?: string;
+    /** Acceptance-criteria coverage declarations (criterionId/criterionText),
+     *  preserved through the case18 → import round-trip (QA2). */
+    coverage?: Array<{ criterionId: string; criterionText: string }>;
+    /** Evidence citations backing the test (QA2). */
+    evidence?: string[];
 }
 
 /** Batch-level Jira fields applied to every test in a single import. */
