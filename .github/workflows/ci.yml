@@ -226,6 +226,7 @@ jobs:
                   set -e
                   if [ "$SCOPE_EXIT" -eq 2 ]; then
                     echo "No production files changed in this bucket — skipping mutation testing"
+                    echo "MUTATION_SKIPPED=true" >> "$GITHUB_ENV"
                     exit 0
                   fi
                   if [ "$SCOPE_EXIT" -ne 0 ]; then
@@ -234,10 +235,11 @@ jobs:
                   fi
                   echo "MUTATE_SCOPE=${MUTATE_SCOPE}" >> "$GITHUB_ENV"
             - name: Run diff-scoped mutation testing (bucket)
+              if: env.MUTATION_SKIPPED != 'true'
               run: npx stryker run stryker.config.mjs --mutate "${MUTATE_SCOPE}"
             - name: Upload mutation report (bucket)
               uses: actions/upload-artifact@v7
-              if: always()
+              if: env.MUTATION_SKIPPED != 'true'
               with:
                   name: mutation-report-${{ matrix.bucket.name }}
                   path: reports/mutation/mutation-report-${{ matrix.bucket.name }}.json
