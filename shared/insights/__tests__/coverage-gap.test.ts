@@ -125,4 +125,37 @@ describe('GenerateCoverageGapInsights (F1.2)', () => {
 
         expect(nonNull(insights.find((i) => i.id === 'coverage-gap:summary')).detail).toContain('inválido');
     });
+
+    it('severidade por faixa de cobertura: critical(<30), high(<50), medium(<70), low(<90), info(>=90)', () => {
+        expect.hasAssertions();
+
+        const cases: Array<{ covered: number; expected: string }> = [
+            { covered: 20, expected: 'critical' },
+            { covered: 40, expected: 'high' },
+            { covered: 60, expected: 'medium' },
+            { covered: 80, expected: 'low' },
+            { covered: 95, expected: 'info' },
+        ];
+
+        for (const c of cases) {
+            const insights = generateCoverageGapInsights(
+                [{ summary: 'Suite X', type: 'Epic', total: 100, covered: c.covered }],
+                SEED,
+            );
+            const summary = nonNull(insights.find((i) => i.id === 'coverage-gap:summary'));
+
+            expect(summary.severity).toBe(c.expected);
+        }
+    });
+
+    it('regra 24: NaN em percentual → severidade critical (nunca passa silencioso)', () => {
+        expect.hasAssertions();
+
+        const badEpics: EpicFixture[] = [{ summary: 'Suite NaN', type: 'Epic', total: Number.NaN, covered: 5 }];
+        const insights = generateCoverageGapInsights(badEpics, SEED);
+        const summary = nonNull(insights.find((i) => i.id === 'coverage-gap:summary'));
+
+        expect(summary.severity).toBe('critical');
+        expect(JSON.stringify(insights)).not.toContain('NaN');
+    });
 });

@@ -108,4 +108,24 @@ describe('GeneratePrReportInsights (F1.3)', () => {
 
         expect(summary.detail).toContain('inválido');
     });
+
+    it('contagem de skipped é separada do pass rate (só passed+failed são considerados)', () => {
+        const mixed: FlatTest[] = [
+            { title: 'a', state: 'passed', duration: 1 },
+            { title: 'b', state: 'failed', duration: 1 },
+            { title: 'c', state: 'skipped', duration: 0 },
+            { title: 'd', state: 'skipped', duration: 0 },
+        ];
+        const insights = generatePrReportInsights(mixed, SEED);
+        const summary = nonNull(insights.find((i) => i.id === 'pr-report:summary'));
+        const values = Object.fromEntries((summary.entities ?? []).map((e) => [e.name, e.value])) as Record<
+            string,
+            number | undefined
+        >;
+
+        expect(values['passed']).toBe(1);
+        expect(values['failed']).toBe(1);
+        expect(values['skipped']).toBe(2);
+        expect(values['pass-rate']).toBe(50);
+    });
 });

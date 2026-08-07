@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+vi.mock('../../shared/ui/cli_base.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/ui/cli_base.js')>();
+    return { ...actual, gracefulExit: vi.fn() };
+});
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
@@ -261,7 +266,7 @@ describe('Quality check integrated', () => {
 
             const { main } = await load();
 
-            expect(() => main()).not.toThrow();
+            await expect(main()).resolves.toBeUndefined();
         }, 240000);
     });
 });
