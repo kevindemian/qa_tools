@@ -441,7 +441,7 @@ Step 1 action,step 1 data,step 1 expected
 - `Title` — **obrigatório**. Nome do teste.
 - `Description` — opcional. Suporta multilinha entre aspas duplas.
 - `Pre-condition` — opcional. Pode ser referência a uma issue (`KEY-123`) ou texto inline entre aspas.
-- `Linked Issues` — opcional. Formato: `KEY (relation)`. Relações comuns: `is tested by`, `relates to`.
+- `Linked Issues` — opcional. Formato: `KEY (relation)`. Relações comuns: `Tests` (cobertura de teste — requirement outward), `relates to`. Em Xray Cloud, frases de cobertura (`Tests`, `is a test for`, `is tested by`) resolvem para o link type de cobertura da instância com a direção correta para popular o Test Coverage Analysis.
 - `Group` — opcional. Agrupa testes para cross-reference automática.
 - `Action`, `Data`, `Expected Result` — steps do teste.
 

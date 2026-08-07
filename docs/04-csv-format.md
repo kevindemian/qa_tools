@@ -77,10 +77,12 @@ Se for texto livre (não parece uma key Jira), o conteúdo é concatenado à des
 Keys separadas por `;`, cada uma com o tipo de link entre parênteses:
 
 ```csv
-Linked Issues: ECSPOL-100 (is tested by); ECSPOL-200 (relates to)
+Linked Issues: ECSPOL-100 (Tests); ECSPOL-200 (relates to)
 ```
 
 O tipo de link é resolvido dinamicamente via API (case-insensitive, fallback para `relates to`).
+
+**Xray Cloud — cobertura de teste:** frases de cobertura (`Tests`, `is a test for`, `is tested by`, `tested by`) resolvem para o link type de cobertura declarado pela instância do Xray Cloud (via `getIssueLinkTypes`), criando o link com a **requirement como outward** e o **teste como inward** — a única direção que popula o Test Coverage Analysis. Outros tipos (`relates to`, `blocks`, …) mantêm a direção fonte→outward, sem alteração.
 
 ### `Group` (opcional)
 

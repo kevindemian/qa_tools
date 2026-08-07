@@ -4,10 +4,12 @@
  *  inward/outward: they call semantic operations and this service derives the
  *  direction from the link-type semantics.
  *
- *  Direction rule (Jira Cloud Xray Test Coverage): the *target* of a Test link
- *  is the INWARD issue ("is tested by"), the *source* (test) is the OUTWARD
- *  issue ("is a test for"). This is the opposite of the legacy `linkIssues()`
- *  payload (inward=source, outward=target) which produced inverted Test Coverage.
+ *  Direction rule (Xray Cloud Test Coverage, empirically verified): the
+ *  REQUIREMENT is the OUTWARD issue and the TEST is the INWARD issue of the
+ *  coverage link type (e.g. "Tests"/10007). The coverage link type is resolved
+ *  dynamically from the Xray Cloud instance (`getIssueLinkTypes` GraphQL) — it
+ *  is never hardcoded (§0). In server mode the legacy direction is preserved
+ *  (test OUTWARD), keeping Server flows unchanged.
  *
  *  Link-type resolution: the caller provides the user's chosen link type
  *  (e.g. "is a test for" from CSV). The service resolves it against the
@@ -20,7 +22,8 @@
 import { formatErr } from '../../shared/errors.js';
 import { rootLogger } from '../../shared/logger.js';
 import type { JiraResourceLike } from '../../shared/types.js';
-import type { LinkTypeManager } from '../link-types.js';
+import type { LinkType, LinkTypeManager } from '../link-types.js';
+import { XrayCloudCoverageLinkTypeResolver, type CoverageLinkTypeResolver } from './coverage-link-type-resolver.js';
 
 /** A single issue link with explicit direction. */
 export interface IssueLink {
@@ -130,13 +133,26 @@ function assertValidLinkType(linkType: string): void {
     }
 }
 
+/** Whether a resolved link-type definition is a test-coverage type (name
+ *  contains "test": "Test", "Tests", "Tested by"…). Only these phrases carry
+ *  coverage semantics in cloud mode. */
+function isTestLinkType(def: { name?: string }): boolean {
+    return typeof def?.name === 'string' && /test/i.test(def.name);
+}
+
 export class IssueLinkService {
     private readonly jiraResource: JiraResourceLike;
     private readonly linkTypeManager: LinkTypeManager;
+    private readonly coverageResolver: CoverageLinkTypeResolver;
 
-    constructor(jiraResource: JiraResourceLike, linkTypeManager: LinkTypeManager) {
+    constructor(
+        jiraResource: JiraResourceLike,
+        linkTypeManager: LinkTypeManager,
+        coverageResolver: CoverageLinkTypeResolver = new XrayCloudCoverageLinkTypeResolver(linkTypeManager),
+    ) {
         this.jiraResource = jiraResource;
         this.linkTypeManager = linkTypeManager;
+        this.coverageResolver = coverageResolver;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -168,15 +184,19 @@ export class IssueLinkService {
         const links: IssueLink[] = [];
         for (const link of raw) {
             if (!link.id || !link.type?.name) continue;
-            const inwardKey = link.inwardIssue?.key ?? '';
-            const outwardKey = link.outwardIssue?.key ?? '';
-            if (!inwardKey || !outwardKey) {
+            // Jira Cloud preenche apenas o lado OPOSTO à issue consultada: quando
+            // inwardIssue está ausente, a própria issue é o inward; quando
+            // outwardIssue está ausente, a própria issue é o outward. Reconstruir
+            // o lado ausente preserva a direção completa (requirement↔test).
+            const inwardKey = link.inwardIssue?.key ?? issueKey;
+            const outwardKey = link.outwardIssue?.key ?? issueKey;
+            if (!inwardKey || !outwardKey || inwardKey === outwardKey) {
                 rootLogger.warn(
                     'IssueLinkService.getIssueLinks: link ' +
                         link.id +
                         ' em ' +
                         issueKey +
-                        ' sem inward/outward completo — ignorado.',
+                        ' sem inward/outward completo (payload malformado) — ignorado.',
                 );
                 continue;
             }
@@ -390,20 +410,23 @@ export class IssueLinkService {
     // ─────────────────────────────────────────────────────────────
 
     /** Link test cases to a requirement/user story with the correct Test
-     *  Coverage direction: requirement is INWARD ("is tested by"), test is
-     *  OUTWARD ("tests"). */
+     *  Coverage direction for Xray Cloud: requirement OUTWARD, test INWARD.
+     *  In server mode the legacy direction (test OUTWARD) is preserved. */
     async linkTestsToRequirement(requirementKey: string, testKeys: string[]): Promise<LinkBatchResult> {
         assertValidKeys(testKeys, 'linkTestsToRequirement(testKeys)');
         if (typeof requirementKey !== 'string' || !requirementKey.trim()) {
             throw new Error('IssueLinkService.linkTestsToRequirement: requirementKey é obrigatória.');
         }
+        const coverage = this.coverageResolver.isCloudMode()
+            ? await this.coverageResolver.resolveCoverageLinkType()
+            : null;
         const result: LinkBatchResult = { created: 0, skipped: 0, failed: [], missing: [] };
         for (const testKey of testKeys) {
             try {
                 const outcome = await this.createLink({
-                    linkType: 'Tests',
-                    inwardKey: requirementKey.trim(),
-                    outwardKey: testKey.trim(),
+                    linkType: coverage?.name ?? 'Tests',
+                    inwardKey: coverage ? testKey.trim() : requirementKey.trim(),
+                    outwardKey: coverage ? requirementKey.trim() : testKey.trim(),
                 });
                 if (outcome === 'created') {
                     result.created++;
@@ -537,9 +560,9 @@ export class IssueLinkService {
     }
 
     /** Generic batch link: source → targets with explicit per-target link types.
-     *  Direction follows the Test-Coverage convention: target is INWARD, source
-     *  is OUTWARD. Used by CSV/JSON import where each linked issue carries its
-     *  own link type. */
+     *  Xray Cloud coverage phrases (test link types) resolve to the coverage
+     *  type with requirement OUTWARD / test INWARD. Any other link type keeps
+     *  the source-OUTWARD convention. */
     async linkSourceToTargets(
         sourceKey: string,
         targets: Array<{ key: string; linkType: string }>,
@@ -567,11 +590,7 @@ export class IssueLinkService {
                 continue;
             }
             try {
-                const outcome = await this.createLink({
-                    linkType: target.linkType,
-                    inwardKey: target.key.trim(),
-                    outwardKey: sourceKey.trim(),
-                });
+                const outcome = await this._createSourceTargetLink(sourceKey, target);
                 if (outcome === 'created') {
                     result.created++;
                 } else if (outcome === 'duplicate') {
@@ -594,5 +613,39 @@ export class IssueLinkService {
             }
         }
         return result;
+    }
+
+    /** Direction decision for a single source→target link. Coverage phrases
+     *  (test link types) in cloud mode resolve to the Xray Cloud coverage type
+     *  with requirement OUTWARD / test INWARD; anything else keeps the
+     *  source-OUTWARD convention. */
+    private async _createSourceTargetLink(
+        sourceKey: string,
+        target: { key: string; linkType: string },
+    ): Promise<CreateLinkOutcome> {
+        const coverage = await this._coverageTypeFor(target.linkType);
+        if (coverage) {
+            return this.createLink({
+                linkType: coverage.name ?? target.linkType,
+                inwardKey: sourceKey.trim(),
+                outwardKey: target.key.trim(),
+            });
+        }
+        return this.createLink({
+            linkType: target.linkType,
+            inwardKey: target.key.trim(),
+            outwardKey: sourceKey.trim(),
+        });
+    }
+
+    /** Resolve the Xray Cloud coverage link type when — and only when — the
+     *  requested phrase is a coverage phrase in cloud mode. Returns null
+     *  otherwise (server mode or non-coverage phrase). A resolution failure in
+     *  cloud mode throws explicitly (§25) — never a silent fallback. */
+    private async _coverageTypeFor(linkTypeName: string): Promise<LinkType | null> {
+        if (!this.coverageResolver.isCloudMode()) return null;
+        const def = await this.linkTypeManager.getLinkTypeByName(linkTypeName);
+        if (!def || !isTestLinkType(def)) return null;
+        return this.coverageResolver.resolveCoverageLinkType();
     }
 }
