@@ -309,7 +309,7 @@ async function fetchUserStoryFromJira(c: CommandContext): Promise<string> {
  *  Returns:
  *    - resolvedPreConditions: per test case, the final preConditions (reference for matched, create for unmatched)
  *    - summariesToCreate: summaries that had no match and must be created in Jira */
-function resolvePreconditionMatches(
+export function resolvePreconditionMatches(
     testCases: TestCaseData[],
     allPCs: PreConditionSummary[],
 ): {
@@ -321,7 +321,8 @@ function resolvePreconditionMatches(
     for (const tc of testCases) {
         if (tc.preConditions) {
             for (const pc of tc.preConditions) {
-                if (pc.summary) summaries.add(pc.summary.trim());
+                const text = pc.summary || (pc as { description?: string }).description;
+                if (text) summaries.add(text.trim());
             }
         }
     }
@@ -342,15 +343,16 @@ function resolvePreconditionMatches(
     const resolvedPreConditions: TestCasePreCondition[][] = testCases.map((tc) => {
         if (!tc.preConditions || tc.preConditions.length === 0) return [];
         return tc.preConditions.map((pc) => {
-            const matched = pc.summary ? matchMap.get(pc.summary.trim()) : undefined;
+            const text = pc.summary || pc.description;
+            const matched = text ? matchMap.get(text.trim()) : undefined;
             if (matched) {
                 return {
                     type: 'reference' as const,
                     key: matched,
-                    ...(pc.summary ? { summary: pc.summary } : {}),
+                    ...(text ? { summary: text } : {}),
                 };
             }
-            return { type: 'create' as const, ...(pc.summary ? { summary: pc.summary } : {}) };
+            return { type: 'create' as const, ...(text ? { summary: text } : {}) };
         });
     });
 
@@ -396,7 +398,7 @@ function _buildGenerationRecord(
         acceptanceCriteria: input.acceptanceCriteria,
         generatedTests: testCases.map((tc) => ({
             title: tc.title,
-            preConditions: tc.preConditions?.map((p) => p.summary || '') || [],
+            preConditions: tc.preConditions?.map((p) => p.summary || p.description || '') || [],
             stepCount: tc.steps.length,
         })),
         preconditionMatches,
@@ -441,7 +443,7 @@ function displayQualityScore(evaluation: EvaluationResult): void {
 /** Write the evaluation report (HTML) and coverage table (JSON+HTML) to
  *  reports/<date>/ for auditability. Failures are logged explicitly, never
  *  silently swallowed (Rule 25). */
-function writeQualityArtifacts(
+export function writeQualityArtifacts(
     evaluation: EvaluationResult,
     testCases: TestCaseData[],
     acceptanceCriteria: string,
@@ -479,7 +481,7 @@ export function computePromptVersion(): string {
  *  The file is serialized in the import-compatible format (ImportJsonItemSchema) so
  *  that `parseJsonFile` (menu 15) can re-import it without data loss.
  *  Returns the absolute path written so callers can reuse it (case18 create+link). */
-function writeTestOutput(converted: TestCase[], createdCount: number): string {
+export function writeTestOutput(converted: TestCase[], createdCount: number): string {
     const outDir = path.join(process.cwd(), 'reports', formatDateISO());
     fs.mkdirSync(path.resolve(outDir), { recursive: true });
     const outPath = path.join(outDir, 'llm-generated-tests.json');
@@ -626,7 +628,14 @@ interface TestCaseData {
     title: string;
     steps: string[];
     expectedResult: string;
-    preConditions?: Array<{ type: string; key?: string | undefined; summary?: string | undefined }> | undefined;
+    preConditions?:
+        | Array<{
+              type: string;
+              key?: string | undefined;
+              summary?: string | undefined;
+              description?: string | undefined;
+          }>
+        | undefined;
     coverage?: Array<{ criterionId: string; criterionText: string }> | undefined;
     evidence?: string[] | undefined;
     environment?: string | undefined;
@@ -640,7 +649,7 @@ interface TestCasePreCondition {
     summary?: string;
 }
 
-function convertTestCases(
+export function convertTestCases(
     llmOutput: TestCaseData[],
     resolvedPreConditions: TestCasePreCondition[][],
     createdKeys: Map<string, string>,

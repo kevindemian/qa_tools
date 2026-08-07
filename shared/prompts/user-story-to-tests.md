@@ -55,10 +55,10 @@ Each test case object must have:
 Each preConditions entry must be:
 
 ```json
-{ "type": "create", "description": "User must be logged in with valid credentials" }
+{ "type": "create", "summary": "User must be logged in with valid credentials" }
 ```
 
-The description must be specific and describe the exact setup needed. Do NOT use generic summaries like "Login setup" — prefer "User must be logged in with valid admin credentials".
+The summary must be specific and describe the exact setup needed. Do NOT use generic summaries like "Login setup" — prefer "User must be logged in with valid admin credentials".
 
 ## Test Design Techniques (Standards: ISO 29119-4, ISTQB CTFL)
 
@@ -88,7 +88,7 @@ Good example:
         "title": "Valid credentials login redirects to dashboard",
         "steps": ["Navigate to /login", "Enter valid email", "Enter correct password", "Click Sign In"],
         "expectedResult": "User is redirected to /dashboard and sees 'Welcome'",
-        "preConditions": [{ "type": "create", "description": "User must be registered with valid credentials" }],
+        "preConditions": [{ "type": "create", "summary": "User must be registered with valid credentials" }],
         "coverage": [{ "criterionId": "C-1", "criterionText": "User can log in with valid credentials" }],
         "environment": "staging",
         "components": ["API", "Frontend"],
@@ -116,7 +116,7 @@ The user will provide the story and acceptance criteria below.
 1. Check coverage: happy path, edge cases, error scenarios, boundary values — all present?
 2. Check each step: is it concrete and executable? (not vague like "Log in")
 3. Check each expectedResult: is it specific and measurable?
-4. Check each preConditions: is the description specific and descriptive? Each test case MUST have at least one preConditions entry.
+4. Check each preConditions: is the summary specific and descriptive? Each test case MUST have at least one preConditions entry.
 5. Check each evidence: does every claim cite real text from the requirements?
 6. Check test design techniques: EP applied to all input fields? BVA applied to numeric ranges? State transitions covered if applicable?
 7. Check no merged invalid partitions (each invalid partition MUST be a separate test)

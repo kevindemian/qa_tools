@@ -65,18 +65,37 @@ describe('PreConditionInputSchema', () => {
         expect(PreConditionInputSchema.parse(data)).toStrictEqual(data);
     });
 
+    it('accepts create type with description and normalizes to summary', () => {
+        const data = { type: 'create', description: 'User must be logged in with valid credentials' };
+        const parsed = PreConditionInputSchema.parse(data);
+
+        expect(parsed.summary).toBe('User must be logged in with valid credentials');
+        expect(parsed.type).toBe('create');
+    });
+
+    it('prefers summary over description when both present', () => {
+        const data = {
+            type: 'create',
+            summary: 'From summary field',
+            description: 'From description field',
+        };
+        const parsed = PreConditionInputSchema.parse(data);
+
+        expect(parsed.summary).toBe('From summary field');
+    });
+
     it('rejects invalid type', () => {
         expect(() => PreConditionInputSchema.parse({ type: 'invalid', key: 'PREC-123' })).toThrow(/./i);
     });
 
-    it('accepts test case with preConditions array', () => {
+    it('accepts test case with preConditions array using description', () => {
         const data = {
             title: 'Login with valid credentials',
             steps: ['Enter user', 'Enter password'],
             expectedResult: 'User is redirected to dashboard',
             preConditions: [
                 { type: 'reference', key: 'PREC-123' },
-                { type: 'create', summary: 'DB must be seeded' },
+                { type: 'create', description: 'DB must be seeded with test data' },
             ],
         };
         const parsed = TestCaseDataSchema.parse(data);
@@ -84,6 +103,7 @@ describe('PreConditionInputSchema', () => {
         expect(parsed.preConditions).toBeDefined();
         expect(nonNull(parsed.preConditions)).toHaveLength(2);
         expect(nonNull(parsed.preConditions)[0]).toStrictEqual({ type: 'reference', key: 'PREC-123' });
+        expect(nonNull(parsed.preConditions)[1]?.summary).toBe('DB must be seeded with test data');
     });
 
     it('accepts test case without preConditions', () => {

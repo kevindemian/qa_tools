@@ -1,11 +1,25 @@
 /** Zod schemas for AI-generated test case validation (case18 — Generate Stories from User Story). */
 import { z } from '../../shared/validation/validation.js';
 
-export const PreConditionInputSchema = z.object({
-    type: z.enum(['reference', 'create']),
-    key: z.string().optional(),
-    summary: z.string().optional(),
-});
+/**
+ * Pre-condition input schema — accepts BOTH `summary` (canonical) and `description`
+ * (LLM may produce either depending on prompt version). Normalizes to `summary`
+ * via transform so all downstream code reads a single field.
+ */
+export const PreConditionInputSchema = z
+    .object({
+        type: z.enum(['reference', 'create']),
+        key: z.string().optional(),
+        summary: z.string().optional(),
+        description: z.string().optional(),
+    })
+    .transform((val) => {
+        const normalizedSummary = val.summary || val.description || undefined;
+        const result: { type: 'reference' | 'create'; key?: string; summary?: string } = { type: val.type };
+        if (val.key !== undefined) result.key = val.key;
+        if (normalizedSummary !== undefined) result.summary = normalizedSummary;
+        return result;
+    });
 
 export const CoverageItemSchema = z.object({
     criterionId: z.string().min(1, 'criterionId must be non-empty'),

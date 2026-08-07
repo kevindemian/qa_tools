@@ -5,6 +5,7 @@
  * behavior: CTRF parsing, delegation to generatePrReport(), and CI context.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseTestResultsFile } from '../result_parser.js';
@@ -110,7 +111,7 @@ vi.mock('../feature-config.js', () => ({
 
 const { postPrComment } = await import('../ci/github-pr-comment.js');
 
-const TEST_CTRF_DIR = path.resolve('reports', 'shared-test');
+const TEST_CTRF_DIR = path.join(os.tmpdir(), 'pr-report-test-' + process.pid);
 const TEST_CTRF_PATH = path.join(TEST_CTRF_DIR, 'ctrf-report.json');
 const TEST_HTML_PATH = path.join(TEST_CTRF_DIR, 'pr-report.html');
 
