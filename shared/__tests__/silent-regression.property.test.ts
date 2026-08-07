@@ -1,7 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import { detectSilentRegressions } from '../data-hub/compute/regression-detection.js';
-import { generateSilentRegressionHtml } from '../quality/silent-regression.js';
 
 vi.mock('../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -106,21 +105,6 @@ describe('DetectSilentRegression — property-based invariants', () => {
                 const result = detectSilentRegressions(histories);
 
                 expect(result.threshold).toBe(2);
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('generateSilentRegressionHtml produces valid HTML structure', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(historyArb, (histories) => {
-                const result = detectSilentRegressions(histories);
-                const html = generateSilentRegressionHtml(result);
-
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('</html>');
             }),
             { numRuns: 50 },
         );

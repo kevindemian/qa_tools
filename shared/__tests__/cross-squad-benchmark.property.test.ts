@@ -1,7 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import { computeCrossSquadBenchmark } from '../data-hub/compute/cross-squad-benchmark.js';
-import { generateBenchmarkHtml } from '../quality/cross-squad-benchmark.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -179,44 +178,6 @@ describe('ComputeCrossSquadBenchmark — property-based', () => {
                         }
 
                         expect(bench.trend).toBe(expectedTrend);
-                    }
-                },
-            ),
-            { numRuns: 50 },
-        );
-    });
-});
-
-describe('GenerateBenchmarkHtml — property-based', () => {
-    it('always produces valid HTML', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(
-                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),
-                (projects) => {
-                    const result = computeCrossSquadBenchmark(projects);
-                    const html = generateBenchmarkHtml(result, 'PBT');
-
-                    expect(html).toContain('<!DOCTYPE html>');
-                    expect(html).toContain('</html>');
-                },
-            ),
-            { numRuns: 50 },
-        );
-    });
-
-    it('contains all project names', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(
-                fc.uniqueArray(projectArb, { selector: (p) => p.name, minLength: 0, maxLength: 8 }),
-                (projects) => {
-                    const result = computeCrossSquadBenchmark(projects);
-                    const html = generateBenchmarkHtml(result);
-                    for (const p of projects) {
-                        expect(html).toContain(p.name);
                     }
                 },
             ),

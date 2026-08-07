@@ -8,17 +8,11 @@
  * - Counts are consistent
  * - acceptanceRate in [0, 100]
  * - Timestamp is valid ISO
- * - generateRequirementScoreHtml always produces valid HTML
  */
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { calculateRequirementScores } from '../data-hub/compute/requirement-score.js';
-import { generateRequirementScoreHtml } from '../quality/requirement-score.js';
 import type { AiGenerationRecord, AiModification } from '../types/llm.js';
-
-vi.mock('../logger', () => ({
-    rootLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
 
 describe('Requirement Score.Property', () => {
     beforeEach(() => {
@@ -214,23 +208,6 @@ describe('Requirement Score.Property', () => {
 
             expect(undefinedResult.totalRequirements).toBe(0);
             expect(undefinedResult.overallScore).toBe(0);
-        });
-    });
-
-    describe('GenerateRequirementScoreHtml — property-based', () => {
-        it('always produces valid HTML with DOCTYPE', () => {
-            expect.hasAssertions();
-
-            fc.assert(
-                fc.property(fc.array(AiGenerationRecordArb, { minLength: 0, maxLength: 8 }), (records) => {
-                    const result = calculateRequirementScores(records);
-                    const html = generateRequirementScoreHtml(result);
-
-                    expect(html).toContain('<!DOCTYPE html>');
-                    expect(html).toContain('</html>');
-                }),
-                { numRuns: 50 },
-            );
         });
     });
 });

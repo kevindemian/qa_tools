@@ -1,7 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import { compareAiVsManual } from '../data-hub/compute/ai-comparison.js';
-import { generateAiComparisonHtml } from '../report/ai-comparison.js';
 
 vi.mock('../logger', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -125,81 +124,6 @@ describe('CompareAiVsManual — property-based', () => {
                 expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
             }),
             { numRuns: 50 },
-        );
-    });
-});
-
-describe('GenerateAiComparisonHtml — property-based', () => {
-    it('structural HTML invariants for all valid inputs', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 10 }), fc.string(), (records, title) => {
-                const result = compareAiVsManual(records);
-                const html = generateAiComparisonHtml(result, title);
-
-                const htmlParts = [
-                    '<!DOCTYPE html>',
-                    '<html',
-                    '</html>',
-                    '<head>',
-                    '</head>',
-                    '<body>',
-                    '</body>',
-                    'prefers-color-scheme',
-                    '--color-surface-page',
-                    'html.dark',
-                ];
-
-                expect(htmlParts.every((p) => html.includes(p))).toBeTruthy();
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('contains metric-card and badge components for non-empty data', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
-                const result = compareAiVsManual(records);
-                const html = generateAiComparisonHtml(result);
-                const hasData = result.aiTotal > 0 || result.manualTotal > 0;
-
-                expect(!hasData || html.includes('data-component="metric-card"')).toBeTruthy();
-                expect(!hasData || html.includes('data-component="badge"')).toBeTruthy();
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('contains pass rate values', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 1, maxLength: 10 }), (records) => {
-                const result = compareAiVsManual(records);
-                const html = generateAiComparisonHtml(result);
-
-                expect(html).toContain(`${result.aiPassRate}%`);
-                expect(html).toContain(`${result.manualPassRate}%`);
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('shows no-data message when both groups empty', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.array(recordArb, { minLength: 0, maxLength: 0 }), (records) => {
-                const result = compareAiVsManual(records);
-                const html = generateAiComparisonHtml(result);
-
-                expect(html).toContain('No comparison data available.');
-                expect(html).not.toContain('data-component="metric-card"');
-            }),
-            { numRuns: 10 },
         );
     });
 });

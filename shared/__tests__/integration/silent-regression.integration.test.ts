@@ -1,14 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as reportStyles from '../../report/report-styles.js';
-
-vi.mock('../../logger.js', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
-
-vi.mock('../../config-accessor.js', () => ({
-    default: { get: vi.fn(() => '') },
-    get: vi.fn(() => ''),
-}));
 
 describe('Integration: Silent Regression (FT-22)', () => {
     beforeEach(() => {
@@ -59,75 +49,6 @@ describe('Integration: Silent Regression (FT-22)', () => {
             const result = detectSilentRegressions({ single: [1.0], empty: [] });
 
             expect(result.totalTests).toBe(0);
-        });
-    });
-
-    describe('FT-22c: generateSilentRegressionHtml', () => {
-        it('produces complete HTML with regression data', async () => {
-            expect.hasAssertions();
-
-            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
-            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
-            const result = detectSilentRegressions({ 'auth test': [1.0, 1.1, 0.9, 1.0, 3.5] });
-            const html = generateSilentRegressionHtml(result, 'Regression Report');
-
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('Regression Report');
-            expect(html).toContain('data-component="metric-card"');
-            expect(html).toContain('data-component="table-wrapper"');
-        });
-
-        it('shows no-regressions message when empty', async () => {
-            expect.hasAssertions();
-
-            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
-            const emptyResult = {
-                regressions: [],
-                totalTests: 5,
-                threshold: 2,
-                timestamp: '2026-06-01T00:00:00Z',
-            };
-            const html = generateSilentRegressionHtml(emptyResult);
-
-            expect(html).toContain('No silent regressions detected');
-        });
-    });
-
-    describe('FT-22d: null handling', () => {
-        it('returns error page when result is null', async () => {
-            expect.hasAssertions();
-
-            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
-            const html = generateSilentRegressionHtml(null);
-
-            expect(html).toContain('Error generating silent regression report');
-        });
-
-        it('returns error page when result is undefined', async () => {
-            expect.hasAssertions();
-
-            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
-            const html = generateSilentRegressionHtml(undefined);
-
-            expect(html).toContain('Error generating silent regression report');
-        });
-    });
-
-    describe('FT-22e: error fallback', () => {
-        it('returns error page when buildCss throws', async () => {
-            expect.hasAssertions();
-
-            const spy = vi.spyOn(reportStyles, 'buildCss').mockImplementation(() => {
-                throw new Error('CSS failure');
-            });
-            const { detectSilentRegressions } = await import('../../data-hub/compute/regression-detection.js');
-            const { generateSilentRegressionHtml } = await import('../../quality/silent-regression.js');
-            const result = detectSilentRegressions({ test: [1.0, 2.0, 3.0, 10.0] });
-            const html = generateSilentRegressionHtml(result);
-
-            expect(html).toContain('Error generating silent regression report');
-
-            spy.mockRestore();
         });
     });
 });

@@ -1,101 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../logger.js', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
-
-vi.mock('../../config-accessor.js', () => ({
-    default: { get: vi.fn(() => '') },
-    get: vi.fn(() => ''),
-}));
-
 describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
-    });
-
-    describe('FT-25a: generateBenchmarkHtml with data', () => {
-        it('returns complete HTML document with data', async () => {
-            expect.hasAssertions();
-
-            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const projects = [
-                {
-                    name: 'Squad Alpha',
-                    healthScore: 92,
-                    grade: 'A',
-                    passRate: 98,
-                    flakyRate: 2,
-                    coveragePct: 85,
-                    runCount: 120,
-                    previousScore: 88,
-                },
-                {
-                    name: 'Squad Beta',
-                    healthScore: 78,
-                    grade: 'B',
-                    passRate: 85,
-                    flakyRate: 8,
-                    coveragePct: 72,
-                    runCount: 95,
-                },
-            ];
-            const result = computeCrossSquadBenchmark(projects);
-            const html = generateBenchmarkHtml(result, 'FT-25 Test');
-
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('</html>');
-            expect(html).toContain('FT-25 Test');
-            expect(html).toContain('Squad Alpha');
-            expect(html).toContain('Squad Beta');
-            expect(html).toContain('Score Distribution');
-            expect(html).toContain('Average Score');
-        });
-
-        it('shows empty state for no benchmarks', async () => {
-            expect.hasAssertions();
-
-            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const result = computeCrossSquadBenchmark([]);
-            const html = generateBenchmarkHtml(result);
-
-            expect(html).toContain('No squad data available');
-            expect(html).toContain('\u2014');
-        });
-
-        it('uses custom title', async () => {
-            expect.hasAssertions();
-
-            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const result = computeCrossSquadBenchmark([]);
-            const html = generateBenchmarkHtml(result, 'Sprint 11 Review');
-
-            expect(html).toContain('Sprint 11 Review');
-            expect(html).not.toContain('Cross-Squad Benchmark');
-        });
-    });
-
-    describe('FT-25b: generateBenchmarkHtml error fallback', () => {
-        it('returns error page when CSS dependency fails', async () => {
-            expect.hasAssertions();
-
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const html = generateBenchmarkHtml(null);
-
-            expect(html).toContain('Error generating benchmark report');
-        });
-
-        it('returns error page when result is undefined', async () => {
-            expect.hasAssertions();
-
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const html = generateBenchmarkHtml(undefined);
-
-            expect(html).toContain('Error generating benchmark report');
-        });
     });
 
     describe('FT-25c: computeCrossSquadBenchmark edge cases', () => {
@@ -117,51 +24,6 @@ describe('Integration: Cross-Squad Benchmark (FT-25)', () => {
 
             expect(result.benchmarks).toStrictEqual([]);
             expect(result.averageScore).toBe(0);
-        });
-    });
-
-    describe('FT-25d: data attributes', () => {
-        it('includes data-part="target" with threshold values', async () => {
-            expect.hasAssertions();
-
-            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const projects = [
-                {
-                    name: 'Alpha',
-                    healthScore: 90,
-                    grade: 'A',
-                    passRate: 95,
-                    flakyRate: 3,
-                    coveragePct: 80,
-                    runCount: 100,
-                },
-                {
-                    name: 'Beta',
-                    healthScore: 40,
-                    grade: 'F',
-                    passRate: 50,
-                    flakyRate: 25,
-                    coveragePct: 30,
-                    runCount: 50,
-                },
-            ];
-            const result = computeCrossSquadBenchmark(projects);
-            const html = generateBenchmarkHtml(result);
-
-            expect(html).toContain('data-part="target"');
-            expect(html).toContain('target: <20');
-        });
-
-        it('includes data-part="timestamp"', async () => {
-            expect.hasAssertions();
-
-            const { computeCrossSquadBenchmark } = await import('../../data-hub/compute/cross-squad-benchmark.js');
-            const { generateBenchmarkHtml } = await import('../../quality/cross-squad-benchmark.js');
-            const result = computeCrossSquadBenchmark([]);
-            const html = generateBenchmarkHtml(result);
-
-            expect(html).toContain('data-part="timestamp"');
         });
     });
 });

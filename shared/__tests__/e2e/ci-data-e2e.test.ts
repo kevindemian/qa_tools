@@ -12,7 +12,6 @@ import type { PipelineRun, PipelineJob } from '../../types/ci-cd.js';
 import type { DataProvider, RawData } from '../../types/data-hub.js';
 import { DataHubImpl } from '../../data-hub/hub.js';
 import { makeDataHubPersistenceMock } from '../../test-utils/factories/data-hub-mock.js';
-import { makeCoverageGapResult } from '../coverage-fixture.js';
 
 vi.mock('../../logger.js', () => ({
     rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() },
@@ -139,55 +138,6 @@ describe('E2E: CI Data Hub — Complete Pipeline Flow', () => {
             expect(result.overall).toBeLessThanOrEqual(100);
             expect(result.grade).toBeDefined();
             expect(result.dimensions.passRate.score).toBeGreaterThanOrEqual(0);
-        });
-    });
-
-    describe('Full flow: API → Hub → Traceability Matrix → HTML', () => {
-        it('traceability matrix produces valid HTML with CI flaky data', async () => {
-            expect.hasAssertions();
-
-            const { buildTraceabilityMatrix, generateTraceabilityHtml } =
-                await import('../../report/traceability-matrix.js');
-
-            const runs = [makeRun(1)];
-            const jobsMap = new Map<number, PipelineJob[]>([
-                [1, [makeJob(10, { status: 'failure' }), makeJob(11, { status: 'success' })]],
-            ]);
-
-            const rawData: RawData = { runs, jobs: jobsMap, failureReasons: new Map(), artifacts: new Map() };
-            const provider = createMockProvider(rawData);
-            await DataHubImpl.create([provider], { repo: 'owner/repo' }, mockPersistence);
-
-            const metrics = [
-                {
-                    timestamp: '2026-07-01T10:00:00Z',
-                    project: 'test',
-                    total: 2,
-                    passed: 1,
-                    failed: 1,
-                    skipped: 0,
-                    duration: 1000,
-                    tests: [
-                        { title: 'TC-001', state: 'passed' as const, duration: 500 },
-                        { title: 'TC-002', state: 'failed' as const, duration: 500 },
-                    ],
-                },
-            ];
-
-            const coverageResult = makeCoverageGapResult({
-                'EPIC-1': {
-                    items: [{ issueKey: 'STORY-1', hasTest: true, linkedTestKeys: ['TC-001', 'TC-002'] }],
-                    rawPct: 100,
-                },
-            });
-
-            const result = buildTraceabilityMatrix(metrics, coverageResult, []);
-            const html = generateTraceabilityHtml(result);
-
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('Traceability Matrix');
-            expect(html).toContain('EPIC-1');
-            expect(html).toContain('STORY-1');
         });
     });
 

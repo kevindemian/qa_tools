@@ -1,7 +1,6 @@
 import fc from 'fast-check';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { computeOptimizationActions } from '../data-hub/compute/optimization-actions.js';
-import { generateOptimizationHtml } from '../quality/suite-optimization.js';
 import type { OptimizationResult } from '../types/data-hub-extensions.js';
 
 function analyze(tests: Array<{ title: string; duration: number; flakiness: number }>): OptimizationResult {
@@ -13,15 +12,6 @@ function analyze(tests: Array<{ title: string; duration: number; flakiness: numb
     }
     return computeOptimizationActions(durationMap, flakinessMap);
 }
-
-vi.mock('../logger', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
-
-vi.mock('../../config.js', () => ({
-    default: { get: vi.fn(() => '') },
-    get: vi.fn(() => ''),
-}));
 
 const testArb = fc.record({
     title: fc.stringMatching(/^[a-zA-Z0-9 _-]{1,20}$/),
@@ -172,53 +162,6 @@ describe('AnalyzeSuiteOptimization — property-based', () => {
                     expect(result.totalDuration).toBe(0);
                 },
             ),
-            { numRuns: 50 },
-        );
-    });
-});
-
-describe('GenerateOptimizationHtml — property-based', () => {
-    it('always produces valid HTML', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyze(tests);
-                const html = generateOptimizationHtml(result, 'PBT');
-
-                expect(html).toContain('<!DOCTYPE html>');
-                expect(html).toContain('</html>');
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('contains all test titles with non-none actions', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyze(tests);
-                const html = generateOptimizationHtml(result);
-                for (const entry of result.optimizations) {
-                    expect(html).toContain(entry.action !== 'none' ? entry.testTitle : '');
-                }
-            }),
-            { numRuns: 50 },
-        );
-    });
-
-    it('contains Tests to Optimize metric card', () => {
-        expect.hasAssertions();
-
-        fc.assert(
-            fc.property(fc.uniqueArray(testArb, { selector: (t) => t.title, minLength: 0, maxLength: 10 }), (tests) => {
-                const result = analyze(tests);
-                const html = generateOptimizationHtml(result);
-
-                expect(html).toContain('Tests to Optimize');
-                expect(html).toContain(String(result.totalTests));
-            }),
             { numRuns: 50 },
         );
     });

@@ -22,22 +22,15 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
  * Each MUST NOT generate its own timestamp.
  */
 const RENDERER_REL_PATHS = [
-    'shared/report/ai-effectiveness-renderer.ts',
-    'shared/report/ai-comparison-renderer.ts',
     'shared/report/incident-report-renderer.ts',
     'shared/report/impact-alert-renderer.ts',
-    'shared/report/traceability-renderer.ts',
     'shared/report/flakiness-renderer.ts',
     'shared/report/backlog-health-renderer.ts',
     'shared/quality/pipeline-cost-renderer.ts',
-    'shared/quality/suite-optimization-renderer.ts',
-    'shared/quality/cross-squad-benchmark-renderer.ts',
     'shared/quality/release-score-renderer.ts',
-    'shared/quality/silent-regression-renderer.ts',
     'shared/quality/defect-trend-renderer.ts',
     'shared/quality/defect-seasonality-renderer.ts',
     'shared/quality/developer-profile-renderer.ts',
-    'shared/quality/requirement-score-renderer.ts',
     'shared/report/generate-coverage-gap-html.ts',
     'git_triggers/pipeline-health-renderer.ts',
     'shared/report/report-html.ts',

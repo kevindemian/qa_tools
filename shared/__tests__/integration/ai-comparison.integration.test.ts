@@ -2,84 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
 import type { AiComparisonRecord } from '../../data-hub/compute/ai-comparison.js';
 
-vi.mock('../../logger.js', () => ({
-    rootLogger: { error: vi.fn(), info: vi.fn(), child: vi.fn().mockReturnThis() },
-}));
-
-vi.mock('../../config-accessor.js', () => ({
-    default: { get: vi.fn(() => '') },
-    get: vi.fn(() => ''),
-}));
-
-describe('Integration: AI Comparison Dashboard (FT-24)', () => {
+describe('Integration: AI Comparison Compute (FT-24)', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
-    });
-
-    describe('FT-24a: generateAiComparisonHtml', () => {
-        it('returns complete HTML document with data', async () => {
-            expect.hasAssertions();
-
-            const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const records: AiComparisonRecord[] = [
-                {
-                    testTitle: 'Login Test',
-                    generatedBy: 'ai',
-                    accepted: true,
-                    passed: true,
-                    duration: 100,
-                    flakiness: 0.1,
-                    promptVersion: 'v1',
-                },
-                {
-                    testTitle: 'API Test',
-                    generatedBy: 'manual',
-                    accepted: true,
-                    passed: true,
-                    duration: 200,
-                    flakiness: 0.3,
-                    promptVersion: 'v1',
-                },
-            ];
-            const result = compareAiVsManual(records);
-
-            expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-
-            const html = generateAiComparisonHtml(result, 'FT-24 Test');
-
-            expect(html).toContain('<!DOCTYPE html>');
-            expect(html).toContain('</html>');
-            expect(html).toContain('FT-24 Test');
-            expect(html).toContain('Summary');
-            expect(html).toContain('Advantage Analysis');
-            expect(html).toContain('AI Pass Rate');
-            expect(html).toContain('Manual Pass Rate');
-        });
-
-        it('shows no data message for empty records', async () => {
-            expect.hasAssertions();
-
-            const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const result = compareAiVsManual([]);
-            const html = generateAiComparisonHtml(result);
-
-            expect(html).toContain('No comparison data available.');
-            expect(html).not.toContain('Summary');
-        });
-
-        it('uses custom title', async () => {
-            expect.hasAssertions();
-
-            const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const result = compareAiVsManual([]);
-            const html = generateAiComparisonHtml(result, 'Sprint 11 Analysis');
-
-            expect(html).toContain('Sprint 11 Analysis');
-            expect(html).not.toContain('AI vs Manual Test Comparison');
-        });
     });
 
     describe('FT-24b: edge cases', () => {
@@ -87,7 +12,6 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect.hasAssertions();
 
             const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [
                 {
                     testTitle: 't1',
@@ -123,10 +47,6 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect(result.manualTotal).toBe(0);
             expect(result.manualPassRate).toBe(0);
             expect(result.manualFlakinessAvg).toBe(0);
-
-            const html = generateAiComparisonHtml(result);
-
-            expect(html).toContain('N/A');
         });
 
         it('handles all manual records', async () => {
@@ -165,7 +85,6 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             expect.hasAssertions();
 
             const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
             const records: AiComparisonRecord[] = [];
             for (let i = 0; i < 100; i++) {
                 records.push({
@@ -181,57 +100,6 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
             const result = compareAiVsManual(records);
 
             expect(result.aiTotal + result.manualTotal).toBe(100);
-
-            const html = generateAiComparisonHtml(result);
-
-            expect(html).toContain('<!DOCTYPE html>');
-        });
-    });
-
-    describe('FT-24c: HTML structural validation', () => {
-        it('contains proper HTML structure', async () => {
-            expect.hasAssertions();
-
-            const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const records: AiComparisonRecord[] = [
-                {
-                    testTitle: 't1',
-                    generatedBy: 'ai',
-                    accepted: true,
-                    passed: true,
-                    duration: 100,
-                    flakiness: 0.1,
-                    promptVersion: 'v1',
-                },
-                {
-                    testTitle: 't2',
-                    generatedBy: 'manual',
-                    accepted: true,
-                    passed: true,
-                    duration: 200,
-                    flakiness: 0.2,
-                    promptVersion: '',
-                },
-            ];
-            const result = compareAiVsManual(records);
-            const html = generateAiComparisonHtml(result);
-
-            const htmlParts = [
-                '<!DOCTYPE html>',
-                '<html',
-                '</html>',
-                '<head>',
-                '</head>',
-                '<body>',
-                '</body>',
-                '--color-surface-page',
-                'prefers-color-scheme',
-                'data-component="metric-card"',
-                'data-component="badge"',
-            ];
-
-            expect(htmlParts.every((p) => html.includes(p))).toBeTruthy();
         });
     });
 
@@ -254,45 +122,6 @@ describe('Integration: AI Comparison Dashboard (FT-24)', () => {
 
             expect(result.aiTotal).toBe(0);
             expect(result.manualTotal).toBe(0);
-        });
-
-        it('handles null result in generateAiComparisonHtml without crashing', async () => {
-            expect.hasAssertions();
-
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const html = generateAiComparisonHtml(null);
-
-            expect(html).toContain('Error generating dashboard');
-        });
-    });
-
-    describe('FT-24e: error fallback', () => {
-        it('returns error page when buildHtmlPage throws', async () => {
-            expect.hasAssertions();
-
-            const { compareAiVsManual } = await import('../../data-hub/compute/ai-comparison.js');
-            const { generateAiComparisonHtml } = await import('../../report/ai-comparison.js');
-            const htmlFactory = await import('../../report/html-factory.js');
-            const spy = vi.spyOn(htmlFactory, 'buildHtmlPage').mockImplementation(() => {
-                throw new Error('mock crash');
-            });
-            const records: AiComparisonRecord[] = [
-                {
-                    testTitle: 't1',
-                    generatedBy: 'ai',
-                    accepted: true,
-                    passed: true,
-                    duration: 100,
-                    flakiness: 0.1,
-                    promptVersion: 'v1',
-                },
-            ];
-            const result = compareAiVsManual(records);
-            const html = generateAiComparisonHtml(result);
-
-            expect(html).toContain('Error generating dashboard');
-
-            spy.mockRestore();
         });
     });
 });
