@@ -672,7 +672,8 @@ async function main(): Promise<void> {
 
 process.on('unhandledRejection', (reason: unknown) => {
     printError('Erro interno não tratado (async)', reason);
-    rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    rootLogger.error('Unhandled Rejection', { error: err.message, stack: err.stack });
     gracefulExit(ExitCode.ERROR);
 });
 
@@ -688,7 +689,8 @@ main().catch((err: unknown) => {
     printError('Erro inesperado', err);
     const state = loadTypedState();
     sharedPrintSessionSummary([], '', state.history || []);
-    rootLogger.error('Main error', { error: String(err) });
+    const error = err instanceof Error ? err : new Error(String(err));
+    rootLogger.error('Main error', { error: error.message, stack: error.stack });
 });
 
 export { main, showSplash, dispatchChoice, dispatchAndHandleResult, showGapBadge, _isJiraConfigured };

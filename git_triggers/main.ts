@@ -12,7 +12,8 @@ import { dispatchCli } from './cli-dispatch.js';
 
 process.on('unhandledRejection', (reason: unknown) => {
     printError('Erro interno não tratado (async)', reason);
-    rootLogger.error('Unhandled Rejection', { reason: String(reason) });
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    rootLogger.error('Unhandled Rejection', { error: err.message, stack: err.stack });
     gracefulExit(ExitCode.ERROR);
 });
 
@@ -26,6 +27,7 @@ process.on('uncaughtException', (err: Error) => {
 dispatchCli(parseCliArgs()).catch((err) => {
     printError('Erro inesperado', err);
     printSessionSummary();
-    rootLogger.error('Main error', { error: String(err) });
+    const error = err instanceof Error ? err : new Error(String(err));
+    rootLogger.error('Main error', { error: error.message, stack: error.stack });
     gracefulExit(ExitCode.ERROR);
 });
