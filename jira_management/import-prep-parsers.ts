@@ -316,6 +316,9 @@ export function parseJsonFile(jsonPath: string): ParsedImportFile {
         ? {
               ...(root.testExecution.title ? { title: root.testExecution.title } : {}),
               ...(root.testExecution.description ? { description: root.testExecution.description } : {}),
+              ...(root.testExecution.linkedIssues && root.testExecution.linkedIssues.length > 0
+                  ? { linkedIssues: root.testExecution.linkedIssues }
+                  : {}),
               ...(root.testExecution.labels ? { labels: root.testExecution.labels } : {}),
           }
         : undefined;

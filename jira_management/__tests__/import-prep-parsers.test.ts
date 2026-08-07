@@ -502,6 +502,32 @@ describe('ParseJsonFile', () => {
         expect(result.testExecution).toStrictEqual({ title: 'TE-1', description: 'desc', labels: ['smoke'] });
     });
 
+    it('parses testExecution linkedIssues from JSON root', () => {
+        const tmp = '/tmp/opencode/import-prep-parsers-te-links.json';
+        writeFileSync(
+            tmp,
+            JSON.stringify({
+                testExecution: {
+                    title: 'TE-1',
+                    linkedIssues: [
+                        { key: 'ECSPOL-100', linkType: 'Relates' },
+                        { key: 'ECSPOL-200', linkType: 'blocks' },
+                    ],
+                },
+                tests: [{ title: 'TC1', steps: [{ Action: 'Click', 'Expected Result': 'Done' }] }],
+            }),
+        );
+        const result = parseJsonFile(tmp);
+
+        expect(result.testExecution).toStrictEqual({
+            title: 'TE-1',
+            linkedIssues: [
+                { key: 'ECSPOL-100', linkType: 'Relates' },
+                { key: 'ECSPOL-200', linkType: 'blocks' },
+            ],
+        });
+    });
+
     it('propagates per-item batch fields into tests', () => {
         const tmp = '/tmp/opencode/import-prep-parsers-items.json';
         writeFileSync(

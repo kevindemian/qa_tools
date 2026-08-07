@@ -355,7 +355,7 @@ export class TestExecutionCreator {
         projectName: string,
         testKeys: string[],
         csvName: string,
-        parentIssues?: LinkedIssue[],
+        teLinkedIssues?: LinkedIssue[],
         execOpts?: { title?: string; description?: string; labels?: string[] },
     ): Promise<TestExecutionResult | null> {
         const title = execOpts?.title || '';
@@ -373,8 +373,8 @@ export class TestExecutionCreator {
             }
         }
 
-        if (parentIssues && parentIssues.length > 0) {
-            const unique = deduplicateLinkedIssues(parentIssues);
+        if (teLinkedIssues && teLinkedIssues.length > 0) {
+            const unique = deduplicateLinkedIssues(teLinkedIssues);
             try {
                 const linkResult = await this.linkManager.linkSourceToTargets(result.key, unique);
                 result.linkedParentCount = linkResult.created + linkResult.skipped;

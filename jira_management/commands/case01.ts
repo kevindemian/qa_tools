@@ -209,7 +209,7 @@ async function handler(c: CommandContext): Promise<boolean | void> {
                     projectName: c.ctx.project_name,
                     testKeys: c.ctx.inMemoryTasksId,
                     csvName,
-                    parentIssues: result.result.parentIssues,
+                    ...(result.testExecution.linkedIssues ? { teLinkedIssues: result.testExecution.linkedIssues } : {}),
                     execOpts: {
                         ...(result.testExecution.title ? { title: result.testExecution.title } : {}),
                         ...(result.testExecution.description ? { description: result.testExecution.description } : {}),

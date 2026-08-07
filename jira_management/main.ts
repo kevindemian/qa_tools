@@ -6,7 +6,7 @@ import { showSplash } from '../shared/ui/splash.js';
 import type { JiraMode } from '../shared/jira/jira-auth.js';
 import { info, title, prompt, printError, warn } from '../shared/ui/prompt.js';
 import {
-    mask,
+    maskCredential,
     createValidateEnv,
     offerEnvSetup,
     setupSigint,
@@ -118,7 +118,7 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             return ExitCode.ERROR;
         }
 
-        const { summary, status, failedLinks, inMemoryTasksId, parentIssues } = outcome.result;
+        const { summary, status, failedLinks, inMemoryTasksId } = outcome.result;
         if (failedLinks && failedLinks.length) {
             printError(summary, undefined);
         } else {
@@ -131,13 +131,15 @@ export async function runHeadlessCsvImport(res: RuntimeResources, csvPath: strin
             const executor = new TestExecutionCreator(res.jiraResource, res.linkManager);
             const csvName = csvPath.split('/').pop() ?? csvPath;
             const teParentArg = getArgValue(process.argv, '--te-parent');
-            const teParentIssues = teParentArg ? parseLinkedIssuesString(teParentArg) : parentIssues;
+            const teLinkedIssues = teParentArg
+                ? parseLinkedIssuesString(teParentArg)
+                : outcome.testExecution?.linkedIssues;
             const teResult = await createTests.createTestExecutionWithLinks({
                 testExecutionCreator: executor,
                 projectName: res.ctx.project_name,
                 testKeys: inMemoryTasksId,
                 csvName,
-                parentIssues: teParentIssues,
+                ...(teLinkedIssues ? { teLinkedIssues } : {}),
                 ...(outcome.testExecution
                     ? {
                           execOpts: {
@@ -263,7 +265,7 @@ const sessionLog = rootLogger.child({ session: 'jira' });
 
 if (Config.get('debug')) {
     info('Jira Base URL: ' + base_url);
-    info('Jira Token: ' + mask(personal_token));
+    info('Jira Token: ' + maskCredential(personal_token));
 }
 
 const _validateEnvConfigs = (): Array<{ key: string; label: string; example: string }> => {

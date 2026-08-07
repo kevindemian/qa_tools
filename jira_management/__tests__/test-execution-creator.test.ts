@@ -385,6 +385,54 @@ describe('TestExecutionCreator', () => {
             expect(callArgs?.[1]).toHaveProperty('fields.description', 'Smoke suite');
             expect(callArgs?.[1]).toHaveProperty('fields.labels', ['smoke']);
         });
+
+        it('links TE to declared TE linked issues using each entry own link type', async () => {
+            expect.hasAssertions();
+
+            setupCreate('TE-1');
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
+            mockLinkManager.linkSourceToTargets.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
+
+            const result = await creator.createWithLinks(projectName, testKeys, csvName, [
+                { key: 'ECSPOL-100', linkType: 'Relates' },
+                { key: 'ECSPOL-200', linkType: 'blocks' },
+            ]);
+
+            expect(mockLinkManager['linkSourceToTargets']).toHaveBeenCalledTimes(1);
+            expect(mockLinkManager['linkSourceToTargets']).toHaveBeenCalledWith('TE-1', [
+                { key: 'ECSPOL-100', linkType: 'Relates' },
+                { key: 'ECSPOL-200', linkType: 'blocks' },
+            ]);
+            expect(result?.linkedParentCount).toBe(1);
+        });
+
+        it('does NOT link TE to parents when no TE linked issues declared', async () => {
+            expect.hasAssertions();
+
+            setupCreate('TE-1');
+            mockJiraResource.getJiraResource.mockResolvedValueOnce({ fields: { issuelinks: [] } });
+            mockLinkManager.linkTestToTestExecution.mockResolvedValue({
+                created: 1,
+                skipped: 0,
+                failed: [],
+                missing: [],
+            });
+
+            await creator.createWithLinks(projectName, testKeys, csvName);
+
+            expect(mockLinkManager['linkSourceToTargets']).not.toHaveBeenCalled();
+        });
     });
 
     describe('AddTestsToExistingExecution', () => {

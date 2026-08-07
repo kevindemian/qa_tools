@@ -7,6 +7,8 @@ interface EnvValidationResult {
 
 export const mask = vi.fn<(v: string) => string>().mockImplementation((v: string) => v);
 
+export const maskCredential = vi.fn<(v: string) => string>().mockImplementation((v: string) => (v ? '****' : ''));
+
 export const sanitizeUrl = vi.fn<(url: string) => string>().mockImplementation((url: string) => url);
 
 export const gracefulExit = vi.fn<(code: ExitCode) => void>();

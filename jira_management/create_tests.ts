@@ -236,7 +236,7 @@ interface CreateTeWithLinksOptions {
     projectName: string;
     testKeys: string[];
     csvName: string;
-    parentIssues?: LinkedIssue[];
+    teLinkedIssues?: LinkedIssue[];
     execOpts?: { title?: string; description?: string; labels?: string[] };
 }
 
@@ -244,8 +244,8 @@ interface CreateTeWithLinksOptions {
 async function createTestExecutionWithLinks(
     opts: CreateTeWithLinksOptions,
 ): Promise<{ key: string; summary: string; linkedParentCount: number } | null> {
-    const { testExecutionCreator, projectName, testKeys, csvName, parentIssues, execOpts } = opts;
-    return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, parentIssues, execOpts);
+    const { testExecutionCreator, projectName, testKeys, csvName, teLinkedIssues, execOpts } = opts;
+    return testExecutionCreator.createWithLinks(projectName, testKeys, csvName, teLinkedIssues, execOpts);
 }
 
 /** Validate test cases against TestCaseSchema. Returns errors and warnings separately. */

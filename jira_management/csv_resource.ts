@@ -272,6 +272,11 @@ class CsvResource {
         const teTitle = this._parseConfigValue(lines, 'Test Execution:');
         const teDescription = this._parseConfigValue(lines, 'TE Description:');
         const teLabels = this._parseConfigList(lines, 'TE Labels:');
+        const teLinkedIssuesRaw = this._parseConfigValue(lines, 'TE Linked Issues:');
+        let teLinkedIssues: Array<{ key: string; linkType: string }> | undefined;
+        if (teLinkedIssuesRaw) {
+            teLinkedIssues = parseLinkedIssuesString(teLinkedIssuesRaw);
+        }
 
         const batchFields: BatchFields = {
             ...(environment ? { environment } : {}),
@@ -282,9 +287,10 @@ class CsvResource {
             ...(teTitle ? { title: teTitle } : {}),
             ...(teDescription ? { description: teDescription } : {}),
             ...(teLabels ? { labels: teLabels } : {}),
+            ...(teLinkedIssues ? { linkedIssues: teLinkedIssues } : {}),
         };
 
-        if (!environment && !components && !priority && !teTitle && !teDescription && !teLabels) {
+        if (!environment && !components && !priority && !teTitle && !teDescription && !teLabels && !teLinkedIssues) {
             return null;
         }
         return {

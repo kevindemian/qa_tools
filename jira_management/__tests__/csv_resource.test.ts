@@ -683,6 +683,33 @@ describe('CsvResource', () => {
             unlinkSync(path.resolve(tmp));
         });
 
+        it('parses TE Linked Issues from config block', async () => {
+            expect.hasAssertions();
+
+            const tmp = path.join(os.tmpdir(), 'qa-meta-te-links.csv');
+            const content = [
+                'Test Execution: TE-Smoke',
+                'TE Linked Issues: ECSPOL-100 (Relates), ECSPOL-200 (blocks)',
+                '---',
+                'Title: TC1',
+                'Action,Data,Expected Result',
+                'a,d,r',
+            ].join('\n');
+            writeFileSync(path.resolve(tmp), content, 'utf-8');
+
+            const result = await csvResource.readBulkCsvWithMeta(tmp);
+
+            expect(result.testExecution).toStrictEqual({
+                title: 'TE-Smoke',
+                linkedIssues: [
+                    { key: 'ECSPOL-100', linkType: 'Relates' },
+                    { key: 'ECSPOL-200', linkType: 'blocks' },
+                ],
+            });
+
+            unlinkSync(path.resolve(tmp));
+        });
+
         it('returns no meta when no config block present', async () => {
             expect.hasAssertions();
 

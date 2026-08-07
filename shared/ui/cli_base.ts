@@ -25,6 +25,12 @@ export function mask(v: string): string {
     return v ? v.slice(0, MASK_VISIBLE_CHARS) + '****' : '';
 }
 
+/** Masks a credential value completely — reveals no prefix.
+ *  Used for secret values in warnings/logs so no credential fragment is exposed. */
+export function maskCredential(v: string): string {
+    return v ? '****' : '';
+}
+
 /** Resultado da validação de ambiente. `ok` = true quando todas as variáveis estão configuradas. */
 export interface EnvValidationResult {
     ok: boolean;
@@ -48,7 +54,7 @@ export function createValidateEnv(configs: EnvConfig[], config?: Config): () => 
                     !val.includes('seu-') &&
                     !val.includes('your-')
                 ) {
-                    rootLogger.warn(`VARIÁVEL COM CREDENCIAL REAL: ${c.key}=${mask(val)}`);
+                    rootLogger.warn(`VARIÁVEL COM CREDENCIAL REAL: ${c.key}=${maskCredential(val)}`);
                 }
             }
         }
@@ -173,6 +179,7 @@ interface HistoryEntry {
     status: string;
     op: string;
     detail: string;
+    ts?: string;
 }
 
 export function printSessionSummary(
@@ -215,8 +222,16 @@ function _printLastOperations(history?: HistoryEntry[]): void {
     info('Últimas operações:');
     last5.forEach((h) => {
         const icon = h.status === 'error' ? chalk.red('ERR') : chalk.green('OK');
-        print(`  ${icon} ${h.op}: ${h.detail}`);
+        const time = _formatEntryTime(h.ts);
+        print(`  ${icon} ${time}${h.op}: ${h.detail}`);
     });
+}
+
+function _formatEntryTime(ts?: string): string {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('pt-BR', { hour12: false }) + ' ';
 }
 
 function _printSessionLine(lastOperation: string | null, logPath: string | null): void {

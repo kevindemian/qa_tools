@@ -89,7 +89,7 @@ async function handleCreateNew(
     const execTitle = await ask('Título do Test Execution', { hint: 'Enter = ' + csvName });
     const execDesc = await askMultiline('Descrição (opcional)');
 
-    const parentIssues = await promptForParentIssues(detectedParentIssues);
+    const teLinkedIssues = await promptForParentIssues(detectedParentIssues);
 
     try {
         const executor = new TestExecutionCreator(c.jiraResource, c.linkManager);
@@ -98,7 +98,7 @@ async function handleCreateNew(
             projectName: project,
             testKeys,
             csvName,
-            parentIssues,
+            teLinkedIssues,
             execOpts: { title: execTitle, description: execDesc },
         });
         if (!execResult) {
@@ -126,7 +126,7 @@ async function promptForParentIssues(detected: LinkedIssue[]): Promise<LinkedIss
     const prefill = detected.map((p) => p.key + ' (' + p.linkType + ')').join(', ');
     const hint = prefill
         ? 'Detectado: ' + prefill + '\n  Enter=usar, digite outras, ou vazio para pular'
-        : 'KEY (tipo de ligação), ...\n  Exemplo: ECSPOL-428 (is a test for)\n  Enter para pular';
+        : 'KEY (tipo de ligação), ...\n  Exemplo: ECSPOL-428 (Relates)\n  Enter para pular';
 
     const input = await ask('🔗 Linkar TE a issues pai?', { hint });
 

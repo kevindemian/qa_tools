@@ -85,6 +85,10 @@ export interface TestExecutionDeclaration {
     title?: string;
     /** TE description (optional). */
     description?: string;
+    /** TE linked issues (optional). Each entry carries its own link type
+     *  (e.g. `{ key: 'ECSPOL-100', linkType: 'Relates' }`). The TE is linked
+     *  to these issues with the declared types; absent = no TE→parent link. */
+    linkedIssues?: Array<{ key: string; linkType: string }>;
     /** TE labels (optional). */
     labels?: string[];
 }

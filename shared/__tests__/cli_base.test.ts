@@ -96,6 +96,22 @@ describe('CLI Base', () => {
             expect(mockRootLogger.warn).toHaveBeenCalledWith(expect.stringContaining('VARIÁVEL COM CREDENCIAL REAL'));
         });
 
+        it('masks real credentials without leaking any prefix', () => {
+            process.env['TOKEN_A'] = 'super-secret-prefix-1234567890';
+            process.env['TOKEN_B'] = 'another-real-credential-here-789';
+            const validate = cliBase.createValidateEnv(configs);
+            validate();
+
+            const calls = mockRootLogger.warn.mock.calls.map((c) => String(c[0]));
+            const maskLine = calls.find((c) => c.includes('VARIÁVEL COM CREDENCIAL REAL: TOKEN_A='));
+            expect(maskLine).toBe('VARIÁVEL COM CREDENCIAL REAL: TOKEN_A=****');
+        });
+
+        it('maskCredential reveals no characters', () => {
+            expect(cliBase.maskCredential('super-secret-prefix-1234567890')).toBe('****');
+            expect(cliBase.maskCredential('')).toBe('');
+        });
+
         it('does not warn for placeholder values', () => {
             process.env['TOKEN_A'] = 'seu-token-aqui';
             process.env['TOKEN_B'] = 'your-token-here';
@@ -501,6 +517,15 @@ describe('CLI Base', () => {
             expect(MOCK_PROMPT.print).toHaveBeenCalledTimes(3);
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('test: passed'));
             expect(MOCK_PROMPT.print).toHaveBeenCalledWith(expect.stringContaining('build: failed'));
+        });
+
+        it('prints timestamp when history entry has ts', () => {
+            const history = [{ status: 'ok', op: 'test', detail: 'passed', ts: '2026-08-07T10:00:00.000Z' }];
+            cliBase.printSessionSummary([], null, history);
+
+            expect(MOCK_PROMPT.print).toHaveBeenCalledWith(
+                expect.stringMatching(/.*\d{2}:\d{2}:\d{2}.*test: passed.*/),
+            );
         });
 
         it('prints last operation when provided', () => {

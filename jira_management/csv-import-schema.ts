@@ -79,6 +79,7 @@ export const ImportJsonRootSchema = z.object({
         .object({
             title: z.string().optional(),
             description: z.string().optional(),
+            linkedIssues: z.array(z.object({ key: z.string().min(1), linkType: z.string().min(1) })).optional(),
             labels: z.array(z.string()).optional(),
         })
         .optional(),

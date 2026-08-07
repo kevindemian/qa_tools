@@ -87,6 +87,12 @@ export function generatePreviewMarkdown(tests: TestCase[], options?: PreviewMdOp
         if (options.testExecution.labels && options.testExecution.labels.length > 0) {
             summaryParts.push('  Labels TE: ' + options.testExecution.labels.join(', '));
         }
+        if (options.testExecution.linkedIssues && options.testExecution.linkedIssues.length > 0) {
+            summaryParts.push(
+                '  Links TE: ' +
+                    options.testExecution.linkedIssues.map((li) => li.key + ' (' + li.linkType + ')').join(', '),
+            );
+        }
     }
     if (summaryParts.length > 0) parts.push(summaryParts.join('  \n') + '\n\n---\n\n');
 
