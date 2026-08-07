@@ -5,6 +5,7 @@
 import { pushBreadcrumb, clearBreadcrumbs } from '../shared/ui/breadcrumbs.js';
 import { createValidateEnv, offerEnvSetup, setupSigint } from '../shared/ui/cli_base.js';
 import Config from '../shared/config-accessor.js';
+import { isJiraConfigured } from '../shared/jira/config.js';
 import { getCurrentProject, setCurrentProject } from '../shared/project-context.js';
 import { showSplash } from '../shared/ui/splash.js';
 import { calcRunFailureRate } from '../shared/data-hub/compute/run-failure-rate.js';
@@ -841,7 +842,13 @@ function _computeHealthScore(): { score: number; grade: string } | undefined {
  */
 async function _showSplashWithHealth(healthScore: { score: number; grade: string } | undefined): Promise<void> {
     try {
-        await showSplash(undefined, undefined, undefined, undefined, healthScore);
+        await showSplash(
+            undefined,
+            isJiraConfigured() ? Config.get('jiraBaseUrl') : undefined,
+            isJiraConfigured() ? Config.get('jiraPersonalToken') : undefined,
+            Config.get('jiraMode'),
+            healthScore,
+        );
     } catch (err) {
         rootLogger.debug('Splash failed: ' + formatErr(err));
         defaultOutput.print('🔧 QA Tools  v1.0.0 — Gestão de Testes & Automação de CI/CD');

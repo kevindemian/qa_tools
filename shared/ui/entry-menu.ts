@@ -19,6 +19,8 @@ import { ExitCode } from '../types.js';
 import { fileURLToPath } from 'url';
 import { join, resolve } from 'path';
 import { gracefulExit } from './cli_base.js';
+import { isJiraConfigured } from '../jira/config.js';
+import Config from '../config-accessor.js';
 import { loadTypedState, updateTyped } from '../state.js';
 import { checkQualitySignals } from '../quality/quality-suggester.js';
 import { setCurrentProject, getCurrentProject, getCurrentProjectDir, isProjectSelected } from '../project-context.js';
@@ -390,6 +392,16 @@ async function maybePromptProject(projectPrompted: boolean, ui: MenuUI = realUI)
     return false;
 }
 
+/** Render the module-selection splash with Jira status checks when configured (J-4.2). */
+async function _showModuleSplash(): Promise<void> {
+    await showSplash(
+        undefined,
+        isJiraConfigured() ? Config.get('jiraBaseUrl') : undefined,
+        isJiraConfigured() ? Config.get('jiraPersonalToken') : undefined,
+        Config.get('jiraMode'),
+    );
+}
+
 export async function main(): Promise<void> {
     const isTTY = Output.isTTY() && !Output.isCI();
 
@@ -408,7 +420,7 @@ export async function main(): Promise<void> {
         if (process.stdout.isTTY) process.stdout.write('\x1Bc');
         projectPrompted = await maybePromptProject(projectPrompted);
         await checkPreMenu();
-        await showSplash();
+        await _showModuleSplash();
 
         const choice = await showSelect('      Selecione o módulo', [
             { name: '      Jira Management  (Testes, Releases, Config)', value: 'jira' },
