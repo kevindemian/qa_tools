@@ -7,6 +7,20 @@
  */
 import type { GeneratedTestCase } from './case18-types.js';
 
+/**
+ * Extract the acceptance criteria section from a user story description.
+ * The story embeds its ACs after the "Acceptance Criteria:" marker; the
+ * section text (the 14 numbered items) is the domain criteria source used
+ * by the deterministic floor. Keeps the marker out so it is never counted
+ * as a phantom criterion (QA7).
+ */
+export function extractCriteria(storyDescription: string): string {
+    const marker = 'Acceptance Criteria:';
+    const idx = storyDescription.indexOf(marker);
+    if (idx === -1) return storyDescription;
+    return storyDescription.slice(idx + marker.length).trim();
+}
+
 // --- ECSPOL-960 Baseline (real data) ---
 
 /** ECSPOL-960 user story and acceptance criteria (from CSV import). */

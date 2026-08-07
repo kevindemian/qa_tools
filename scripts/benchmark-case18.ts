@@ -12,6 +12,7 @@ import { evaluateCase18 } from '../shared/quality/case18-evaluator.js';
 import {
     ECSPOL960_BASELINE,
     ECSPOL960_STORY,
+    extractCriteria,
     BVA_BENCHMARK,
     EP_BENCHMARK,
     STATE_TRANSITION_BENCHMARK,
@@ -31,7 +32,7 @@ function benchmark(label: string, testCases: GeneratedTestCase[], criteria: stri
 
 console.log('=== Case18 Quality Benchmarks (deterministic floor) ===\n');
 
-benchmark('ECSPOL-960 baseline', ECSPOL960_BASELINE, ECSPOL960_STORY.description.split('\n').slice(1).join('\n'));
+benchmark('ECSPOL-960 baseline', ECSPOL960_BASELINE, extractCriteria(ECSPOL960_STORY.description));
 
 const bvaCases: GeneratedTestCase[] = [
     {

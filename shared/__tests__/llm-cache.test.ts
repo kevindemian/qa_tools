@@ -271,6 +271,32 @@ describe('Llm Cache', () => {
             expect(result).toStrictEqual({ ok: true });
         });
 
+        it('returns validated data when response is wrapped in markdown code fences', () => {
+            const result = checkSchema('```json\n{"ok": true}\n```', testSchema);
+
+            expect(result).toStrictEqual({ ok: true });
+        });
+
+        it('returns validated data when response is wrapped in bare code fences', () => {
+            const result = checkSchema('```\n{"ok": true}\n```', testSchema);
+
+            expect(result).toStrictEqual({ ok: true });
+        });
+
+        it('returns validated array data for an array schema', () => {
+            const arraySchema = z.array(z.object({ title: z.string() }));
+            const result = checkSchema('[{"title": "Login with valid credentials"}]', arraySchema);
+
+            expect(result).toStrictEqual([{ title: 'Login with valid credentials' }]);
+        });
+
+        it('returns validated array data for an array schema wrapped in fences', () => {
+            const arraySchema = z.array(z.object({ title: z.string() }));
+            const result = checkSchema('```json\n[{"title": "Login with valid credentials"}]\n```', arraySchema);
+
+            expect(result).toStrictEqual([{ title: 'Login with valid credentials' }]);
+        });
+
         it('returns null when raw string is not valid JSON', () => {
             const result = checkSchema('not json', testSchema);
 

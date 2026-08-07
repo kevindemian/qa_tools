@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { diskCacheGet, diskCacheSet, clearDiskCache } from '../infra/disk-cache.js';
 import { rootLogger } from '../logger.js';
-import { parseRawOnce } from './llm-fallback-http.js';
+import { parseJsonOnce } from './llm-fallback-http.js';
 import type { ZodSchemaTyped as ZodSchema } from '../types.js';
 
 // ---- types ----
@@ -67,16 +67,16 @@ export function cacheKey(
 }
 
 function _validateWithSchema<T>(raw: string, schema: ZodSchema<T>): T | null {
-    const parsed = parseRawOnce(raw);
-    if (!parsed) return null;
+    const parsed = parseJsonOnce(raw);
+    if (parsed === null) return null;
     const result = schema.safeParse(parsed);
     if (result.success) return result.data;
     return null;
 }
 
 function _warnIfNotJson(raw: string): void {
-    const parsed = parseRawOnce(raw);
-    if (!parsed) {
+    const parsed = parseJsonOnce(raw);
+    if (parsed === null) {
         rootLogger.warn('LLM response expected JSON but was not parseable — returning raw text');
     }
 }

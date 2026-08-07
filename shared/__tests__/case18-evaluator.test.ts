@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateDeterministic, CASE18_FLOOR_PROVENANCE } from '../quality/case18-deterministic.js';
 import { evaluateCase18, generateEvaluationReport } from '../quality/case18-evaluator.js';
-import { ECSPOL960_BASELINE, ECSPOL960_STORY } from '../quality/case18-benchmarks.js';
+import { ECSPOL960_BASELINE, ECSPOL960_STORY, extractCriteria } from '../quality/case18-benchmarks.js';
 import type { GeneratedTestCase } from '../quality/case18-types.js';
 
 // --- Fixtures ---
@@ -305,5 +305,28 @@ describe('ECSPOL-960 baseline', () => {
             expect(tc.coverage).toBeDefined();
             expect((tc.coverage ?? []).length).toBeGreaterThan(0);
         }
+    });
+
+    it('extracts the 14 acceptance criteria without the phantom header line (QA7)', () => {
+        const criteria = extractCriteria(ECSPOL960_STORY.description);
+        const lines = criteria
+            .split('\n')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 10);
+
+        expect(lines).toHaveLength(14);
+        expect(lines[0]).toMatch(/^1\. Regulations section/);
+        expect(lines.some((l) => l === 'Acceptance Criteria:')).toBe(false);
+    });
+
+    it('evaluates the baseline at 98/A on the domain criteria (coverage 14/14)', () => {
+        const criteria = extractCriteria(ECSPOL960_STORY.description);
+        const result = evaluateCase18(ECSPOL960_BASELINE, criteria);
+        const coverage = result.layers.deterministic.metrics.coverage;
+
+        expect(result.score).toBe(98);
+        expect(result.grade).toBe('A');
+        expect(coverage.score).toBe(100);
+        expect(coverage.failed).toHaveLength(0);
     });
 });

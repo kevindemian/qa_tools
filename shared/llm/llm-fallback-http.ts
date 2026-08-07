@@ -87,13 +87,41 @@ export function buildAnthropicPayload(
 
 const RawRecordSchema = z.record(z.string(), z.unknown());
 
+/** Strip a single surrounding markdown code-fence block (```json ... ``` or ``` ... ```). */
+export function stripMarkdownFence(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed.startsWith('```')) return raw;
+    const newlineIdx = trimmed.indexOf('\n');
+    if (newlineIdx === -1) return raw;
+    const closing = trimmed.lastIndexOf('```');
+    if (closing <= newlineIdx) return raw;
+    return trimmed.slice(newlineIdx + 1, closing).trim();
+}
+
 export function parseRawOnce(raw: string): Record<string, unknown> | null {
     try {
-        const parsed: unknown = JSON.parse(raw);
+        const parsed: unknown = JSON.parse(stripMarkdownFence(raw));
         return RawRecordSchema.parse(parsed);
     } catch (err) {
         rootLogger.warn(
             'llm-fallback-http: failed to parse raw record: ' + (err instanceof Error ? err.message : String(err)),
+        );
+        return null;
+    }
+}
+
+/**
+ * Parse a JSON payload agnostic of its top-level shape (object, array, scalar).
+ * Unlike parseRawOnce (which only accepts objects), this is safe for schemas
+ * whose top level is an array — e.g. the test-case array schemas used by
+ * case18. Fails explicitly (null) when the payload is not valid JSON.
+ */
+export function parseJsonOnce(raw: string): unknown | null {
+    try {
+        return JSON.parse(stripMarkdownFence(raw)) as unknown;
+    } catch (err) {
+        rootLogger.warn(
+            'llm-fallback-http: failed to parse JSON payload: ' + (err instanceof Error ? err.message : String(err)),
         );
         return null;
     }
@@ -223,25 +251,29 @@ export async function sendToProvider(
     recordModelLatency(cfg.model, elapsed);
 
     const data = parseRawOnce(raw);
-    if (!data) {
-        rootLogger.warn('LLM provider returned non-JSON response on 200 OK (raw length: ' + raw.length + ')');
-        return '';
-    }
-
-    const errPayload = data['error'];
-    if (errPayload !== undefined) {
-        if (typeof errPayload === 'string') throw new LlmProviderError('LLM API error: ' + errPayload);
-        const errResult = LlmErrorPayloadSchema.safeParse(errPayload);
-        if (errResult.success) {
-            throw new LlmProviderError(
-                'LLM API error: ' + (errResult.data.message ?? summarizeLlmError(errResult.data)),
-            );
+    if (data) {
+        const errPayload = data['error'];
+        if (errPayload !== undefined) {
+            if (typeof errPayload === 'string') throw new LlmProviderError('LLM API error: ' + errPayload);
+            const errResult = LlmErrorPayloadSchema.safeParse(errPayload);
+            if (errResult.success) {
+                throw new LlmProviderError(
+                    'LLM API error: ' + (errResult.data.message ?? summarizeLlmError(errResult.data)),
+                );
+            }
+            throw new LlmProviderError('LLM API error: ' + summarizeLlmError(errPayload));
         }
-        throw new LlmProviderError('LLM API error: ' + summarizeLlmError(errPayload));
+        _trackUsage(data, configUniqueKey(cfg), tier ?? 'main');
+        return stripMarkdownFence(extractContent(data, cfg.format));
     }
 
-    _trackUsage(data, configUniqueKey(cfg), tier ?? 'main');
-    return extractContent(data, cfg.format);
+    const arrParsed = parseJsonOnce(raw);
+    if (Array.isArray(arrParsed)) {
+        return JSON.stringify(arrParsed);
+    }
+
+    rootLogger.warn('LLM provider returned non-JSON response on 200 OK (raw length: ' + raw.length + ')');
+    return '';
 }
 
 /** Compact human-readable summary of an unknown LLM error payload (never a raw dump). */
