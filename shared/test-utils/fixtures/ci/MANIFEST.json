@@ -1,0 +1,47 @@
+{
+    "description": "Fixtures reais de CI do projeto qa_tools, baixadas via GitHub Actions API (origem externa). Dados relativos ao projeto, conforme diretriz do usuário (origem da fonte = externa).",
+    "fetched_at": "2026-08-06T22:00:00Z",
+    "method": "GET https://api.github.com/repos/kevindemian/qa_tools/actions/artifacts/{id}/zip (Authorization: Bearer)",
+    "artifacts": [
+        {
+            "file": "ctrf-6996-real.json",
+            "artifact": "test-report",
+            "run": "31085474282",
+            "branch": "dev",
+            "conclusion": "success",
+            "tests": 6996,
+            "passed": 6996,
+            "failed": 0,
+            "skipped": 0
+        },
+        {
+            "file": "ctrf-6843-real.json",
+            "artifact": "test-report",
+            "run": "30658210491",
+            "branch": "main",
+            "conclusion": "failure",
+            "tests": 6843,
+            "passed": 6843,
+            "failed": 0,
+            "skipped": 0,
+            "note": "Run concluído como failure por etapa de lint/typecheck (não por testes: ctrf tem 0 falhas)"
+        },
+        {
+            "file": "pr-report-6994-real.json",
+            "artifact": "pr-report-html",
+            "run": "31085474282",
+            "branch": "dev",
+            "conclusion": "success",
+            "tests": 6994,
+            "passed": 6994,
+            "failed": 0,
+            "skipped": 0
+        }
+    ],
+    "known_limitations": [
+        "Nenhum run CI acessível possui testes com falha real (0 failed em todos os ctrf)",
+        "Jira inacessível (401 Bearer e Basic)",
+        "GitLab token acessa apenas me-team-group/qatools (mirror interno) sem test reports",
+        "reports/*/legacy.json são todos vazios ({}); ctrf local é byte-idêntico à fixture sintética"
+    ]
+}

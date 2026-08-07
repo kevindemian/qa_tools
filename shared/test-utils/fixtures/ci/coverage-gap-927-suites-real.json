@@ -1,0 +1,5567 @@
+{
+  "source": "github-actions/run/31085474282/artifact/pr-report-html (agrupado por suite top-level)",
+  "items": [
+    {
+      "summary": "CreateDataHub",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Quality check integrated",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "Main",
+      "type": "Epic",
+      "total": 93,
+      "covered": 93
+    },
+    {
+      "summary": "Pr Report Core.Property",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Jira_management — getHandler registry",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Jira_management — case handlers are connected",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Main.ts",
+      "type": "Epic",
+      "total": 36,
+      "covered": 36
+    },
+    {
+      "summary": "CreateDataHubFromParseResult (F0-T8)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Llm Metrics",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "CalculateHealthScore — property-based",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "EvaluateQualityGate — property-based (no mocks)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Opencode Db Maintenance",
+      "type": "Epic",
+      "total": 36,
+      "covered": 36
+    },
+    {
+      "summary": "CalculatePipelineCost — property-based",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "Project Registry (property)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GeneratePipelineCostHtml — data attributes",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GeneratePipelineCostHtml — EmptyState",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Show docs (integrated)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PBT: Temp Dir",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ComputeAiMetrics",
+      "type": "Epic",
+      "total": 28,
+      "covered": 28
+    },
+    {
+      "summary": "Requirement Score.Property",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Pr-report entry point — CTRF parsing",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Deps — dependency wall",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Pr-report entry point — quality gate check run",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Pr-report entry point — flaky detection with quarantine",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Pr-report entry point — HTML report generation",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Store Backend",
+      "type": "Epic",
+      "total": 35,
+      "covered": 35
+    },
+    {
+      "summary": "State Persistence — property-based invariants",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "AggregateDefectSeasonality — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateFlakinessHtml — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ComputeAiEffectiveness — property-based",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GenerateAiEffectivenessHtml — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "AnalyzeBacklogHealth — property-based",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "GenerateBacklogHealthHtml — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "HandleListSchedules",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "HandleRunSchedule",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "HandleCreateMR",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "HandleListApprovedMRs",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "HandleMergeMR",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "HandleFlakinessDashboard",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "GenerateCoverageGapHtml — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Case01 — Import CSV",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case03 — Create Version",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case04 — Add Sprint Tasks",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Case05 — Update Package Version",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case06 — Check Release Task Status",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case07 — Close Tasks",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case08 — Publish Version",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case09 — Change Project",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case10 — Set Git Directory",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case11 — Generate Template",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case13 — Create Test Execution",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case14 — Set Cypress Directory",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Case16 — Set JSON Directory",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Case24 — Setup Wizard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Prompt",
+      "type": "Epic",
+      "total": 107,
+      "covered": 107
+    },
+    {
+      "summary": "ExtractHost",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "HostSemaphore",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Detector",
+      "type": "Epic",
+      "total": 22,
+      "covered": 22
+    },
+    {
+      "summary": "R8.7 Cross-validation: specs vs renderers (C17)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "R8.1 Mandatory Metrics Validation",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "R8.2 Mandatory Sections Validation",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.3 Conditional Actions Validation",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.4 Thresholds and Severities Validation",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 Timestamp and SSOT Validation",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "R8 Cross-cutting Validation",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "R8.1 HTML: &#39;ai-effectiveness&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;ai-comparison&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;incident-report&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;impact-alert&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;traceability&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;flakiness&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;backlog-health&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;pipeline-cost&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;suite-optimization&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;cross-squad-benchmark&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;release-score&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildQualityGateSectionMd — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "R8.1 HTML: &#39;silent-regression&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;defect-trend&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;defect-seasonality&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;developer-profile&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;requirement-score&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.1 HTML: &#39;coverage-gap&#39; — Mandatory Metrics in Output",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.2 HTML: &#39;ai-effectiveness&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;ai-comparison&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;incident-report&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;impact-alert&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;traceability&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;flakiness&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;backlog-health&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;pipeline-cost&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;suite-optimization&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;cross-squad-benchmark&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;release-score&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;silent-regression&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;defect-trend&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;defect-seasonality&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;developer-profile&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;requirement-score&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.2 HTML: &#39;coverage-gap&#39; — Mandatory Sections in Output",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "R8.5 HTML: &#39;ai-effectiveness&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;ai-comparison&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;incident-report&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;impact-alert&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;traceability&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;flakiness&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;backlog-health&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;pipeline-cost&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;suite-optimization&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;cross-squad-benchmark&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;release-score&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;silent-regression&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;defect-trend&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;defect-seasonality&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;developer-profile&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;requirement-score&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8.5 HTML: &#39;coverage-gap&#39; — Timestamp and data-dashboard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;ai-effectiveness&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;ai-comparison&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;incident-report&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;impact-alert&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;traceability&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;flakiness&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;backlog-health&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;pipeline-cost&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;suite-optimization&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;cross-squad-benchmark&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;release-score&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;silent-regression&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;defect-trend&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;defect-seasonality&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;developer-profile&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;requirement-score&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R8 Cross-cutting HTML: &#39;coverage-gap&#39;",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CompareAiVsManual — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GenerateAiComparisonHtml — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildTraceabilityMatrix — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GenerateTraceabilityHtml — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ExecuteConfigInIsolate",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "ComputeCoverageMetrics — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "CalcReleaseScore — property-based",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "CalcReleaseScore — edge cases (no mocks)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "AnalyzeSuiteOptimization — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateOptimizationHtml — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Batch Mode",
+      "type": "Epic",
+      "total": 24,
+      "covered": 24
+    },
+    {
+      "summary": "Quarantine.Property",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "AnalyzePipelineImpact — property-based",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "GenerateImpactAlertHtml — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Validation-hook",
+      "type": "Epic",
+      "total": 31,
+      "covered": 31
+    },
+    {
+      "summary": "Incident Report.Property",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "AggregateDefectTrends",
+      "type": "Epic",
+      "total": 22,
+      "covered": 22
+    },
+    {
+      "summary": "AggregateDefectSeasonality",
+      "type": "Epic",
+      "total": 27,
+      "covered": 27
+    },
+    {
+      "summary": "BuildSplashLines",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "CheckJiraStatus",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ShowSplash",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "ComputeCrossSquadBenchmark — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateBenchmarkHtml — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Run Comparison.Property",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Llm Client",
+      "type": "Epic",
+      "total": 59,
+      "covered": 59
+    },
+    {
+      "summary": "GenerateDefectTrendHtml — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "no-swallow",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "CreateTestExecution",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "CreateTestExecutionWithLinks",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GenerateMappingFiles",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ValidateCsvTests",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CreateTestsFromJson",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "ReadCsvTests (via createTestsFromCsv)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "UpdateCrossReferences",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "CreateTestsFromCsv",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Integration — detection drives CI reporter config",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Framework-detection — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildDeveloperProfile — property-based",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateDeveloperProfileHtml — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Failure-classifier — property-based",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "QualityMetricsCollector — property-based",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "SecureReporterDetection",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "DataHubImpl",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "DataHubImpl — data availability (B2/§25)",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "DataHubImpl — mergeIncremental (Gap 4)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "HasDataChanged",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "DataHubImpl.loadFromStore",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "DataHubImpl — SSOT Persistence",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Compute/test-duration-map — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Jira_resource",
+      "type": "Epic",
+      "total": 83,
+      "covered": 83
+    },
+    {
+      "summary": "ArtifactScorecardRunner",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "DetectSilentRegression — property-based invariants",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Handlers",
+      "type": "Epic",
+      "total": 53,
+      "covered": 53
+    },
+    {
+      "summary": "ConsensusGenerate",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "RefineWithConsistency",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Prompt Input Editor",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "AnalyzeTestImpact — property-based",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GenerateTestSelectionJson — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Pipeline Handler",
+      "type": "Epic",
+      "total": 37,
+      "covered": 37
+    },
+    {
+      "summary": "Case-d — dashboard menu",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Case26 — Release Score",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Case27 — Coverage Dashboard",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "FeatureConfigStoreSchema — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ResolvePublishTarget — property-based invariants",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "System: Quality Gate — Full Pipeline Flow",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Session Cache",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Multi-project Cache",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GetOrFetchWithLock",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Pipeline Jira",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateHtmlReport — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Log-parser — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Test Execution Flow",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "CheckResumeCheckpoint",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "FilterTests",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ValidateImportBatch",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GeneratePreviewMarkdown",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "ParseJsonTests",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ShowPreview",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Csv -> preview pipeline (e2e)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Pr Report Core",
+      "type": "Epic",
+      "total": 25,
+      "covered": 25
+    },
+    {
+      "summary": "ComputeOptimizationActions",
+      "type": "Epic",
+      "total": 20,
+      "covered": 20
+    },
+    {
+      "summary": "SafeParseJson",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Env-loader — dotenv wrapper",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "Env-loader — per-project overlay (real filesystem, hermetic XDG root)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Env-loader — secret scanning (real filesystem, safety mechanism §25)",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Env-loader — ensureDotenv production path (isTest=false, injected project root)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DataHubPersistence",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "CalculatePipelineCost",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "ComputePipelineCostResult (direct compute contract)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GeneratePipelineCostHtml",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "CalculatePipelineCost — SSOT consumption (computed.perRunCosts)",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Coverage invariants (PBT)",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "RenderPipelineHealthHtml — property-based",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "TestCaseValidator — createTestCaseValidator",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantCoverageComplete (T-01)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantCoverageThreshold (T-02)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantConcreteSteps (T-04)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantVerifiableResult (T-05)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantUniqueTitles (T-06)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantPreconditionsExist (T-07)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantResultMatchesAction (T-08)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "InvariantNoDuplicateTests (T-10)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "InvariantStateMutation (T-03)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "InvariantNumericConsistency (T-09)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantPartitionCoverage (T-11)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "InvariantBoundaryCoverage (T-12)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "InvariantRedundancyCoupling (T-13)",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "T-01 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-02 edge cases",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "T-03 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-04 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-05 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-06 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-07 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-09 edge cases",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "T-10 edge cases",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "T-11 edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-01 more edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "T-09 more edge cases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Git Sha",
+      "type": "Epic",
+      "total": 23,
+      "covered": 23
+    },
+    {
+      "summary": "Validation-hook — exported units",
+      "type": "Epic",
+      "total": 27,
+      "covered": 27
+    },
+    {
+      "summary": "Pr Report Core.Main",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Config Accessor.Property",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Compute/release-score — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/trends — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GenerateHtmlReport",
+      "type": "Epic",
+      "total": 81,
+      "covered": 81
+    },
+    {
+      "summary": "Compute/suite-speed — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CsvResource",
+      "type": "Epic",
+      "total": 48,
+      "covered": 48
+    },
+    {
+      "summary": "Compute/branch-health — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "SeverityFromLatency — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "FailureRate — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CheckQualitySignals — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "JiraLinkManager",
+      "type": "Epic",
+      "total": 33,
+      "covered": 33
+    },
+    {
+      "summary": "MatchPreconditionByTokenOverlap",
+      "type": "Epic",
+      "total": 36,
+      "covered": 36
+    },
+    {
+      "summary": "MatchPreconditionByDualThreshold",
+      "type": "Epic",
+      "total": 33,
+      "covered": 33
+    },
+    {
+      "summary": "Failure-analysis",
+      "type": "Epic",
+      "total": 27,
+      "covered": 27
+    },
+    {
+      "summary": "JUnit-xml-parser — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GitHubManager",
+      "type": "Epic",
+      "total": 59,
+      "covered": 59
+    },
+    {
+      "summary": "First Run",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "TestExecutionCreator",
+      "type": "Epic",
+      "total": 26,
+      "covered": 26
+    },
+    {
+      "summary": "MatchResultsToTests",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "CreateTestExecutionFromResults",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Artifact-parser — property-based",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "SanitizeHtml",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "Case02.Integration",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Case28",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "EvaluateQualityGate",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Flaky dimension consistency (no-data vs gate)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CalculateHealthScore",
+      "type": "Epic",
+      "total": 47,
+      "covered": 47
+    },
+    {
+      "summary": "CalculateHealthScore error handling (Fase 1.5)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "B2: dimensão sem dados ≠ 0 — health NUNCA critical por falta de dado (SSOT DataHub)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case17",
+      "type": "Epic",
+      "total": 22,
+      "covered": 22
+    },
+    {
+      "summary": "TryCreateDataHub wiring — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CreateGitProvider — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "DetectSilentRegressions",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "Case26",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Compute/failure-reasons — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Prompt Ui",
+      "type": "Epic",
+      "total": 60,
+      "covered": 60
+    },
+    {
+      "summary": "Quarantine",
+      "type": "Epic",
+      "total": 17,
+      "covered": 17
+    },
+    {
+      "summary": "Secure-io readConfigFileSafe — integração real (fs verdadeiro)",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "Llm Fallback",
+      "type": "Epic",
+      "total": 24,
+      "covered": 24
+    },
+    {
+      "summary": "Schedule Handler",
+      "type": "Epic",
+      "total": 21,
+      "covered": 21
+    },
+    {
+      "summary": "Import safety harness lifecycle",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "D2/D3 — empty and missing CSV must surface explicit, distinguishable failure",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "D5 — missing referenced Jira key must be reported explicitly (never silent skip)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "D6 — mapping-file generation must surface write/dir failure",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "GitHubDataProvider",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "GitHubDataProvider — FASE EXPAND+STORE (EIXO A)",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Feature-config (hermetic, fs-backed, baseDir-isolated)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "WfTriggerPipeline",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "WfGetRecentPipelines",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "WfGetPipeline",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "WfGetPipelineJobs",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "WfListPipelineArtifacts",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfDownloadArtifact",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "WfGetJobLogs",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "WfGetCICDVariables",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfGetSchedules",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "WfRunSchedule",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "WfGetWorkflowRunTiming",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfGetWorkflowUsage",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfGetRepoTree",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfGetFileContents",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WfListDirectory",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "WfGetRepoTreeCached",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Interactive-mode test exports",
+      "type": "Epic",
+      "total": 53,
+      "covered": 53
+    },
+    {
+      "summary": "Ui Helpers",
+      "type": "Epic",
+      "total": 24,
+      "covered": 24
+    },
+    {
+      "summary": "Compute/pipeline-cost (PBT)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/pass-rate — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "HTTP Client",
+      "type": "Epic",
+      "total": 33,
+      "covered": 33
+    },
+    {
+      "summary": "GenerateSeasonalityHtml",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "Config (accessor)",
+      "type": "Epic",
+      "total": 26,
+      "covered": 26
+    },
+    {
+      "summary": "Compute/test-duration-p95 — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Config",
+      "type": "Epic",
+      "total": 92,
+      "covered": 92
+    },
+    {
+      "summary": "DataHubImpl.create",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "Structural.ts — module loads and runs",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Requirement Score",
+      "type": "Epic",
+      "total": 37,
+      "covered": 37
+    },
+    {
+      "summary": "Project Registry (unit)",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "Test-source-fallback — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "EnrichFailuresWithAuthor",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "TestHistoryCache",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CreateHistoryProvider",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ServerHistoryProvider",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CloudHistoryProvider",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Llm Fallback Http",
+      "type": "Epic",
+      "total": 32,
+      "covered": 32
+    },
+    {
+      "summary": "GitLabDataProvider",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "IssueLinker",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "Setup main",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Setup main — pr-report workflow generation",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ParseCliDir",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/run-pass-rate — property-based",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ReviewWithLlm",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "DetectHedging",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DetectContradictions",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ShouldSkipAdversarialReview",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "CONFIG_SCHEMA",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "Migrate-projects (Fase 8)",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "ParseLegacyEntry (Fase 8)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Gitlab Branch",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "OfferPipelineFailureAnalysis — integração real",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "CLI Base",
+      "type": "Epic",
+      "total": 38,
+      "covered": 38
+    },
+    {
+      "summary": "ExtractCoverageFiles",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Test Results",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "OpenWithOsOrFallback",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GetOsOpenCommand (platform detection)",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "GetWinTempDir",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GetDocsOutputDir",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "OpenWithFallback",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "NullAs",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "UndefinedAs",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "MakeMockCommandContext",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "NonNull",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "CreateConsoleSpies",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WithEnv",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "System: CI Data Hub — Full Pipeline Flow",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Gitlab Pr",
+      "type": "Epic",
+      "total": 29,
+      "covered": 29
+    },
+    {
+      "summary": "WorkflowBuilder",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Prompt Input Filepath",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "PreConditionSchema",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CoverageRefSchema",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "TestCaseSchema",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "CoverageTableSchema",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "TestSuiteSchema",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DataHub/extractors/coverage-files — extractCoverageFiles",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Project Context (unit)",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "EnsureSelfHostProject (self-host resolution)",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "ComputeAiEffectiveness",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "GenerateAiEffectivenessHtml",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Case01.Integration",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "PreconditionHandler",
+      "type": "Epic",
+      "total": 35,
+      "covered": 35
+    },
+    {
+      "summary": "PreconditionHandler (Cloud mode)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GetHandler",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Handler contract (bidirectional)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GenerateDefectTrendHtml",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "ComputeCrossSquadBenchmark",
+      "type": "Epic",
+      "total": 22,
+      "covered": 22
+    },
+    {
+      "summary": "GenerateBenchmarkHtml",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "IsCTRF",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "IsJUnit",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "IsMochawesome",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "IsTestArtifact",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "ParseArtifactBuffer",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ParseZipBuffer",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ParseArtifactBufferAll",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "MappingFileGenerator",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Setup/reporter-ast",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Architecture — report renderer determinism (D5)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GitHubManager — FASE EXPAND+STORE optional methods",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GitHubDataProvider — LA-4 artifact failure records",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CompareAiVsManual",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "GenerateAiComparisonHtml",
+      "type": "Epic",
+      "total": 21,
+      "covered": 21
+    },
+    {
+      "summary": "Compute/avg-duration — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Gitlab Workflow",
+      "type": "Epic",
+      "total": 43,
+      "covered": 43
+    },
+    {
+      "summary": "TestCaseFactory",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "AssertNullOr",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ContainsEmoji",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GenerateCIWorkflow",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GenerateQaPostProcessAction",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GenerateCIWorkflow — with: project-name",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GenerateQaPostProcessAction — HTML upload",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "AnalyzeUnassignedIssues",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "AnalyzeStaleIssues",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "AnalyzeBugsWithoutTests",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CalculateBacklogScore",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "AnalyzeBacklogHealth",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GenerateBacklogHealthHtml",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Characterization — backlog vazio nao reporta saude 100% (C6, verificacao 2026-07-20)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Github Branch",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Compute/coverage — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case22",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Prompt Input Inquirer",
+      "type": "Epic",
+      "total": 43,
+      "covered": 43
+    },
+    {
+      "summary": "RunQualityGate",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "State",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "FormatPR",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PrCreateMergeRequest",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PrUpdateMergeRequest",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "PrGetMergeRequest",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "PrSearchMergeRequests",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "PrAcceptMergeRequest",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PrIsApproved",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Badge",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Icon",
+      "type": "Epic",
+      "total": 36,
+      "covered": 36
+    },
+    {
+      "summary": "Success/error/warn/info",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Title",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Divider",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "TableView",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GetConfig / __setConfig",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Coverage-extractor — property-based",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BugReport Service",
+      "type": "Epic",
+      "total": 24,
+      "covered": 24
+    },
+    {
+      "summary": "GenerateBugReportFromDescription",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Coverage Gap",
+      "type": "Epic",
+      "total": 25,
+      "covered": 25
+    },
+    {
+      "summary": "FilterHighFlakiness",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GenerateFlakinessHtml",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "AnalyzePipelineImpact",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "GenerateImpactAlertHtml",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "Disk Cache",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "ReviewWithLlm — rejection branches (LLM is the only mocked boundary)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "RunBenchmark",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "RunBenchmark — error handling",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Compute/quarantine-status — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case15",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "BuildTraceabilityMatrix",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "GenerateTraceabilityHtml",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "EIXO C — traceability awareness (C-3c)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Llm Cache",
+      "type": "Epic",
+      "total": 29,
+      "covered": 29
+    },
+    {
+      "summary": "ProjectPath",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ApiGet",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ApiPost",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "ApiPut",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "FormatDiffResponse",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "Case18",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "TryCreateDataHub wiring",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "BuildTabs",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildTabContents",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "BuildHierarchySidebar",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildTimeline",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "BuildSummaryCards",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildLlmSection",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "BuildQualityGateSection",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildFilterBar",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildFailedSummary",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildReleaseSection",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "BuildHealthSection",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "HELP_TOPICS",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ALIASES",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ResolveAlias",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CATEGORIES",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "SUB_MENUS",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CATEGORY_IDS",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CATEGORY_TITLES",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ID_TO_ALIASES",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ConfigHint",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "BuildMenuChoices",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "ValidateRequiredEnv",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ValidateConfigValues",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "WarnUnknownEnv",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ValidateAll",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Temp Dir",
+      "type": "Epic",
+      "total": 20,
+      "covered": 20
+    },
+    {
+      "summary": "DetectFrameworkCascade",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "DataHubImpl.create: ingest gate",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Compute/scoring — property-based",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "ParseTestResults (Mochawesome input)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ParseTestResultsFile (Mochawesome file)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "IsCtrfFormat",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ParseCtrfResults",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "ParseTestResults (dispatch)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ParseTestResultsFile",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Characterization — estados de erro nao devem virar skipped (C9, verificacao 2026-07-20)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Case11",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Import Loop",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Compute/run-failure-rate — property-based",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "VitestCtrfReporter",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "ServerStepImporter",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CloudStepImporter",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "SelectProject entry menu (real logic, injected UI, no TTY/spawn)",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Gitlab_manager",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "DetectSilentRegression",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "GenerateSilentRegressionHtml",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "Github Issues",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Developer Profile",
+      "type": "Epic",
+      "total": 26,
+      "covered": 26
+    },
+    {
+      "summary": "LinkTypeManager",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "CsvRowSchema",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ImportJsonSchema",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "JiraPayloadSchema",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Llm Rate Limiter",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "LatestRunTimestamp (Gap 4 anchor)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GetOrFetchDataHub incremental merge (Gap 4)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Case02",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Gitlab Issues",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Md",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "RenderPipeTable edge cases",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "MdBox",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Set lexer token injection",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "WrapCell extended edge cases",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "RenderTokens additional types",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "RenderInline additional types",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "MdToHtml",
+      "type": "Epic",
+      "total": 23,
+      "covered": 23
+    },
+    {
+      "summary": "Case20 - Bug Report handler",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Jira Client",
+      "type": "Epic",
+      "total": 21,
+      "covered": 21
+    },
+    {
+      "summary": "ConfidenceForSource",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ValidateAndScoreFailureRecords",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ValidateAndScoreSecurityFindings",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ValidateAndScoreDeployments",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ValidateAndScoreReleases",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "ValidateAndScorePmIssues",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ValidateAndScoreCoverageFiles",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ValidateAndScoreDoraMetrics (object)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ValidateAndScorePerformanceMetrics (object)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GateRawData (ingest boundary — AGGRESIVE robustness)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CreateMockContext",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ComputeArtifactScorecard",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ST-1 hub delegates to persistence",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "DataHub test-result cache",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "ApiPatch",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GlobalHub",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "EnsureDataHub with freshness check",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GeneratePostProcessWorkflowYaml",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ExtractArtifactProducerJobName",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "InjectPostProcessJob",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Contract: deployed qa-post-process.yml matches generator",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Contract: ci-injector and setup wizard generators are equivalent",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case23",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "IsManifestFile",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "DetectFrameworkFromDeps",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "DetectFrameworkFromAPI",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GenerateGitLabCI",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "SessionContext",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "ResolveSessionContext",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ResolveTestDataSource",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "GitLabDataProvider — expanded extraction (EIXO A)",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "ST-1 persistence: array categories round-trip",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ST-1 persistence: object categories round-trip",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ST-1 persistence: missing file safeguards",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ST-1 persistence: overwrite semantics (no silent append)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "CreateDataHubFromFallback (call-site wiring)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Spinner",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "CalcReleaseScore (B3 SSOT — 5-dimension model)",
+      "type": "Epic",
+      "total": 31,
+      "covered": 31
+    },
+    {
+      "summary": "GenerateReleaseScoreHtml (renderer)",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "GenerateReleaseScoreHtml — availability rendering (B3/§25)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "RawDataSchema — Gap 1 boundary validation",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "AnalyzeSuiteOptimization",
+      "type": "Epic",
+      "total": 23,
+      "covered": 23
+    },
+    {
+      "summary": "GenerateOptimizationHtml",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "Llm Fallback Config",
+      "type": "Epic",
+      "total": 31,
+      "covered": 31
+    },
+    {
+      "summary": "Compute/flaky-rate — property-based",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Audit-suppressions threshold mapping (C1)",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Parser parseYamlSimple de audit/suppressions.yaml",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Jira Resource Sprint",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "GitProviderBase._get",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "GitProviderBase._post",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GitProviderBase._formatDiffResponse",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "RunValidationRules",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "PrintValidationMessages",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Qa.sh — OpenCode container wrapper",
+      "type": "Epic",
+      "total": 28,
+      "covered": 28
+    },
+    {
+      "summary": "PostPrComment",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "IsGitHubCi",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "IsGitLabCi",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "BuildGitTrendHtml",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "BuildJiraContextHtml",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InjectAnalysisSection",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildDiffSummary",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "IsValidCtrfData",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ParseCliExtra",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Case17Helpers — exact rendered markup (mutation coverage)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Merge mutation reports",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute gate decision (equivalência com gate do Stryker — §10)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Integration: Xray merge",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DataHubImpl Layer 7 (User Fallback)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CreateCheckRun",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "GetCheckRuns",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "VITEST guard",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Coverage",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Schemas",
+      "type": "Epic",
+      "total": 21,
+      "covered": 21
+    },
+    {
+      "summary": "Case12",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Config-writer — integração real (fs verdadeiro)",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Test Impact",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "Store gate: array category",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Store gate: object category",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "L4.4 — parseFailureRecordsFromLogs: canonical FailureRecord extraction",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "L4.1 — NaN guards and count invariant (no silent masking)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "L4.3 — stripAnsi hardened (CSI + OSC)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "L4.2 — detectFrameworkVersion (provenance metadata)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "L4.4 — categorizeFailure (root-cause buckets)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "L4 — integration: full vitest log with failures",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Case00 Handler",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ExtractErrorMessages",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "FormatDuration",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "RenderPipelineHealthHtml",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "NivelarBranches",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "SanitizeForLlm",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "TruncateStacktrace",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "SanitizeForLlm with truncation",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "SanitizeForLlm — realistic scenarios",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "SanitizeTerminal",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Mutation-scope parsing (git diff --unified=0)",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Dir bucket scoping (--dir)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Build mutate patterns with dir scoping",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Range helpers",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Layout primitives",
+      "type": "Epic",
+      "total": 25,
+      "covered": 25
+    },
+    {
+      "summary": "Import Orchestrator",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Summarize data quality",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Ai Feedback",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Mock Modules",
+      "type": "Epic",
+      "total": 26,
+      "covered": 26
+    },
+    {
+      "summary": "CreateMockJiraResource",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Model-adapter",
+      "type": "Epic",
+      "total": 23,
+      "covered": 23
+    },
+    {
+      "summary": "CompositeProvider",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ValidateTestFile",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "FormatValidationResult",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "AskTestSource",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Theme-tokens",
+      "type": "Epic",
+      "total": 20,
+      "covered": 20
+    },
+    {
+      "summary": "ValidateJsonSchema",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ValidateJsonArray",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ValidateClassify",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ValidateJsonSchema — edge cases",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ValidateJsonArray — edge cases",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ValidateClassify — edge cases",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "HumanizeError",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ExtractErrorMessage",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "PrintError",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CancelError",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "OnError",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "DataHub/extractors/commit-log",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "PackageVersionManager",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Prompt Input Base",
+      "type": "Epic",
+      "total": 22,
+      "covered": 22
+    },
+    {
+      "summary": "DetectProvider",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ProbeApiKey",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "DiscoverProvider",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "AutoAssignTiers",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "PrecomputeCategories",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "BuildDetailRow",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildErrorCell",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "BuildHistoryCell",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildCategoryBadge",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildFlakinessBadge",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "BuildTestTable",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Mr Handler",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Logger file level filter — LOG-02",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Logger file error recovery — LOG-03",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Logger file cache validity — LOG-06",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "CreateMockLinkManager",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "TestClassificationSchema",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "TestSeveritySchema",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "FailureAnalysisTestSchema",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "FailureAnalysisSchema",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CalcExecutionRate",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CalcFlakyPercentage",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CalcPerRunCosts",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ConvertToMetricsRuns",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "CalcFlakinessEntries",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CalcMetricsTrends",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ArtifactValidator",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Factory functions",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Jira Resource Version",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ComputeCoverageGap",
+      "type": "Epic",
+      "total": 20,
+      "covered": 20
+    },
+    {
+      "summary": "Validation — zod wrapper",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "TestCaseDataSchema",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PreConditionInputSchema",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "TestCaseArraySchema",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Session-state",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Jira Helper",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "JiraDataProvider",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "HandleDryRun",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ResolveCsvPath",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ResolveLabels",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ResolveJsonPath",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ProxyConfig",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Circuit Breaker",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "GateRawData: failure records",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GateRawData: non-gated fields",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "GateRawData: empty categories",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "GateRawData: object categories",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "GateRawData: quality map shape",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Compute/coverage",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PipelineCategorySchema",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "PipelineClassificationSchema",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Incident Report",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "HandleError",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "InvariantNoPlaceholder (I-01)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "InvariantNoMarkdown (I-02)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "InvariantEvidenceExists (I-03)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantNoEmptyStrings (I-04)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "InvariantConclusionHasEvidence (I-05)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "LlmReviewPrompts",
+      "type": "Epic",
+      "total": 35,
+      "covered": 35
+    },
+    {
+      "summary": "DataHub/extractors/annotations",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CheckQualitySignals",
+      "type": "Epic",
+      "total": 19,
+      "covered": 19
+    },
+    {
+      "summary": "ComputeTraceabilityTree",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ChangeImpactSchema",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "RunComparisonSchema",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GenerateCoverageGapHtml",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "AiBugReportSchema",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "Case19",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CommandContext interface",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "R5.2 HTML Hook Invariants",
+      "type": "Epic",
+      "total": 24,
+      "covered": 24
+    },
+    {
+      "summary": "ParseJUnitXml",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "AssessTestImpact",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Palette",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ClassifyFailures",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "GeneratePrDescription",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ApplyProjectContext — self-host resolution (CI post-process path)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CreateMockResponse",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "CreateMockAxiosInstance",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ComputeImpactAlerts",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "DiscoverModels",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "AssignTierHints",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Case01",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WriteDotEnvExample",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "WriteFeaturesConfig",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "GetRegistry",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ResolveModel",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "Output",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Compute/branch-health",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Run Comparison",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Case13",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Pr Report Setup Handler",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "ParseTestSummaryFromLogs",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "DetectFileLine",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Available&lt;T> — guards e construtores",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "FormatAvailableScore — zero-silencing",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case21",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "ComputeIncidentEvents",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ClassifyResponseSchema",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Publish",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "ReportValidator",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "CheckConsistency",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ResolveField — deep nesting",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Fase1: dimensão faltante => unknown (não fail forçado)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Case08",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Cli-dispatch",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "ComputeArtifactQualityScore — AQS",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "CreateMockConfig",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "PrintSummary",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GetCoverageWeight",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "NormalizeType",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ExtractEpicKey",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ExtractLinkedTestKeys",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "BuildCoverageItems",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "CalculateTotals",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "CheckQualityGate",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GetCoverageGateDefaults",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "LoadEpicSummaries",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "LoadFixture",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Robust: Release Score does not fabricate dimensions (#C1)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Case07",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/Suite-speed",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "ExportMetricsCsv",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ImportMetricsCsv",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Case24 handler",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Compute/flaky-rate",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "PipelineValidator — createPipelineValidator",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantMinConfidence (P-01)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "InvariantEvidenceNonEmpty (P-02)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantCategoryHasRecommendation (P-03)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/release-score",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Box",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Card",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case14",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case16",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "PROVIDER_PROFILES",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "IsKnownProvider",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "GetProviderProfile",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InferProviderFromKey",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "FormatProviderList",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "ComparisonValidator — createComparisonValidator",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantChangesNonEmpty (C-01)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantSummaryLength (C-03)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantNumbersMatchInput (C-02)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "ST-1 mergeCategoryArrays: array categories",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ST-1 mergeCategoryArrays: object categories (first-non-null)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ST-1 mergeProvenance: trust channel preserved across providers",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Shared/project-paths",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "BugReportValidator — createBugReportValidator",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantMinSteps (B-01)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantImperativeSteps (B-02)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantSeverityConsistentWithDescription (B-03)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantNotSpecifiedJustified (B-04)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Compute/failure-reasons",
+      "type": "Epic",
+      "total": 15,
+      "covered": 15
+    },
+    {
+      "summary": "NormalizeFieldName",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "SanitizeCellValue",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Case05",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Chart primitives",
+      "type": "Epic",
+      "total": 17,
+      "covered": 17
+    },
+    {
+      "summary": "FlakinessEntries",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "ParseTests",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ExtractCriteria",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ExportTestsCsv",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ExportTestsJson",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "JiraDataProvider — deep extraction",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ComputeDiffComparison",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Form primitives",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "ComputeCoverageMetrics",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Case10",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Constants",
+      "type": "Epic",
+      "total": 27,
+      "covered": 27
+    },
+    {
+      "summary": "QualityMetricsCollector",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "Shared/errors",
+      "type": "Epic",
+      "total": 17,
+      "covered": 17
+    },
+    {
+      "summary": "Env-loader — per-project overlay",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case04",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Table primitives",
+      "type": "Epic",
+      "total": 18,
+      "covered": 18
+    },
+    {
+      "summary": "LinkOperations",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Report-types constants",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CategorizeFailure",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "ExtractSuite",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "XrayDataProvider XR-2 (requirement coverage + defects)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GenerateWithRetry",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Compute/trends",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CreateMockGitProvider",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Compute/avg-duration",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Compute/avg-duration — via timing data (run_duration_ms)",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Badge primitives",
+      "type": "Epic",
+      "total": 16,
+      "covered": 16
+    },
+    {
+      "summary": "BuildToggleScript",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Robust: Traceability Matrix uses real coverage, honest labels (#C3/#C4)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Card primitives",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "ClassifyFailures — annotations",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "AnalysisValidator — createAnalysisValidator",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantTestTitleExists (A-01)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantUnknownHasReason (A-04)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantHighSeverityRecommendation (A-05)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantSeverityConsistent (A-03)",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "InvariantRecommendationReferencesError (A-02)",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Prompt-input barrel",
+      "type": "Epic",
+      "total": 13,
+      "covered": 13
+    },
+    {
+      "summary": "Report-styles",
+      "type": "Epic",
+      "total": 14,
+      "covered": 14
+    },
+    {
+      "summary": "CreateJiraAuthHeader",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "IsAtlassianCloudGateway",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "ValidateLlmResponse (hermetic, local-hook-absent path)",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "XrayDataProvider",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Case09",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "RecalculateCoverage",
+      "type": "Epic",
+      "total": 12,
+      "covered": 12
+    },
+    {
+      "summary": "Tokenize",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "JaccardSimilarity",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "NormalizeText",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Similarity",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "CreateMockTestExecutionCreator",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Jira-resource-types",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Compute/test-duration-map",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "BUG 9: CSV import doesn&#39;t update existing issues",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DataHub/extractors/failure-classifier",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Bucket coverage validation (Estratégia B — Rule 25, sem gap silencioso)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "Architecture — hub-first: no fabricated computed fields (F0.3)",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "NormalizeRunId",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GetCiRunId",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "BuildHtmlPage",
+      "type": "Epic",
+      "total": 11,
+      "covered": 11
+    },
+    {
+      "summary": "BuildThemeScript",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "BuildErrorPage",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Report HTML qa-project meta tag",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Compute/quarantine-status",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "DetectNumericRange",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "BuildDiffComparisonSection",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "BUG 5: Cloud pagination infinite loop without nextPageToken",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Compute/test-duration-p95",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Shared/path-utils",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "GenerateQaPostProcessWorkflow",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "Case03",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ParseCliArgs",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "BUG 11: Cloud API missing fields[] in POST body",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "ExportMetricsJson",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ImportMetricsJson",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Pr Report Reconfig — real injector rewrites project-name",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "Case06",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "TestCoupling",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Breadcrumbs",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "Compute/pipeline-cost",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CreateGitProvider",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Compute/run-failure-rate",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "BUG 8: CloudStepImporter receives correct resource",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Compute/scoring",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "FormatDateISO",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "ConfirmOrCancel",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DataHub/extractors/coverage-extractor — branch coverage",
+      "type": "Epic",
+      "total": 10,
+      "covered": 10
+    },
+    {
+      "summary": "Entry-menu-logic (Fase 5 pure decisions)",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "CalcComputeCost",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "ParseQuotedValue",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "IsPreconditionKey",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ExtractPreconditionKey",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "CalcRetryFlaky",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "FormatBranch",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "DetectStoreBackend fallback",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Theme",
+      "type": "Epic",
+      "total": 6,
+      "covered": 6
+    },
+    {
+      "summary": "FmtDuration",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PctClass",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Pct",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "PctSub",
+      "type": "Epic",
+      "total": 3,
+      "covered": 3
+    },
+    {
+      "summary": "Commit log extractor",
+      "type": "Epic",
+      "total": 9,
+      "covered": 9
+    },
+    {
+      "summary": "VerifyEvidence",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "EvidenceValidationResult",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildChartSvg",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildMiniTrendChart",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildTrendSection",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BuildChartSection",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "BUG 1: isAtlassianCloudGateway misses *.atlassian.net",
+      "type": "Epic",
+      "total": 2,
+      "covered": 2
+    },
+    {
+      "summary": "ExtractCoverage",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "Compute/run-pass-rate",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "Compute/pass-rate",
+      "type": "Epic",
+      "total": 7,
+      "covered": 7
+    },
+    {
+      "summary": "DataHub/extractors/coverage-files",
+      "type": "Epic",
+      "total": 8,
+      "covered": 8
+    },
+    {
+      "summary": "CreateAgent",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    },
+    {
+      "summary": "Fase 5 — parseProjectFlag",
+      "type": "Epic",
+      "total": 5,
+      "covered": 5
+    },
+    {
+      "summary": "GeneratePrePushHook",
+      "type": "Epic",
+      "total": 4,
+      "covered": 4
+    },
+    {
+      "summary": "Env example stays in sync with CONFIG_SCHEMA",
+      "type": "Epic",
+      "total": 1,
+      "covered": 1
+    }
+  ]
+}

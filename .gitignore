@@ -66,6 +66,12 @@ gemini-code-*
 
 # === Config (Stryker canonical; diff-scoped via scripts/mutation-scope.ts) ===
 # stryker.config.mjs is the single mutation config source (tracked; env-driven STRYKER_BREAK/STRYKER_REPORT_FILE).
+# Scope-scoped temp configs (generated per mutation run; never tracked).
+stryker.scope.config.mjs
+vitest.stryker-scope.config.ts
+
+# === Legacy project config migration backup (runtime artifact) ===
+config/projects.json.migrated
 
 # === Windows artifacts ===
 nul
