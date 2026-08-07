@@ -72,9 +72,9 @@ remover o wizard first-run obrigatório do startup do jira (opt-in via menu 24),
 | J-5.1 | tsc --noEmit                      | ✅ Complete | 2026-08-07 |
 | J-5.2 | vitest run completo + quality-check | ✅ Complete | 544 files / 7365 tests; quality-check 20/20 |
 | J-5.3 | lint, depcruise, unused-exports   | ✅ Complete | depcruise 0 violações; unused-exports limpo |
-| J-5.4 | Commit por mudança + push + CI    | ⬜ pendente  | aguardando autorização do usuário |
+| J-5.4 | Commit por mudança + push + CI    | ✅ Complete | 4 commits (1351abc0, 89eb17ce, 8f9636fc, 32e79350); push dev; CI run 31161161814 success |
 
-**Checkpoint Fase 5**: ✅ validação completa verde (J-5.1..J-5.3); J-5.4 aguarda commit.
+**Checkpoint Fase 5**: ✅ concluída — suíte verde + CI verde.
 
 ### Fase 6 — UX: flags `[MIGRADO]` na seleção de projeto (adicional)
 
