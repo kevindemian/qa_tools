@@ -104,6 +104,8 @@ ERR Entry menu child module error: Processo encerrou com código 1
 
 **Checkpoint Fase 2:** fluxo completo do jira (incluindo wizard via menu 24) não lança mais `_getSession`.
 
+> **STATUS 2026-08-07:** ✅ Concluída. Causa raiz: `shared/deps.ts` importava `nock` (ativa interceptor global `http.ClientRequest` no import — `node_modules/nock/index.js:47-52`), quebrando o `HttpsProxyAgent` do proxy egress (`MockHttpSocket.passthrough` com `this` errado → `_getSession`). Corrigido na origem: nock removido de `deps.ts`; consumidores de teste usam ponte test-only `shared/__tests__/nock.ts` (imports relativos não violam o DepWall). RED→GREEN em `shared/__tests__/deps-runtime.test.ts`.
+
 ### Fase 3 — Wizard first-run opt-in
 
 **Objetivo:** remover a obrigatoriedade do wizard mantendo a configuração acessível no menu.
@@ -116,6 +118,8 @@ ERR Entry menu child module error: Processo encerrou com código 1
 - **J-3.4** — TDD: teste que falha se o wizard rodar no startup; teste que passa se abrir via menu 24.
 
 **Checkpoint Fase 3:** jira abre sem wizard obrigatório; menu 24 abre o wizard sob demanda.
+
+> **STATUS 2026-08-07:** ✅ Concluída. J-3.1+J-3.2: removidos a auto-chamada `maybeRunFirstRunWizard()` e o dead-block `offerEnvSetup` de `initStartup` (`jira_management/main.ts`); `validateEnv()` preservado (já loga warnings). J-3.4: RED→GREEN em `jira_management/__tests__/main.test.ts` ("first-run wizard is NOT auto-run at startup"). `case24.ts` (menu 24 opt-in) e `git_triggers` (fluxo próprio) inalterados.
 
 ### Fase 4 — Splash status real
 
@@ -137,6 +141,8 @@ ERR Entry menu child module error: Processo encerrou com código 1
 
 **Checkpoint Fase 4:** splash mostra status reais; sem chamada de rede com placeholders.
 
+> **STATUS 2026-08-07:** ✅ Concluída. J-4.1: `initStartup` passa credenciais reais quando `_isJiraConfigured()`. J-4.2: helper compartilhado `shared/jira/config.ts` (`isJiraConfigured`) usado nos 3 call-sites (`jira_management/main.ts`, `git_triggers/interactive-mode.ts:844`, `shared/ui/entry-menu.ts:411`) — sem duplicação. J-4.3: `shared/__tests__/jira-config.test.ts` (RED→GREEN, 5 casos) + `splash.test.ts` já cobre credenciais reais.
+
 ### Fase 5 — Validação completa
 
 **Tarefas:**
@@ -148,17 +154,19 @@ ERR Entry menu child module error: Processo encerrou com código 1
 
 **Checkpoint Fase 5:** suíte verde + CI verde.
 
+> **STATUS 2026-08-07:** ✅ Validação completa verde — tsc limpo, vitest 544 files/7365 tests, quality-check 20/20, depcruise 0 violações, unused-exports limpo. J-5.4 (commit por mudança + push + CI) aguarda autorização do usuário.
+
 ---
 
 ## 3. Critérios de aceite (medíveis)
 
-- [ ] Jira abre sem wizard obrigatório; menu 24 abre o wizard opt-in.
-- [ ] Erro com **stack trace completo** aparece no log (`LOG_FILE=true`).
-- [ ] `_getSession` corrigido na origem (sem workaround).
-- [ ] Splash mostra status Jira API/Token reais quando configurados; nenhuma chamada de rede com placeholder.
-- [ ] Handler `unhandledRejection` registra `error` + `stack` nos dois entry points.
-- [ ] Suíte completa + CI verdes.
-- [ ] Nenhum workaround, bypass ou enfraquecimento de safety mechanism.
+- [x] Jira abre sem wizard obrigatório; menu 24 abre o wizard opt-in.
+- [x] Erro com **stack trace completo** aparece no log (`LOG_FILE=true`).
+- [x] `_getSession` corrigido na origem (sem workaround).
+- [x] Splash mostra status Jira API/Token reais quando configurados; nenhuma chamada de rede com placeholder.
+- [x] Handler `unhandledRejection` registra `error` + `stack` nos dois entry points.
+- [ ] Suíte completa + CI verdes. (suíte verde; CI pendente do commit/push)
+- [x] Nenhum workaround, bypass ou enfraquecimento de safety mechanism.
 
 ---
 
@@ -166,3 +174,26 @@ ERR Entry menu child module error: Processo encerrou com código 1
 
 - **Fase 2:** se o stack revelar resolução de outro node_modules/versão/instalação global, o escopo exato da correção será confirmado com o usuário antes de executar.
 - **J-3.2:** forma final do prompt `offerEnvSetup` (disparar setup vs. remover) definida na execução da tarefa.
+
+---
+
+## 5. Fase 6 (adicional) — UX: remover flags `[MIGRADO]` da listagem de seleção de projeto
+
+**Data:** 2026-08-07
+**Autoridade:** instrução explícita do usuário durante teste manual — "o menu de seleção de projeto é ok, o problema são os warnings de migração".
+
+### 5.1 Contexto
+
+- Ao rodar `qatools.sh`, a tela inicial lista projetos numerados com o flag `[MIGRADO]` em todas as entradas migradas: `shared/ui/entry-menu.ts:103` (`displayProjects`).
+- Origem do flag: D-U4 — entradas migradas recebem `migrated: true` e são protegidas contra edição/remoção (`isProjectProtected`, `entry-menu-logic.ts:4-6`).
+- A proteção D-U4 é **reaplicada** com warning próprio em `manageProjectsFlow` (`entry-menu.ts:209-211`) quando o usuário tenta editar/remover uma entrada migrada.
+- Na tela de seleção, o flag `[MIGRADO]` é ruído: o usuário precisa escolher o projeto ativo, não saber que ele foi migrado. O flag `[INVÁLIDO]` (diretório quebrado) é informação útil na seleção e permanece.
+- O `main()` do entry-menu já limpa a tela entre menus (`entry-menu.ts:408`, `\x1Bc`).
+
+### 5.2 Tarefas
+
+- **J-6.1** — `shared/ui/entry-menu.ts:103`: remover o flag `[MIGRADO]` da renderização de `displayProjects`, mantendo `[INVÁLIDO]`.
+- **J-6.2** — Preservar `isProjectProtected` e a proteção D-U4 em `manageProjectsFlow` (warning ao editar/remover entrada migrada). Nenhuma alteração de contrato de proteção.
+- **J-6.3** — TDD RED→GREEN: teste que verifica que `displayProjects` não imprime `[MIGRADO]` (mas mantém `[INVÁLIDO]`), e que `isProjectProtected` continua true somente com `migrated=true`.
+
+**Checkpoint Fase 6:** tela inicial sem `[MIGRADO]`; proteção D-U4 preservada; suíte `shared/__tests__/entry-menu*.test.ts` verde.
