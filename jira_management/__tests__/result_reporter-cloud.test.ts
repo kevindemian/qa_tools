@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { nock } from '../../shared/deps.js';
+import nock from '../../shared/__tests__/nock.js';
 
 const XRAY_CLOUD = 'http://localhost:1999';
 const XRAY_CLOUD_PATH = '/xray';
