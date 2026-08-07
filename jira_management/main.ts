@@ -13,7 +13,6 @@ import { withSpinner } from '../shared/ui/spinner.js';
 import {
     mask,
     createValidateEnv,
-    offerEnvSetup,
     setupSigint,
     gracefulExit,
     printSessionSummary as sharedPrintSessionSummary,
@@ -30,9 +29,9 @@ import createTests from './create_tests.js';
 import { ensureDirs, registerCleanup } from '../shared/infra/temp-dir.js';
 import { CATEGORY_IDS, CATEGORY_TITLES } from './menu-data.js';
 import { dispatchChoice, getAndResolveChoice } from './ui-helpers.js';
-import { maybeRunFirstRunWizard } from '../shared/ui/first-run.js';
 import { setCurrentProject, getCurrentProject, loadProjectConfig } from '../shared/project-context.js';
 import { parseProjectFlag } from '../shared/parse-project-flag.js';
+import { isJiraConfigured } from '../shared/jira/config.js';
 
 /** Type-safe wrapper around `updateState` that provides a `StateSchema` callback. */
 function updateStateTyped(fn: (state: StateSchema) => void): void {
@@ -250,11 +249,7 @@ async function showGapBadge(jiraResource: JiraResource, project: string): Promis
 /** Returns true when Jira base URL and personal token are configured with real values
  *  (non-empty, non-placeholder). Used to skip non-critical startup calls. */
 function _isJiraConfigured(): boolean {
-    const url = Config.get('jiraBaseUrl');
-    const token = Config.get('jiraPersonalToken');
-    if (!url || !token) return false;
-    if (url.includes('seu-jira-server') || token === 'seu-token-aqui') return false;
-    return true;
+    return isJiraConfigured();
 }
 
 function _displayBadge(totalCount: number, project: string): void {
@@ -601,7 +596,7 @@ async function initStartup(): Promise<void> {
     }
     const projectName = parseProjectFlag(process.argv);
     if (projectName) setCurrentProject(projectName);
-    const envResult = validateEnv();
+    validateEnv();
     ensureDirs();
     registerCleanup();
 
@@ -613,18 +608,14 @@ async function initStartup(): Promise<void> {
     } catch (err) {
         rootLogger.debug('[startup] Health score unavailable: ' + String(err));
     }
-    await showSplash(getStatePath(), undefined, undefined, undefined, healthScore);
+    await showSplash(
+        getStatePath(),
+        _isJiraConfigured() ? base_url : undefined,
+        _isJiraConfigured() ? personal_token : undefined,
+        jira_mode,
+        healthScore,
+    );
     rootLogger.writeFileOnly('INFO', 'Sessão iniciada');
-
-    if (offerEnvSetup(envResult)) {
-        /* env setup offered */
-    }
-    try {
-        await maybeRunFirstRunWizard();
-    } catch (err) {
-        rootLogger.debug('[startup] Setup wizard failed:', err);
-        rootLogger.error('Setup wizard failed: ' + String(err));
-    }
 }
 
 async function main(): Promise<void> {

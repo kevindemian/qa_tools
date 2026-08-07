@@ -140,6 +140,7 @@ vi.mock('fs', async (importOriginal) => {
 import { createValidateEnv } from '../../shared/ui/cli_base.js';
 import { warn, prompt, printError } from '../../shared/ui/prompt.js';
 import { getStatePath } from '../../shared/state.js';
+import { maybeRunFirstRunWizard } from '../../shared/ui/first-run.js';
 import * as openModule from '../../shared/open.js';
 import * as cp from 'child_process';
 import * as commandsModule from '../commands/index.js';
@@ -169,6 +170,7 @@ describe('Main.ts', () => {
     let mod: MainModule;
     let createValidateEnvCall: unknown;
     let getStatePathCalled = false;
+    let firstRunWizardCalledAtStartup = false;
 
     beforeAll(async () => {
         if (!vi.isMockFunction(openModule.openWithFallback)) {
@@ -185,6 +187,7 @@ describe('Main.ts', () => {
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         createValidateEnvCall = vi.mocked(createValidateEnv).mock.calls[0]?.[0];
         getStatePathCalled = vi.mocked(getStatePath).mock.calls.length > 0;
+        firstRunWizardCalledAtStartup = vi.mocked(maybeRunFirstRunWizard).mock.calls.length > 0;
     });
 
     beforeEach(() => {
@@ -226,6 +229,10 @@ describe('Main.ts', () => {
 
         it('getStatePath was called during initialization', () => {
             expect(getStatePathCalled).toBeTruthy();
+        });
+
+        it('first-run wizard is NOT auto-run at startup (opt-in via menu 24)', () => {
+            expect(firstRunWizardCalledAtStartup).toBeFalsy();
         });
     });
 
