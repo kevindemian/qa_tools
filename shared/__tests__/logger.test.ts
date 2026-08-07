@@ -64,6 +64,45 @@ describe('Logger file level filter — LOG-02', () => {
     });
 });
 
+describe('Logger console error payload — LOG-25 (zero silencing)', () => {
+    let stderrSpy: MockInstance<(chunk: unknown) => boolean>;
+
+    function captureStderr(body: () => void): string {
+        let captured = '';
+        stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
+            captured += String(chunk);
+            return true;
+        });
+
+        try {
+            body();
+        } finally {
+            stderrSpy.mockRestore();
+        }
+        return captured;
+    }
+
+    it('payload curto de ERROR aparece completo no stderr (nao omitido)', () => {
+        const logger = new Logger({}, new StubConfig({ logLevel: 'error' }) as unknown as Config);
+        const captured = captureStderr(() => logger.error('falhou', { error: 'curto' }));
+
+        expect(captured).toContain('ERR falhou');
+        expect(captured).toContain('"error":"curto"');
+    });
+
+    it('payload longo de ERROR NUNCA e omitido — truncado com marcador explicito (Regra 25)', () => {
+        const logger = new Logger({}, new StubConfig({ logLevel: 'error' }) as unknown as Config);
+        const longData = { error: 'x'.repeat(200) };
+        const captured = captureStderr(() => logger.error('falhou', longData));
+
+        expect(captured).toContain('ERR falhou');
+        expect(captured).toContain('[...]');
+        expect(captured).not.toMatch(/ERR falhou\s*$/);
+        expect(captured).toContain('xxxxxxxxxxxxxxxx');
+        expect(captured.length).toBeLessThan(400);
+    });
+});
+
 describe('Logger file error recovery — LOG-03', () => {
     let dir: string;
 

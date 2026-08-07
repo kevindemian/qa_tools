@@ -150,7 +150,12 @@ export class Logger {
 
         if (data && level === 'ERROR') {
             const dataStr = JSON.stringify(data);
-            if (dataStr.length < CONSOLE_DATA_MAX_LENGTH) text += '  ' + colorFn(dataStr);
+            if (dataStr.length < CONSOLE_DATA_MAX_LENGTH) {
+                text += '  ' + colorFn(dataStr);
+            } else {
+                const truncated = dataStr.slice(0, CONSOLE_DATA_MAX_LENGTH);
+                text += '  ' + colorFn(truncated + ' [...]');
+            }
         }
 
         if (level === 'ERROR') {

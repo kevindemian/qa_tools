@@ -36,6 +36,7 @@ export const MUTATION_BUCKETS: BucketDefinition[] = [
     { name: 'data-hub', specs: ['shared/data-hub'] },
     { name: 'report', specs: ['shared/report'] },
     { name: 'quality', specs: ['shared/quality'] },
+    { name: 'insights', specs: ['shared/insights'] },
     { name: 'validation', specs: ['shared/validation'] },
     { name: 'ui-primitives', specs: ['shared/ui', 'shared/primitives'] },
     { name: 'llm-test-utils-invariants', specs: ['shared/llm', 'shared/test-utils', 'shared/invariants'] },
